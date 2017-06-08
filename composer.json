@@ -1,0 +1,39 @@
+{
+    "name": "totalmadownage/netrunners",
+    "description": "NETRUNNERS MMO",
+    "license": "BSD-3-Clause",
+    "keywords": [
+        "cyberpunk",
+        "html5",
+        "game",
+        "websockets",
+        "gearman"
+    ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/tfountain/GearmanManager"
+        },
+        {
+            "type": "vcs",
+            "url": "git@github.com:tfountain/zf-gearman-manager"
+        }
+    ],
+    "homepage": "http://netrunners.totalmadownage.com/",
+    "require": {
+        "php": ">=5.3.3",
+        "zendframework/zendframework": "~2.3",
+        "zf-commons/zfc-user": "1.2.2",
+        "bjyoungblood/bjy-authorize": "dev-master",
+        "doctrine/doctrine-module": "~0.8",
+        "doctrine/doctrine-orm-module": "~0.8",
+        "zf-commons/zfc-user-doctrine-orm": "~1.0",
+        "doctrine/migrations": "1.2.2",
+        "tfountain/zf-gearman-manager": "dev-master",
+        "brianlmoon/gearmanmanager": "dev-zf-gearman-manager-fork",
+        "cboden/ratchet": "^0.3.5",
+        "shark/simple_html_dom": "dev-master"
+    },
+    "require-dev": {
+    }
+}

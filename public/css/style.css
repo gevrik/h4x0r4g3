@@ -1,0 +1,66 @@
+body {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+input:focus {
+    outline-width: 0;
+}
+
+pre {
+    display: block;
+    font-family: monospace;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 12px;
+    color: #888888;
+    word-break: break-all;
+    word-wrap: break-word;
+    background-color: #000000;
+    border: 0 solid #000000;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+#command-input {
+    background-color: inherit !important;
+    border: 0 solid #000000;
+    line-height: 12px;
+}
+
+#messages {
+    overflow-y: auto;
+}
+
+.text-sysmsg {
+    color: #ffff00;
+}
+
+.text-white {
+    color: #ffffff;
+}
+
+.text-directory {
+    color: #66ccff;
+}
+
+.text-executable {
+    color: #00ff00;
+}
+
+.text-muted {
+    color: #c7c7c7;
+}
+
+.text-gchat {
+    color: #3399ff;
+}
+
+.img-tesseract {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 2em;
+    height: 2em;
+}
