@@ -18,8 +18,7 @@ pre {
     word-break: break-all;
     word-wrap: break-word;
     background-color: #060606;
-    border: 0 solid #060606;
-    border-radius: 0;
+    border: 0;
     overflow: hidden;
 }
 
@@ -49,12 +48,23 @@ pre {
     color: #00ff00;
 }
 
+.text-textfile {
+    color: ghostwhite;
+}
+
 .text-muted {
     color: #c7c7c7;
 }
 
 .text-gchat {
     color: #3399ff;
+}
+
+.panel-container {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
 }
 
 .img-tesseract {

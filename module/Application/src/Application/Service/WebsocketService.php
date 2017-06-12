@@ -4,8 +4,10 @@ namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Service\CodingService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
 use Netrunners\Service\SystemService;
@@ -17,6 +19,7 @@ use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Crypt\Password\Bcrypt;
 use Zend\I18n\Validator\Alnum;
+use Zend\Log\Logger;
 
 class WebsocketService implements MessageComponentInterface {
 
@@ -55,12 +58,17 @@ class WebsocketService implements MessageComponentInterface {
      */
     protected $parserService;
 
+    /**
+     * @var CodingService
+     */
+    protected $codingService;
 
     /**
      * @param EntityManager $entityManager
      * @param ProfileService $profileService
      * @param UtilityService $utilityService
      * @param ParserService $parserService
+     * @param CodingService $codingService
      * @param LoopInterface $loop
      */
     public function __construct(
@@ -68,6 +76,7 @@ class WebsocketService implements MessageComponentInterface {
         ProfileService $profileService,
         UtilityService $utilityService,
         ParserService $parserService,
+        CodingService $codingService,
         LoopInterface $loop
     ) {
         $this->clients = new \SplObjectStorage;
@@ -75,6 +84,7 @@ class WebsocketService implements MessageComponentInterface {
         $this->profileService = $profileService;
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
+        $this->codingService = $codingService;
         $this->loop = $loop;
 
         $this->loop->addPeriodicTimer(5, function(){
@@ -85,7 +95,27 @@ class WebsocketService implements MessageComponentInterface {
 
     protected function loopTest()
     {
-        // loop
+        $now = new \DateTime();
+        foreach ($this->clientsData as $resourceId => $clientData) {
+            if (!empty($clientData['jobs'])) {
+                foreach ($clientData['jobs'] as $jobId => $jobData) {
+                    // if the job is finished now
+                    if ($jobData['completionDate'] <= $now) {
+                        // resolve the job
+                        $response = $this->codingService->resolveCoding($jobId, $clientData);
+                        // find the correction connection and send the response
+                        foreach ($this->clients as $client) {
+                            if ($client->resourceId == $resourceId) {
+                                $client->send(json_encode($response));
+                                break;
+                            }
+                        }
+                        // remove job from server
+                        unset($this->clientsData[$resourceId]['jobs'][$jobId]);
+                    }
+                }
+            }
+        }
     }
 
     public function onOpen(ConnectionInterface $conn)
@@ -104,6 +134,10 @@ class WebsocketService implements MessageComponentInterface {
 
     public function onMessage(ConnectionInterface $from, $msg)
     {
+        var_dump(filter_var($_SERVER['HTTP_CLIENT_IP']?$_SERVER['HTTP_CLIENT_IP']:($_SERVER['HTTP_X_FORWARDE‌​D_FOR']?$_SERVER['HTTP_X_FORWARDED_FOR']:$_SERVER['REMOTE_ADDR']), FILTER_SANITIZE_STRING));die();
+        // init logger
+        $logger = new Logger();
+        $logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
         // decode received data and if the data is not valid, disconnect the client
         $msgData = json_decode($msg);
         // get the message data parts
@@ -128,6 +162,7 @@ class WebsocketService implements MessageComponentInterface {
         }
         // get resource id of socket
         $resourceId = $from->resourceId;
+        $logger->log(Logger::INFO, (string)$from->WebSocket->request->getHeader('Origin') . ': ' . $resourceId . ': ' . $msg);
         // get the current date
         $currentDate = new \DateTime();
         // data ok, check which command was sent
@@ -226,6 +261,9 @@ class WebsocketService implements MessageComponentInterface {
                             return true;
                         }
                     }
+                    // get some defaults
+                    $directoryFileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_DIRECTORY);
+                    $chatClientFileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CHATCLIENT);
                     // create new user
                     $this->clientsData[$resourceId]['tempPassword'] = false;
                     $user = new User();
@@ -271,7 +309,7 @@ class WebsocketService implements MessageComponentInterface {
                     $rootDirectory->setParent(NULL);
                     $rootDirectory->setSize(0);
                     $rootDirectory->setVersion(1);
-                    $rootDirectory->setType(File::TYPE_DIRECTORY);
+                    $rootDirectory->setFileType($directoryFileType);
                     $this->entityManager->persist($rootDirectory);
                     $system->addFile($rootDirectory);
                     $profile->setCurrentDirectory($rootDirectory);
@@ -288,7 +326,7 @@ class WebsocketService implements MessageComponentInterface {
                     $file->setParent($rootDirectory);
                     $file->setSize(0);
                     $file->setVersion(1);
-                    $file->setType(File::TYPE_DIRECTORY);
+                    $rootDirectory->setFileType($directoryFileType);
                     $this->entityManager->persist($file);
                     $system->addFile($file);
                     $rootDirectory->addChild($file);
@@ -305,7 +343,7 @@ class WebsocketService implements MessageComponentInterface {
                     $file->setParent($rootDirectory);
                     $file->setSize(0);
                     $file->setVersion(1);
-                    $file->setType(File::TYPE_DIRECTORY);
+                    $rootDirectory->setFileType($directoryFileType);
                     $this->entityManager->persist($file);
                     $system->addFile($file);
                     $rootDirectory->addChild($file);
@@ -322,7 +360,7 @@ class WebsocketService implements MessageComponentInterface {
                     $file->setParent($rootDirectory);
                     $file->setSize(0);
                     $file->setVersion(1);
-                    $file->setType(File::TYPE_DIRECTORY);
+                    $rootDirectory->setFileType($directoryFileType);
                     $this->entityManager->persist($file);
                     $system->addFile($file);
                     $rootDirectory->addChild($file);
@@ -339,7 +377,7 @@ class WebsocketService implements MessageComponentInterface {
                     $bitchXFile->setParent($file);
                     $bitchXFile->setSize(1);
                     $bitchXFile->setVersion(1);
-                    $bitchXFile->setType(File::TYPE_CHAT_CLIENT);
+                    $rootDirectory->setFileType($chatClientFileType);
                     $bitchXFile->setExecutable(1);
                     $bitchXFile->setRunning(1);
                     $this->entityManager->persist($bitchXFile);
@@ -347,10 +385,11 @@ class WebsocketService implements MessageComponentInterface {
                     $file->addChild($bitchXFile);
                     // flush to db
                     $this->entityManager->flush();
-                    $hash = hash('sha256', 'netrunners' . $user->getId());
+                    $hash = hash('sha256', 'hocuspocus' . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $this->clientsData[$resourceId]['userId'] = $user->getId();
                     $this->clientsData[$resourceId]['username'] = $user->getUsername();
+                    $this->clientsData[$resourceId]['jobs'] = [];
                     $response = array(
                         'command' => 'createUserDone',
                         'hash' => $hash
@@ -372,7 +411,7 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 else {
-                    $hash = hash('sha256', 'netrunners' . $user->getId());
+                    $hash = hash('sha256', 'hocuspocus' . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(
                         'command' => 'loginComplete',
@@ -395,7 +434,20 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->parserService->parseMailInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->mailOptions);
             case 'parseCodeInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->parserService->parseCodeInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->codeOptions);
+                $codeResponse = $this->parserService->parseCodeInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->codeOptions);
+                if (is_array($codeResponse) && $codeResponse['command'] == 'updateClientData') {
+                    $this->clientsData[$resourceId] = (array)$codeResponse['clientData'];
+                    $response = array(
+                        'command' => 'showMessage',
+                        'type' => $codeResponse['type'],
+                        'message' => $codeResponse['message']
+                    );
+                    $from->send(json_encode($response));
+                }
+                else {
+                    $from->send(json_encode($codeResponse));
+                }
+                break;
         }
         return true;
     }

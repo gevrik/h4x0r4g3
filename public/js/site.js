@@ -114,7 +114,11 @@
                                 file.name = '/' + file.name;
                                 break;
                             case 2:
+                            case 3:
                                 textClass = 'executable';
+                                break;
+                            case 4:
+                                textClass = 'textfile';
                                 break;
                         }
                         if (file.running) {
@@ -147,6 +151,20 @@
                     resetConsoleOptionsMail();
                     showPrompt();
                     break;
+                case 'jobs':
+                    messageArray = data.message;
+                    $.each(messageArray, function(i, messageData){
+                        md.append(messageData);
+                    });
+                    showPrompt();
+                    break;
+                case 'parts':
+                    messageArray = data.message;
+                    $.each(messageArray, function(i, messageData){
+                        md.append(messageData);
+                    });
+                    showPrompt();
+                    break;
                 case 'ps':
                     var fileArray = data.message;
                     $.each(fileArray, function(i, fileData){
@@ -167,11 +185,22 @@
                     showPrompt();
                     console.log(data);
                     break;
+                case 'setCodeMode':
+                    resetConsoleOptionsCode();
+                    consoleOptionsCode.mode = data.value;
+                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    showPrompt();
+                    console.log(data);
+                    break;
                 case 'setCodeType':
                     consoleOptionsCode.fileType = data.value;
                     md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
                     showPrompt();
                     console.log(data);
+                    break;
+                case 'showPanel':
+                    $('#panel-container').append(data.content);
+                    $('.draggable').draggable({});
                     break;
                 case 'skills':
                     messageArray = data.message;

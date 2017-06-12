@@ -92,4 +92,69 @@ class ProfileService extends BaseService
         return $response;
     }
 
+    public function showJobs($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $returnMessage = array();
+        if (empty($clientData->jobs)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">No running jobs</pre>')
+            );
+        }
+        else {
+            foreach ($clientData->jobs as $jobId => $jobData) {
+                $type = $jobData['type'];
+                $typeId = $jobData['typeId'];
+                $completionDate = $jobData['completionDate'];
+                $difficulty = $jobData['difficulty'];
+                if ($type == 'program') {
+                    $newCode = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
+                }
+                else {
+                    $newCode = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
+                }
+                $returnMessage[] = sprintf('<pre>%-4s: [%-10s] [%-20s] [%s] [%s]</pre>', $jobId, $type, $newCode->getName(), $completionDate->format('y/m/d H:i:s'), $difficulty);
+            }
+            $response = array(
+                'command' => 'jobs',
+                'message' => $returnMessage
+            );
+        }
+        return $response;
+    }
+
+    public function showFilePartInstances($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $returnMessage = array();
+        $filePartInstances = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance')->findForPartsCommand($profile);
+        if (empty($filePartInstances)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">You have no file parts</pre>')
+            );
+        }
+        else {
+            foreach ($filePartInstances as $data) {
+                $returnMessage[] = sprintf('<pre>%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
+            }
+            $response = array(
+                'command' => 'parts',
+                'message' => $returnMessage
+            );
+        }
+        return $response;
+    }
+
 }

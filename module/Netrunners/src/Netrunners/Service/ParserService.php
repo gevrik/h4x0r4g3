@@ -137,6 +137,9 @@ class ParserService
             case 'commands':
                 $response = $this->showCommands($clientData);
                 break;
+            case 'edit':
+                $response = $this->fileService->editFile($clientData, $contentArray);
+                break;
             case 'gc':
                 $messageContent = $this->chatService->globalChat($clientData, $contentArray);
                 foreach ($wsClients as $wsClient) {
@@ -159,10 +162,14 @@ class ParserService
                             'message' => $messageContent
                         );
                     }
-                    if (count($this->fileService->findRunningInSystemByType($clientUser->getProfile()->getSystem(), true, File::TYPE_CHAT_CLIENT)) < 1) continue;
+                    // check if a chat client is running in the current system TODO only for people that can access it
+                    if (count($this->fileService->findRunningInSystemByType($clientUser->getProfile()->getSystem(), true, $this->entityManager->find('Netrunners\Entity\FileType', 2))) < 1) continue;
                     $wsClient->send(json_encode($response));
                 }
                 return true;
+            case 'jobs':
+                $response = $this->profileService->showJobs($clientData);
+                break;
             case 'kill':
                 $response = $this->fileService->killProcess($clientData, $contentArray);
                 break;
@@ -176,6 +183,11 @@ class ParserService
             case 'makedir':
             case 'mkdir':
                 $response = $this->fileService->makeDirectory($clientData, $contentArray);
+                break;
+            case 'parts':
+            case 'resources':
+            case 'res':
+                $response = $this->profileService->showFilePartInstances($clientData);
                 break;
             case 'ps':
                 $response = $this->fileService->listProcesses($clientData);
@@ -198,6 +210,9 @@ class ParserService
                 break;
             case 'system':
                 $response = $this->systemService->showSystemStats($clientData);
+                break;
+            case 'touch':
+                $response = $this->fileService->touchFile($clientData, $contentArray);
                 break;
             /** ADMIN STUFF */
         }
@@ -247,12 +262,24 @@ class ParserService
         $codeOptions = (object)$codeOptions;
         switch ($userCommand) {
             default:
-                return true;
-            case 'level':
-                $response = $this->codingService->commandLevel($clientData, $contentArray, $codeOptions);
-                break;
             case 'options':
-                $response = $this->codingService->commandOptions($clientData, $contentArray, $codeOptions);
+                $response = $this->codingService->commandOptions($clientData, $codeOptions);
+                break;
+            case 'code':
+                return $this->codingService->commandCode($clientData, $codeOptions);
+            case 'jobs':
+                $response = $this->profileService->showJobs($clientData);
+                break;
+            case 'level':
+                $response = $this->codingService->commandLevel($clientData, $contentArray);
+                break;
+            case 'mode':
+                $response = $this->codingService->switchCodeMode($clientData, $contentArray);
+                break;
+            case 'parts':
+            case 'resources':
+            case 'res':
+                $response = $this->profileService->showFilePartInstances($clientData);
                 break;
             case 'type':
                 $response = $this->codingService->commandType($clientData, $contentArray, $codeOptions);

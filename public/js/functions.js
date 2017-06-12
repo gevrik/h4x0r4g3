@@ -28,6 +28,7 @@ function resetConsoleOptionsMail()
 function resetConsoleOptionsCode()
 {
     consoleOptionsCode = {
+        mode: 'resource',
         fileType: 0,
         fileLevel: 0
     };

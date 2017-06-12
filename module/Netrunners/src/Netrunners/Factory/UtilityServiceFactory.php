@@ -25,7 +25,8 @@ class UtilityServiceFactory implements FactoryInterface
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
         return new UtilityService(
-            $serviceLocator->get('Doctrine\ORM\EntityManager')
+            $serviceLocator->get('Doctrine\ORM\EntityManager'),
+            $serviceLocator->get('ViewRenderer')
         );
     }
 

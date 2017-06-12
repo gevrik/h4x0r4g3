@@ -96,7 +96,14 @@ class UtilityService extends BaseService
         return $from->send(json_encode($response));
     }
 
-    function getRandomAddress($length, $sep = ":", $space = 4) {
+    /**
+     * To create random ipv6 addresses for the systems.
+     * @param $length
+     * @param string $sep
+     * @param int $space
+     * @return string
+     */
+    public function getRandomAddress($length, $sep = ":", $space = 4) {
         if (function_exists("mcrypt_create_iv")) {
             $r = mcrypt_create_iv($length, MCRYPT_DEV_URANDOM);
         } else if (function_exists("openssl_random_pseudo_bytes")) {

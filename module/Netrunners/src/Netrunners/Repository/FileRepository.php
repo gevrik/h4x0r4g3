@@ -12,6 +12,7 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\System;
 
 class FileRepository extends EntityRepository
@@ -49,10 +50,10 @@ class FileRepository extends EntityRepository
      * Returns all running programs of the given type in the given system.
      * @param System $system
      * @param bool|true $running
-     * @param null $fileType
+     * @param null|FileType $fileType
      * @return array
      */
-    public function findRunningFilesInSystemByType(System $system, $running = true, $fileType = NULL)
+    public function findRunningFilesInSystemByType(System $system, $running = true, FileType $fileType = NULL)
     {
         $qb = $this->createQueryBuilder('f');
         $qb->where('f.system = :system');
@@ -61,7 +62,7 @@ class FileRepository extends EntityRepository
             $qb->setParameter('running', $running);
         }
         if ($fileType) {
-            $qb->andWhere('f.type = :type');
+            $qb->andWhere('f.fileType = :type');
             $qb->setParameter('type', $fileType);
         }
         $qb->setParameter('system', $system);

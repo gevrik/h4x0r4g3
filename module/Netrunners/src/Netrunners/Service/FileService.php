@@ -11,10 +11,12 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Zend\I18n\Validator\Alnum;
+use Zend\View\Model\ViewModel;
 
 class FileService extends BaseService
 {
@@ -62,17 +64,157 @@ class FileService extends BaseService
             $targetFile = $targetFiles[0];
             /** @var File $targetFile */
             $returnMessage = array();
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', "Name", $targetFile->getName());
-            $returnMessage[] = sprintf('<pre>%-12s: %smu</pre>', "Size", $targetFile->getSize());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', "Version", $targetFile->getVersion());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', "Type", File::$fileTypeData[$targetFile->getType()][File::TYPE_KEY_LABEL]);
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', "Birth", $targetFile->getCreated()->format('Y/m/d H:i:s'));
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', "Modified", ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : "---");
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Name", $targetFile->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %smu</pre>', "Size", $targetFile->getSize());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Level", $targetFile->getLevel());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Version", $targetFile->getVersion());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Type", $targetFile->getFileType()->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s/%s</pre>', "Integrity", $targetFile->getIntegrity(), $targetFile->getMaxIntegrity());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Slots", $targetFile->getSlots());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Birth", $targetFile->getCreated()->format('Y/m/d H:i:s'));
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Modified", ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : "---");
             $response = array(
                 'command' => 'stat',
                 'message' => $returnMessage
             );
             return $response;
+        }
+        return $response;
+    }
+
+    public function touchFile($clientData, $contentArray)
+    {
+        // init response
+        $response = false;
+        // get user
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        // get profile
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        // get parameter
+        $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
+        // get file repo
+        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepository */
+        // try to get target file via repo method
+        $targetFiles = $fileRepository->findFileInSystemByName(
+            $profile->getCurrentDirectory()->getSystem(),
+            $profile->getCurrentDirectory(),
+            $parameter,
+            false
+        );
+        if ($profile->getSnippets() < 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => 'You need 1 snippet to create an empty text file'
+            );
+        }
+        if (!$response && count($targetFiles) >= 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => 'A file with that name already exists in this directory'
+            );
+        }
+        // check if only alphanumeric
+        $validator = new Alnum(array('allowWhiteSpace' => false));
+        if (!$response && !$validator->isValid($parameter)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => 'The file name contains non-alphanumeric characters'
+            );
+        }
+        /* start logic if we do not have a response already */
+        if (!$response) {
+            $rootDirectory = $profile->getCurrentDirectory();
+            $system = $rootDirectory->getSystem();
+            /** @var System $system */
+            $currentSnippets = $profile->getSnippets();
+            $profile->setSnippets($currentSnippets - 1);
+            $newCode = new File();
+            $newCode->setProfile($profile);
+            $newCode->setCoder($profile);
+            $newCode->setLevel(1);
+            $newCode->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT));
+            $newCode->setCreated(new \DateTime());
+            $newCode->setExecutable(0);
+            $newCode->setIntegrity(100);
+            $newCode->setMaxIntegrity(100);
+            $newCode->setMailMessage(NULL);
+            $newCode->setModified(NULL);
+            $newCode->setName($parameter);
+            $newCode->setParent($rootDirectory);
+            $newCode->setRunning(NULL);
+            $newCode->setSize(0);
+            $newCode->setSlots(0);
+            $newCode->setSystem($profile->getCurrentDirectory()->getSystem());
+            $newCode->setVersion(1);
+            $this->entityManager->persist($newCode);
+            $system->addFile($newCode);
+            $rootDirectory->addChild($newCode);
+            $this->entityManager->flush();
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('%s has been created', $parameter)
+            );
+            return $response;
+        }
+        return $response;
+    }
+
+    public function editFile($clientData, $contentArray)
+    {
+        // init response
+        $response = false;
+        // get user
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        // get profile
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        // get parameter
+        $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
+        // get file repo
+        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepository */
+        // try to get target file via repo method
+        $targetFiles = $fileRepository->findFileInSystemByName(
+            $profile->getCurrentDirectory()->getSystem(),
+            $profile->getCurrentDirectory(),
+            $parameter,
+            false
+        );
+        if (count($targetFiles) < 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => "No such file"
+            );
+        }
+        // check if only alphanumeric
+        $validator = new Alnum(array('allowWhiteSpace' => false));
+        if (!$response && !$validator->isValid($parameter)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => "No such file"
+            );
+        }
+        /* start logic if we do not have a response already */
+        if (!$response) {
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/file/edit-text.phtml');
+            $response = array(
+                'command' => 'showPanel',
+                'type' => 'warning',
+                'content' => $this->viewRenderer->render($view)
+            );
         }
         return $response;
     }
@@ -111,7 +253,7 @@ class FileService extends BaseService
         }
         if (!$response) {
             // determine what to do depending on file type
-            switch ($file->getType()) {
+            switch ($file->getFileType()->getId()) {
                 default:
                     $response = array(
                         'command' => 'showMessage',
@@ -119,8 +261,11 @@ class FileService extends BaseService
                         'message' => sprintf("%s is not executable", $file->getName())
                     );
                     break;
-                case File::TYPE_CHAT_CLIENT:
+                case FileType::ID_CHATCLIENT:
                     $response = $this->executeChatClient($file);
+                    break;
+                case FileType::ID_DATAMINER:
+                    $response = $this->executeDataminer($file);
                     break;
             }
         }
@@ -216,7 +361,7 @@ class FileService extends BaseService
             $file->setParent($currentDirectory);
             $file->setSize(0);
             $file->setVersion(1);
-            $file->setType(File::TYPE_DIRECTORY);
+            $file->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_DIRECTORY));
             $this->entityManager->persist($file);
             $currentSystem->addFile($file);
             $currentDirectory->addChild($file);
@@ -361,7 +506,7 @@ class FileService extends BaseService
             $newDirectory = $this->entityManager->getRepository('Netrunners\Entity\File')->findOneBy(array(
                 'system' => $currentSystem,
                 'name' => $parameter,
-                'type' => File::TYPE_DIRECTORY,
+                'fileType' => $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_DIRECTORY),
                 'parent' => $profile->getCurrentDirectory()
             ));
             if (!$newDirectory) {
@@ -463,7 +608,7 @@ class FileService extends BaseService
         foreach ($directoryChildren as $directoryChild) {
             /** @var File $directoryChild */
             $returnMessage[] = array(
-                'type' => $directoryChild->getType(),
+                'type' => $directoryChild->getFileType()->getId(),
                 'name' => $directoryChild->getName(),
                 'running' => ($directoryChild->getRunning()) ? 1 : 0
             );
@@ -497,7 +642,7 @@ class FileService extends BaseService
         $returnMessage = array();
         foreach ($runningFiles as $runningFile) {
             /** @var File $runningFile */
-            $returnMessage[] = sprintf('<pre>%-12s | %s</pre>', $runningFile->getId(), $runningFile->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s | %s</pre>', $runningFile->getId(), $runningFile->getName());
         }
         $response = array(
             'command' => 'ps',
@@ -518,7 +663,24 @@ class FileService extends BaseService
         $response = array(
             'command' => 'showMessage',
             'type' => 'sysmsg',
-            'message' => sprintf("%s has been started as process %s", $file->getName(), $file->getId())
+            'message' => sprintf('<pre style="white-space: pre-wrap;">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+        );
+        return $response;
+    }
+
+    /**
+     * Executes a dataminer file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeDataminer(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showMessage',
+            'type' => 'sysmsg',
+            'message' => sprintf('<pre style="white-space: pre-wrap;">%s has been started as process %s</pre>', $file->getName(), $file->getId())
         );
         return $response;
     }
@@ -527,10 +689,10 @@ class FileService extends BaseService
      * Returns all running programs of the given type in the given system.
      * @param System $system
      * @param bool|true $running
-     * @param null $fileType
+     * @param null|FileType $fileType
      * @return array
      */
-    public function findRunningInSystemByType(System $system, $running = true, $fileType = NULL)
+    public function findRunningInSystemByType(System $system, $running = true, FileType $fileType = NULL)
     {
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */

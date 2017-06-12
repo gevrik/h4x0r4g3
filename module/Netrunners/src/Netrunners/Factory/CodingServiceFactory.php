@@ -25,7 +25,8 @@ class CodingServiceFactory implements FactoryInterface
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
         return new CodingService(
-            $serviceLocator->get('Doctrine\ORM\EntityManager')
+            $serviceLocator->get('Doctrine\ORM\EntityManager'),
+            $serviceLocator->get('ViewRenderer')
         );
     }
 

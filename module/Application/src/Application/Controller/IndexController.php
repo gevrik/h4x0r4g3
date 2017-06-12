@@ -12,6 +12,7 @@ namespace Application\Controller;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\System;
+use Netrunners\Service\CodingService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
 use Application\Service\WebsocketService;
@@ -50,6 +51,10 @@ class IndexController extends AbstractActionController
      */
     protected $parserService;
 
+    /**
+     * @var CodingService
+     */
+    protected $codingService;
 
     /**
      * IndexController constructor.
@@ -57,18 +62,21 @@ class IndexController extends AbstractActionController
      * @param ProfileService $profileService
      * @param UtilityService $utilityService
      * @param ParserService $parserService
+     * @param CodingService $codingService
      */
     public function __construct(
         EntityManager $entityManager,
         ProfileService $profileService,
         UtilityService $utilityService,
-        ParserService $parserService
+        ParserService $parserService,
+        CodingService $codingService
     )
     {
         $this->entityManager = $entityManager;
         $this->profileService = $profileService;
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
+        $this->codingService = $codingService;
     }
 
     /**
@@ -99,6 +107,7 @@ class IndexController extends AbstractActionController
                         $this->profileService,
                         $this->utilityService,
                         $this->parserService,
+                        $this->codingService,
                         $loop
                     )
                 )

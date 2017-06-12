@@ -20,15 +20,19 @@ class BaseService
      */
     protected $entityManager;
 
+    protected $viewRenderer;
+
     /**
      * BaseService constructor.
      * @param EntityManager $entityManager
      */
     public function __construct(
-        EntityManager $entityManager
+        EntityManager $entityManager,
+        $viewRenderer
     )
     {
         $this->entityManager = $entityManager;
+        $this->viewRenderer = $viewRenderer;
     }
 
 }

@@ -121,7 +121,18 @@ class File
      */
     protected $version;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $slots;
+
     // ORM
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\FileType")
+     */
+    protected $fileType;
 
     /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
@@ -377,7 +388,43 @@ class File
         return $this;
     }
 
+    /**
+     * @return int
+     */
+    public function getSlots()
+    {
+        return $this->slots;
+    }
+
+    /**
+     * @param int $slots
+     * @return File
+     */
+    public function setSlots($slots)
+    {
+        $this->slots = $slots;
+        return $this;
+    }
+
     // ORM
+
+    /**
+     * @return mixed
+     */
+    public function getFileType()
+    {
+        return $this->fileType;
+    }
+
+    /**
+     * @param mixed $fileType
+     * @return File
+     */
+    public function setFileType($fileType)
+    {
+        $this->fileType = $fileType;
+        return $this;
+    }
 
     /**
      * @return mixed

@@ -13,6 +13,7 @@
         <!-- Le styles -->
         <?php echo $this->headLink(array('rel' => 'shortcut icon', 'type' => 'image/vnd.microsoft.icon', 'href' => $this->basePath() . '/img/favicon.ico'))
                         ->prependStylesheet($this->basePath('css/style.css'))
+                        ->prependStylesheet($this->basePath('css/jquery-ui.min.css'))
                         ->prependStylesheet($this->basePath('css/bootstrap.min.css')) ?>
 
         <!-- Scripts -->
@@ -22,6 +23,7 @@
             ->prependFile($this->basePath('js/global.js'))
             ->prependFile($this->basePath('js/jquery.inputHistory.js'))
             ->prependFile($this->basePath('js/bootstrap.min.js'))
+            ->prependFile($this->basePath('js/jquery-ui.min.js'))
             ->prependFile($this->basePath('js/jquery.min.js'))
             ->prependFile($this->basePath('js/respond.min.js'), 'text/javascript', array('conditional' => 'lt IE 9',))
             ->prependFile($this->basePath('js/html5shiv.min.js'),   'text/javascript', array('conditional' => 'lt IE 9',))
@@ -32,5 +34,6 @@
         <?php echo $this->content; ?>
         <?php echo $this->inlineScript() ?>
         <img class="img-tesseract" src="<?php echo $this->basePath('img/8-cell-orig.gif'); ?>" title="Hi!" />
+        <div id="panel-container" class="panel-container"></div>
     </body>
 </html>
