@@ -26,6 +26,7 @@ pre {
     background-color: inherit !important;
     border: 0 solid #000000;
     line-height: 12px;
+    width: 80%;
 }
 
 #messages {

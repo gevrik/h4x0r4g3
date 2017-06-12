@@ -71,12 +71,6 @@ class File
      * @ORM\Column(type="integer")
      * @var int
      */
-    protected $type;
-
-    /**
-     * @ORM\Column(type="integer")
-     * @var int
-     */
     protected $level;
 
     /**
@@ -223,24 +217,6 @@ class File
     public function setSize($size)
     {
         $this->size = $size;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getType()
-    {
-        return $this->type;
-    }
-
-    /**
-     * @param int $type
-     * @return File
-     */
-    public function setType($type)
-    {
-        $this->type = $type;
         return $this;
     }
 

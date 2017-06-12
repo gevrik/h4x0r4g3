@@ -64,6 +64,11 @@ class WebsocketService implements MessageComponentInterface {
     protected $codingService;
 
     /**
+     * @var Logger
+     */
+    protected $logger;
+
+    /**
      * @param EntityManager $entityManager
      * @param ProfileService $profileService
      * @param UtilityService $utilityService
@@ -86,6 +91,9 @@ class WebsocketService implements MessageComponentInterface {
         $this->parserService = $parserService;
         $this->codingService = $codingService;
         $this->loop = $loop;
+
+        $this->logger = new Logger();
+        $this->logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
 
         $this->loop->addPeriodicTimer(5, function(){
             $this->loopTest();
@@ -134,10 +142,6 @@ class WebsocketService implements MessageComponentInterface {
 
     public function onMessage(ConnectionInterface $from, $msg)
     {
-        var_dump(filter_var($_SERVER['HTTP_CLIENT_IP']?$_SERVER['HTTP_CLIENT_IP']:($_SERVER['HTTP_X_FORWARDE‌​D_FOR']?$_SERVER['HTTP_X_FORWARDED_FOR']:$_SERVER['REMOTE_ADDR']), FILTER_SANITIZE_STRING));die();
-        // init logger
-        $logger = new Logger();
-        $logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
         // decode received data and if the data is not valid, disconnect the client
         $msgData = json_decode($msg);
         // get the message data parts
@@ -162,7 +166,7 @@ class WebsocketService implements MessageComponentInterface {
         }
         // get resource id of socket
         $resourceId = $from->resourceId;
-        $logger->log(Logger::INFO, (string)$from->WebSocket->request->getHeader('Origin') . ': ' . $resourceId . ': ' . $msg);
+        $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
         // get the current date
         $currentDate = new \DateTime();
         // data ok, check which command was sent
@@ -326,7 +330,7 @@ class WebsocketService implements MessageComponentInterface {
                     $file->setParent($rootDirectory);
                     $file->setSize(0);
                     $file->setVersion(1);
-                    $rootDirectory->setFileType($directoryFileType);
+                    $file->setFileType($directoryFileType);
                     $this->entityManager->persist($file);
                     $system->addFile($file);
                     $rootDirectory->addChild($file);
@@ -343,7 +347,7 @@ class WebsocketService implements MessageComponentInterface {
                     $file->setParent($rootDirectory);
                     $file->setSize(0);
                     $file->setVersion(1);
-                    $rootDirectory->setFileType($directoryFileType);
+                    $file->setFileType($directoryFileType);
                     $this->entityManager->persist($file);
                     $system->addFile($file);
                     $rootDirectory->addChild($file);
@@ -360,7 +364,7 @@ class WebsocketService implements MessageComponentInterface {
                     $file->setParent($rootDirectory);
                     $file->setSize(0);
                     $file->setVersion(1);
-                    $rootDirectory->setFileType($directoryFileType);
+                    $file->setFileType($directoryFileType);
                     $this->entityManager->persist($file);
                     $system->addFile($file);
                     $rootDirectory->addChild($file);
@@ -377,7 +381,7 @@ class WebsocketService implements MessageComponentInterface {
                     $bitchXFile->setParent($file);
                     $bitchXFile->setSize(1);
                     $bitchXFile->setVersion(1);
-                    $rootDirectory->setFileType($chatClientFileType);
+                    $bitchXFile->setFileType($chatClientFileType);
                     $bitchXFile->setExecutable(1);
                     $bitchXFile->setRunning(1);
                     $this->entityManager->persist($bitchXFile);
