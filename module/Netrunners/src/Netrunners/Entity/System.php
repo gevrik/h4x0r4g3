@@ -10,7 +10,6 @@
 
 namespace Netrunners\Entity;
 
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\SystemRepository") */
@@ -32,24 +31,6 @@ class System
     protected $name;
 
     /**
-     * @ORM\Column(type="integer", options={"default":1})
-     * @var int
-     */
-    protected $cpu;
-
-    /**
-     * @ORM\Column(type="integer", options={"default":16})
-     * @var int
-     */
-    protected $memory;
-
-    /**
-     * @ORM\Column(type="integer", options={"default":32})
-     * @var int
-     */
-    protected $storage;
-
-    /**
      * @ORM\Column(type="string")
      * @var string
      */
@@ -58,22 +39,10 @@ class System
     // ORM
 
     /**
-     * @ORM\OneToOne(targetEntity="Netrunners\Entity\Profile", inversedBy="system")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
      **/
     protected $profile;
 
-    /**
-     * @ORM\OneToMany(targetEntity="Netrunners\Entity\File", mappedBy="system")
-     **/
-    protected $files;
-
-
-    /**
-     * Constructor for System.
-     */
-    public function __construct() {
-        $this->files = new ArrayCollection();
-    }
 
     /**
      * @return int
@@ -108,60 +77,6 @@ class System
     public function setName($name)
     {
         $this->name = $name;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getCpu()
-    {
-        return $this->cpu;
-    }
-
-    /**
-     * @param int $cpu
-     * @return System
-     */
-    public function setCpu($cpu)
-    {
-        $this->cpu = $cpu;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getMemory()
-    {
-        return $this->memory;
-    }
-
-    /**
-     * @param int $memory
-     * @return System
-     */
-    public function setMemory($memory)
-    {
-        $this->memory = $memory;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getStorage()
-    {
-        return $this->storage;
-    }
-
-    /**
-     * @param int $storage
-     * @return System
-     */
-    public function setStorage($storage)
-    {
-        $this->storage = $storage;
         return $this;
     }
 
@@ -201,30 +116,6 @@ class System
     {
         $this->profile = $profile;
         return $this;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getFiles()
-    {
-        return $this->files;
-    }
-
-    /**
-     * @param File $file
-     */
-    public function addFile(File $file)
-    {
-        $this->files[] = $file;
-    }
-
-    /**
-     * @param File $file
-     */
-    public function removeFile(File $file)
-    {
-        $this->files->removeElement($file);
     }
 
 }

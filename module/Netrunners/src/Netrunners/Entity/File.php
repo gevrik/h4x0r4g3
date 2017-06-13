@@ -139,9 +139,14 @@ class File
     protected $profile;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\System", inversedBy="files")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\System")
      */
     protected $system;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
+     */
+    protected $node;
 
     /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\MailMessage", inversedBy="attachments")

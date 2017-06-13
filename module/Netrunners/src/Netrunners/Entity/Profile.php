@@ -128,14 +128,9 @@ class Profile
     protected $user;
 
     /**
-     * @ORM\OneToOne(targetEntity="Netrunners\Entity\System", mappedBy="profile")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
      */
-    protected $system;
-
-    /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\File")
-     */
-    protected $currentDirectory;
+    protected $currentNode;
 
 
     /**
@@ -473,36 +468,18 @@ class Profile
     /**
      * @return mixed
      */
-    public function getSystem()
+    public function getCurrentNode()
     {
-        return $this->system;
+        return $this->currentNode;
     }
 
     /**
-     * @param mixed $system
+     * @param mixed $currentNode
      * @return Profile
      */
-    public function setSystem($system)
+    public function setCurrentNode($currentNode)
     {
-        $this->system = $system;
-        return $this;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getCurrentDirectory()
-    {
-        return $this->currentDirectory;
-    }
-
-    /**
-     * @param mixed $currentDirectory
-     * @return Profile
-     */
-    public function setCurrentDirectory($currentDirectory)
-    {
-        $this->currentDirectory = $currentDirectory;
+        $this->currentNode = $currentNode;
         return $this;
     }
 
