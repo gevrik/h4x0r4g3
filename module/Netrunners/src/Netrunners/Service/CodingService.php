@@ -26,12 +26,19 @@ class CodingService extends BaseService
 {
 
     /**
-     * @const MIN
+     * @const MIN_LEVEL
      */
     const MIN_LEVEL = 1;
 
+    /**
+     * @const MAX_LEVEL
+     */
     const MAX_LEVEL = 100;
 
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
     public function enterCodeMode($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -48,6 +55,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function switchCodeMode($clientData, $contentArray)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -77,6 +89,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function commandLevel($clientData, $contentArray)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -119,9 +136,14 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @param $codeOptions
+     * @return array|bool
+     */
     public function commandOptions($clientData, $contentArray, $codeOptions)
     {
-        var_dump($codeOptions);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -188,6 +210,12 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @param $codeOptions
+     * @return array|bool
+     */
     public function commandType($clientData, $contentArray, $codeOptions)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -262,6 +290,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $codeOptions
+     * @return array|bool
+     */
     public function commandCode($clientData, $codeOptions)
     {
         $mode = $codeOptions->mode;
@@ -283,6 +316,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $codeOptions
+     * @return array|bool
+     */
     protected function codeResource($clientData, $codeOptions)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -356,6 +394,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $jobId
+     * @param $clientData
+     * @return array|bool
+     */
     public function resolveCoding($jobId, $clientData)
     {
         $jobData = $clientData['jobs'][$jobId];
@@ -428,6 +471,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $codeOptions
+     * @return array|bool
+     */
     protected function codeProgram($clientData, $codeOptions)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -519,6 +567,9 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @return array
+     */
     public function exitCodeMode()
     {
         $response = array(
@@ -527,6 +578,11 @@ class CodingService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $type
+     * @param Profile $profile
+     * @return int
+     */
     protected function getSkillModifier($type, Profile $profile)
     {
         switch ($type) {
@@ -576,6 +632,10 @@ class CodingService extends BaseService
         return $skillModifier;
     }
 
+    /**
+     * @param $type
+     * @return array
+     */
     protected function getSkillListForType($type)
     {
         $skillList = [];
@@ -626,6 +686,12 @@ class CodingService extends BaseService
         return $skillList;
     }
 
+    /**
+     * @param Profile $profile
+     * @param $jobData
+     * @param $roll
+     * @return bool
+     */
     public function learnFromSuccess(Profile $profile, $jobData, $roll)
     {
         foreach ($jobData['skills'] as $skillName) {
@@ -641,6 +707,12 @@ class CodingService extends BaseService
         return true;
     }
 
+    /**
+     * @param Profile $profile
+     * @param $jobData
+     * @param $roll
+     * @return bool
+     */
     public function learnFromFailure(Profile $profile, $jobData, $roll)
     {
         foreach ($jobData['skills'] as $skillName) {
@@ -656,6 +728,11 @@ class CodingService extends BaseService
         return true;
     }
 
+    /**
+     * @param Profile $profile
+     * @param $skillName
+     * @return int
+     */
     public function getSkillRating(Profile $profile, $skillName)
     {
         $skillRating = 0;
@@ -699,6 +776,12 @@ class CodingService extends BaseService
         return $skillRating;
     }
 
+    /**
+     * @param Profile $profile
+     * @param $skillName
+     * @param $newSkillRating
+     * @return bool
+     */
     public function setSkillRating(Profile $profile, $skillName, $newSkillRating)
     {
         switch ($skillName) {

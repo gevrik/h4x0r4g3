@@ -20,7 +20,11 @@ class SystemService extends BaseService
     const SYSTEM_STRING = 'system';
     const ADDY_STRING = 'address';
 
-
+    /**
+     * Shows important stats of the current system.
+     * @param $clientData
+     * @return array|bool
+     */
     public function showSystemStats($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);

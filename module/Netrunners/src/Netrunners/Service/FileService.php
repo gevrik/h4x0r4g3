@@ -15,6 +15,7 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
+use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
 use Zend\View\Model\ViewModel;
 
@@ -257,80 +258,6 @@ class FileService extends BaseService
                 case FileType::ID_DATAMINER:
                     $response = $this->executeDataminer($file);
                     break;
-            }
-        }
-        return $response;
-    }
-
-    /**
-     * Changes the current directory.
-     * @param $clientData
-     * @param $contentArray
-     * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function changeDirectory($clientData, $contentArray)
-    {
-        // TODO complex paths
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $parameter = array_shift($contentArray);
-        if (!$parameter) {
-            $currentSystem = $profile->getCurrentDirectory()->getSystem();
-            $rootDirectory = $this->entityManager->getRepository('Netrunners\Entity\File')->findOneBy(array(
-                'system' => $currentSystem,
-                'name' => 'home'
-            ));
-            $profile->setCurrentDirectory($rootDirectory);
-            $this->entityManager->flush($profile);
-            $response = array(
-                'command' => 'refreshPrompt',
-                'message' => 'default'
-            );
-        }
-        else if ($parameter == '..') {
-            $parentDirectory = $profile->getCurrentDirectory()->getParent();
-            if (!$parentDirectory) {
-                $response = array(
-                    'command' => 'refreshPrompt',
-                    'message' => 'default'
-                );
-            }
-            else {
-                $profile->setCurrentDirectory($parentDirectory);
-                $this->entityManager->flush($profile);
-                $response = array(
-                    'command' => 'refreshPrompt',
-                    'message' => 'default'
-                );
-            }
-        }
-        else {
-            $currentSystem = $profile->getCurrentDirectory()->getSystem();
-            $newDirectory = $this->entityManager->getRepository('Netrunners\Entity\File')->findOneBy(array(
-                'system' => $currentSystem,
-                'name' => $parameter,
-                'fileType' => $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_DIRECTORY),
-                'parent' => $profile->getCurrentDirectory()
-            ));
-            if (!$newDirectory) {
-                $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'sysmsg',
-                    'message' => 'No such directory'
-                );
-            }
-            else {
-                $profile->setCurrentDirectory($newDirectory);
-                $this->entityManager->flush($profile);
-                $response = array(
-                    'command' => 'refreshPrompt',
-                    'message' => 'default'
-                );
             }
         }
         return $response;

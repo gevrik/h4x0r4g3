@@ -61,6 +61,10 @@ pre {
     color: #3399ff;
 }
 
+.text-users {
+    color: #e730f4;
+}
+
 .panel-container {
     position: fixed;
     width: 100%;

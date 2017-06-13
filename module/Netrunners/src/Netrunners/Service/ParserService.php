@@ -61,6 +61,11 @@ class ParserService
     protected $systemService;
 
     /**
+     * @var ConnectionService
+     */
+    protected $connectionService;
+
+    /**
      * @param EntityManager $entityManager
      * @param FileService $fileService
      * @param NodeService $nodeService
@@ -69,6 +74,7 @@ class ParserService
      * @param ProfileService $profileService
      * @param CodingService $codingService
      * @param SystemService $systemService
+     * @param ConnectionService $connectionService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -78,7 +84,8 @@ class ParserService
         MailMessageService $mailMessageService,
         ProfileService $profileService,
         CodingService $codingService,
-        SystemService $systemService
+        SystemService $systemService,
+        ConnectionService $connectionService
     )
     {
         $this->entityManager = $entityManager;
@@ -89,6 +96,7 @@ class ParserService
         $this->profileService = $profileService;
         $this->codingService = $codingService;
         $this->systemService = $systemService;
+        $this->connectionService = $connectionService;
     }
 
     /**
@@ -123,6 +131,9 @@ class ParserService
                     'command' => 'clear',
                     'message' => 'default'
                 );
+                break;
+            case 'addnode':
+                $response = $this->nodeService->addNode($clientData);
                 break;
             case 'code':
                 $response = $this->codingService->enterCodeMode($clientData);

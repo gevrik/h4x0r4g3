@@ -33,6 +33,7 @@ return array(
             'Netrunners\Service\ChatService' => 'Netrunners\Factory\ChatServiceFactory',
             'Netrunners\Service\CodingService' => 'Netrunners\Factory\CodingServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
+            'Netrunners\Service\ConnectionService' => 'Netrunners\Factory\ConnectionServiceFactory',
             'Netrunners\Service\NodeService' => 'Netrunners\Factory\NodeServiceFactory',
             'Netrunners\Service\MailMessageService' => 'Netrunners\Factory\MailMessageServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',
