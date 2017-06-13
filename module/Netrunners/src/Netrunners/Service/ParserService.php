@@ -184,6 +184,9 @@ class ParserService
             case 'mail':
                 $response = $this->mailMessageService->enterMailMode($clientData);
                 break;
+            case 'nodetype':
+                $response = $this->nodeService->changeNodeType($clientData, $contentArray);
+                break;
             case 'parts':
             case 'resources':
             case 'res':

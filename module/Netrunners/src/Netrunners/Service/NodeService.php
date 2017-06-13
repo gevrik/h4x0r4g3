@@ -149,4 +149,67 @@ class NodeService extends BaseService
         return $response;
     }
 
+    public function changeNodeType($clientData, $contentArray)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $response = false;
+        /* node types can be given by name or number, so we need to handle both */
+        // get parameter
+        $parameter = array_shift($contentArray);
+        if (!$parameter) {
+            $returnMessage = array();
+            $nodeTypes = Node::$lookup;
+            $returnMessage[] = sprintf('<pre class="text-sysmsg">Please choose a node type:</pre>');
+            foreach ($nodeTypes as $typeId => $typeString) {
+                $returnMessage[] = sprintf('<pre class="text-sysmsg">%-12s: %s</pre>', $typeId, $typeString);
+            }
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            );
+        }
+        else {
+            $searchByNumber = false;
+            if (is_numeric($parameter)) {
+                $searchByNumber = true;
+            }
+            $type = false;
+            if ($searchByNumber) {
+                if (isset(Node::$lookup[$parameter])) {
+                    $type = $parameter;
+                    $name = Node::$lookup[$parameter];
+                }
+            }
+            else {
+                if (isset(Node::$revLookup[$parameter])) {
+                    $type = Node::$revLookup[$parameter];
+                    $name = Node::$lookup[$type];
+                }
+            }
+            if (!$type) {
+                $response = array(
+                    'command' => 'showMessage',
+                    'type' => 'sysmsg',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;">No such node type</pre>')
+                );
+            }
+            else {
+                $response = array(
+                    'command' => 'showMessage',
+                    'type' => 'sysmsg',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;">Node type changed to %s</pre>', $name)
+                );
+            }
+        }
+        return $response;
+    }
+
 }

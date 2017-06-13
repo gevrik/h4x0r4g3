@@ -32,6 +32,16 @@ class Node
     const STRING_FIREWALL = "firewall";
     const STRING_CPU = "cpu";
 
+    static $lookup = [
+        self::ID_RAW => self::STRING_RAW,
+        self::ID_IO => self::STRING_IO,
+        self::ID_MEMORY => self::STRING_MEMORY,
+        self::ID_STORAGE => self::STRING_STORAGE,
+        self::ID_SERVICE => self::STRING_SERVICE,
+        self::ID_FIREWALL => self::STRING_FIREWALL,
+        self::ID_CPU => self::STRING_CPU,
+    ];
+
     static $revLookup = [
         self::STRING_RAW => self::ID_RAW,
         self::STRING_IO => self::ID_IO,
