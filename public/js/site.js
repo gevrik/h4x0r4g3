@@ -42,6 +42,15 @@
                 default:
                     console.log('=== unknown command received ===');
                     break;
+                case 'cd':
+                    jsonData = {
+                        command: 'parseInput',
+                        hash: hash,
+                        content: 'ls',
+                        silent: true
+                    };
+                    conn.send(JSON.stringify(jsonData));
+                    break;
                 case 'echoCommand':
                     if (loginStage != 'createPassword' && loginStage != 'createPasswordConfirm' && loginStage != 'promptForPassword') {
                         md.append(data.content + '<br />');

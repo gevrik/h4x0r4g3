@@ -135,6 +135,9 @@ class ParserService
             case 'addnode':
                 $response = $this->nodeService->addNode($clientData);
                 break;
+            case 'cd':
+                $response = $this->connectionService->useConnection($clientData, $contentArray);
+                break;
             case 'code':
                 $response = $this->codingService->enterCodeMode($clientData);
                 break;
