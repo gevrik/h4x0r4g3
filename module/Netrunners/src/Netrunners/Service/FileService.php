@@ -513,7 +513,7 @@ class FileService extends BaseService
                 $response = array(
                     'command' => 'showMessage',
                     'type' => 'sysmsg',
-                    'message' => 'No such file or directory'
+                    'message' => 'No such directory'
                 );
             }
             else {

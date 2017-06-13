@@ -285,6 +285,19 @@ class WebsocketService implements MessageComponentInterface {
                     $profile->setUser($user);
                     $profile->setCredits(ProfileService::DEFAULT_STARTING_CREDITS);
                     $profile->setSnippets(ProfileService::DEFAULT_STARTING_SNIPPETS);
+                    $profile->setSkillAdvancedCoding(0);
+                    $profile->setSkillAdvancedNetworking(0);
+                    $profile->setSkillBlackhat(20);
+                    $profile->setSkillCoding(30);
+                    $profile->setSkillComputing(30);
+                    $profile->setSkillCryptography(0);
+                    $profile->setSkillDatabases(0);
+                    $profile->setSkillElectronics(0);
+                    $profile->setSkillForensics(0);
+                    $profile->setSkillNetworking(0);
+                    $profile->setSkillReverseEngineering(0);
+                    $profile->setSkillSocialEngineering(0);
+                    $profile->setSkillWhitehat(0);
                     $profile->setSkillPoints(ProfileService::DEFAULT_SKILL_POINTS);
                     $this->entityManager->persist($profile);
                     $user->setProfile($profile);
@@ -415,6 +428,17 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 else {
+                    foreach ($this->clients as $client) {
+                        if ($client->resourceId != $resourceId && $this->clientsData[$client->resourceId]['username'] == $this->clientsData[$resourceId]['username']) {
+                            $loginResponse = array(
+                                'command' => 'showMessage',
+                                'type' => 'danger',
+                                'message' => 'Your connection has been terminated because you logged in from another location'
+                            );
+                            $client->send(json_encode($loginResponse));
+                            $client->close();
+                        }
+                    }
                     $hash = hash('sha256', 'hocuspocus' . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(

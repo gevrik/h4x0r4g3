@@ -121,6 +121,7 @@ class CodingService extends BaseService
 
     public function commandOptions($clientData, $contentArray, $codeOptions)
     {
+        var_dump($codeOptions);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */

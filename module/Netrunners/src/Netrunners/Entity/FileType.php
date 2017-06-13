@@ -21,17 +21,23 @@ class FileType
     const ID_CHATCLIENT = 2;
     const ID_DATAMINER = 3;
     const ID_TEXT = 4;
+    const ID_ICMP_BLOCKER = 5;
+    const ID_COINMINER = 6;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
     const STRING_DATAMINER = 'dataminer';
     const STRING_TEXT = 'text';
+    const STRING_ICMP_BLOCKER = 'icmp-blocker';
+    const STRING_COINMINER = 'coinminer';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
         self::STRING_CHATCLIENT => self::ID_CHATCLIENT,
         self::STRING_DATAMINER => self::ID_DATAMINER,
         self::STRING_TEXT => self::ID_TEXT,
+        self::STRING_ICMP_BLOCKER => self::ID_ICMP_BLOCKER,
+        self::STRING_COINMINER => self::ID_COINMINER,
     ];
 
     /**

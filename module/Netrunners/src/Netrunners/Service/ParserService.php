@@ -263,7 +263,7 @@ class ParserService
         switch ($userCommand) {
             default:
             case 'options':
-                $response = $this->codingService->commandOptions($clientData, $codeOptions);
+                $response = $this->codingService->commandOptions($clientData, $contentArray, $codeOptions);
                 break;
             case 'code':
                 return $this->codingService->commandCode($clientData, $codeOptions);

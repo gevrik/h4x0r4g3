@@ -1,6 +1,6 @@
 function showPrompt()
 {
-    if (consoleMode == 'default')
+    if (consoleMode === 'default')
     {
         var jsonData;
         jsonData = {
