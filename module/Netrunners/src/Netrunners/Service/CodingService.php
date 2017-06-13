@@ -388,30 +388,7 @@ class CodingService extends BaseService
             }
             else {
                 // programs
-                // check if a file with that name already exists in this directory
-                $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-                /** @var FileRepository $fileRepository */
-                $fileNameFound = false;
-                $fileNameCounter = 0;
                 $newFileName = $basePart->getName();
-                while (!$fileNameFound) {
-                    $targetFile = $fileRepository->findFileInSystemByName(
-                        $profile->getCurrentDirectory()->getSystem(),
-                        $profile->getCurrentDirectory(),
-                        $newFileName,
-                        false
-                    );
-                    if (!empty($targetFile)) {
-                        $fileNameCounter++;
-                        $newFileName = $newFileName . '' . $fileNameCounter;
-                    }
-                    else {
-                        $fileNameFound = true;
-                    }
-                }
-                $rootDirectory = $profile->getCurrentDirectory();
-                $system = $rootDirectory->getSystem();
-                /** @var System $system */
                 $newCode = new File();
                 $newCode->setProfile($profile);
                 $newCode->setCoder($profile);
@@ -424,15 +401,13 @@ class CodingService extends BaseService
                 $newCode->setMailMessage(NULL);
                 $newCode->setModified(NULL);
                 $newCode->setName($newFileName);
-                $newCode->setParent($profile->getCurrentDirectory());
                 $newCode->setRunning(NULL);
                 $newCode->setSize($basePart->getSize());
                 $newCode->setSlots(1);
-                $newCode->setSystem($profile->getCurrentDirectory()->getSystem());
+                $newCode->setSystem($profile->getCurrentNode()->getSystem());
+                $newCode->setNode($profile->getCurrentNode());
                 $newCode->setVersion(1);
                 $this->entityManager->persist($newCode);
-                $system->addFile($newCode);
-                $rootDirectory->addChild($newCode);
             }
             $this->entityManager->flush();
             $this->learnFromSuccess($profile, $jobData, $roll);

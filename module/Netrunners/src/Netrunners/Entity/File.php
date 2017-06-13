@@ -153,23 +153,6 @@ class File
      */
     protected $mailMessage;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\File", inversedBy="children")
-     */
-    protected $parent;
-
-    /**
-     * @ORM\OneToMany(targetEntity="Netrunners\Entity\File", mappedBy="parent")
-     */
-    protected $children;
-
-
-    /**
-     * Constructor for System.
-     */
-    public function __construct() {
-        $this->children = new ArrayCollection();
-    }
 
     /**
      * @return int
@@ -482,43 +465,19 @@ class File
     /**
      * @return mixed
      */
-    public function getParent()
+    public function getNode()
     {
-        return $this->parent;
+        return $this->node;
     }
 
     /**
-     * @param mixed $parent
+     * @param mixed $node
      * @return File
      */
-    public function setParent($parent)
+    public function setNode($node)
     {
-        $this->parent = $parent;
+        $this->node = $node;
         return $this;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getChildren()
-    {
-        return $this->children;
-    }
-
-    /**
-     * @param File $file
-     */
-    public function addChild(File $file)
-    {
-        $this->children[] = $file;
-    }
-
-    /**
-     * @param File $file
-     */
-    public function removeChild(File $file)
-    {
-        $this->children->removeElement($file);
     }
 
 }

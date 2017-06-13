@@ -17,29 +17,7 @@ use TmoAuth\Entity\User;
 class SystemService extends BaseService
 {
 
-    /**
-     * @const DEFAULT_CPU
-     */
-    const DEFAULT_CPU = 1;
-
-    /**
-     * @const DEFAULT_MEMORY
-     */
-    const DEFAULT_MEMORY = 16;
-
-    /**
-     * @const DEFAULT_STORAGE
-     */
-    const DEFAULT_STORAGE = 32;
-
-    const CPU_STRING = 'cpu';
-
-    const MEMORY_STRING = 'memory';
-
-    const STORAGE_STRING = 'storage';
-
     const SYSTEM_STRING = 'system';
-
     const ADDY_STRING = 'address';
 
 
@@ -50,14 +28,11 @@ class SystemService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $currentSystem = $profile->getCurrentDirectory()->getSystem();
+        $currentSystem = $profile->getCurrentNode()->getSystem();
         /** @var System $currentSystem */
         $returnMessage = array();
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SYSTEM_STRING, $currentSystem->getName());
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::ADDY_STRING, $currentSystem->getAddy());
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::CPU_STRING, $currentSystem->getCpu());
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::MEMORY_STRING, $currentSystem->getMemory());
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::STORAGE_STRING, $currentSystem->getStorage());
         $response = array(
             'command' => 'system',
             'message' => $returnMessage

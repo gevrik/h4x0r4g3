@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Ratchet\ConnectionInterface;
@@ -32,16 +33,12 @@ class UtilityService extends BaseService
         if (!$user) return true;
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $currentDirectory = $profile->getCurrentDirectory();
-        /** @var File $currentDirectory */
-        $currentSystem = $currentDirectory->getSystem();
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
         // init prompt string
-        $promptString = '/' . $currentDirectory->getName();
-        while ($currentDirectory->getParent()) {
-            $promptString = '/' . $currentDirectory->getParent()->getName() . $promptString;
-            $currentDirectory = $currentDirectory->getParent();
-        }
+        $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
         $fullPromptString = '<span class="prompt">[' . $userAtHostString . ':' . $promptString . ']</span> ';
         $response = array(

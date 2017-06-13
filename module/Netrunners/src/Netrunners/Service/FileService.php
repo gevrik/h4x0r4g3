@@ -47,9 +47,8 @@ class FileService extends BaseService
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findFileInSystemByName(
-            $profile->getCurrentDirectory()->getSystem(),
-            $profile->getCurrentDirectory(),
+        $targetFiles = $fileRepository->findFileInNodeByName(
+            $profile->getCurrentNode(),
             $parameter
         );
         if (count($targetFiles) < 1) {
@@ -99,11 +98,9 @@ class FileService extends BaseService
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findFileInSystemByName(
-            $profile->getCurrentDirectory()->getSystem(),
-            $profile->getCurrentDirectory(),
-            $parameter,
-            false
+        $targetFiles = $fileRepository->findFileInNodeByName(
+            $profile->getCurrentNode(),
+            $parameter
         );
         if ($profile->getSnippets() < 1) {
             $response = array(
@@ -116,7 +113,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
-                'message' => 'A file with that name already exists in this directory'
+                'message' => 'A file with that name already exists in this node'
             );
         }
         // check if only alphanumeric
@@ -130,9 +127,6 @@ class FileService extends BaseService
         }
         /* start logic if we do not have a response already */
         if (!$response) {
-            $rootDirectory = $profile->getCurrentDirectory();
-            $system = $rootDirectory->getSystem();
-            /** @var System $system */
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - 1);
             $newCode = new File();
@@ -147,15 +141,13 @@ class FileService extends BaseService
             $newCode->setMailMessage(NULL);
             $newCode->setModified(NULL);
             $newCode->setName($parameter);
-            $newCode->setParent($rootDirectory);
             $newCode->setRunning(NULL);
             $newCode->setSize(0);
             $newCode->setSlots(0);
-            $newCode->setSystem($profile->getCurrentDirectory()->getSystem());
+            $newCode->setSystem($profile->getCurrentNode()->getSystem());
+            $newCode->setNode($profile->getCurrentNode());
             $newCode->setVersion(1);
             $this->entityManager->persist($newCode);
-            $system->addFile($newCode);
-            $rootDirectory->addChild($newCode);
             $this->entityManager->flush();
             $response = array(
                 'command' => 'showMessage',
@@ -184,11 +176,9 @@ class FileService extends BaseService
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findFileInSystemByName(
-            $profile->getCurrentDirectory()->getSystem(),
-            $profile->getCurrentDirectory(),
-            $parameter,
-            false
+        $targetFiles = $fileRepository->findFileInNodeByName(
+            $profile->getCurrentNode(),
+            $parameter
         );
         if (count($targetFiles) < 1) {
             $response = array(
@@ -268,188 +258,6 @@ class FileService extends BaseService
                     $response = $this->executeDataminer($file);
                     break;
             }
-        }
-        return $response;
-    }
-
-    /**
-     * Create a new directory in the current system and current directory.
-     * @param $clientData
-     * @param $contentArray
-     * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function makeDirectory($clientData, $contentArray)
-    {
-        // init return value
-        $response = false;
-        // get user and profile
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
-        // check if the name is valid TODO check for blacklisted words
-        if (strlen($parameter) > 128) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "The directory name is too long, maximum of 128 characters"
-            );
-        }
-        // check if system belongs to user TODO should be able to bypass this via bh program
-        if (!$response && $profile->getCurrentDirectory()->getSystem()->getProfile() != $profile) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "You are not allowed to create directories in this system"
-            );
-        }
-        // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => false));
-        if (!$response && !$validator->isValid($parameter)) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "The directory name contains non-alphanumeric characters"
-            );
-        }
-        // check if name is valid
-        if (!$response && (!$parameter || $parameter == '')) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "Specify a name for the new directory"
-            );
-        }
-        // check if a file with that name already exists in this directory
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
-        $targetFile = $fileRepository->findFileInSystemByName(
-            $profile->getCurrentDirectory()->getSystem(),
-            $profile->getCurrentDirectory(),
-            $parameter,
-            false
-        );
-        if (!empty($targetFile)) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "A file with this name already exists in the current directory"
-            );
-        }
-        /* all checks passed - create directory */
-        if (!$response) {
-            $currentDirectory = $profile->getCurrentDirectory();
-            /** @var File $currentDirectory */
-            $currentSystem = $currentDirectory->getSystem();
-            /** @var System $currentSystem */
-            // create directory
-            $file = new File();
-            $file->setName($parameter);
-            $file->setSystem($currentSystem);
-            $file->setProfile(NULL);
-            $file->setCoder(NULL);
-            $file->setCreated(new \DateTime());
-            $file->setMaxIntegrity(100);
-            $file->setIntegrity(100);
-            $file->setLevel(1);
-            $file->setParent($currentDirectory);
-            $file->setSize(0);
-            $file->setVersion(1);
-            $file->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_DIRECTORY));
-            $this->entityManager->persist($file);
-            $currentSystem->addFile($file);
-            $currentDirectory->addChild($file);
-            $this->entityManager->flush();
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => "New directory created"
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * Remove a directory in the current system and current directory.
-     * @param $clientData
-     * @param $contentArray
-     * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function removeDirectory($clientData, $contentArray)
-    {
-        // init return value
-        $response = false;
-        // get user and profile
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
-        // check for empty parameter
-        if (!$parameter || $parameter == '') {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "Specify the name of the directory that is to be removed"
-            );
-        }
-        // find the target file
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
-        $targetFile = $fileRepository->findFileInSystemByName(
-            $profile->getCurrentDirectory()->getSystem(),
-            $profile->getCurrentDirectory(),
-            $parameter,
-            false
-        );
-        // error if file could not be found
-        if (!$response && !isset($targetFile[0])) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "No such directory"
-            );
-        }
-        $targetFile = $targetFile[0];
-        /** @var File $targetFile */
-        // check if the directory is empty
-        if (!$response && !$targetFile->getChildren()->isEmpty()) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "The directory is not empty"
-            );
-        }
-        // check if system belongs to user TODO should be able to bypass this via bh program
-        if (!$response && $profile->getCurrentDirectory()->getSystem()->getProfile() != $profile) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "You are not allowed to remove directories in this system"
-            );
-        }
-        /* all checks passed - we can remove the dir */
-        if (!$response) {
-            $targetFile->getSystem()->removeFile($targetFile);
-            $targetFile->getParent()->removeChild($targetFile);
-            $this->entityManager->remove($targetFile);
-            $this->entityManager->flush();
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => "Directory removed"
-            );
         }
         return $response;
     }
@@ -636,7 +444,7 @@ class FileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $runningFiles = $this->entityManager->getRepository('Netrunners\Entity\File')->findBy(array(
-            'system' => $profile->getCurrentDirectory()->getSystem(),
+            'system' => $profile->getCurrentNode()->getSystem(),
             'running' => true
         ));
         $returnMessage = array();

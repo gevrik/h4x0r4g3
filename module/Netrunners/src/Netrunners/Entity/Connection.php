@@ -59,7 +59,12 @@ class Connection
     /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
      **/
-    protected $node;
+    protected $sourceNode;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
+     **/
+    protected $targetNode;
 
 
     /**
@@ -157,18 +162,36 @@ class Connection
     /**
      * @return mixed
      */
-    public function getNode()
+    public function getSourceNode()
     {
-        return $this->node;
+        return $this->sourceNode;
     }
 
     /**
-     * @param mixed $node
+     * @param mixed $sourceNode
      * @return Connection
      */
-    public function setNode($node)
+    public function setSourceNode($sourceNode)
     {
-        $this->node = $node;
+        $this->sourceNode = $sourceNode;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getTargetNode()
+    {
+        return $this->targetNode;
+    }
+
+    /**
+     * @param mixed $targetNode
+     * @return Connection
+     */
+    public function setTargetNode($targetNode)
+    {
+        $this->targetNode = $targetNode;
         return $this;
     }
 

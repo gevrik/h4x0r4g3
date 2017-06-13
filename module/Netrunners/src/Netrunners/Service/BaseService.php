@@ -25,6 +25,7 @@ class BaseService
     /**
      * BaseService constructor.
      * @param EntityManager $entityManager
+     * @param $viewRenderer
      */
     public function __construct(
         EntityManager $entityManager,

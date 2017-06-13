@@ -31,6 +31,11 @@ class ParserService
     protected $fileService;
 
     /**
+     * @var NodeService
+     */
+    protected $nodeService;
+
+    /**
      * @var ChatService
      */
     protected $chatService;
@@ -58,6 +63,7 @@ class ParserService
     /**
      * @param EntityManager $entityManager
      * @param FileService $fileService
+     * @param NodeService $nodeService
      * @param ChatService $chatService
      * @param MailMessageService $mailMessageService
      * @param ProfileService $profileService
@@ -67,6 +73,7 @@ class ParserService
     public function __construct(
         EntityManager $entityManager,
         FileService $fileService,
+        NodeService $nodeService,
         ChatService $chatService,
         MailMessageService $mailMessageService,
         ProfileService $profileService,
@@ -76,6 +83,7 @@ class ParserService
     {
         $this->entityManager = $entityManager;
         $this->fileService = $fileService;
+        $this->nodeService = $nodeService;
         $this->chatService = $chatService;
         $this->mailMessageService = $mailMessageService;
         $this->profileService = $profileService;
@@ -104,26 +112,11 @@ class ParserService
         $userCommand = array_shift($contentArray);
         switch ($userCommand) {
             default:
-                // unknown command, might be a file name - try to find a file with the corresponding name and try to execute it
-                $targetFiles = $fileRepository->findFileInSystemByName(
-                    $profile->getCurrentDirectory()->getSystem(),
-                    $profile->getCurrentDirectory(),
-                    $content
+                $response = array(
+                    'command' => 'showMessage',
+                    'type' => 'sysmsg',
+                    'message' => 'Unknown command'
                 );
-                if (count($targetFiles) < 1) {
-                    $response = array(
-                        'command' => 'showMessage',
-                        'type' => 'sysmsg',
-                        'message' => 'Unknown command'
-                    );
-                }
-                else {
-                    $targetFile = $targetFiles[0];
-                    $response = $this->fileService->executeFile($targetFile, $clientData);
-                }
-                break;
-            case 'cd':
-                    $response = $this->fileService->changeDirectory($clientData, $contentArray);
                 break;
             case 'clear':
                 $response = array(
@@ -162,8 +155,6 @@ class ParserService
                             'message' => $messageContent
                         );
                     }
-                    // check if a chat client is running in the current system TODO only for people that can access it
-                    if (count($this->fileService->findRunningInSystemByType($clientUser->getProfile()->getSystem(), true, $this->entityManager->find('Netrunners\Entity\FileType', 2))) < 1) continue;
                     $wsClient->send(json_encode($response));
                 }
                 return true;
@@ -174,15 +165,10 @@ class ParserService
                 $response = $this->fileService->killProcess($clientData, $contentArray);
                 break;
             case 'ls':
-            case 'dir':
-                $response = $this->fileService->listDirectory($clientData);
+                $response = $this->nodeService->showNodeInfo($clientData);
                 break;
             case 'mail':
                 $response = $this->mailMessageService->enterMailMode($clientData);
-                break;
-            case 'makedir':
-            case 'mkdir':
-                $response = $this->fileService->makeDirectory($clientData, $contentArray);
                 break;
             case 'parts':
             case 'resources':
@@ -191,10 +177,6 @@ class ParserService
                 break;
             case 'ps':
                 $response = $this->fileService->listProcesses($clientData);
-                break;
-            case 'removedir':
-            case 'rmdir':
-                $response = $this->fileService->removeDirectory($clientData, $contentArray);
                 break;
             case 'score':
                 $response = $this->profileService->showScore($clientData);
@@ -296,17 +278,13 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s</pre>',
-            'cd',
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br /></pre>',
             'clear',
             'code',
             'commands',
             'gc',
             'kill',
-            'ls',
-            'dir',
             'mail',
-            'mkdir',
             'ps',
             'score',
             'skills',

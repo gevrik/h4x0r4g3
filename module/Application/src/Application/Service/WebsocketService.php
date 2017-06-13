@@ -5,6 +5,7 @@ namespace Application\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Service\CodingService;
@@ -265,9 +266,6 @@ class WebsocketService implements MessageComponentInterface {
                             return true;
                         }
                     }
-                    // get some defaults
-                    $directoryFileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_DIRECTORY);
-                    $chatClientFileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CHATCLIENT);
                     // create new user
                     $this->clientsData[$resourceId]['tempPassword'] = false;
                     $user = new User();
@@ -307,99 +305,17 @@ class WebsocketService implements MessageComponentInterface {
                     $system = new System();
                     $system->setProfile($profile);
                     $system->setName($user->getUsername());
-                    $system->setCpu(SystemService::DEFAULT_CPU);
-                    $system->setMemory(SystemService::DEFAULT_MEMORY);
-                    $system->setStorage(SystemService::DEFAULT_STORAGE);
                     $system->setAddy($addy);
                     $this->entityManager->persist($system);
-                    $profile->setSystem($system);
-                    // root folder
-                    $rootDirectory = new File();
-                    $rootDirectory->setName('root');
-                    $rootDirectory->setSystem($system);
-                    $rootDirectory->setProfile(NULL);
-                    $rootDirectory->setCoder(NULL);
-                    $rootDirectory->setCreated(new \DateTime());
-                    $rootDirectory->setMaxIntegrity(100);
-                    $rootDirectory->setIntegrity(100);
-                    $rootDirectory->setLevel(1);
-                    $rootDirectory->setParent(NULL);
-                    $rootDirectory->setSize(0);
-                    $rootDirectory->setVersion(1);
-                    $rootDirectory->setFileType($directoryFileType);
-                    $this->entityManager->persist($rootDirectory);
-                    $system->addFile($rootDirectory);
-                    $profile->setCurrentDirectory($rootDirectory);
-                    // home folder
-                    $file = new File();
-                    $file->setName('home');
-                    $file->setSystem($system);
-                    $file->setProfile(NULL);
-                    $file->setCoder(NULL);
-                    $file->setCreated(new \DateTime());
-                    $file->setMaxIntegrity(100);
-                    $file->setIntegrity(100);
-                    $file->setLevel(1);
-                    $file->setParent($rootDirectory);
-                    $file->setSize(0);
-                    $file->setVersion(1);
-                    $file->setFileType($directoryFileType);
-                    $this->entityManager->persist($file);
-                    $system->addFile($file);
-                    $rootDirectory->addChild($file);
-                    // log folder
-                    $file = new File();
-                    $file->setName('log');
-                    $file->setSystem($system);
-                    $file->setProfile(NULL);
-                    $file->setCoder(NULL);
-                    $file->setCreated(new \DateTime());
-                    $file->setMaxIntegrity(100);
-                    $file->setIntegrity(100);
-                    $file->setLevel(1);
-                    $file->setParent($rootDirectory);
-                    $file->setSize(0);
-                    $file->setVersion(1);
-                    $file->setFileType($directoryFileType);
-                    $this->entityManager->persist($file);
-                    $system->addFile($file);
-                    $rootDirectory->addChild($file);
-                    // bin folder
-                    $file = new File();
-                    $file->setName('bin');
-                    $file->setSystem($system);
-                    $file->setProfile(NULL);
-                    $file->setCoder(NULL);
-                    $file->setCreated(new \DateTime());
-                    $file->setMaxIntegrity(100);
-                    $file->setIntegrity(100);
-                    $file->setLevel(1);
-                    $file->setParent($rootDirectory);
-                    $file->setSize(0);
-                    $file->setVersion(1);
-                    $file->setFileType($directoryFileType);
-                    $this->entityManager->persist($file);
-                    $system->addFile($file);
-                    $rootDirectory->addChild($file);
-                    // bitchx client
-                    $bitchXFile = new File();
-                    $bitchXFile->setName('bitchx');
-                    $bitchXFile->setSystem($system);
-                    $bitchXFile->setProfile($profile);
-                    $bitchXFile->setCoder($profile);
-                    $bitchXFile->setCreated(new \DateTime());
-                    $bitchXFile->setMaxIntegrity(100);
-                    $bitchXFile->setIntegrity(100);
-                    $bitchXFile->setLevel(1);
-                    $bitchXFile->setParent($file);
-                    $bitchXFile->setSize(1);
-                    $bitchXFile->setVersion(1);
-                    $bitchXFile->setFileType($chatClientFileType);
-                    $bitchXFile->setExecutable(1);
-                    $bitchXFile->setRunning(1);
-                    $this->entityManager->persist($bitchXFile);
-                    $system->addFile($bitchXFile);
-                    $file->addChild($bitchXFile);
+                    // default io node
+                    $ioNode = new Node();
+                    $ioNode->setCreated(new \DateTime());
+                    $ioNode->setLevel(1);
+                    $ioNode->setName(Node::STRING_IO);
+                    $ioNode->setSystem($system);
+                    $ioNode->setType(Node::ID_IO);
+                    $this->entityManager->persist($ioNode);
+                    $profile->setCurrentNode($ioNode);
                     // flush to db
                     $this->entityManager->flush();
                     $hash = hash('sha256', 'hocuspocus' . $user->getId());

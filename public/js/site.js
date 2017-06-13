@@ -80,13 +80,14 @@
                     md.append('<span class="text-muted">password: </span>');
                     break;
                 case 'loginComplete':
+                    var jsonData;
                     loginStage = 'complete';
                     resetConsoleOptionsMail();
                     resetConsoleOptionsCode();
                     hash = data.hash;
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
-                    var jsonData = {
+                    jsonData = {
                         command: 'parseInput',
                         hash: hash,
                         content: 'showunreadmails',
@@ -211,6 +212,13 @@
                     break;
                 case 'showMessage':
                     md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    showPrompt();
+                    break;
+                case 'showoutput':
+                    messageArray = data.message;
+                    $.each(messageArray, function(i, messageData){
+                        md.append(messageData);
+                    });
                     showPrompt();
                     break;
                 case 'stat':
