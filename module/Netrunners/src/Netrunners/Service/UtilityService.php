@@ -40,7 +40,7 @@ class UtilityService extends BaseService
         // init prompt string
         $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
-        $fullPromptString = '<span class="prompt">[' . $userAtHostString . ':' . $promptString . ']</span> ';
+        $fullPromptString = '<span class="prompt">[' . $userAtHostString . ':' . $promptString . '][' . Node::$data[$currentNode->getType()]['shortname'] . '][' . $currentNode->getLevel() . ']</span> ';
         $response = array(
             'command' => 'showPrompt',
             'message' => $fullPromptString

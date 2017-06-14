@@ -67,9 +67,9 @@ pre {
 
 .panel-container {
     position: fixed;
-    width: 100%;
-    top: 0;
-    left: 0;
+    width: 33%;
+    top: 2em;
+    right: 2em;
 }
 
 .img-tesseract {
@@ -78,4 +78,30 @@ pre {
     right: 0;
     width: 2em;
     height: 2em;
+}
+
+::-webkit-scrollbar
+{
+    width: 12px;  /* for vertical scrollbars */
+    height: 12px; /* for horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track
+{
+    background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb
+{
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.node {
+    stroke: #fff;
+    stroke-width: 2px;
+}
+
+.link {
+    fill: none;
+    stroke: #bbb;
 }

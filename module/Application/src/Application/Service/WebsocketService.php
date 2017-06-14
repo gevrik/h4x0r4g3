@@ -311,9 +311,9 @@ class WebsocketService implements MessageComponentInterface {
                     $ioNode = new Node();
                     $ioNode->setCreated(new \DateTime());
                     $ioNode->setLevel(1);
-                    $ioNode->setName(Node::STRING_IO);
+                    $ioNode->setName(Node::STRING_CPU);
                     $ioNode->setSystem($system);
-                    $ioNode->setType(Node::ID_IO);
+                    $ioNode->setType(Node::ID_CPU);
                     $this->entityManager->persist($ioNode);
                     $profile->setCurrentNode($ioNode);
                     // flush to db

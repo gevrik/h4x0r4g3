@@ -31,12 +31,6 @@ class Connection
     protected $id;
 
     /**
-     * @ORM\Column(type="string")
-     * @var string
-     */
-    protected $name;
-
-    /**
      * @ORM\Column(type="integer", nullable=true, options={"default":0})
      * @var int
      */
@@ -82,24 +76,6 @@ class Connection
     public function setId($id)
     {
         $this->id = $id;
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->name;
-    }
-
-    /**
-     * @param string $name
-     * @return Connection
-     */
-    public function setName($name)
-    {
-        $this->name = $name;
         return $this;
     }
 

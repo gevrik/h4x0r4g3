@@ -52,6 +52,37 @@ class Node
         self::STRING_CPU => self::ID_CPU,
     ];
 
+    static $data = [
+        self::ID_RAW => [
+            'cost' => 0,
+            'shortname' => 'raw',
+        ],
+        self::ID_IO => [
+            'cost' => 100,
+            'shortname' => 'io',
+        ],
+        self::ID_MEMORY => [
+            'cost' => 150,
+            'shortname' => 'mem',
+        ],
+        self::ID_STORAGE => [
+            'cost' => 50,
+            'shortname' => 'sto',
+        ],
+        self::ID_SERVICE => [
+            'cost' => 100,
+            'shortname' => 'srv',
+        ],
+        self::ID_FIREWALL => [
+            'cost' => 1000,
+            'shortname' => 'fw',
+        ],
+        self::ID_CPU => [
+            'cost' => 250,
+            'shortname' => 'cpu',
+        ],
+    ];
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

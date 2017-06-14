@@ -16,11 +16,13 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use TmoAuth\Entity\User;
+use Zend\I18n\Validator\Alnum;
 
 class NodeService extends BaseService
 {
 
     const NAME_STRING = "name";
+    const TYPE_STRING = "type";
     const LEVEL_STRING = "level";
     const CONNECTIONS_STRING = "connections";
     const FILES_STRING = "files";
@@ -45,16 +47,13 @@ class NodeService extends BaseService
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
         $returnMessage = array();
-        $returnMessage[] = sprintf('<pre class="text-sysmsg">%-12s: %s</pre>', SystemService::SYSTEM_STRING, $currentSystem->getName());
-        $returnMessage[] = sprintf('<pre class="text-sysmsg">%-12s: %s</pre>', self::NAME_STRING, $currentNode->getName());
-        $returnMessage[] = sprintf('<pre class="text-sysmsg">%-12s: %s</pre>', self::LEVEL_STRING, $currentNode->getLevel());
         $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
         if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', self::CONNECTIONS_STRING);
         $counter = 0;
         foreach ($connections as $connection) {
             /** @var Connection $connection */
             $counter++;
-            $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getName());
+            $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getTargetNode()->getName());
         }
         $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($currentNode);
         if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', self::FILES_STRING);
@@ -121,11 +120,10 @@ class NodeService extends BaseService
             $node->setLevel(1);
             $node->setName(Node::STRING_RAW);
             $node->setSystem($currentNode->getSystem());
-            $node->setType(NULL);
+            $node->setType(Node::ID_RAW);
             $this->entityManager->persist($node);
             $sourceConnection = new Connection();
             $sourceConnection->setType(Connection::TYPE_NORMAL);
-            $sourceConnection->setName($node->getName());
             $sourceConnection->setLevel(1);
             $sourceConnection->setCreated(new \DateTime());
             $sourceConnection->setSourceNode($currentNode);
@@ -133,7 +131,6 @@ class NodeService extends BaseService
             $this->entityManager->persist($sourceConnection);
             $targetConnection = new Connection();
             $targetConnection->setType(Connection::TYPE_NORMAL);
-            $targetConnection->setName($currentNode->getName());
             $targetConnection->setLevel(1);
             $targetConnection->setCreated(new \DateTime());
             $targetConnection->setSourceNode($node);
@@ -144,6 +141,63 @@ class NodeService extends BaseService
                 'command' => 'showMessage',
                 'type' => 'sysmsg',
                 'message' => sprintf('<pre style="white-space: pre-wrap;">You have added a new node to the system for %s credits</pre>', self::RAW_NODE_COST)
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function changeNodeName($clientData, $contentArray)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $response = false;
+        /* node types can be given by name or number, so we need to handle both */
+        // get parameter
+        $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
+        if (!$parameter) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Please specify a new name for the node</pre>')
+            );
+        }
+        // check if they can change the type
+        if (!$response && $profile != $currentSystem->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        // check if only alphanumeric
+        $validator = new Alnum(array('allowWhiteSpace' => false));
+        if (!$response && !$validator->isValid($parameter)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node name (alpha-numeric, no whitespace)</pre>')
+            );
+        }
+        if (!$response) {
+            $currentNode->setName($parameter);
+            $this->entityManager->flush($currentNode);
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Node name changed to %s</pre>', $parameter)
             );
         }
         return $response;
@@ -164,50 +218,72 @@ class NodeService extends BaseService
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
         if (!$parameter) {
             $returnMessage = array();
             $nodeTypes = Node::$lookup;
             $returnMessage[] = sprintf('<pre class="text-sysmsg">Please choose a node type:</pre>');
             foreach ($nodeTypes as $typeId => $typeString) {
-                $returnMessage[] = sprintf('<pre class="text-sysmsg">%-12s: %s</pre>', $typeId, $typeString);
+                if ($typeId === 0) continue;
+                $returnMessage[] = sprintf('<pre class="text-sysmsg">%-2s|%-18s|%sc</pre>', $typeId, $typeString, Node::$data[$typeId]['cost']);
             }
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
+        // check if they can change the type
+        if (!$response && $profile != $currentSystem->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $type = false;
+        $name = "";
+        if ($searchByNumber) {
+            if (isset(Node::$lookup[$parameter])) {
+                $type = $parameter;
+                $name = Node::$lookup[$parameter];
+            }
+        }
         else {
-            $searchByNumber = false;
-            if (is_numeric($parameter)) {
-                $searchByNumber = true;
+            if (isset(Node::$revLookup[$parameter])) {
+                $type = Node::$revLookup[$parameter];
+                $name = Node::$lookup[$type];
             }
-            $type = false;
-            if ($searchByNumber) {
-                if (isset(Node::$lookup[$parameter])) {
-                    $type = $parameter;
-                    $name = Node::$lookup[$parameter];
-                }
-            }
-            else {
-                if (isset(Node::$revLookup[$parameter])) {
-                    $type = Node::$revLookup[$parameter];
-                    $name = Node::$lookup[$type];
-                }
-            }
-            if (!$type) {
-                $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'sysmsg',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;">No such node type</pre>')
-                );
-            }
-            else {
-                $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'sysmsg',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;">Node type changed to %s</pre>', $name)
-                );
-            }
+        }
+        if (!$response && !$type) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">No such node type</pre>')
+            );
+        }
+        // check if they have enough credits
+        if (!$response && $profile->getCredits() < Node::$data[$type]['cost']) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a node to the system</pre>', Node::$data[$type]['cost'])
+            );
+        }
+        if (!$response) {
+            $currentCredits = $profile->getCredits();
+            $profile->setCredits($currentCredits - Node::$data[$type]['cost']);
+            $currentNode->setType($type);
+            $currentNode->setName($name);
+            $this->entityManager->flush();
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Node type changed to %s</pre>', $name)
+            );
         }
         return $response;
     }

@@ -54,7 +54,7 @@ class ConnectionService extends BaseService
         else {
             foreach ($connections as $pconnection) {
                 /** @var Connection $pconnection */
-                if ($pconnection->getName() == $parameter) {
+                if ($pconnection->getTargetNode()->getName() == $parameter) {
                     $connection = $pconnection;
                     break;
                 }

@@ -15,6 +15,11 @@
             size: 5
         });
 
+        $('#panel-container').on('click', '.close', function(e){
+            $('#panel-container').html('');
+            commandInput.focus();
+        });
+
         // resize message div to be full height
         var vph = $(window).height() - 5;
         md.css({'height': vph + 'px', 'max-height': vph + 'px'});
@@ -193,24 +198,24 @@
                     consoleOptionsCode.fileLevel = data.value;
                     md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
                     showPrompt();
-                    console.log(data);
                     break;
                 case 'setCodeMode':
                     resetConsoleOptionsCode();
                     consoleOptionsCode.mode = data.value;
                     md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
                     showPrompt();
-                    console.log(data);
                     break;
                 case 'setCodeType':
                     consoleOptionsCode.fileType = data.value;
                     md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
                     showPrompt();
-                    console.log(data);
                     break;
                 case 'showPanel':
-                    $('#panel-container').append(data.content);
-                    $('.draggable').draggable({});
+                    $('#panel-container').html('').append(data.content);
+                    $('.draggable').draggable({
+                        handle: '.panel-heading'
+                    });
+                    showPrompt();
                     break;
                 case 'skills':
                     messageArray = data.message;
