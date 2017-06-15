@@ -67,9 +67,13 @@ pre {
 
 .panel-container {
     position: fixed;
-    width: 33%;
+    width: 40%;
     top: 2em;
     right: 2em;
+}
+
+.map-panel .panel-body{
+    height: 500px;
 }
 
 .img-tesseract {

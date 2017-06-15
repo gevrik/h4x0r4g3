@@ -203,6 +203,11 @@ class NodeService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function changeNodeType($clientData, $contentArray)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);

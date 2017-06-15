@@ -100,17 +100,26 @@ class SystemService extends BaseService
         $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
         foreach ($nodes as $node) {
             /** @var Node $node */
-            $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
-            $mapArray['nodes'][] = [
-                'id' => (string)$node->getId(),
-                'group' => $group
-            ];
+            // if this is the current node, add to beginning of array
+            if ($node == $profile->getCurrentNode()) {
+                array_unshift($mapArray['nodes'], [
+                    'id' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+                    'group' => 99
+                ]);
+            }
+            else {
+                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
+                $mapArray['nodes'][] = [
+                    'id' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+                    'group' => $group
+                ];
+            }
             $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
             foreach ($connections as $connection) {
                 /** @var Connection $connection */
                 $mapArray['links'][] = [
-                    'source' => (string)$connection->getSourceNode()->getId(),
-                    'target' => (string)$connection->getTargetNode()->getId(),
+                    'source' => (string)$connection->getSourceNode()->getId() . '_' . Node::$lookup[$connection->getSourceNode()->getType()] . '_' . $connection->getSourceNode()->getName(),
+                    'target' => (string)$connection->getTargetNode()->getId() . '_' . Node::$lookup[$connection->getTargetNode()->getType()] . '_' . $connection->getTargetNode()->getName(),
                     'value' => 2
                 ];
             }

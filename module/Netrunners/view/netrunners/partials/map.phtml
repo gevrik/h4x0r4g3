@@ -1,13 +1,19 @@
-<div class="panel panel-default draggable">
+<div class="panel panel-default draggable map-panel">
     <div class="panel-heading">
         <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h3 class="panel-title"><?php echo $this->translate("system map"); ?></h3>
     </div>
-    <div class="panel-body">
-        <svg width="500" height="400"></svg>
+    <div class="panel-body" style="padding: 0;">
+        <svg id="map-svg"></svg>
     </div>
 </div>
 <script>
+
+    var mapWidth = $('.panel-body').innerWidth();
+    var mapHeight = $('.panel-body').innerHeight();
+
+    $('#map-svg').attr('height', mapHeight);
+    $('#map-svg').attr('width', mapWidth);
 
     var svg = d3.select("svg"),
         width = +svg.attr("width"),
@@ -16,7 +22,7 @@
     var color = d3.scaleOrdinal(d3.schemeCategory20);
 
     var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().distance(10).strength(0.5))
+        .force("link", d3.forceLink().distance(5).strength(0.5))
         .force("charge", d3.forceManyBody())
         .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -53,7 +59,7 @@
                 .on("end", dragended));
 
         node.append("title")
-            .text(function(d) { return d.id; });
+            .text(function(d) { return (d.group === 99) ? d.id + ' [you are here]' : d.id; });
 
         simulation
             .nodes(nodes)
@@ -63,6 +69,8 @@
             .links(links);
 
         function ticked() {
+            //nodes[0].fx = mapWidth / 2;
+            //nodes[0].fy = mapHeight / 2;
             link.attr("d", positionLink);
             node.attr("transform", positionNode);
         }
