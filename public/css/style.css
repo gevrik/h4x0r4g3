@@ -84,6 +84,14 @@ pre {
     height: 2em;
 }
 
+textarea {
+    background-color: #1b1b1b;
+}
+
+.save {
+    margin-right: 1em;
+}
+
 ::-webkit-scrollbar
 {
     width: 12px;  /* for vertical scrollbars */

@@ -170,6 +170,12 @@ class Node
     protected $name;
 
     /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $description;
+
+    /**
      * @ORM\Column(type="integer", nullable=true, options={"default":0})
      * @var int
      */
@@ -228,6 +234,24 @@ class Node
     public function setName($name)
     {
         $this->name = $name;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDescription()
+    {
+        return $this->description;
+    }
+
+    /**
+     * @param string $description
+     * @return Node
+     */
+    public function setDescription($description)
+    {
+        $this->description = $description;
         return $this;
     }
 

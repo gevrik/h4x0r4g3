@@ -1,0 +1,19 @@
+<div class="panel panel-default draggable edit-node-description-panel">
+    <div class="panel-heading">
+        <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button type="button" class="close save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
+        <h3 class="panel-title"><?php echo $this->translate("edit node description"); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <label for="description">
+            <textarea id="description" name="description" class="description" rows="10"><?php echo $this->description; ?></textarea>
+        </label>
+    </div>
+</div>
+<script>
+
+    var editorWidth = $('.panel-body').innerWidth();
+
+    $('#description').css('width', editorWidth);
+
+</script>

@@ -17,6 +17,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
+use Zend\View\Model\ViewModel;
 
 class NodeService extends BaseService
 {
@@ -288,6 +289,38 @@ class NodeService extends BaseService
                 'command' => 'showMessage',
                 'type' => 'sysmsg',
                 'message' => sprintf('<pre style="white-space: pre-wrap;">Node type changed to %s</pre>', $name)
+            );
+        }
+        return $response;
+    }
+
+    public function editNodeDescription($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $response = false;
+        // only allow owner of system to add nodes
+        if ($profile != $currentNode->getSystem()->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        /* checks passed, we can now edit the node */
+        if (!$response) {
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/node/edit-description.phtml');
+            $view->setVariable('description', $currentNode->getDescription());
+            $response = array(
+                'command' => 'showPanel',
+                'type' => 'default',
+                'content' => $this->viewRenderer->render($view)
             );
         }
         return $response;

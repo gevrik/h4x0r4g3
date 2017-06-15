@@ -147,6 +147,9 @@ class ParserService
             case 'edit':
                 $response = $this->fileService->editFile($clientData, $contentArray);
                 break;
+            case 'editnode':
+                $response = $this->nodeService->editNodeDescription($clientData);
+                break;
             case 'gc':
                 $messageContent = $this->chatService->globalChat($clientData, $contentArray);
                 foreach ($wsClients as $wsClient) {

@@ -26,54 +26,62 @@
         .force("charge", d3.forceManyBody())
         .force("center", d3.forceCenter(width / 2, height / 2));
 
-        graph = <?php echo $this->json; ?>;
+    graph = <?php echo $this->json; ?>;
 
-        var nodes = graph.nodes,
-            nodeById = d3.map(nodes, function(d) { return d.id; }),
-            links = graph.links,
-            bilinks = [];
+    var nodes = graph.nodes,
+        nodeById = d3.map(nodes, function (d) {
+            return d.id;
+        }),
+        links = graph.links,
+        bilinks = [];
 
-        links.forEach(function(link) {
-            var s = link.source = nodeById.get(link.source),
-                t = link.target = nodeById.get(link.target),
-                i = {}; // intermediate node
-            nodes.push(i);
-            links.push({source: s, target: i}, {source: i, target: t});
-            bilinks.push([s, i, t]);
+    links.forEach(function (link) {
+        var s = link.source = nodeById.get(link.source),
+            t = link.target = nodeById.get(link.target),
+            i = {}; // intermediate node
+        nodes.push(i);
+        links.push({source: s, target: i}, {source: i, target: t});
+        bilinks.push([s, i, t]);
+    });
+
+    var link = svg.selectAll(".link")
+        .data(bilinks)
+        .enter().append("path")
+        .attr("class", "link");
+
+    var node = svg.selectAll(".node")
+        .data(nodes.filter(function (d) {
+            return d.id;
+        }))
+        .enter().append("circle")
+        .attr("class", "node")
+        .attr("r", 5)
+        .attr("fill", function (d) {
+            return (d.group === 99) ? '#000000' : color(d.group);
+        })
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    node.append("title")
+        .text(function (d) {
+            return (d.group === 99) ? d.id + ' [you are here]' : d.id;
         });
 
-        var link = svg.selectAll(".link")
-            .data(bilinks)
-            .enter().append("path")
-            .attr("class", "link");
+    simulation
+        .nodes(nodes)
+        .on("tick", ticked);
 
-        var node = svg.selectAll(".node")
-            .data(nodes.filter(function(d) { return d.id; }))
-            .enter().append("circle")
-            .attr("class", "node")
-            .attr("r", 5)
-            .attr("fill", function(d) { return (d.group === 99) ? '#000000' : color(d.group); })
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended));
+    simulation.force("link")
+        .links(links);
 
-        node.append("title")
-            .text(function(d) { return (d.group === 99) ? d.id + ' [you are here]' : d.id; });
-
-        simulation
-            .nodes(nodes)
-            .on("tick", ticked);
-
-        simulation.force("link")
-            .links(links);
-
-        function ticked() {
-            //nodes[0].fx = mapWidth / 2;
-            //nodes[0].fy = mapHeight / 2;
-            link.attr("d", positionLink);
-            node.attr("transform", positionNode);
-        }
+    function ticked() {
+        //nodes[0].fx = mapWidth / 2;
+        //nodes[0].fy = mapHeight / 2;
+        link.attr("d", positionLink);
+        node.attr("transform", positionNode);
+    }
 
     function positionLink(d) {
         return "M" + d[0].x + "," + d[0].y
