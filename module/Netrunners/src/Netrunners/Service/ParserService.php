@@ -208,6 +208,11 @@ class ParserService
                     $wsClient->send(json_encode($response));
                 }
                 return true;
+            case 'i':
+            case 'inv':
+            case 'inventory':
+                $response = $this->profileService->showInventory($clientData);
+                break;
             case 'kill':
                 $response = $this->fileService->killProcess($clientData, $contentArray);
                 break;
@@ -251,6 +256,14 @@ class ParserService
                 break;
             case 'system':
                 $response = $this->systemService->showSystemStats($clientData);
+                break;
+            case 'time':
+                $now = new \DateTime();
+                $response = array(
+                    'command' => 'showMessage',
+                    'type' => 'sysmsg',
+                    'message' => sprintf('current server time: %s', $now->format('Y/m/d H:i:s'))
+                );
                 break;
             case 'touch':
                 $response = $this->fileService->touchFile($clientData, $contentArray);

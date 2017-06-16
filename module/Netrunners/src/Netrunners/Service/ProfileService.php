@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Netrunners\Entity\File;
 use Netrunners\Entity\Profile;
 use TmoAuth\Entity\User;
 
@@ -53,6 +54,10 @@ class ProfileService extends BaseService
     const DEFAULT_SKILL_POINTS = 20;
 
 
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
     public function showScore($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -70,6 +75,10 @@ class ProfileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
     public function showSkills($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -92,6 +101,11 @@ class ProfileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $jobs
+     * @return array|bool
+     */
     public function showJobs($clientData, $jobs)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -114,6 +128,7 @@ class ProfileService extends BaseService
             );
         }
         else {
+            $returnMessage[] = sprintf('<pre>%-4s|%-10s|%-20s|%-20s|%s</pre>', 'id', 'type', 'name', 'time', 'difficulty');
             foreach ($userJobs as $jobId => $jobData) {
                 $type = $jobData['type'];
                 $typeId = $jobData['typeId'];
@@ -125,7 +140,7 @@ class ProfileService extends BaseService
                 else {
                     $newCode = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
                 }
-                $returnMessage[] = sprintf('<pre>%-4s: [%-10s] [%-20s] [%s] [%s]</pre>', $jobId, $type, $newCode->getName(), $completionDate->format('y/m/d H:i:s'), $difficulty);
+                $returnMessage[] = sprintf('<pre>%-4s|%-10s|%-20s|%-20s|%s</pre>', $jobId, $type, $newCode->getName(), $completionDate->format('y/m/d H:i:s'), $difficulty);
             }
             $response = array(
                 'command' => 'jobs',
@@ -135,6 +150,10 @@ class ProfileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
     public function showFilePartInstances($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -160,6 +179,36 @@ class ProfileService extends BaseService
                 'message' => $returnMessage
             );
         }
+        return $response;
+    }
+
+    public function showInventory($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $returnMessage = array();
+        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByProfile($profile);
+        $returnMessage[] = sprintf('<pre>%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's');
+        foreach ($files as $file) {
+            /** @var File $file */
+            $returnMessage[] = sprintf('<pre>%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s</pre>',
+                $file->getId(),
+                File::$fileTypeData[$file->getFileType()->getId()]['label'],
+                $file->getName(),
+                $file->getIntegrity(),
+                $file->getLevel(),
+                $file->getSize(),
+                ($file->getRunning()) ? 'Y' : 'N',
+                $file->getSlots()
+            );
+        }
+        $response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        );
         return $response;
     }
 

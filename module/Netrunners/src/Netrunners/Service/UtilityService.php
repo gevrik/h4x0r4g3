@@ -66,8 +66,9 @@ class UtilityService extends BaseService
         /** @var Profile $profile */
         $contentArray = explode(' ', $content);
         $stringToComplete = array_pop($contentArray);
-        $filesInCurrentDirectory = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode(
-            $profile->getCurrentNode()
+        $filesInCurrentDirectory = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNodeOrProfile(
+            $profile->getCurrentNode(),
+            $profile
         );
         $fileResults = array();
         $fileFound = false;

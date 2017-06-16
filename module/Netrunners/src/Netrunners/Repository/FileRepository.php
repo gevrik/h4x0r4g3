@@ -14,10 +14,24 @@ use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
 class FileRepository extends EntityRepository
 {
+
+    /**
+     * Finds all files for the given profile.
+     * @param Profile $profile
+     * @return array
+     */
+    public function findByProfile(Profile $profile)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.profile = :profile');
+        $qb->setParameter('profile', $profile);
+        return $qb->getQuery()->getResult();
+    }
 
     /**
      * Finds all files for the given node.
@@ -29,6 +43,23 @@ class FileRepository extends EntityRepository
         $qb = $this->createQueryBuilder('f');
         $qb->where('f.node = :node');
         $qb->setParameter('node', $node);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Node $node
+     * @param Profile $profile
+     * @return array
+     */
+    public function findByNodeOrProfile(Node $node, Profile $profile)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.node = :node');
+        $qb->orWhere('f.profile = :profile AND f.system IS NULL AND f.node IS NULL');
+        $qb->setParameters([
+            'node' => $node,
+            'profile' => $profile
+        ]);
         return $qb->getQuery()->getResult();
     }
 
