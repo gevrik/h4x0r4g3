@@ -1,8 +1,8 @@
 <?php
 
 /**
- * CodingService Factory.
- * Factory for the CodingService.
+ * NotificationService Factory.
+ * Factory for the NotificationService.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,11 +10,11 @@
 
 namespace Netrunners\Factory;
 
-use Netrunners\Service\CodingService;
+use Netrunners\Service\NotificationService;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
-class CodingServiceFactory implements FactoryInterface
+class NotificationServiceFactory implements FactoryInterface
 {
 
     /**
@@ -24,10 +24,9 @@ class CodingServiceFactory implements FactoryInterface
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new CodingService(
+        return new NotificationService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('Netrunners\Service\LoopService')
+            $serviceLocator->get('ViewRenderer')
         );
     }
 

@@ -30,13 +30,15 @@ class IndexControllerFactory implements FactoryInterface
         $utilityService = $realServiceLocator->get('Netrunners\Service\UtilityService');
         $parserService = $realServiceLocator->get('Netrunners\Service\ParserService');
         $codingService = $realServiceLocator->get('Netrunners\Service\CodingService');
+        $loopService = $realServiceLocator->get('Netrunners\Service\LoopService');
 
         return new IndexController(
             $entityManager,
             $profileService,
             $utilityService,
             $parserService,
-            $codingService
+            $codingService,
+            $loopService
         );
     }
 

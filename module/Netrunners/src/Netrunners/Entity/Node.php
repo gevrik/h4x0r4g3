@@ -107,7 +107,7 @@ class Node
         ],
         self::ID_CODING => [
             'cost' => 100,
-            'shortname' => 'srv',
+            'shortname' => 'cdi',
         ],
         self::ID_FIREWALL => [
             'cost' => 1000,

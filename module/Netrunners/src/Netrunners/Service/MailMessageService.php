@@ -77,7 +77,7 @@ class MailMessageService extends BaseService
                 '%s%-3s | %-20s | %-20s | %s</pre>',
                 $preTag,
                 $mailNumber,
-                $mail->getAuthor()->getUser()->getDisplayName(),
+                ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : "[SYSTEM-MAIL]",
                 $mail->getSentDateTime()->format('Y/m/d H:i:s'),
                 $mail->getSubject()
             );

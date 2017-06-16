@@ -10,20 +10,17 @@
 namespace Application\Controller;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\File;
-use Netrunners\Entity\System;
 use Netrunners\Service\CodingService;
+use Netrunners\Service\LoopService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
 use Application\Service\WebsocketService;
-use Netrunners\Service\SystemService;
 use Netrunners\Service\UtilityService;
 use Ratchet\Http\HttpServer;
 use Ratchet\Server\IoServer;
 use Ratchet\WebSocket\WsServer;
 use React\EventLoop\Factory;
 use React\Socket\Server;
-use TmoAuth\Entity\User;
 use Zend\Console\ColorInterface;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
@@ -57,19 +54,27 @@ class IndexController extends AbstractActionController
     protected $codingService;
 
     /**
+     * @var LoopService
+     */
+    protected $loopService;
+
+
+    /**
      * IndexController constructor.
      * @param EntityManager $entityManager
      * @param ProfileService $profileService
      * @param UtilityService $utilityService
      * @param ParserService $parserService
      * @param CodingService $codingService
+     * @param LoopService $loopService
      */
     public function __construct(
         EntityManager $entityManager,
         ProfileService $profileService,
         UtilityService $utilityService,
         ParserService $parserService,
-        CodingService $codingService
+        CodingService $codingService,
+        LoopService $loopService
     )
     {
         $this->entityManager = $entityManager;
@@ -77,6 +82,7 @@ class IndexController extends AbstractActionController
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
         $this->codingService = $codingService;
+        $this->loopService = $loopService;
     }
 
     /**
@@ -108,6 +114,7 @@ class IndexController extends AbstractActionController
                         $this->utilityService,
                         $this->parserService,
                         $this->codingService,
+                        $this->loopService,
                         $loop
                     )
                 )

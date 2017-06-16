@@ -7,6 +7,8 @@
         var md = $('#messages');
         var commandInput = $('#command-input');
 
+        var ticker;
+
         // site ready
         console.log('site ready');
 
@@ -15,9 +17,38 @@
             size: 5
         });
 
-        $('#panel-container').on('click', '.close', function(e){
+        $('#panel-container').on('click', '.close-btn', function(e){
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'dismissnotification',
+                silent: true,
+                entityId: $(this).data('notification-id')
+            };
+            conn.send(JSON.stringify(command));
+            commandInput.focus();
+        });
+
+        $('#panel-container').on('click', '#btn-dismiss-all-notifications', function(e){
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'dismissallnotifications',
+                silent: true
+            };
+            conn.send(JSON.stringify(command));
             $('#panel-container').html('');
             commandInput.focus();
+        });
+
+        $('.notification-box').on('click', function(e){
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'shownotifications',
+                silent: true
+            };
+            conn.send(JSON.stringify(command));
         });
 
         // resize message div to be full height
@@ -108,11 +139,24 @@
                         silent: true
                     };
                     conn.send(JSON.stringify(jsonData));
+                    ticker = window.setInterval(function(){
+                        jsonData = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'ticker',
+                            silent: true
+                        };
+                        conn.send(JSON.stringify(jsonData));
+                    }, 1000);
                     break;
                 case 'showPrompt':
                     var message = data.message;
                     if (promptAddon != '') message = message + ' ' + promptAddon;
                     md.append('<span class="text-muted">' + message + '</span>');
+                    break;
+                case 'ticker':
+                    var notiAmount = data.amount;
+                    $('.notification-box').removeClass('btn-default').removeClass('btn-info').addClass((notiAmount>0)?'btn-info':'btn-default').html('<span>' + notiAmount + '</span>');
                     break;
                 case 'refreshPrompt':
                     showPrompt();
@@ -215,7 +259,7 @@
                     $('.draggable').draggable({
                         handle: '.panel-heading'
                     });
-                    showPrompt();
+                    if (!data.silent) showPrompt();
                     break;
                 case 'skills':
                     messageArray = data.message;
@@ -264,6 +308,7 @@
         conn.onclose = function() {
             md.append('<br /><span class="text-danger">Connection to NeoCortex network lost</span>');
             $('#command-input').remove();
+            clearInterval(ticker);
         };
         // sending input
         $('#main-content').on('keydown', '#command-input', function(event){

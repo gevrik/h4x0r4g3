@@ -9,6 +9,7 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Service\CodingService;
+use Netrunners\Service\LoopService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
 use Netrunners\Service\SystemService;
@@ -65,6 +66,11 @@ class WebsocketService implements MessageComponentInterface {
     protected $codingService;
 
     /**
+     * @var LoopService
+     */
+    protected $loopService;
+
+    /**
      * @var Logger
      */
     protected $logger;
@@ -75,6 +81,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param UtilityService $utilityService
      * @param ParserService $parserService
      * @param CodingService $codingService
+     * @param LoopService $loopService
      * @param LoopInterface $loop
      */
     public function __construct(
@@ -83,6 +90,7 @@ class WebsocketService implements MessageComponentInterface {
         UtilityService $utilityService,
         ParserService $parserService,
         CodingService $codingService,
+        LoopService $loopService,
         LoopInterface $loop
     ) {
         $this->clients = new \SplObjectStorage;
@@ -91,40 +99,16 @@ class WebsocketService implements MessageComponentInterface {
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
         $this->codingService = $codingService;
+        $this->loopService = $loopService;
         $this->loop = $loop;
 
         $this->logger = new Logger();
         $this->logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
 
         $this->loop->addPeriodicTimer(5, function(){
-            $this->loopTest();
+            $this->loopService->loopJobs();
         });
 
-    }
-
-    protected function loopTest()
-    {
-        $now = new \DateTime();
-        foreach ($this->clientsData as $resourceId => $clientData) {
-            if (!empty($clientData['jobs'])) {
-                foreach ($clientData['jobs'] as $jobId => $jobData) {
-                    // if the job is finished now
-                    if ($jobData['completionDate'] <= $now) {
-                        // resolve the job
-                        $response = $this->codingService->resolveCoding($jobId, $clientData);
-                        // find the correction connection and send the response
-                        foreach ($this->clients as $client) {
-                            if ($client->resourceId == $resourceId) {
-                                $client->send(json_encode($response));
-                                break;
-                            }
-                        }
-                        // remove job from server
-                        unset($this->clientsData[$resourceId]['jobs'][$jobId]);
-                    }
-                }
-            }
-        }
     }
 
     public function onOpen(ConnectionInterface $conn)
@@ -138,6 +122,7 @@ class WebsocketService implements MessageComponentInterface {
             'userId' => false,
             'hash' => false,
             'tempPassword' => false,
+            'profileId' => false
         );
     }
 
@@ -152,6 +137,7 @@ class WebsocketService implements MessageComponentInterface {
         $content = $msgData->content;
         $content = trim($content);
         $silent = (isset($msgData->silent)) ? $msgData->silent : false;
+        $entityId = (isset($msgData->entityId)) ? (int)$msgData->entityId : false;
         if (!$content || $content == '') {
             if ($command != 'parseMailInput') {
                 return true;
@@ -188,6 +174,7 @@ class WebsocketService implements MessageComponentInterface {
                 else {
                     $this->clientsData[$resourceId]['username'] = $user->getUsername();
                     $this->clientsData[$resourceId]['userId'] = $user->getId();
+                    $this->clientsData[$resourceId]['profileId'] = $user->getProfile()->getId();
                     $response = array(
                         'command' => 'promptForPassword',
                     );
@@ -318,7 +305,7 @@ class WebsocketService implements MessageComponentInterface {
                     $profile->setCurrentNode($ioNode);
                     // flush to db
                     $this->entityManager->flush();
-                    $hash = hash('sha256', 'hocuspocus' . $user->getId());
+                    $hash = hash('sha256', 'netrunners' . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $this->clientsData[$resourceId]['userId'] = $user->getId();
                     $this->clientsData[$resourceId]['username'] = $user->getUsername();
@@ -355,7 +342,7 @@ class WebsocketService implements MessageComponentInterface {
                             $client->close();
                         }
                     }
-                    $hash = hash('sha256', 'hocuspocus' . $user->getId());
+                    $hash = hash('sha256', 'netrunners' . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(
                         'command' => 'loginComplete',
@@ -372,7 +359,7 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->utilityService->autocomplete($from, (object)$this->clientsData[$resourceId], $content);
             case 'parseInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->parserService->parseInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData);
+                return $this->parserService->parseInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $entityId);
             case 'parseMailInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->parserService->parseMailInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->mailOptions);

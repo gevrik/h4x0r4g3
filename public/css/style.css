@@ -117,3 +117,19 @@ textarea {
     fill: none;
     stroke: #bbb;
 }
+
+.notification-box {
+    position: fixed;
+    bottom: 1em;
+    right: 1em;
+}
+
+.popover {
+    max-width: 40%;
+    bottom: 0.5em !important;
+    right: 1em !important;
+}
+
+.popover-content {
+    overflow-y: scroll;
+}

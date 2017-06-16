@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
@@ -66,6 +67,12 @@ class ParserService
     protected $connectionService;
 
     /**
+     * @var NotificationService
+     */
+    protected $notificationService;
+
+
+    /**
      * @param EntityManager $entityManager
      * @param FileService $fileService
      * @param NodeService $nodeService
@@ -75,6 +82,7 @@ class ParserService
      * @param CodingService $codingService
      * @param SystemService $systemService
      * @param ConnectionService $connectionService
+     * @param NotificationService $notificationService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -85,7 +93,8 @@ class ParserService
         ProfileService $profileService,
         CodingService $codingService,
         SystemService $systemService,
-        ConnectionService $connectionService
+        ConnectionService $connectionService,
+        NotificationService $notificationService
     )
     {
         $this->entityManager = $entityManager;
@@ -97,6 +106,7 @@ class ParserService
         $this->codingService = $codingService;
         $this->systemService = $systemService;
         $this->connectionService = $connectionService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -106,10 +116,12 @@ class ParserService
      * @param string $content
      * @param \SplObjectStorage $wsClients
      * @param array $wsClientsData
+     * @param bool $entityId
      * @return bool|ConnectionInterface
      */
-    public function parseInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array())
+    public function parseInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $entityId = false)
     {
+        $response = false;
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -143,6 +155,27 @@ class ParserService
                 break;
             case 'commands':
                 $response = $this->showCommands($clientData);
+                break;
+            case 'ticker':
+                $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+                if (!$user) return true;
+                /** @var User $user */
+                $profile = $user->getProfile();
+                /** @var Profile $profile */
+                $countUnreadNotifications = $this->entityManager->getRepository('Netrunners\Entity\Notification')->countUnreadByProfile($profile);
+                $response = array(
+                    'command' => 'ticker',
+                    'amount' => $countUnreadNotifications
+                );
+                break;
+            case 'shownotifications':
+                $response = $this->notificationService->showNotifications($clientData);
+                break;
+            case 'dismissnotification':
+                $this->notificationService->dismissNotification($clientData, $entityId);
+                break;
+            case 'dismissallnotifications':
+                $this->notificationService->dismissNotification($clientData, $entityId, true);
                 break;
             case 'edit':
                 $response = $this->fileService->editFile($clientData, $contentArray);
@@ -224,7 +257,8 @@ class ParserService
                 break;
             /** ADMIN STUFF */
         }
-        return $from->send(json_encode($response));
+        if ($response) $from->send(json_encode($response));
+        return true;
     }
 
     /**
