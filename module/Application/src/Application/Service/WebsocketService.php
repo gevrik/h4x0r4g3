@@ -76,6 +76,11 @@ class WebsocketService implements MessageComponentInterface {
     protected $logger;
 
     /**
+     * @var
+     */
+    protected $hash;
+
+    /**
      * @param EntityManager $entityManager
      * @param ProfileService $profileService
      * @param UtilityService $utilityService
@@ -83,6 +88,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param CodingService $codingService
      * @param LoopService $loopService
      * @param LoopInterface $loop
+     * @param $hash
      */
     public function __construct(
         EntityManager $entityManager,
@@ -91,7 +97,8 @@ class WebsocketService implements MessageComponentInterface {
         ParserService $parserService,
         CodingService $codingService,
         LoopService $loopService,
-        LoopInterface $loop
+        LoopInterface $loop,
+        $hash
     ) {
         $this->clients = new \SplObjectStorage;
         $this->entityManager = $entityManager;
@@ -101,6 +108,7 @@ class WebsocketService implements MessageComponentInterface {
         $this->codingService = $codingService;
         $this->loopService = $loopService;
         $this->loop = $loop;
+        $this->hash = $hash;
 
         $this->logger = new Logger();
         $this->logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
@@ -305,7 +313,7 @@ class WebsocketService implements MessageComponentInterface {
                     $profile->setCurrentNode($ioNode);
                     // flush to db
                     $this->entityManager->flush();
-                    $hash = hash('sha256', 'netrunners' . $user->getId());
+                    $hash = hash('sha256', $this->hash . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $this->clientsData[$resourceId]['userId'] = $user->getId();
                     $this->clientsData[$resourceId]['username'] = $user->getUsername();
@@ -342,7 +350,7 @@ class WebsocketService implements MessageComponentInterface {
                             $client->close();
                         }
                     }
-                    $hash = hash('sha256', 'netrunners' . $user->getId());
+                    $hash = hash('sha256', $this->hash . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(
                         'command' => 'loginComplete',

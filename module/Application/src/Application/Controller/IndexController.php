@@ -101,6 +101,7 @@ class IndexController extends AbstractActionController
     public function cliStartWebsocketAction()
     {
         $console = $this->getServiceLocator()->get('console');
+        $config = $this->getServiceLocator()->get('config');
         $console->writeLine("=== STARTING WEBSOCKET SERVICE ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
         $loop = Factory::create();
         $webSock = new Server($loop);
@@ -115,7 +116,8 @@ class IndexController extends AbstractActionController
                         $this->parserService,
                         $this->codingService,
                         $this->loopService,
-                        $loop
+                        $loop,
+                        $config['hashmod']
                     )
                 )
             ),
