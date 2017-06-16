@@ -26,6 +26,14 @@ class LoopService extends BaseService
     protected $jobs = [];
 
     /**
+     * @return array
+     */
+    public function getJobs()
+    {
+        return $this->jobs;
+    }
+
+    /**
      * @param array $jobData
      */
     public function addJob($jobData = [])
@@ -110,8 +118,8 @@ class LoopService extends BaseService
                 $newCode->setRunning(NULL);
                 $newCode->setSize($basePart->getSize());
                 $newCode->setSlots(1);
-                $newCode->setSystem($profile->getCurrentNode()->getSystem());
-                $newCode->setNode($profile->getCurrentNode());
+                $newCode->setSystem(NULL);
+                $newCode->setNode(NULL);
                 $newCode->setVersion(1);
                 $this->entityManager->persist($newCode);
             }

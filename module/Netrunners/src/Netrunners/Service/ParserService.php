@@ -119,7 +119,7 @@ class ParserService
      * @param bool $entityId
      * @return bool|ConnectionInterface
      */
-    public function parseInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $entityId = false)
+    public function parseInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $entityId = false, $jobs = false)
     {
         $response = false;
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
@@ -208,11 +208,11 @@ class ParserService
                     $wsClient->send(json_encode($response));
                 }
                 return true;
-            case 'jobs':
-                $response = $this->profileService->showJobs($clientData);
-                break;
             case 'kill':
                 $response = $this->fileService->killProcess($clientData, $contentArray);
+                break;
+            case 'jobs':
+                $response = $this->profileService->showJobs($clientData, $jobs);
                 break;
             case 'ls':
                 $response = $this->nodeService->showNodeInfo($clientData);

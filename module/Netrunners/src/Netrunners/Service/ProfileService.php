@@ -92,15 +92,21 @@ class ProfileService extends BaseService
         return $response;
     }
 
-    public function showJobs($clientData)
+    public function showJobs($clientData, $jobs)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
+        $userJobs = [];
+        foreach ($jobs as $jobId => $jobData) {
+            if ($jobData['socketId'] == $clientData->socketId) {
+                $userJobs[] = $jobData;
+            }
+        }
         $returnMessage = array();
-        if (empty($clientData->jobs)) {
+        if (empty($userJobs)) {
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'sysmsg',
@@ -108,7 +114,7 @@ class ProfileService extends BaseService
             );
         }
         else {
-            foreach ($clientData->jobs as $jobId => $jobData) {
+            foreach ($userJobs as $jobId => $jobData) {
                 $type = $jobData['type'];
                 $typeId = $jobData['typeId'];
                 $completionDate = $jobData['completionDate'];

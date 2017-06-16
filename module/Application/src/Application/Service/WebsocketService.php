@@ -359,7 +359,7 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->utilityService->autocomplete($from, (object)$this->clientsData[$resourceId], $content);
             case 'parseInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->parserService->parseInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $entityId);
+                return $this->parserService->parseInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $entityId, $this->loopService->getJobs());
             case 'parseMailInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->parserService->parseMailInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->mailOptions);

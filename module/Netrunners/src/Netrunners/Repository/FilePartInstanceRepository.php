@@ -28,7 +28,7 @@ class FilePartInstanceRepository extends EntityRepository
         return $this->findBy(['profile' => $profile, 'fileType' => $fileType]);
     }
 
-    public function findByProfileAndTypeAndMinLevel(Profile $profile, FilePart $filePart, $minLevel = 1)
+    public function findByProfileAndTypeAndMinLevel(Profile $profile, FilePart $filePart, $minLevel = 1, $orderByLevel = false)
     {
         $qb = $this->createQueryBuilder('fpi');
         $qb->where('fpi.profile = :profile AND fpi.filePart = :filePart AND fpi.level >= :minLevel');
@@ -37,6 +37,9 @@ class FilePartInstanceRepository extends EntityRepository
             'filePart' => $filePart,
             'minLevel' => $minLevel
         ]);
+        if ($orderByLevel) {
+            $qb->addOrderBy('fpi.level', 'ASC');
+        }
         return $qb->getQuery()->getResult();
     }
 

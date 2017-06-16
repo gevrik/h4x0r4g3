@@ -466,11 +466,12 @@ class CodingService extends BaseService
                 );
             }
         }
+        // get the fpi-repo, we'll need it from now on
+        $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
+        /** @var FilePartInstanceRepository $filePartInstanceRepo */
         // now we check if the player has all the needed resources
         if (!$response) {
             /** @var FileType $fileType */
-            $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
-            /** @var FilePartInstanceRepository $filePartInstanceRepo */
             $neededResources = $fileType->getFileParts();
             foreach ($neededResources as $neededResource) {
                 /** @var FilePart $neededResource */
@@ -516,9 +517,17 @@ class CodingService extends BaseService
                 'clientData' => $clientData
             );
 
+            $neededResources = $fileType->getFileParts();
+            foreach ($neededResources as $neededResource) {
+                /** @var FilePart $neededResource */
+                $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
+                $filePartInstance = array_shift($filePartInstances);
+                $this->entityManager->remove($filePartInstance);
+            }
+
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - $level);
-            $this->entityManager->flush($profile);
+            $this->entityManager->flush();
 
         }
         return $response;
