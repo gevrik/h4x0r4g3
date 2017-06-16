@@ -111,6 +111,14 @@ class NodeService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a node to the system</pre>')
             );
         }
+        // check if we are in a home node, you can't add nodes to a home node TODO also implement check on change of node type
+        if (!$response && $currentNode->getType() == Node::STRING_HOME) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">You can not add nodes to a home node</pre>')
+            );
+        }
         /* checks passed, we can now add the node */
         if (!$response) {
             // take creds from user
@@ -271,6 +279,16 @@ class NodeService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;">No such node type</pre>')
             );
         }
+        // check a few combinations that are not valid
+        if (!$response && $type == Node::ID_HOME) {
+            if ($this->countTargetNodesOfType($currentNode, Node::ID_HOME) > 0) {
+                $response = array(
+                    'command' => 'showMessage',
+                    'type' => 'sysmsg',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;">There is already a home node around this node</pre>')
+                );
+            }
+        }
         // check if they have enough credits
         if (!$response && $profile->getCredits() < Node::$data[$type]['cost']) {
             $response = array(
@@ -324,6 +342,22 @@ class NodeService extends BaseService
             );
         }
         return $response;
+    }
+
+    /**
+     * @param Node $node
+     * @param $type
+     * @return int
+     */
+    public function countTargetNodesOfType(Node $node, $type)
+    {
+        $amount = 0;
+        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
+        foreach ($connections as $connection) {
+            /** @var Connection $connection */
+            if ($connection->getTargetNode()->getType() == $type) $amount++;
+        }
+        return $amount;
     }
 
 }
