@@ -108,14 +108,14 @@ textarea {
     background: rgba(0, 0, 0, 0.5);
 }
 
-.node {
-    stroke: #fff;
-    stroke-width: 2px;
+.links line {
+    stroke: #999;
+    stroke-opacity: 0.6;
 }
 
-.link {
-    fill: none;
-    stroke: #bbb;
+.nodes circle {
+    stroke: #fff;
+    stroke-width: 1.5px;
 }
 
 .notification-box {
