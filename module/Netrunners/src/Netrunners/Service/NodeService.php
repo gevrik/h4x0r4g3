@@ -111,8 +111,8 @@ class NodeService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a node to the system</pre>')
             );
         }
-        // check if we are in a home node, you can't add nodes to a home node TODO also implement check on change of node type
-        if (!$response && $currentNode->getType() == Node::STRING_HOME) {
+        // check if we are in a home node, you can't add nodes to a home node
+        if (!$response && $currentNode->getType() == Node::ID_HOME) {
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
@@ -358,6 +358,81 @@ class NodeService extends BaseService
             if ($connection->getTargetNode()->getType() == $type) $amount++;
         }
         return $amount;
+    }
+
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
+    public function removeNode($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $response = false;
+        // check if they can change the type
+        if (!$response && $profile != $currentSystem->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        // check if there are still connections to this node
+        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        if (!$response && count($connections) > 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to remove node with more than one connection</pre>')
+            );
+        }
+        // check if there are still files in this node
+        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($currentNode);
+        if (!$response && count($files) > 0) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to remove node which still contains files</pre>')
+            );
+        }
+        // check if there are still other profiles in this node
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($currentNode);
+        if (!$response && count($profiles) > 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to remove node which still contains other users</pre>')
+            );
+        }
+        // TODO sanity checks for storage/memory/etc
+        /* all checks passed, we can now remove the node */
+        if (!$response) {
+            foreach ($connections as $connection) {
+                /** @var Connection $connection */
+                $newCurrentNode = $connection->getTargetNode();
+                $targetConnection = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
+                $targetConnection = array_shift($targetConnection);
+                $sourceConnection = $connection;
+            }
+            $this->entityManager->remove($targetConnection);
+            $this->entityManager->remove($sourceConnection);
+            $profile->setCurrentNode($newCurrentNode);
+            $this->entityManager->remove($currentNode);
+            $this->entityManager->flush();
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">The node has been removed</pre>')
+            );
+        }
+        return $response;
     }
 
 }

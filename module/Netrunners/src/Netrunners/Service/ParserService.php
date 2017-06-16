@@ -234,6 +234,9 @@ class ParserService
             case 'nodetype':
                 $response = $this->nodeService->changeNodeType($clientData, $contentArray);
                 break;
+            case 'removenode':
+                $response = $this->nodeService->removeNode($clientData);
+                break;
             case 'parts':
             case 'resources':
             case 'res':
