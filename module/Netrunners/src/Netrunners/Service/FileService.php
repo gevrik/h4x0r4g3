@@ -212,6 +212,83 @@ class FileService extends BaseService
         return $response;
     }
 
+    public function changeFileName($clientData, $contentArray)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $response = false;
+        // get parameter
+        $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
+        // get file repo
+        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepository */
+        // try to get target file via repo method
+        $targetFiles = $fileRepository->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        if (count($targetFiles) < 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => "No such file"
+            );
+        }
+        $file = array_shift($targetFiles);
+        if (!$response && !$file) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">File not found</pre>')
+            );
+        }
+        // now ge the new name
+        $newName = array_shift($contentArray);
+        $newName = trim($newName);
+        if (!$response && !$newName) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Please specify a new name</pre>')
+            );
+        }
+        // check if they can change the type
+        if (!$response && $profile != $file->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        // check if only alphanumeric
+        $validator = new Alnum(array('allowWhiteSpace' => false));
+        if (!$response && !$validator->isValid($newName)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid file name (alpha-numeric, no whitespace)</pre>')
+            );
+        }
+        if (!$response) {
+            $file->setName($newName);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">File name changed to %s</pre>', $newName)
+            );
+        }
+        return $response;
+    }
 
     public function executeFile($clientData, $contentArray)
     {
@@ -242,7 +319,7 @@ class FileService extends BaseService
                 'message' => "No such file"
             );
         }
-        $file = $targetFile = array_shift($targetFiles);
+        $file = array_shift($targetFiles);
         // check if file belongs to user TODO should be able to bypass this via bh program
         if (!$response && $file->getProfile() != $profile) {
             $response = array(
@@ -257,6 +334,14 @@ class FileService extends BaseService
                 'command' => 'showMessage',
                 'type' => 'sysmsg',
                 'message' => sprintf("%s is already running", $file->getName())
+            );
+        }
+        // check if there is enough memory to execute this
+        if (!$response && $this->canExecuteFile($profile, $file)) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf("You do not have enough memory to execute %s - build more memory nodes", $file->getName())
             );
         }
         if (!$response) {
@@ -297,6 +382,7 @@ class FileService extends BaseService
         /** @var Profile $profile */
         // get parameter
         $parameter = array_shift($contentArray);
+        $parameter = (int)$parameter;
         // init response
         $response = false;
         if (!$parameter) {
@@ -328,8 +414,24 @@ class FileService extends BaseService
                 'message' => 'No process with that id'
             );
         }
+        if (!$response && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => 'That process needs to be killed in the system that it is running in'
+            );
+        }
+        if (!$response && $runningFile->getNode() != $profile->getCurrentNode()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => 'That process needs to be killed in the node that it is running in'
+            );
+        }
         if (!$response) {
             $runningFile->setRunning(false);
+            $runningFile->setSystem(NULL);
+            $runningFile->setNode(NULL);
             $this->entityManager->flush($runningFile);
             $response = array(
                 'command' => 'showMessage',
@@ -394,7 +496,7 @@ class FileService extends BaseService
         $returnMessage = array();
         foreach ($runningFiles as $runningFile) {
             /** @var File $runningFile */
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s | %s</pre>', $runningFile->getId(), $runningFile->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s|%-20s|%s</pre>', $runningFile->getId(), $runningFile->getFileType()->getName() ,$runningFile->getName());
         }
         $response = array(
             'command' => 'ps',

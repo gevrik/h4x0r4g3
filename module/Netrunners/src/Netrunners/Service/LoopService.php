@@ -156,12 +156,23 @@ class LoopService extends BaseService
                 $newCode->setNode(NULL);
                 $newCode->setVersion(1);
                 $this->entityManager->persist($newCode);
+                $canStore = $this->canStoreFile($profile, $newCode);
+                if (!$canStore) {
+                    $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);
+                    $newCode->setProfile(NULL);
+                    $newCode->setSystem($targetNode->getSystem());
+                    $newCode->setNode($targetNode);
+                }
             }
             $this->entityManager->flush();
+            $add = '';
+            if (!$newCode->getProfile()) {
+                $add = '<br />The file could not be stored in storage - it has been added to the node that it was coded in';
+            }
             $this->learnFromSuccess($profile, $jobData, $roll);
             $response = [
                 'severity' => 'success',
-                'message' => sprintf("[%s] Coding project complete: %s [level: %s]", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty)
+                'message' => sprintf("[%s] Coding project complete: %s [level: %s]%s", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty, $add)
             ];
         }
         else {
@@ -172,145 +183,6 @@ class LoopService extends BaseService
             ];
         }
         return $response;
-    }
-
-    /**
-     * @param Profile $profile
-     * @param $jobData
-     * @param $roll
-     * @return bool
-     */
-    protected function learnFromSuccess(Profile $profile, $jobData, $roll)
-    {
-        foreach ($jobData['skills'] as $skillName) {
-            $skillRating = $this->getSkillRating($profile, $skillName);
-            $chance = 100 - $skillRating;
-            if ($chance < 1) return true;
-            if (rand(1, 100) <= $chance) {
-                $newSkillRating = $skillRating + 1;
-                $this->setSkillRating($profile, $skillName, $newSkillRating);
-            }
-        }
-        $this->entityManager->flush($profile);
-        return true;
-    }
-
-    /**
-     * @param Profile $profile
-     * @param $jobData
-     * @param $roll
-     * @return bool
-     */
-    protected function learnFromFailure(Profile $profile, $jobData, $roll)
-    {
-        foreach ($jobData['skills'] as $skillName) {
-            $skillRating = $this->getSkillRating($profile, $skillName);
-            $chance = 100 - $skillRating;
-            if ($chance < 1) return true;
-            if (rand(1, 100) <= $chance) {
-                $newSkillRating = $skillRating + 1;
-                $this->setSkillRating($profile, $skillName, $newSkillRating);
-            }
-        }
-        $this->entityManager->flush($profile);
-        return true;
-    }
-
-    /**
-     * @param Profile $profile
-     * @param $skillName
-     * @return int
-     */
-    protected function getSkillRating(Profile $profile, $skillName)
-    {
-        $skillRating = 0;
-        switch ($skillName) {
-            default:
-                break;
-            case 'coding':
-                $skillRating = $profile->getSkillCoding();
-                break;
-            case 'advancedcoding':
-                $skillRating = $profile->getSkillAdvancedCoding();
-                break;
-            case 'whitehat':
-                $skillRating = $profile->getSkillWhitehat();
-                break;
-            case 'blackhat':
-                $skillRating = $profile->getSkillBlackhat();
-                break;
-            case 'crypto':
-                $skillRating = $profile->getSkillCryptography();
-                break;
-            case 'database':
-                $skillRating = $profile->getSkillDatabases();
-                break;
-            case 'electronics':
-                $skillRating = $profile->getSkillElectronics();
-                break;
-            case 'forensics':
-                $skillRating = $profile->getSkillForensics();
-                break;
-            case 'networking':
-                $skillRating = $profile->getSkillNetworking();
-                break;
-            case 'reverse':
-                $skillRating = $profile->getSkillReverseEngineering();
-                break;
-            case 'social':
-                $skillRating = $profile->getSkillSocialEngineering();
-                break;
-        }
-        return $skillRating;
-    }
-
-    /**
-     * @param Profile $profile
-     * @param $skillName
-     * @param $newSkillRating
-     * @return bool
-     */
-    public function setSkillRating(Profile $profile, $skillName, $newSkillRating)
-    {
-        switch ($skillName) {
-            default:
-                break;
-            case 'coding':
-                $profile->setSkillCoding($newSkillRating);
-                break;
-            case 'advancedcoding':
-                $profile->setSkillAdvancedCoding($newSkillRating);
-                break;
-            case 'whitehat':
-                $profile->setSkillWhitehat($newSkillRating);
-                break;
-            case 'blackhat':
-                $profile->setSkillBlackhat($newSkillRating);
-                break;
-            case 'crypto':
-                $profile->setSkillCryptography($newSkillRating);
-                break;
-            case 'database':
-                $profile->setSkillDatabases($newSkillRating);
-                break;
-            case 'electronics':
-                $profile->setSkillElectronics($newSkillRating);
-                break;
-            case 'forensics':
-                $profile->setSkillForensics($newSkillRating);
-                break;
-            case 'networking':
-                $profile->setSkillNetworking($newSkillRating);
-                break;
-            case 'reverse':
-                $profile->setSkillReverseEngineering($newSkillRating);
-                break;
-            case 'social':
-                $profile->setSkillSocialEngineering($newSkillRating);
-                break;
-        }
-        $this->entityManager->flush($profile);
-        return true;
     }
 
 }

@@ -327,6 +327,7 @@ class WebsocketService implements MessageComponentInterface {
                     $ioNode->setType(Node::ID_CPU);
                     $this->entityManager->persist($ioNode);
                     $profile->setCurrentNode($ioNode);
+                    $profile->setHomeNode($ioNode);
                     // flush to db
                     $this->entityManager->flush();
                     $hash = hash('sha256', $this->hash . $user->getId());

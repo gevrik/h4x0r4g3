@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Profile;
 
 class SystemRepository extends EntityRepository
 {
@@ -18,6 +19,13 @@ class SystemRepository extends EntityRepository
     public function findByAddy($addy)
     {
         return $this->findOneBy(['addy', $addy]);
+    }
+
+    public function findByProfile(Profile $profile)
+    {
+        return $this->findBy([
+            'profile' => $profile
+        ]);
     }
 
 }

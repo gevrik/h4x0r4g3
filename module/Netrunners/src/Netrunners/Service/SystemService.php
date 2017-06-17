@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\Connection;
+use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
@@ -45,8 +46,8 @@ class SystemService extends BaseService
         $returnMessage = array();
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SYSTEM_STRING, $currentSystem->getName());
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::ADDY_STRING, $currentSystem->getAddy());
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::MEMORY_STRING, $this->getSystemMemory($currentSystem));
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::STORAGE_STRING, $this->getSystemStorage($currentSystem));
+        $returnMessage[] = sprintf('<pre>%-12s: %s/%s</pre>', self::MEMORY_STRING, $this->getUsedMemory($profile), $this->getSystemMemory($currentSystem));
+        $returnMessage[] = sprintf('<pre>%-12s: %s/%s</pre>', self::STORAGE_STRING, $this->getUsedStorage($profile), $this->getSystemStorage($currentSystem));
         $response = array(
             'command' => 'system',
             'message' => $returnMessage
@@ -55,35 +56,9 @@ class SystemService extends BaseService
     }
 
     /**
-     * @param System $system
-     * @return int
+     * @param $clientData
+     * @return array|bool
      */
-    public function getSystemMemory(System $system)
-    {
-        $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystemAndType($system, Node::ID_MEMORY);
-        $total = 0;
-        foreach ($nodes as $node) {
-            /** @var Node $node */
-            $total += $node->getLevel() * self::BASE_MEMORY_VALUE;
-        }
-        return $total;
-    }
-
-    /**
-     * @param System $system
-     * @return int
-     */
-    public function getSystemStorage(System $system)
-    {
-        $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystemAndType($system, Node::ID_STORAGE);
-        $total = 0;
-        foreach ($nodes as $node) {
-            /** @var Node $node */
-            $total += $node->getLevel() * self::BASE_STORAGE_VALUE;
-        }
-        return $total;
-    }
-
     public function showSystemMap($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -100,20 +75,6 @@ class SystemService extends BaseService
         $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
         foreach ($nodes as $node) {
             /** @var Node $node */
-            // if this is the current node, add to beginning of array
-//            if ($node == $profile->getCurrentNode()) {
-//                array_unshift($mapArray['nodes'], [
-//                    'id' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
-//                    'group' => 99
-//                ]);
-//            }
-//            else {
-//                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
-//                $mapArray['nodes'][] = [
-//                    'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
-//                    'type' => $group
-//                ];
-//            }
             $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
             $mapArray['nodes'][] = [
                 'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
@@ -138,6 +99,100 @@ class SystemService extends BaseService
             'type' => 'default',
             'content' => $this->viewRenderer->render($view)
         );
+        return $response;
+    }
+
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
+    public function showAreaMap($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $mapArray = [
+            'nodes' => [],
+            'links' => []
+        ];
+        $nodes = [];
+        $nodes[] = $currentNode;
+        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        foreach ($connections as $xconnection) {
+            /** @var Connection $xconnection */
+            $nodes[] = $xconnection->getTargetNode();
+        }
+        $counter = true;
+        foreach ($nodes as $node) {
+            /** @var Node $node */
+            $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
+            $mapArray['nodes'][] = [
+                'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+                'type' => $group
+            ];
+            if ($counter) {
+                $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
+                foreach ($connections as $connection) {
+                    /** @var Connection $connection */
+                    $mapArray['links'][] = [
+                        'source' => (string)$connection->getSourceNode()->getId() . '_' . Node::$lookup[$connection->getSourceNode()->getType()] . '_' . $connection->getSourceNode()->getName(),
+                        'target' => (string)$connection->getTargetNode()->getId() . '_' . Node::$lookup[$connection->getTargetNode()->getType()] . '_' . $connection->getTargetNode()->getName(),
+                        'value' => 2,
+                        'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                    ];
+                }
+                $counter = false;
+            }
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/partials/map.phtml');
+        $view->setVariable('json', json_encode($mapArray));
+        $response = array(
+            'command' => 'showPanel',
+            'type' => 'default',
+            'content' => $this->viewRenderer->render($view)
+        );
+        return $response;
+    }
+
+    /**
+     * Allows a player to recall to their home node.
+     * TODO add this as an action that takes time
+     * @param $clientData
+     * @return array|bool
+     */
+    public function homeRecall($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $response = false;
+        if ($profile->getHomeNode() == $currentNode) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'content' => sprintf('<pre>You are already there</pre>')
+            );
+        }
+        if (!$response) {
+            $profile->setCurrentNode($profile->getHomeNode());
+            $this->entityManager->flush($profile);
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'content' => sprintf('<pre>You moved to your home node</pre>')
+            );
+        }
         return $response;
     }
 

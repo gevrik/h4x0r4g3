@@ -132,6 +132,11 @@ class Profile
      */
     protected $currentNode;
 
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
+     */
+    protected $homeNode;
+
 
     /**
      * Constructor for Profile.
@@ -480,6 +485,24 @@ class Profile
     public function setCurrentNode($currentNode)
     {
         $this->currentNode = $currentNode;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getHomeNode()
+    {
+        return $this->homeNode;
+    }
+
+    /**
+     * @param mixed $homeNode
+     * @return Profile
+     */
+    public function setHomeNode($homeNode)
+    {
+        $this->homeNode = $homeNode;
         return $this;
     }
 

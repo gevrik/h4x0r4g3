@@ -190,6 +190,10 @@ class ParserService
             case 'execute':
                 $response = $this->fileService->executeFile($clientData, $contentArray);
                 break;
+            case 'fn':
+            case 'filename':
+                $response = $this->fileService->changeFileName($clientData, $contentArray);
+                break;
             case 'gc':
                 $messageContent = $this->chatService->globalChat($clientData, $contentArray);
                 foreach ($wsClients as $wsClient) {
@@ -215,6 +219,10 @@ class ParserService
                     $wsClient->send(json_encode($response));
                 }
                 return true;
+            case 'home':
+            case 'homerecall':
+                $response = $this->systemService->homeRecall($clientData);
+                break;
             case 'i':
             case 'inv':
             case 'inventory':
@@ -233,7 +241,12 @@ class ParserService
                 $response = $this->mailMessageService->enterMailMode($clientData);
                 break;
             case 'map':
-                $response = $this->systemService->showSystemMap($clientData);
+                if ($profile->getCurrentNode()->getSystem()->getProfile() != $profile) {
+                    $response = $this->systemService->showAreaMap($clientData);
+                }
+                else {
+                    $response = $this->systemService->showSystemMap($clientData);
+                }
                 break;
             case 'nodename':
                 $response = $this->nodeService->changeNodeName($clientData, $contentArray);

@@ -408,7 +408,8 @@ class CodingService extends BaseService
                 'mode' => 'resource',
                 'skills' => $skillList,
                 'profileId' => $profile->getId(),
-                'socketId' => $clientData->socketId
+                'socketId' => $clientData->socketId,
+                'nodeId' => $profile->getCurrentNode()->getId()
             ]);
 
             $response = array(
@@ -486,6 +487,14 @@ class CodingService extends BaseService
                 }
             }
         }
+        // check if the player can store the file in his total storage
+        if (!$response && !$this->canStoreFileOfSize($profile, $fileType->getSize())) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>', $type, $fileType->getSize())
+            );
+        }
         /* checks passed, we can now create the file */
         if (!$response) {
             $difficulty = $level;
@@ -507,7 +516,8 @@ class CodingService extends BaseService
                 'mode' => 'program',
                 'skills' => $skillList,
                 'profileId' => $profile->getId(),
-                'socketId' => $clientData->socketId
+                'socketId' => $clientData->socketId,
+                'nodeId' => $profile->getCurrentNode()->getId()
             ]);
 
             $response = array(
