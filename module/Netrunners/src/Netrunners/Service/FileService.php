@@ -18,7 +18,6 @@ use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
-use Zend\View\Model\ViewModel;
 
 class FileService extends BaseService
 {
@@ -120,7 +119,7 @@ class FileService extends BaseService
             );
         }
         // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => false));
+        $validator = new Alnum(array('allowWhiteSpace' => true));
         if (!$response && !$validator->isValid($parameter)) {
             $response = array(
                 'command' => 'showMessage',
@@ -128,6 +127,7 @@ class FileService extends BaseService
                 'message' => 'The file name contains non-alphanumeric characters'
             );
         }
+        $parameter = str_replace(' ', '_', $parameter);
         /* start logic if we do not have a response already */
         if (!$response) {
             $currentSnippets = $profile->getSnippets();
@@ -162,56 +162,11 @@ class FileService extends BaseService
         return $response;
     }
 
-    public function editFile($clientData, $contentArray)
-    {
-        // init response
-        $response = false;
-        // get user
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        // get profile
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
-        // get file repo
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
-        // try to get target file via repo method
-        $targetFiles = $fileRepository->findFileInNodeByName(
-            $profile->getCurrentNode(),
-            $parameter
-        );
-        if (count($targetFiles) < 1) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "No such file"
-            );
-        }
-        // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => false));
-        if (!$response && !$validator->isValid($parameter)) {
-            $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => "No such file"
-            );
-        }
-        /* start logic if we do not have a response already */
-        if (!$response) {
-            $view = new ViewModel();
-            $view->setTemplate('netrunners/file/edit-text.phtml');
-            $response = array(
-                'command' => 'showPanel',
-                'type' => 'warning',
-                'content' => $this->viewRenderer->render($view)
-            );
-        }
-        return $response;
-    }
-
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function changeFileName($clientData, $contentArray)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -270,7 +225,7 @@ class FileService extends BaseService
             );
         }
         // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => false));
+        $validator = new Alnum(array('allowWhiteSpace' => true));
         if (!$response && !$validator->isValid($newName)) {
             $response = array(
                 'command' => 'showMessage',
@@ -279,6 +234,7 @@ class FileService extends BaseService
             );
         }
         if (!$response) {
+            $newName = str_replace(' ', '_', $newName);
             $file->setName($newName);
             $this->entityManager->flush($file);
             $response = array(
@@ -290,6 +246,11 @@ class FileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function executeFile($clientData, $contentArray)
     {
         // get user
@@ -550,51 +511,6 @@ class FileService extends BaseService
             );
         }
         return $response;
-    }
-
-    /**
-     * Returns all running programs of the given type in the given system.
-     * @param System $system
-     * @param bool|true $running
-     * @param null|FileType $fileType
-     * @return array
-     */
-    public function findRunningInSystemByType(System $system, $running = true, FileType $fileType = NULL)
-    {
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        $programs = $fileRepo->findRunningFilesInSystemByType($system, $running, $fileType);
-        return $programs;
-    }
-
-    /**
-     * @param System $system
-     * @return int
-     */
-    public function getTotalSizeOfSystem(System $system)
-    {
-        $allFiles = $this->findRunningInSystemByType($system, false, NULL);
-        $totalSize = 0;
-        foreach ($allFiles as $file) {
-            /** @var File $file */
-            $totalSize += $file->getSize();
-        }
-        return $totalSize;
-    }
-
-    /**
-     * @param System $system
-     * @return int
-     */
-    public function getTotalMemoryUsageOfSystem(System $system)
-    {
-        $allFiles = $this->findRunningInSystemByType($system, true, NULL);
-        $totalSize = 0;
-        foreach ($allFiles as $file) {
-            /** @var File $file */
-            $totalSize += $file->getSize();
-        }
-        return $totalSize;
     }
 
 }

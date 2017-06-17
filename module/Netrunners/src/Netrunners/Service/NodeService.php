@@ -175,7 +175,7 @@ class NodeService extends BaseService
         $response = false;
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
         if (!$parameter) {
             $response = array(
@@ -193,21 +193,23 @@ class NodeService extends BaseService
             );
         }
         // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => false));
+        $validator = new Alnum(array('allowWhiteSpace' => true));
         if (!$response && !$validator->isValid($parameter)) {
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node name (alpha-numeric, no whitespace)</pre>')
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node name (alpha-numeric only)</pre>')
             );
         }
         if (!$response) {
-            $currentNode->setName($parameter);
+            // turn spaces in name to underscores
+            $name = str_replace(' ', '_', $parameter);
+            $currentNode->setName($name);
             $this->entityManager->flush($currentNode);
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Node name changed to %s</pre>', $parameter)
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Node name changed to %s</pre>', $name)
             );
         }
         return $response;
@@ -525,6 +527,96 @@ class NodeService extends BaseService
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
+            );
+        }
+        return $response;
+    }
+
+    public function systemConnect($clientData, $contentArray)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $response = false;
+        // check if they are in an io-node
+        if ($currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
+            var_dump('not in i/o node');
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">You must be in an I/O node to connect to another system</pre>')
+            );
+        }
+        // get parameter
+        $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
+        if (!$response && !$parameter) {
+            var_dump('no param given, list nodes');
+            $returnMessage = array();
+            $publicIoNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_PUBLICIO);
+            $returnMessage[] = sprintf('<pre>%-40s|%-12s|%-20s</pre>', 'address', 'id', 'name');
+            foreach ($publicIoNodes as $publicIoNode) {
+                /** @var Node $publicIoNode */
+                $returnMessage[] = sprintf('<pre>%-40s|%-12s|%-20s</pre>', $publicIoNode->getSystem()->getAddy(), $publicIoNode->getId(), $publicIoNode->getName());
+            }
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            );
+        }
+        $addy = $parameter;
+        // check if the target system exists
+        $targetSystem = $this->entityManager->getRepository('Netrunners\Entity\System')->findByAddy($addy);
+        if (!$response && !$targetSystem) {
+            var_dump('invalid addy');
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid system address</pre>')
+            );
+        }
+        // now check if the node id exists
+        $targetNodeId = array_shift($contentArray);
+        $targetNodeId = trim($targetNodeId);
+        $targetNodeId = (int)$targetNodeId;
+        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+        if (!$response && !$targetNode) {
+            var_dump('invalid node id');
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node id</pre>')
+            );
+        }
+        if (!$response && ($targetNode->getType() != Node::ID_PUBLICIO && $targetNode->getType() != Node::ID_IO)) {
+            var_dump('no param given, list nodes');
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node id</pre>')
+            );
+        }
+        if (!$response && ($targetNode->getType() == Node::ID_IO && $targetSystem->getProfile() != $profile)) {
+            var_dump('no param given, list nodes');
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node id</pre>')
+            );
+        }
+        if (!$response) {
+            $profile->setCurrentNode($targetNode);
+            $this->entityManager->flush($profile);
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">You have connected to the target system</pre>')
             );
         }
         return $response;

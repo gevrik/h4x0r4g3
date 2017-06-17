@@ -326,6 +326,10 @@ class BaseService
         return true;
     }
 
+    /**
+     * @param Profile $profile
+     * @param Node $node
+     */
     protected function addKnownNode(Profile $profile, Node $node)
     {
         $row = $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);
@@ -345,6 +349,11 @@ class BaseService
         $this->entityManager->flush($row);
     }
 
+    /**
+     * @param Profile $profile
+     * @param Node $node
+     * @return mixed
+     */
     protected function getKnownNode(Profile $profile, Node $node)
     {
         return $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);

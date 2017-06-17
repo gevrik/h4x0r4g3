@@ -159,6 +159,9 @@ class ParserService
             case 'commands':
                 $response = $this->showCommands($clientData);
                 break;
+            case 'connect':
+                $response = $this->nodeService->systemConnect($clientData, $contentArray);
+                break;
             case 'ticker':
                 $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
                 if (!$user) return true;
@@ -179,9 +182,6 @@ class ParserService
                 break;
             case 'dismissallnotifications':
                 $this->notificationService->dismissNotification($clientData, $entityId, true);
-                break;
-            case 'edit':
-                $response = $this->fileService->editFile($clientData, $contentArray);
                 break;
             case 'editnode':
                 $response = $this->nodeService->editNodeDescription($clientData);
