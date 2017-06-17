@@ -47,9 +47,8 @@ class MailMessageService extends BaseService
         /** @var Profile $profile */
         $countUnreadMails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->countByUnreadMails($profile);
         $response = array(
-            'command' => 'showMessage',
-            'type' => 'sysmsg',
-            'message' => sprintf("You have %s unread mails in your inbox", $countUnreadMails)
+            'command' => 'showmessage',
+            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>', $countUnreadMails)
         );
         return $response;
     }
@@ -72,7 +71,7 @@ class MailMessageService extends BaseService
         foreach ($mails as $mail) {
             /** @var MailMessage $mail */
             $mailNumber++;
-            $preTag = ($mail->getReadDateTime()) ? '<pre>' : '<pre class="text-white">';
+            $preTag = ($mail->getReadDateTime()) ? '<pre>' : '<pre style="white-space: pre-wrap;" class="text-white">';
             $message .= sprintf(
                 '%s%-3s | %-20s | %-20s | %s</pre>',
                 $preTag,
@@ -84,7 +83,6 @@ class MailMessageService extends BaseService
         }
         $response = array(
             'command' => 'enterMailMode',
-            'type' => 'sysmsg',
             'message' => $message,
             'mailNumber' => $mailNumber
         );
@@ -117,7 +115,7 @@ class MailMessageService extends BaseService
         $mail = (isset($mails[$mailNumberArray])) ? $mails[$mailNumberArray] : NULL;
         if (!$mail) {
             $response = array(
-                'command' => 'showMessage',
+                'command' => 'showmessage',
                 'type' => 'white',
                 'message' => 'Unknown mail number'
             );
@@ -136,7 +134,7 @@ class MailMessageService extends BaseService
             $message .= sprintf('<pre class="text-white">Subject: %s</pre>', $mail->getSubject());
             $message .= sprintf('<pre class="text-white">%s</pre>', $mail->getContent());
             $response = array(
-                'command' => 'showMessage',
+                'command' => 'showmessage',
                 'type' => 'white',
                 'message' => $message
             );
@@ -170,19 +168,18 @@ class MailMessageService extends BaseService
         $mail = $mails[$mailNumberArray];
         if (!$mail) {
             $response = array(
-                'command' => 'showMessage',
+                'command' => 'showmessage',
                 'type' => 'danger',
                 'message' => 'Invalid mail number'
             );
         }
         if (!$response) {
             /** @var MailMessage $mail */
-            $message = sprintf('Mail #%s has been deleted', $mailNumber);
+            $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Mail #%s has been deleted</pre>', $mailNumber);
             $this->entityManager->remove($mail);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
+                'command' => 'showmessage',
                 'message' => $message
             );
         }

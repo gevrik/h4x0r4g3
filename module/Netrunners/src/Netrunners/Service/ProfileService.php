@@ -122,9 +122,8 @@ class ProfileService extends BaseService
         $returnMessage = array();
         if (empty($userJobs)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">No running jobs</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No running jobs</pre>')
             );
         }
         else {
@@ -165,9 +164,8 @@ class ProfileService extends BaseService
         $filePartInstances = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance')->findForPartsCommand($profile);
         if (empty($filePartInstances)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You have no file parts</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have no file parts</pre>')
             );
         }
         else {

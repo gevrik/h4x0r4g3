@@ -180,9 +180,8 @@ class SystemService extends BaseService
         // check if they are not already there
         if ($profile->getHomeNode() == $currentNode) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You are already there</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You are already there</pre>')
             );
         }
         /* checks passed, we can now move the player to their home node */
@@ -190,9 +189,8 @@ class SystemService extends BaseService
             $profile->setCurrentNode($profile->getHomeNode());
             $this->entityManager->flush($profile);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You recall to your home node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You recall to your home node</pre>')
             );
         }
         return $response;

@@ -198,12 +198,12 @@
                     break;
                 case 'enterCodeMode':
                     consoleMode = 'code';
-                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    md.append(data.message);
                     break;
                 case 'enterMailMode':
                     consoleMode = 'mail';
                     consoleOptionsMail.currentMailNumber = (data.mailNumber < 1) ? 0 : 1;
-                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    md.append(data.message);
                     break;
                 case 'exitCodeMode':
                     consoleMode = 'default';
@@ -245,18 +245,18 @@
                     break;
                 case 'setCodeLevel':
                     consoleOptionsCode.fileLevel = data.value;
-                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    md.append(data.message);
                     showPrompt();
                     break;
                 case 'setCodeMode':
                     resetConsoleOptionsCode();
                     consoleOptionsCode.mode = data.value;
-                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    md.append(data.message);
                     showPrompt();
                     break;
                 case 'setCodeType':
                     consoleOptionsCode.fileType = data.value;
-                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                    md.append(data.message);
                     showPrompt();
                     break;
                 case 'showPanel':
@@ -273,8 +273,8 @@
                     });
                     showPrompt();
                     break;
-                case 'showMessage':
-                    md.append('<span class="text-' + data.type + '">' + data.message + '</span><br />');
+                case 'showmessage':
+                    md.append(data.message);
                     showPrompt();
                     break;
                 case 'showoutput':
@@ -303,7 +303,7 @@
                     break;
                 case 'showMessagePrepend':
                     var lastPrompt = $('.prompt').last();
-                    $('<span class="text-' + data.type + '">' + data.message + '</span><br />').insertBefore(lastPrompt);
+                    $(data.message).insertBefore(lastPrompt);
                     return true;
             }
             if (command != 'echoCommand' && command != 'updatePrompt' && command != 'ticker') {

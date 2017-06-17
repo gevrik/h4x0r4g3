@@ -103,25 +103,22 @@ class NodeService extends BaseService
         // only allow owner of system to add nodes
         if ($profile != $currentNode->getSystem()->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         // check if they have enough credits
         if (!$response && $profile->getCredits() < self::RAW_NODE_COST) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a node to the system</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>')
             );
         }
         // check if we are in a home node, you can't add nodes to a home node
         if (!$response && $currentNode->getType() == Node::ID_HOME) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You can not add nodes to a home node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You can not add nodes to a home node</pre>')
             );
         }
         /* checks passed, we can now add the node */
@@ -152,9 +149,8 @@ class NodeService extends BaseService
             $this->entityManager->persist($targetConnection);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You have added a new node to the system for %s credits</pre>', self::RAW_NODE_COST)
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have added a new node to the system for %s credits</pre>', self::RAW_NODE_COST)
             );
         }
         return $response;
@@ -183,26 +179,23 @@ class NodeService extends BaseService
         $parameter = trim($parameter);
         if (!$parameter) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Please specify a new name for the node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name for the node</pre>')
             );
         }
         // check if they can change the type
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
         if (!$response && !$validator->isValid($parameter)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node name (alpha-numeric only)</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node name (alpha-numeric only)</pre>')
             );
         }
         if (!$response) {
@@ -211,9 +204,8 @@ class NodeService extends BaseService
             $currentNode->setName($name);
             $this->entityManager->flush($currentNode);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Node name changed to %s</pre>', $name)
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node name changed to %s</pre>', $name)
             );
         }
         return $response;
@@ -243,10 +235,10 @@ class NodeService extends BaseService
         if (!$parameter) {
             $returnMessage = array();
             $nodeTypes = Node::$lookup;
-            $returnMessage[] = sprintf('<pre class="text-sysmsg">Please choose a node type:</pre>');
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please choose a node type:</pre>');
             foreach ($nodeTypes as $typeId => $typeString) {
                 if ($typeId === 0) continue;
-                $returnMessage[] = sprintf('<pre class="text-sysmsg">%-2s|%-18s|%sc</pre>', $typeId, $typeString, Node::$data[$typeId]['cost']);
+                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-2s|%-18s|%sc</pre>', $typeId, $typeString, Node::$data[$typeId]['cost']);
             }
             $response = array(
                 'command' => 'showoutput',
@@ -256,9 +248,8 @@ class NodeService extends BaseService
         // check if they can change the type
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         $searchByNumber = false;
@@ -281,27 +272,24 @@ class NodeService extends BaseService
         }
         if (!$response && !$type) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">No such node type</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No such node type</pre>')
             );
         }
         // check a few combinations that are not valid
         if (!$response && $type == Node::ID_HOME) {
             if ($this->countTargetNodesOfType($currentNode, Node::ID_HOME) > 0) {
                 $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'sysmsg',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;">There is already a home node around this node</pre>')
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">There is already a home node around this node</pre>')
                 );
             }
         }
         // check if they have enough credits
         if (!$response && $profile->getCredits() < Node::$data[$type]['cost']) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a node to the system</pre>', Node::$data[$type]['cost'])
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>', Node::$data[$type]['cost'])
             );
         }
         if (!$response) {
@@ -311,9 +299,8 @@ class NodeService extends BaseService
             $currentNode->setName($name);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Node type changed to %s</pre>', $name)
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node type changed to %s</pre>', $name)
             );
         }
         return $response;
@@ -332,9 +319,8 @@ class NodeService extends BaseService
         // only allow owner of system to add nodes
         if ($profile != $currentNode->getSystem()->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         /* checks passed, we can now edit the node */
@@ -369,9 +355,8 @@ class NodeService extends BaseService
         // only allow owner of system to add nodes
         if ($profile != $currentNode->getSystem()->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         /* checks passed, we can now edit the node */
@@ -379,9 +364,8 @@ class NodeService extends BaseService
             $currentNode->setDescription($content);
             $this->entityManager->flush($currentNode);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Node description saved</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node description saved</pre>')
             );
         }
         return $conn->send(json_encode($response));
@@ -422,36 +406,32 @@ class NodeService extends BaseService
         // check if they can change the type
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         // check if there are still connections to this node
         $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
         if (!$response && count($connections) > 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to remove node with more than one connection</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unable to remove node with more than one connection</pre>')
             );
         }
         // check if there are still files in this node
         $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($currentNode);
         if (!$response && count($files) > 0) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to remove node which still contains files</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unable to remove node which still contains files</pre>')
             );
         }
         // check if there are still other profiles in this node
         $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($currentNode);
         if (!$response && count($profiles) > 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to remove node which still contains other users</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unable to remove node which still contains other users</pre>')
             );
         }
         // TODO sanity checks for storage/memory/etc
@@ -470,9 +450,8 @@ class NodeService extends BaseService
             $this->entityManager->remove($currentNode);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">The node has been removed</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">The node has been removed</pre>')
             );
         }
         return $response;
@@ -492,7 +471,7 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
         $returnMessage = array();
-        $returnMessage[] = sprintf("%s<br />", htmLawed($currentNode->getDescription(), array('safe'=>1, 'elements'=>'strong, em, strike, u')));
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', htmLawed($currentNode->getDescription(), array('safe'=>1, 'elements'=>'strong, em, strike, u')));
         $response = array(
             'command' => 'showoutput',
             'message' => $returnMessage
@@ -515,18 +494,17 @@ class NodeService extends BaseService
         // check if they can change the type
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         if (!$response) {
             $returnMessage = array();
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-11s|%-20s|%-3s|%s</pre>', 'id', 'type', 'lvl', 'name');
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>', 'id', 'type', 'lvl', 'name');
             $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-11s|%-20s|%-3s|%s</pre>', $node->getId(), Node::$lookup[$node->getType()], $node->getLevel(), $node->getName());
+                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>', $node->getId(), Node::$lookup[$node->getType()], $node->getLevel(), $node->getName());
             }
             $response = array(
                 'command' => 'showoutput',
@@ -551,9 +529,8 @@ class NodeService extends BaseService
         // check if they are in an io-node
         if ($currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You must be in an I/O node to connect to another system</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You must be in an I/O node to connect to another system</pre>')
             );
         }
         // get parameter
@@ -578,9 +555,8 @@ class NodeService extends BaseService
         if (!$response && !$targetSystem) {
             var_dump('invalid addy');
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid system address</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid system address</pre>')
             );
         }
         // now check if the node id exists
@@ -590,32 +566,28 @@ class NodeService extends BaseService
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
         if (!$response && !$targetNode) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node id</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node id</pre>')
             );
         }
         if (!$response && ($targetNode->getType() != Node::ID_PUBLICIO && $targetNode->getType() != Node::ID_IO)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node id</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node id</pre>')
             );
         }
         if (!$response && ($targetNode->getType() == Node::ID_IO && $targetSystem->getProfile() != $profile)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid node id</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node id</pre>')
             );
         }
         if (!$response) {
             $profile->setCurrentNode($targetNode);
             $this->entityManager->flush($profile);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You have connected to the target system</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have connected to the target system</pre>')
             );
         }
         return $response;

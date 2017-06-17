@@ -133,9 +133,8 @@ class ParserService
         switch ($userCommand) {
             default:
                 $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'sysmsg',
-                    'message' => 'Unknown command'
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
                 );
                 break;
             case 'clear':
@@ -204,7 +203,7 @@ class ParserService
                     /** @var User $clientUser */
                     if ($clientUser == $user) {
                         $response = array(
-                            'command' => 'showMessage',
+                            'command' => 'showmessage',
                             'type' => ChatService::CHANNEL_GLOBAL,
                             'message' => $messageContent
                         );
@@ -292,9 +291,8 @@ class ParserService
             case 'time':
                 $now = new \DateTime();
                 $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'sysmsg',
-                    'message' => sprintf('current server time: %s', $now->format('Y/m/d H:i:s'))
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">current server time: %s</pre>', $now->format('Y/m/d H:i:s'))
                 );
                 break;
             case 'touch':

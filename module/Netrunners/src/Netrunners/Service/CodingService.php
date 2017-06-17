@@ -69,16 +69,14 @@ class CodingService extends BaseService
         $response = false;
         if ($profile->getCurrentNode()->getType() != Node::ID_CODING) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => "You must be in a coding node to enter coding mode"
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You must be in a coding node to enter coding mode</pre>')
             );
         }
         if (!$response) {
-            $message = "NeoCode - version 0.1 - '?' for help, 'q' to quit";
+            $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">NeoCode - version 0.1 - \'?\' for help, \'q\' to quit</pre>');
             $response = array(
                 'command' => 'enterCodeMode',
-                'type' => 'sysmsg',
                 'message' => $message
             );
         }
@@ -109,11 +107,10 @@ class CodingService extends BaseService
                 $value = 'program';
                 break;
         }
-        $message = sprintf('mode set to [%s]', $value);
+        $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">mode set to [%s]</pre>', $value);
         $response = array(
             'command' => $command,
             'value' => $value,
-            'type' => 'sysmsg',
             'message' => $message
         );
         return $response;
@@ -136,29 +133,26 @@ class CodingService extends BaseService
         // init message
         $message = '';
         if (!$parameter) {
-            $returnMessage = sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "Choose a number between 1 and 100.");
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => $returnMessage
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Choose a number between 1 and 100</pre>')
             );
         }
         else {
             $value = false;
             $parameter = (int)$parameter;
             if ($parameter < 1 || $parameter > 100) {
-                $command = 'showMessage';
-                $message = sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "Choose a number between 1 and 100.");
+                $command = 'showmessage';
+                $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Choose a number between 1 and 100</pre>');
             }
             else {
                 $command = 'setCodeLevel';
                 $value = $parameter;
-                $message = sprintf('level set to [%s]', $parameter);
+                $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">level set to [%s]</pre>', $parameter);
             }
             $response = array(
                 'command' => $command,
                 'value' => $value,
-                'type' => 'sysmsg',
                 'message' => $message
             );
         }
@@ -215,7 +209,7 @@ class CodingService extends BaseService
                     $partsString .= '<span class="text-success">' . $shortName[0] . '</span> ';
                 }
             }
-            $message .= sprintf('<pre style="white-space: pre-wrap;">%-10s: %s</pre>', "resources", $partsString);
+            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-10s: %s</pre>', "resources", $partsString);
             // add optional parts to the ouput
             $partsString = '';
             foreach ($fileType->getOptionalFileParts() as $filePart) {
@@ -224,16 +218,15 @@ class CodingService extends BaseService
                 $shortName = explode(' ', $name);
                 $partsString .= $shortName[0] . ' ';
             }
-            $message .= sprintf('<pre style="white-space: pre-wrap;">%-10s: %s</pre>', "optional", $partsString);
+            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-10s: %s</pre>', "optional", $partsString);
         }
         else {
             /* resource */
-            $message .= sprintf('<pre style="white-space: pre-wrap;">%-10s: %s</pre>', "snippets", ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 'unknown');
+            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-10s: %s</pre>', "snippets", ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 'unknown');
         }
         // build response
         $response = array(
-            'command' => 'showMessage',
-            'type' => 'sysmsg',
+            'command' => 'showmessage',
             'message' => $message
         );
         // init response
@@ -277,10 +270,9 @@ class CodingService extends BaseService
                 $shortName = explode(' ', $name);
                 $message .= $shortName[0] . ' ';
             }
-            $returnMessage = sprintf('<pre style="white-space: pre-wrap;">%s</pre>', $message);
+            $returnMessage = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', $message);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
+                'command' => 'showmessage',
                 'message' => $returnMessage
             );
         }
@@ -306,13 +298,12 @@ class CodingService extends BaseService
                 case 'social':
                     $command = 'setCodeType';
                     $value = $parameter;
-                    $message = sprintf('type set to [%s]', $parameter);
+                    $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     break;
             }
             $response = array(
                 'command' => $command,
                 'value' => $value,
-                'type' => 'sysmsg',
                 'message' => $message
             );
         }
@@ -331,9 +322,8 @@ class CodingService extends BaseService
         switch ($mode) {
             default:
                 $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'warning',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "Invalid code mode")
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>', "Invalid code mode")
                 );
                 break;
             case 'program':
@@ -362,17 +352,15 @@ class CodingService extends BaseService
         $type = $codeOptions->fileType;
         if ($type === 0) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need to specify a type first</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need to specify a type first</pre>')
             );
         }
         $level = $codeOptions->fileLevel;
         if (!$response && $level === 0) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need to specify a level first</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need to specify a level first</pre>')
             );
         }
         $filePart = NULL;
@@ -380,9 +368,8 @@ class CodingService extends BaseService
             $filePart = $this->entityManager->find('Netrunners\Entity\FilePart', FilePart::$revLookup[$type]);
             if ($level > $profile->getSnippets()) {
                 $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'warning',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s snippets to code the %s</pre>', $level, $type)
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code the %s</pre>', $level, $type)
                 );
             }
         }
@@ -411,14 +398,11 @@ class CodingService extends BaseService
                 'socketId' => $clientData->socketId,
                 'nodeId' => $profile->getCurrentNode()->getId()
             ]);
-
             $response = array(
                 'command' => 'updateClientData',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You start coding the %s for %s snippets</pre>', $filePart->getName(), $level),
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>', $filePart->getName(), $level),
                 'clientData' => $clientData
             );
-
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - $level);
             $this->entityManager->flush($profile);
@@ -443,17 +427,15 @@ class CodingService extends BaseService
         $type = $codeOptions->fileType;
         if ($type === 0) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need to specify a type first</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need to specify a type first</pre>')
             );
         }
         $level = $codeOptions->fileLevel;
         if (!$response && $level === 0) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need to specify a level first</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need to specify a level first</pre>')
             );
         }
         $fileType = NULL;
@@ -461,9 +443,8 @@ class CodingService extends BaseService
             $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::$revLookup[$type]);
             if ($level > $profile->getSnippets()) {
                 $response = array(
-                    'command' => 'showMessage',
-                    'type' => 'warning',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s snippets to code the %s</pre>', $level, $type)
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code the %s</pre>', $level, $type)
                 );
             }
         }
@@ -479,9 +460,8 @@ class CodingService extends BaseService
                 $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
                 if (empty($filePartInstances)) {
                     $response = array(
-                        'command' => 'showMessage',
-                        'type' => 'warning',
-                        'message' => sprintf('<pre style="white-space: pre-wrap;">You need this resource with at least level %s to code the %s : [%s]</pre>', $level, $type, $neededResource->getName())
+                        'command' => 'showmessage',
+                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>', $level, $type, $neededResource->getName())
                     );
                     break;
                 }
@@ -490,9 +470,8 @@ class CodingService extends BaseService
         // check if the player can store the file in his total storage
         if (!$response && !$this->canStoreFileOfSize($profile, $fileType->getSize())) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>', $type, $fileType->getSize())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>', $type, $fileType->getSize())
             );
         }
         /* checks passed, we can now create the file */
@@ -522,8 +501,7 @@ class CodingService extends BaseService
 
             $response = array(
                 'command' => 'updateClientData',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You start coding the %s for %s snippets</pre>', $fileType->getName(), $level),
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>', $fileType->getName(), $level),
                 'clientData' => $clientData
             );
 

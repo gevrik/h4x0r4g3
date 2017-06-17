@@ -360,7 +360,7 @@ class BaseService
         return $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);
     }
 
-    protected function messageEveryoneInNode(Node $node, $wsClientsData, $wsClients, $message, $profile)
+    public function messageEveryoneInNode(Node $node, $wsClientsData, $wsClients, $message, $profile)
     {
         $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($node, $profile);
         foreach ($profiles as $xprofile) {

@@ -61,35 +61,31 @@ class ConnectionService extends BaseService
         }
         if (!$connection) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "No such connection")
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>', "No such connection")
             );
         }
         // check if they can access the connection
         if (!$response && ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile())) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "Access denied")
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>', "Access denied")
             );
         }
         if (!$response) {
             $targetNode = $connection->getTargetNode();
             $sourceNode = $connection->getSourceNode();
             // message everyone in source node
-            $messageText = sprintf('<pre style="white-space: pre-wrap;">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
+            $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
             $message = array(
                 'command' => 'showMessagePrepend',
-                'type' => 'sysmsg',
                 'message' => $messageText
             );
             $this->messageEveryoneInNode($sourceNode, $wsClientsData, $wsClients, $message, $profile);
             $profile->setCurrentNode($connection->getTargetNode());
-            $messageText = sprintf('<pre style="white-space: pre-wrap;">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
+            $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
             $message = array(
                 'command' => 'showMessagePrepend',
-                'type' => 'sysmsg',
                 'message' => $messageText
             );
             $this->messageEveryoneInNode($targetNode, $wsClientsData, $wsClients, $message, $profile);
@@ -141,50 +137,44 @@ class ConnectionService extends BaseService
         // check if they can add connections
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         // check if this is a home node
         if (!$response && $currentNode->getType() == Node::ID_HOME) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Unable to add a connection to a home node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unable to add a connection to a home node</pre>')
             );
         }
         // check if they have enough credits
         if (!$response && $profile->getCredits() < self::CONNECTION_COST) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a connection to the node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You need %s credits to add a connection to the node</pre>')
             );
         }
         // check if the target node exists
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
         if (!$response && !$targetNode) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid target node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid target node</pre>')
             );
         }
         // check if the target node is the current ndoe
         if (!$response && $targetNode == $currentNode) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid target node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid target node</pre>')
             );
         }
         // check if the target node is in the same system
         if (!$response && $targetNode->getSystem() != $currentSystem) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid target node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid target node</pre>')
             );
         }
         /* all checks passed, we can now add the connection */
@@ -207,9 +197,8 @@ class ConnectionService extends BaseService
             $this->entityManager->persist($bconnection);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">The connection has been created for %s credits</pre>', self::CONNECTION_COST)
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">The connection has been created for %s credits</pre>', self::CONNECTION_COST)
             );
         }
         return $response;
@@ -230,17 +219,15 @@ class ConnectionService extends BaseService
         // check if they can add connections
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         // check if they have enough credits
         if (!$response && $profile->getCredits() < self::CONNECTION_COST) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">You need %s credits to add a connection to the node</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a connection to the node</pre>')
             );
         }
         /* connections can be given by name or number, so we need to handle both */
@@ -267,9 +254,8 @@ class ConnectionService extends BaseService
         }
         if (!$response && !$connection) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "No such connection")
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', "No such connection")
             );
         }
         if (!$response) {
@@ -281,9 +267,8 @@ class ConnectionService extends BaseService
             $targetConnection->setType(Connection::TYPE_CODEGATE);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "The connection has been secured")
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', "The connection has been secured")
             );
         }
         return $response;

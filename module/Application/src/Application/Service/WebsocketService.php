@@ -216,9 +216,8 @@ class WebsocketService implements MessageComponentInterface {
                     }
                     else {
                         $response = array(
-                            'command' => 'showMessage',
-                            'type' => 'warning',
-                            'message' => 'Username can only contain alphanumeric characters, please try again'
+                            'command' => 'showmessage',
+                            'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Username can only contain alphanumeric characters, please try again</pre>'
                         );
                         $from->send(json_encode($response));
                         $from->close();
@@ -239,9 +238,8 @@ class WebsocketService implements MessageComponentInterface {
                 }
                 else {
                     $response = array(
-                        'command' => 'showMessage',
-                        'type' => 'warning',
-                        'message' => 'Password can only contain alphanumeric characters, please try again'
+                        'command' => 'showmessage',
+                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Password can only contain alphanumeric characters, please try again</pre>'
                     );
                     $from->send(json_encode($response));
                     $from->close();
@@ -251,9 +249,8 @@ class WebsocketService implements MessageComponentInterface {
                 $tempPassword = $this->clientsData[$resourceId]['tempPassword'];
                 if ($tempPassword != $content) {
                     $response = array(
-                        'command' => 'showMessage',
-                        'type' => 'warning',
-                        'message' => 'The passwords do not match, please confirm again'
+                        'command' => 'showmessage',
+                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">The passwords do not match, please confirm again</pre>'
                     );
                     $from->send(json_encode($response));
                     $from->close();
@@ -268,9 +265,8 @@ class WebsocketService implements MessageComponentInterface {
                         $tries++;
                         if ($tries >= $maxTries) {
                             $response = array(
-                                'command' => 'showMessage',
-                                'type' => 'warning',
-                                'message' => 'Unable to initialize your account! Please contact an administrator!'
+                                'command' => 'showmessage',
+                                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Unable to initialize your account! Please contact an administrator!</pre>'
                             );
                             $from->send(json_encode($response));
                             $from->close();
@@ -348,9 +344,8 @@ class WebsocketService implements MessageComponentInterface {
                 $bcrypt = new Bcrypt();
                 if (!$bcrypt->verify($content, $currentPassword)) {
                     $response = array(
-                        'command' => 'showMessage',
-                        'type' => 'danger',
-                        'message' => 'Invalid password'
+                        'command' => 'showmessage',
+                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>'
                     );
                     $from->send(json_encode($response));
                     $from->close();
@@ -359,9 +354,8 @@ class WebsocketService implements MessageComponentInterface {
                     foreach ($this->clients as $client) {
                         if ($client->resourceId != $resourceId && $this->clientsData[$client->resourceId]['username'] == $this->clientsData[$resourceId]['username']) {
                             $loginResponse = array(
-                                'command' => 'showMessage',
-                                'type' => 'danger',
-                                'message' => 'Your connection has been terminated because you logged in from another location'
+                                'command' => 'showmessage',
+                                'message' => '<pre style="white-space: pre-wrap;" class="text-danger">Your connection has been terminated because you logged in from another location</pre>'
                             );
                             $client->send(json_encode($loginResponse));
                             $client->close();
@@ -374,6 +368,13 @@ class WebsocketService implements MessageComponentInterface {
                         'hash' => $hash
                     );
                     $from->send(json_encode($response));
+                    // message everyone in node
+                    $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has logged in to this node</pre>', $user->getUsername());
+                    $message = array(
+                        'command' => 'showMessagePrepend',
+                        'message' => $messageText
+                    );
+                    $this->codingService->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $this->clientsData, $this->clients, $message, $user->getProfile());
                 }
                 break;
             case 'saveNodeDescription':
@@ -397,9 +398,8 @@ class WebsocketService implements MessageComponentInterface {
                 if (is_array($codeResponse) && $codeResponse['command'] == 'updateClientData') {
                     $this->clientsData[$resourceId] = (array)$codeResponse['clientData'];
                     $response = array(
-                        'command' => 'showMessage',
-                        'type' => $codeResponse['type'],
-                        'message' => $codeResponse['message']
+                        'command' => 'showmessage',
+                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-%s">%s</pre>', $codeResponse['type'], $codeResponse['message'])
                     );
                     $from->send(json_encode($response));
                 }

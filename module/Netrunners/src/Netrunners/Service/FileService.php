@@ -55,9 +55,8 @@ class FileService extends BaseService
         );
         if (count($targetFiles) < 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => "No such file"
+                'command' => 'showmessage',
+                'message' => '<pre style="white-space: pre-wrap;" class="text-sysmsg">No such file</pre>'
             );
         }
         /* start logic if we do not have a response already */
@@ -106,25 +105,22 @@ class FileService extends BaseService
         );
         if ($profile->getSnippets() < 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => 'You need 1 snippet to create an empty text file'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need 1 snippet to create an empty text file</pre>')
             );
         }
         if (!$response && count($targetFiles) >= 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => 'A file with that name already exists in this node'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">A file with that name already exists in this node</pre>')
             );
         }
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
         if (!$response && !$validator->isValid($parameter)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => 'The file name contains non-alphanumeric characters'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">The file name contains non-alphanumeric characters</pre>')
             );
         }
         $parameter = str_replace(' ', '_', $parameter);
@@ -153,9 +149,8 @@ class FileService extends BaseService
             $this->entityManager->persist($newCode);
             $this->entityManager->flush();
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('%s has been created', $parameter)
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been created</pre>', $parameter)
             );
             return $response;
         }
@@ -193,17 +188,15 @@ class FileService extends BaseService
         );
         if (count($targetFiles) < 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => "No such file"
+                'command' => 'showmessage',
+                'message' => sprintf("<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">No such file</pre>")
             );
         }
         $file = array_shift($targetFiles);
         if (!$response && !$file) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">File not found</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">File not found</pre>')
             );
         }
         // now ge the new name
@@ -211,26 +204,23 @@ class FileService extends BaseService
         $newName = trim($newName);
         if (!$response && !$newName) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Please specify a new name</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name</pre>')
             );
         }
         // check if they can change the type
         if (!$response && $profile != $file->getProfile()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
             );
         }
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
         if (!$response && !$validator->isValid($newName)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">Invalid file name (alpha-numeric, no whitespace)</pre>')
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (alpha-numeric, no whitespace)</pre>')
             );
         }
         if (!$response) {
@@ -238,9 +228,8 @@ class FileService extends BaseService
             $file->setName($newName);
             $this->entityManager->flush($file);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">File name changed to %s</pre>', $newName)
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">File name changed to %s</pre>', $newName)
             );
         }
         return $response;
@@ -275,34 +264,30 @@ class FileService extends BaseService
         );
         if (count($targetFiles) < 1) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => "No such file"
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No such file</pre>')
             );
         }
         $file = array_shift($targetFiles);
         // check if file belongs to user TODO should be able to bypass this via bh program
         if (!$response && $file->getProfile() != $profile) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf("You are not allowed to execute %s", $file->getName())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You are not allowed to execute %s</pre>', $file->getName())
             );
         }
         // check if already running
         if (!$response && $file->getRunning()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf("%s is already running", $file->getName())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s is already running</pre>', $file->getName())
             );
         }
         // check if there is enough memory to execute this
         if (!$response && $this->canExecuteFile($profile, $file)) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf("You do not have enough memory to execute %s - build more memory nodes", $file->getName())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You do not have enough memory to execute %s - build more memory nodes</pre>', $file->getName())
             );
         }
         if (!$response) {
@@ -310,9 +295,8 @@ class FileService extends BaseService
             switch ($file->getFileType()->getId()) {
                 default:
                     $response = array(
-                        'command' => 'showMessage',
-                        'type' => 'sysmsg',
-                        'message' => sprintf("%s is not executable, yet", $file->getName())
+                        'command' => 'showmessage',
+                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s is not executable, yet</pre>', $file->getName())
                     );
                     break;
                 case FileType::ID_CHATCLIENT:
@@ -348,45 +332,39 @@ class FileService extends BaseService
         $response = false;
         if (!$parameter) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => 'Please specify the process id to kill (ps for list)'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the process id to kill (ps for list)</pre>')
             );
         }
         $runningFile = (!$response) ? $this->entityManager->find('Netrunners\Entity\File', $parameter) : NULL;
         if (!$response && !$runningFile) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => 'Invalid process id'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid process id</pre>')
             );
         }
         if (!$response && $runningFile->getProfile() != $profile) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => 'Invalid process id'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid process id</pre>')
             );
         }
         if (!$response && !$runningFile->getRunning()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => 'No process with that id'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No process with that id</pre>')
             );
         }
         if (!$response && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => 'That process needs to be killed in the system that it is running in'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">That process needs to be killed in the system that it is running in</pre>')
             );
         }
         if (!$response && $runningFile->getNode() != $profile->getCurrentNode()) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => 'That process needs to be killed in the node that it is running in'
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">That process needs to be killed in the node that it is running in</pre>')
             );
         }
         if (!$response) {
@@ -395,9 +373,8 @@ class FileService extends BaseService
             $runningFile->setNode(NULL);
             $this->entityManager->flush($runningFile);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('Process with id %s has been killed', $runningFile->getId())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Process with id %s has been killed</pre>', $runningFile->getId())
             );
         }
         return $response;
@@ -476,9 +453,8 @@ class FileService extends BaseService
         $file->setRunning(true);
         $this->entityManager->flush($file);
         $response = array(
-            'command' => 'showMessage',
-            'type' => 'sysmsg',
-            'message' => sprintf('<pre style="white-space: pre-wrap;">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            'command' => 'showmessage',
+            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
         );
         return $response;
     }
@@ -494,9 +470,8 @@ class FileService extends BaseService
         $response = false;
         if ($node->getType() != Node::ID_DATABASE) {
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'warning',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">%s can only be used in a database node</pre>', $file->getName())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>', $file->getName())
             );
         }
         if (!$response) {
@@ -505,9 +480,8 @@ class FileService extends BaseService
             $file->setNode($node);
             $this->entityManager->flush($file);
             $response = array(
-                'command' => 'showMessage',
-                'type' => 'sysmsg',
-                'message' => sprintf('<pre style="white-space: pre-wrap;">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
             );
         }
         return $response;
