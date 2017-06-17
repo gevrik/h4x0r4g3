@@ -15,6 +15,7 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
 use Zend\View\Model\ViewModel;
@@ -334,7 +335,12 @@ class NodeService extends BaseService
         if (!$response) {
             $view = new ViewModel();
             $view->setTemplate('netrunners/node/edit-description.phtml');
-            $view->setVariable('description', $currentNode->getDescription());
+            $description = $currentNode->getDescription();
+            $processedDescription = '';
+            if ($description) {
+                $processedDescription = htmLawed($description);
+            }
+            $view->setVariable('description', $processedDescription);
             $response = array(
                 'command' => 'showPanel',
                 'type' => 'default',
@@ -342,6 +348,37 @@ class NodeService extends BaseService
             );
         }
         return $response;
+    }
+
+    public function saveNodeDescription(ConnectionInterface $conn, $clientData, $content)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $response = false;
+        // only allow owner of system to add nodes
+        if ($profile != $currentNode->getSystem()->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        /* checks passed, we can now edit the node */
+        if (!$response) {
+            $currentNode->setDescription($content);
+            $this->entityManager->flush($currentNode);
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Node description saved</pre>')
+            );
+        }
+        return $conn->send(json_encode($response));
     }
 
     /**
@@ -430,6 +467,64 @@ class NodeService extends BaseService
                 'command' => 'showMessage',
                 'type' => 'sysmsg',
                 'message' => sprintf('<pre style="white-space: pre-wrap;">The node has been removed</pre>')
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
+    public function surveyNode($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $returnMessage = array();
+        $returnMessage[] = sprintf("%s<br />", htmLawed($currentNode->getDescription(), array('safe'=>1, 'elements'=>'strong, em, strike, u')));
+        $response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        );
+        return $response;
+    }
+
+    public function listNodes($clientData)
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $currentNode = $profile->getCurrentNode();
+        /** @var Node $currentNode */
+        $currentSystem = $currentNode->getSystem();
+        /** @var System $currentSystem */
+        $response = false;
+        // check if they can change the type
+        if (!$response && $profile != $currentSystem->getProfile()) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">Permission denied</pre>')
+            );
+        }
+        if (!$response) {
+            $returnMessage = array();
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-11s|%-20s|%-3s|%s</pre>', 'id', 'type', 'lvl', 'name');
+            $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
+            foreach ($nodes as $node) {
+                /** @var Node $node */
+                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-11s|%-20s|%-3s|%s</pre>', $node->getId(), Node::$lookup[$node->getType()], $node->getLevel(), $node->getName());
+            }
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
             );
         }
         return $response;

@@ -1,12 +1,12 @@
 <div class="panel panel-default draggable edit-node-description-panel">
     <div class="panel-heading">
         <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <button type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
+        <button id="save-node-desc" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
         <h3 class="panel-title"><?php echo $this->translate("edit node description"); ?></h3>
     </div>
     <div class="panel-body" style="padding: 0;">
         <label for="description">
-            <textarea id="description" name="description" class="description" rows="10"><?php echo $this->description; ?></textarea>
+            <textarea id="description" name="description" class="description" rows="10" style="border: 0;"><?php echo $this->description; ?></textarea>
         </label>
     </div>
 </div>
@@ -14,5 +14,16 @@
 
     var editorWidth = $('.panel-body').innerWidth();
     $('#description').css('width', editorWidth);
+
+    $('#save-node-desc').on('click', function(){
+        console.log('save clicked');
+        var jsonData = {
+            command: 'saveNodeDescription',
+            hash: hash,
+            content: $('#description').val(),
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+    });
 
 </script>

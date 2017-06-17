@@ -10,6 +10,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\LoopService;
+use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
 use Netrunners\Service\SystemService;
@@ -24,6 +25,9 @@ use Zend\I18n\Validator\Alnum;
 use Zend\Log\Logger;
 
 class WebsocketService implements MessageComponentInterface {
+
+    const LOOP_TIME_JOBS = 5;
+    const LOOP_TIME_RESOURCES = 300;
 
     /**
      * @var \SplObjectStorage
@@ -71,6 +75,11 @@ class WebsocketService implements MessageComponentInterface {
     protected $loopService;
 
     /**
+     * @var NodeService
+     */
+    protected $nodeService;
+
+    /**
      * @var Logger
      */
     protected $logger;
@@ -87,6 +96,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param ParserService $parserService
      * @param CodingService $codingService
      * @param LoopService $loopService
+     * @param NodeService $nodeService
      * @param LoopInterface $loop
      * @param $hash
      */
@@ -97,6 +107,7 @@ class WebsocketService implements MessageComponentInterface {
         ParserService $parserService,
         CodingService $codingService,
         LoopService $loopService,
+        NodeService $nodeService,
         LoopInterface $loop,
         $hash
     ) {
@@ -107,17 +118,18 @@ class WebsocketService implements MessageComponentInterface {
         $this->parserService = $parserService;
         $this->codingService = $codingService;
         $this->loopService = $loopService;
+        $this->nodeService = $nodeService;
         $this->loop = $loop;
         $this->hash = $hash;
 
         $this->logger = new Logger();
         $this->logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
 
-        $this->loop->addPeriodicTimer(5, function(){
+        $this->loop->addPeriodicTimer(self::LOOP_TIME_JOBS, function(){
             $this->loopService->loopJobs();
         });
 
-        $this->loop->addPeriodicTimer(900, function(){
+        $this->loop->addPeriodicTimer(self::LOOP_TIME_RESOURCES, function(){
             $this->loopService->loopResources();
         });
 
@@ -156,7 +168,7 @@ class WebsocketService implements MessageComponentInterface {
             }
         }
         if ($content != 'default' && $command != 'autocomplete' && !$silent) {
-            $content = htmlentities($content);
+            $content = htmLawed($content);
             $response = array(
                 'command' => 'echoCommand',
                 'content' => $content
@@ -363,6 +375,9 @@ class WebsocketService implements MessageComponentInterface {
                     $from->send(json_encode($response));
                 }
                 break;
+            case 'saveNodeDescription':
+                if ($hash != $this->clientsData[$resourceId]['hash']) return true;
+                return $this->nodeService->saveNodeDescription($from, (object)$this->clientsData[$resourceId], $content);
             case 'showPrompt':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->utilityService->showPrompt($from, (object)$this->clientsData[$resourceId]);

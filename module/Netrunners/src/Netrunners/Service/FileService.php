@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
@@ -146,8 +147,8 @@ class FileService extends BaseService
             $newCode->setRunning(NULL);
             $newCode->setSize(0);
             $newCode->setSlots(0);
-            $newCode->setSystem($profile->getCurrentNode()->getSystem());
-            $newCode->setNode($profile->getCurrentNode());
+            $newCode->setSystem(NULL);
+            $newCode->setNode(NULL);
             $newCode->setVersion(1);
             $this->entityManager->persist($newCode);
             $this->entityManager->flush();
@@ -211,13 +212,8 @@ class FileService extends BaseService
         return $response;
     }
 
-    /**
-     * Executes a file.
-     * @param File $file
-     * @param $clientData
-     * @return bool
-     */
-    public function executeFile(File $file, $clientData)
+
+    public function executeFile($clientData, $contentArray)
     {
         // get user
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -227,8 +223,28 @@ class FileService extends BaseService
         /** @var Profile $profile */
         // init response
         $response = false;
+        // get parameter
+        $parameter = array_shift($contentArray);
+        $parameter = trim($parameter);
+        // get file repo
+        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepository */
+        // try to get target file via repo method
+        $targetFiles = $fileRepository->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        if (count($targetFiles) < 1) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => "No such file"
+            );
+        }
+        $file = $targetFile = array_shift($targetFiles);
         // check if file belongs to user TODO should be able to bypass this via bh program
-        if ($file->getProfile() != $profile) {
+        if (!$response && $file->getProfile() != $profile) {
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
@@ -250,14 +266,14 @@ class FileService extends BaseService
                     $response = array(
                         'command' => 'showMessage',
                         'type' => 'sysmsg',
-                        'message' => sprintf("%s is not executable", $file->getName())
+                        'message' => sprintf("%s is not executable, yet", $file->getName())
                     );
                     break;
                 case FileType::ID_CHATCLIENT:
                     $response = $this->executeChatClient($file);
                     break;
                 case FileType::ID_DATAMINER:
-                    $response = $this->executeDataminer($file);
+                    $response = $this->executeDataminer($file, $profile, $profile->getCurrentNode());
                     break;
             }
         }
@@ -405,19 +421,32 @@ class FileService extends BaseService
     }
 
     /**
-     * Executes a dataminer file.
      * @param File $file
-     * @return array
+     * @param Profile $profile
+     * @param Node $node
+     * @return array|bool
      */
-    protected function executeDataminer(File $file)
+    protected function executeDataminer(File $file, Profile $profile, Node $node)
     {
-        $file->setRunning(true);
-        $this->entityManager->flush($file);
-        $response = array(
-            'command' => 'showMessage',
-            'type' => 'sysmsg',
-            'message' => sprintf('<pre style="white-space: pre-wrap;">%s has been started as process %s</pre>', $file->getName(), $file->getId())
-        );
+        $response = false;
+        if ($node->getType() != Node::ID_DATABASE) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">%s can only be used in a database node</pre>', $file->getName())
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'sysmsg',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            );
+        }
         return $response;
     }
 

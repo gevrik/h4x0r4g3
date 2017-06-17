@@ -17,6 +17,11 @@
             size: 5
         });
 
+        $('#panel-container').on('click', '.panel-heading .close', function(e){
+            $('#panel-container').html('');
+            commandInput.focus();
+        });
+
         $('#panel-container').on('click', '.close-btn', function(e){
             var command = {
                 command: 'parseInput',
@@ -73,7 +78,7 @@
             var textClass = 'muted';
             var data = JSON.parse(e.data);
             var command = data.command;
-            if (command != 'showMessagePrepend' && command != 'updatePrompt') commandInput.attr('type', 'text').detach();
+            if (command != 'showMessagePrepend' && command != 'updatePrompt' && command != 'ticker') commandInput.attr('type', 'text').detach();
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
@@ -301,7 +306,7 @@
                     $('<span class="text-' + data.type + '">' + data.message + '</span><br />').insertBefore(lastPrompt);
                     return true;
             }
-            if (command != 'echoCommand' && command != 'updatePrompt') {
+            if (command != 'echoCommand' && command != 'updatePrompt' && command != 'ticker') {
                 commandInput.appendTo(md).focus();
             }
         };

@@ -43,7 +43,7 @@ class LoopService extends BaseService
     }
 
     /**
-     *
+     * This runs every 5s to check if coding jobs are finished.
      */
     public function loopJobs()
     {
@@ -69,6 +69,9 @@ class LoopService extends BaseService
         }
     }
 
+    /**
+     * This runs every 15m to determine snippet and credit gains based on node types.
+     */
     public function loopResources()
     {
         $items = [];

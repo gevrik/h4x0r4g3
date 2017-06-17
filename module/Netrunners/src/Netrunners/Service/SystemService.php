@@ -101,26 +101,32 @@ class SystemService extends BaseService
         foreach ($nodes as $node) {
             /** @var Node $node */
             // if this is the current node, add to beginning of array
-            if ($node == $profile->getCurrentNode()) {
-                array_unshift($mapArray['nodes'], [
-                    'id' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
-                    'group' => 99
-                ]);
-            }
-            else {
-                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
-                $mapArray['nodes'][] = [
-                    'id' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
-                    'group' => $group
-                ];
-            }
+//            if ($node == $profile->getCurrentNode()) {
+//                array_unshift($mapArray['nodes'], [
+//                    'id' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+//                    'group' => 99
+//                ]);
+//            }
+//            else {
+//                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
+//                $mapArray['nodes'][] = [
+//                    'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+//                    'type' => $group
+//                ];
+//            }
+            $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
+            $mapArray['nodes'][] = [
+                'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+                'type' => $group
+            ];
             $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
             foreach ($connections as $connection) {
                 /** @var Connection $connection */
                 $mapArray['links'][] = [
                     'source' => (string)$connection->getSourceNode()->getId() . '_' . Node::$lookup[$connection->getSourceNode()->getType()] . '_' . $connection->getSourceNode()->getName(),
                     'target' => (string)$connection->getTargetNode()->getId() . '_' . Node::$lookup[$connection->getTargetNode()->getType()] . '_' . $connection->getTargetNode()->getName(),
-                    'value' => 2
+                    'value' => 2,
+                    'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
                 ];
             }
         }

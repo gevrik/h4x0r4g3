@@ -12,6 +12,7 @@ namespace Application\Controller;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\LoopService;
+use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
 use Application\Service\WebsocketService;
@@ -58,6 +59,11 @@ class IndexController extends AbstractActionController
      */
     protected $loopService;
 
+    /**
+     * @var NodeService
+     */
+    protected $nodeService;
+
 
     /**
      * IndexController constructor.
@@ -67,6 +73,7 @@ class IndexController extends AbstractActionController
      * @param ParserService $parserService
      * @param CodingService $codingService
      * @param LoopService $loopService
+     * @param NodeService $nodeService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -74,7 +81,8 @@ class IndexController extends AbstractActionController
         UtilityService $utilityService,
         ParserService $parserService,
         CodingService $codingService,
-        LoopService $loopService
+        LoopService $loopService,
+        NodeService $nodeService
     )
     {
         $this->entityManager = $entityManager;
@@ -83,6 +91,7 @@ class IndexController extends AbstractActionController
         $this->parserService = $parserService;
         $this->codingService = $codingService;
         $this->loopService = $loopService;
+        $this->nodeService = $nodeService;
     }
 
     /**
@@ -116,6 +125,7 @@ class IndexController extends AbstractActionController
                         $this->parserService,
                         $this->codingService,
                         $this->loopService,
+                        $this->nodeService,
                         $loop,
                         $config['hashmod']
                     )

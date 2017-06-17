@@ -23,6 +23,11 @@ class FileType
     const ID_TEXT = 4;
     const ID_ICMP_BLOCKER = 5;
     const ID_COINMINER = 6;
+    const ID_CODEBLADE = 7;
+    const ID_CODEBLASTER = 8;
+    const ID_CODEARMOR = 9;
+    const ID_CODESHIELD = 10;
+    const ID_SYSMAPPER = 11;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -30,6 +35,11 @@ class FileType
     const STRING_TEXT = 'text';
     const STRING_ICMP_BLOCKER = 'icmp-blocker';
     const STRING_COINMINER = 'coinminer';
+    const STRING_CODEBLADE = 'codeblade';
+    const STRING_CODEBLASTER = 'codeblaster';
+    const STRING_CODEARMOR = 'codearmor';
+    const STRING_CODESHIELD = 'codeshield';
+    const STRING_SYSMAPPER = 'sysmapper';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -38,6 +48,11 @@ class FileType
         self::STRING_TEXT => self::ID_TEXT,
         self::STRING_ICMP_BLOCKER => self::ID_ICMP_BLOCKER,
         self::STRING_COINMINER => self::ID_COINMINER,
+        self::STRING_CODEBLADE => self::ID_CODEBLADE,
+        self::STRING_CODEBLASTER => self::ID_CODEBLASTER,
+        self::STRING_CODEARMOR => self::ID_CODEARMOR,
+        self::STRING_CODESHIELD => self::ID_CODESHIELD,
+        self::STRING_SYSMAPPER => self::ID_SYSMAPPER,
     ];
 
     /**

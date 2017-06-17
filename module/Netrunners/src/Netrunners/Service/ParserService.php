@@ -147,6 +147,9 @@ class ParserService
             case 'addnode':
                 $response = $this->nodeService->addNode($clientData);
                 break;
+            case 'addconnection':
+                $response = $this->connectionService->addConnection($clientData, $contentArray);
+                break;
             case 'cd':
                 $response = $this->connectionService->useConnection($clientData, $contentArray);
                 break;
@@ -182,6 +185,10 @@ class ParserService
                 break;
             case 'editnode':
                 $response = $this->nodeService->editNodeDescription($clientData);
+                break;
+            case 'exe':
+            case 'execute':
+                $response = $this->fileService->executeFile($clientData, $contentArray);
                 break;
             case 'gc':
                 $messageContent = $this->chatService->globalChat($clientData, $contentArray);
@@ -231,6 +238,9 @@ class ParserService
             case 'nodename':
                 $response = $this->nodeService->changeNodeName($clientData, $contentArray);
                 break;
+            case 'nodes':
+                $response = $this->nodeService->listNodes($clientData);
+                break;
             case 'nodetype':
                 $response = $this->nodeService->changeNodeType($clientData, $contentArray);
                 break;
@@ -248,6 +258,9 @@ class ParserService
             case 'score':
                 $response = $this->profileService->showScore($clientData);
                 break;
+            case 'secureconnection':
+                $response = $this->connectionService->secureConnection($clientData, $contentArray);
+                break;
             case 'skills':
                 $response = $this->profileService->showSkills($clientData);
                 break;
@@ -256,6 +269,9 @@ class ParserService
                 break;
             case 'stat':
                 $response = $this->fileService->statFile($clientData, $contentArray);
+                break;
+            case 'survey':
+                $response = $this->nodeService->surveyNode($clientData);
                 break;
             case 'system':
                 $response = $this->systemService->showSystemStats($clientData);
