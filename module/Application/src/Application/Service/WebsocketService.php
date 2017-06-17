@@ -117,6 +117,10 @@ class WebsocketService implements MessageComponentInterface {
             $this->loopService->loopJobs();
         });
 
+        $this->loop->addPeriodicTimer(900, function(){
+            $this->loopService->loopResources();
+        });
+
     }
 
     public function onOpen(ConnectionInterface $conn)

@@ -64,6 +64,26 @@ class FileRepository extends EntityRepository
     }
 
     /**
+     * @param Node $node
+     * @param Profile $profile
+     * @param $name
+     * @return array
+     */
+    public function findByNodeOrProfileAndName(Node $node, Profile $profile, $name)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.node = :node');
+        $qb->orWhere('f.profile = :profile AND f.system IS NULL AND f.node IS NULL');
+        $qb->andWhere('f.name = :name');
+        $qb->setParameters([
+            'node' => $node,
+            'profile' => $profile,
+            'name' => $name
+        ]);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * Finds the file with the given name in the given system.
      * @param System $system
      * @param bool|false $name

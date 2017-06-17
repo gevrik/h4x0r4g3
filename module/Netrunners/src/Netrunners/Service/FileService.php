@@ -48,8 +48,9 @@ class FileService extends BaseService
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findFileInNodeByName(
+        $targetFiles = $fileRepository->findByNodeOrProfileAndName(
             $profile->getCurrentNode(),
+            $profile,
             $parameter
         );
         if (count($targetFiles) < 1) {
@@ -61,7 +62,7 @@ class FileService extends BaseService
         }
         /* start logic if we do not have a response already */
         if (!$response) {
-            $targetFile = $targetFiles[0];
+            $targetFile = array_shift($targetFiles);
             /** @var File $targetFile */
             $returnMessage = array();
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Name", $targetFile->getName());

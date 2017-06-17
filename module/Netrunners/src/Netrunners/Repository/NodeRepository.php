@@ -24,6 +24,14 @@ class NodeRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    public function findByType($type)
+    {
+        $qb = $this->createQueryBuilder('n');
+        $qb->where('n.type = :type');
+        $qb->setParameter('type', $type);
+        return $qb->getQuery()->getResult();
+    }
+
     public function findBySystemAndType(System $system, $type)
     {
         $qb = $this->createQueryBuilder('n');

@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\MailMessage;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 
@@ -66,6 +67,36 @@ class LoopService extends BaseService
                 unset($this->jobs[$jobId]);
             }
         }
+    }
+
+    public function loopResources()
+    {
+        $items = [];
+        $databaseNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_DATABASE);
+        foreach ($databaseNodes as $databaseNode) {
+            /** @var Node $databaseNode */
+            if (!isset($items[$databaseNode->getSystem()->getProfile()->getId()])) $items[$databaseNode->getSystem()->getProfile()->getId()] = [
+                'snippets' => 0,
+                'credits' => 0
+            ];
+            $items[$databaseNode->getSystem()->getProfile()->getId()]['snippets'] += $databaseNode->getLevel();
+        }
+        $terminalNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_TERMINAL);
+        foreach ($terminalNodes as $terminalNode) {
+            /** @var Node $terminalNode */
+            if (!isset($items[$terminalNode->getSystem()->getProfile()->getId()])) $items[$terminalNode->getSystem()->getProfile()->getId()] = [
+                'snippets' => 0,
+                'credits' => 0
+            ];
+            $items[$terminalNode->getSystem()->getProfile()->getId()]['credits'] += $terminalNode->getLevel();
+        }
+        foreach ($items as $profileId => $amountData) {
+            $profile = $this->entityManager->find('Netrunners\Entity\Profile', $profileId);
+            /** @var Profile $profile */
+            $profile->setSnippets($profile->getSnippets() + $amountData['snippets']);
+            $profile->setCredits($profile->getCredits() + $amountData['credits']);
+        }
+        $this->entityManager->flush();
     }
 
     /**

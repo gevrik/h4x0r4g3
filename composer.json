@@ -32,7 +32,8 @@
         "tfountain/zf-gearman-manager": "dev-master",
         "brianlmoon/gearmanmanager": "dev-zf-gearman-manager-fork",
         "cboden/ratchet": "^0.3.5",
-        "shark/simple_html_dom": "dev-master"
+        "shark/simple_html_dom": "dev-master",
+        "htmlawed/htmlawed": "dev-master"
     },
     "require-dev": {
     }
