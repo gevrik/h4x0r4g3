@@ -69,7 +69,16 @@ class ConnectionService extends BaseService
                 'type' => 'warning',
                 'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "No such connection")
             );
-        } else {
+        }
+        // check if they can access the connection
+        if (!$response && ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile())) {
+            $response = array(
+                'command' => 'showMessage',
+                'type' => 'warning',
+                'message' => sprintf('<pre style="white-space: pre-wrap;">%s</pre>', "Access denied")
+            );
+        }
+        if (!$response) {
             $profile->setCurrentNode($connection->getTargetNode());
             $this->entityManager->flush($profile);
             $response = array(
