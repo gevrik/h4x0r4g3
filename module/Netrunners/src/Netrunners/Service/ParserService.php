@@ -151,7 +151,7 @@ class ParserService
                 $response = $this->connectionService->addConnection($clientData, $contentArray);
                 break;
             case 'cd':
-                $response = $this->connectionService->useConnection($clientData, $contentArray);
+                $response = $this->connectionService->useConnection($clientData, $contentArray, $wsClientsData, $wsClients);
                 break;
             case 'code':
                 $response = $this->codingService->enterCodeMode($clientData);
@@ -235,7 +235,7 @@ class ParserService
                 $response = $this->profileService->showJobs($clientData, $jobs);
                 break;
             case 'ls':
-                $response = $this->nodeService->showNodeInfo($clientData);
+                $response = $this->nodeService->showNodeInfo($clientData, $wsClientsData);
                 break;
             case 'mail':
                 $response = $this->mailMessageService->enterMailMode($clientData);

@@ -16,6 +16,7 @@ use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Ratchet\ConnectionInterface;
 
 class BaseService
 {
@@ -357,6 +358,20 @@ class BaseService
     protected function getKnownNode(Profile $profile, Node $node)
     {
         return $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);
+    }
+
+    protected function messageEveryoneInNode(Node $node, $wsClientsData, $wsClients, $message, $profile)
+    {
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($node, $profile);
+        foreach ($profiles as $xprofile) {
+            /** @var Profile $xprofile */
+            if ($xprofile == $profile) continue;
+            foreach ($wsClients as $wsClient) {
+                if (isset($wsClientsData[$wsClient->resourceId]) && $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()) {
+                    $wsClient->send(json_encode($message));
+                }
+            }
+        }
     }
 
 }

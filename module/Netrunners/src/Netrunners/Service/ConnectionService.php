@@ -23,12 +23,8 @@ class ConnectionService extends BaseService
 
     const SECURE_CONNECTION_COST = 50;
 
-    /**
-     * @param $clientData
-     * @param $contentArray
-     * @return array|bool
-     */
-    public function useConnection($clientData, $contentArray)
+
+    public function useConnection($clientData, $contentArray, $wsClientsData = [], $wsClients)
     {
         // TODO check for codegate and permission
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -79,7 +75,24 @@ class ConnectionService extends BaseService
             );
         }
         if (!$response) {
+            $targetNode = $connection->getTargetNode();
+            $sourceNode = $connection->getSourceNode();
+            // message everyone in source node
+            $messageText = sprintf('<pre style="white-space: pre-wrap;">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
+            $message = array(
+                'command' => 'showMessagePrepend',
+                'type' => 'sysmsg',
+                'message' => $messageText
+            );
+            $this->messageEveryoneInNode($sourceNode, $wsClientsData, $wsClients, $message, $profile);
             $profile->setCurrentNode($connection->getTargetNode());
+            $messageText = sprintf('<pre style="white-space: pre-wrap;">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
+            $message = array(
+                'command' => 'showMessagePrepend',
+                'type' => 'sysmsg',
+                'message' => $messageText
+            );
+            $this->messageEveryoneInNode($targetNode, $wsClientsData, $wsClients, $message, $profile);
             $this->entityManager->flush($profile);
             $response = array(
                 'command' => 'cd',

@@ -16,11 +16,22 @@ use Netrunners\Entity\Profile;
 class SystemRepository extends EntityRepository
 {
 
+    /**
+     * @param $addy
+     * @return null|object
+     */
     public function findByAddy($addy)
     {
-        return $this->findOneBy(['addy', $addy]);
+        $result = $this->findOneBy([
+            'addy' => $addy
+        ]);
+        return $result;
     }
 
+    /**
+     * @param Profile $profile
+     * @return array
+     */
     public function findByProfile(Profile $profile)
     {
         return $this->findBy([

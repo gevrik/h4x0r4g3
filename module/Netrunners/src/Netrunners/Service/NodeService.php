@@ -35,9 +35,10 @@ class NodeService extends BaseService
     /**
      * Shows important information about a node.
      * @param $clientData
+     * @param $clientsData
      * @return array|bool
      */
-    public function showNodeInfo($clientData)
+    public function showNodeInfo($clientData, $clientsData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -65,12 +66,15 @@ class NodeService extends BaseService
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-executable">%-12s: %s</pre>', $counter, $file->getName());
         }
-        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($currentNode, $profile);
+        $profiles = [];
+        foreach ($clientsData as $clientId => $xClientData) {
+            $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
+            if($requestedProfile && $requestedProfile != $profile && $requestedProfile->getCurrentNode() == $currentNode) $profiles[] = $requestedProfile;
+        }
         if (count($profiles) > 0) $returnMessage[] = sprintf('<pre class="text-users">%s:</pre>', self::USERS_STRING);
         $counter = 0;
         foreach ($profiles as $pprofile) {
             /** @var Profile $pprofile */
-            if ($pprofile === $profile) continue;
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-users">%-12s: %s</pre>', $counter, $pprofile->getUser()->getUsername());
         }
@@ -546,7 +550,6 @@ class NodeService extends BaseService
         $response = false;
         // check if they are in an io-node
         if ($currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
-            var_dump('not in i/o node');
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
@@ -557,7 +560,6 @@ class NodeService extends BaseService
         $parameter = array_shift($contentArray);
         $parameter = trim($parameter);
         if (!$response && !$parameter) {
-            var_dump('no param given, list nodes');
             $returnMessage = array();
             $publicIoNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_PUBLICIO);
             $returnMessage[] = sprintf('<pre>%-40s|%-12s|%-20s</pre>', 'address', 'id', 'name');
@@ -587,7 +589,6 @@ class NodeService extends BaseService
         $targetNodeId = (int)$targetNodeId;
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
         if (!$response && !$targetNode) {
-            var_dump('invalid node id');
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
@@ -595,7 +596,6 @@ class NodeService extends BaseService
             );
         }
         if (!$response && ($targetNode->getType() != Node::ID_PUBLICIO && $targetNode->getType() != Node::ID_IO)) {
-            var_dump('no param given, list nodes');
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
@@ -603,7 +603,6 @@ class NodeService extends BaseService
             );
         }
         if (!$response && ($targetNode->getType() == Node::ID_IO && $targetSystem->getProfile() != $profile)) {
-            var_dump('no param given, list nodes');
             $response = array(
                 'command' => 'showMessage',
                 'type' => 'warning',
