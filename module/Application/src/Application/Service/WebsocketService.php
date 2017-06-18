@@ -305,6 +305,12 @@ class WebsocketService implements MessageComponentInterface {
                     $profile->setSkillReverseEngineering(0);
                     $profile->setSkillSocialEngineering(0);
                     $profile->setSkillWhitehat(0);
+                    $profile->setSkillBlades(0);
+                    $profile->setSkillCodeBlades(0);
+                    $profile->setSkillBlasters(0);
+                    $profile->setSkillCodeBlasters(0);
+                    $profile->setSkillShields(0);
+                    $profile->setSkillCodeShields(0);
                     $profile->setSkillPoints(ProfileService::DEFAULT_SKILL_POINTS);
                     $this->entityManager->persist($profile);
                     $user->setProfile($profile);

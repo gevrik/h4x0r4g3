@@ -601,6 +601,9 @@ class CodingService extends BaseService
             case 'coinminer':
                 $skillModifier = floor(($profile->getSkillCryptography() + $profile->getSkillNetworking())/2);
                 break;
+            case 'icmpblocker':
+                $skillModifier = floor(($profile->getSkillWhitehat() + $profile->getSkillNetworking())/2);
+                break;
         }
         return $skillModifier;
     }
@@ -658,6 +661,10 @@ class CodingService extends BaseService
             case 'coinminer':
                 $skillList[] = 'networking';
                 $skillList[] = 'crypto';
+                break;
+            case 'icmpblocker':
+                $skillList[] = 'networking';
+                $skillList[] = 'whitehat';
                 break;
         }
         return $skillList;

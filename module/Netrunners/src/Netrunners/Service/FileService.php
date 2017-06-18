@@ -82,6 +82,11 @@ class FileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function touchFile($clientData, $contentArray)
     {
         // init response
@@ -121,6 +126,13 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">The file name contains non-alphanumeric characters</pre>')
+            );
+        }
+        // check if max of 32 characters
+        if (mb_strlen($parameter) > 32) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (32-characters-max)</pre>')
             );
         }
         $parameter = str_replace(' ', '_', $parameter);
@@ -316,7 +328,110 @@ class FileService extends BaseService
                 case FileType::ID_COINMINER:
                     $response = $this->executeCoinminer($file, $profile, $profile->getCurrentNode());
                     break;
+                case FileType::ID_ICMP_BLOCKER:
+                    $response = $this->executeIcmpBlocker($file, $profile, $profile->getCurrentNode());
+                    break;
             }
+        }
+        return $response;
+    }
+
+    /**
+     * Executes a chat client file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeChatClient(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showmessage',
+            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+        );
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Profile $profile
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeDataminer(File $file, Profile $profile, Node $node)
+    {
+        $response = false;
+        if ($node->getType() != Node::ID_DATABASE) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>', $file->getName())
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Profile $profile
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeCoinminer(File $file, Profile $profile, Node $node)
+    {
+        $response = false;
+        if ($node->getType() != Node::ID_TERMINAL) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>', $file->getName())
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Profile $profile
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeIcmpBlocker(File $file, Profile $profile, Node $node)
+    {
+        $response = false;
+        if ($node->getType() != Node::ID_IO) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>', $file->getName())
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            );
         }
         return $response;
     }
@@ -451,78 +566,6 @@ class FileService extends BaseService
             'command' => 'ps',
             'message' => $returnMessage
         );
-        return $response;
-    }
-
-    /**
-     * Executes a chat client file.
-     * @param File $file
-     * @return array
-     */
-    protected function executeChatClient(File $file)
-    {
-        $file->setRunning(true);
-        $this->entityManager->flush($file);
-        $response = array(
-            'command' => 'showmessage',
-            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
-        );
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Profile $profile
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeDataminer(File $file, Profile $profile, Node $node)
-    {
-        $response = false;
-        if ($node->getType() != Node::ID_DATABASE) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>', $file->getName())
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Profile $profile
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeCoinminer(File $file, Profile $profile, Node $node)
-    {
-        $response = false;
-        if ($node->getType() != Node::ID_TERMINAL) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>', $file->getName())
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
-            );
-        }
         return $response;
     }
 

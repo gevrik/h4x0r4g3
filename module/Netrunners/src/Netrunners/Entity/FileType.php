@@ -33,7 +33,7 @@ class FileType
     const STRING_CHATCLIENT = 'chatclient';
     const STRING_DATAMINER = 'dataminer';
     const STRING_TEXT = 'text';
-    const STRING_ICMP_BLOCKER = 'icmp-blocker';
+    const STRING_ICMP_BLOCKER = 'icmpblocker';
     const STRING_COINMINER = 'coinminer';
     const STRING_CODEBLADE = 'codeblade';
     const STRING_CODEBLASTER = 'codeblaster';

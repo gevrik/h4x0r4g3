@@ -115,6 +115,42 @@ class Profile
     protected $skillAdvancedCoding;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $skillCodeBlades;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $skillCodeBlasters;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $skillCodeShields;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $skillBlades;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $skillBlasters;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $skillShields;
+
+    /**
      * @ORM\Column(type="integer", options={"default":20}, nullable=true)
      * @var int
      */
@@ -429,6 +465,114 @@ class Profile
     public function setSkillAdvancedCoding($skillAdvancedCoding)
     {
         $this->skillAdvancedCoding = $skillAdvancedCoding;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSkillCodeBlades()
+    {
+        return $this->skillCodeBlades;
+    }
+
+    /**
+     * @param int $skillCodeBlades
+     * @return Profile
+     */
+    public function setSkillCodeBlades($skillCodeBlades)
+    {
+        $this->skillCodeBlades = $skillCodeBlades;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSkillCodeBlasters()
+    {
+        return $this->skillCodeBlasters;
+    }
+
+    /**
+     * @param int $skillCodeBlasters
+     * @return Profile
+     */
+    public function setSkillCodeBlasters($skillCodeBlasters)
+    {
+        $this->skillCodeBlasters = $skillCodeBlasters;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSkillCodeShields()
+    {
+        return $this->skillCodeShields;
+    }
+
+    /**
+     * @param int $skillCodeShields
+     * @return Profile
+     */
+    public function setSkillCodeShields($skillCodeShields)
+    {
+        $this->skillCodeShields = $skillCodeShields;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSkillBlades()
+    {
+        return $this->skillBlades;
+    }
+
+    /**
+     * @param int $skillBlades
+     * @return Profile
+     */
+    public function setSkillBlades($skillBlades)
+    {
+        $this->skillBlades = $skillBlades;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSkillBlasters()
+    {
+        return $this->skillBlasters;
+    }
+
+    /**
+     * @param int $skillBlasters
+     * @return Profile
+     */
+    public function setSkillBlasters($skillBlasters)
+    {
+        $this->skillBlasters = $skillBlasters;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSkillShields()
+    {
+        return $this->skillShields;
+    }
+
+    /**
+     * @param int $skillShields
+     * @return Profile
+     */
+    public function setSkillShields($skillShields)
+    {
+        $this->skillShields = $skillShields;
         return $this;
     }
 
