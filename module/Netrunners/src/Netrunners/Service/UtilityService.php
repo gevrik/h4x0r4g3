@@ -14,6 +14,7 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
 
 class UtilityService extends BaseService
@@ -60,17 +61,18 @@ class UtilityService extends BaseService
      */
     public function autocomplete(ConnectionInterface $from, $clientData, $content = '')
     {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $contentArray = explode(' ', $content);
         $stringToComplete = array_pop($contentArray);
-        $filesInCurrentDirectory = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNodeOrProfile(
+        $filesInCurrentDirectory = $fileRepo->findByNodeOrProfile(
             $profile->getCurrentNode(),
             $profile
         );
-        $fileResults = array();
         $fileFound = false;
         foreach ($filesInCurrentDirectory as $cdFile) {
             /** @var File $cdFile */

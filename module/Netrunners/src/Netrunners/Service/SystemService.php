@@ -11,10 +11,11 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\Connection;
-use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\NodeRepository;
 use TmoAuth\Entity\User;
 use Zend\View\Model\ViewModel;
 
@@ -62,6 +63,10 @@ class SystemService extends BaseService
      */
     public function showSystemMap($resourceId)
     {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -74,7 +79,7 @@ class SystemService extends BaseService
             'nodes' => [],
             'links' => []
         ];
-        $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
+        $nodes = $nodeRepo->findBySystem($currentSystem);
         foreach ($nodes as $node) {
             /** @var Node $node */
             $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
@@ -82,7 +87,7 @@ class SystemService extends BaseService
                 'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
                 'type' => $group
             ];
-            $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
+            $connections = $connectionRepo->findBySourceNode($node);
             foreach ($connections as $connection) {
                 /** @var Connection $connection */
                 $mapArray['links'][] = [
@@ -110,6 +115,8 @@ class SystemService extends BaseService
      */
     public function showAreaMap($resourceId)
     {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -126,7 +133,7 @@ class SystemService extends BaseService
         ];
         $nodes = [];
         $nodes[] = $currentNode;
-        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        $connections = $connectionRepo->findBySourceNode($currentNode);
         foreach ($connections as $xconnection) {
             /** @var Connection $xconnection */
             $nodes[] = $xconnection->getTargetNode();
@@ -140,7 +147,7 @@ class SystemService extends BaseService
                 'type' => $group
             ];
             if ($counter) {
-                $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
+                $connections = $connectionRepo->findBySourceNode($node);
                 foreach ($connections as $connection) {
                     /** @var Connection $connection */
                     $mapArray['links'][] = [
