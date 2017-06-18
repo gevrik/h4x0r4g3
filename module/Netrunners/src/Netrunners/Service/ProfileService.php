@@ -12,6 +12,8 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\Skill;
+use Netrunners\Repository\SkillRatingRepository;
 use TmoAuth\Entity\User;
 
 class ProfileService extends BaseService
@@ -101,18 +103,17 @@ class ProfileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $returnMessage = array();
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_CODING_STRING, $profile->getSkillCoding(), self::SKILL_COMPUTING_STRING, $profile->getSkillComputing());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_BLACKHAT_STRING, $profile->getSkillBlackhat(), self::SKILL_WHITEHAT_STRING, $profile->getSkillWhitehat());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_CRYPTOGRAPHY_STRING, $profile->getSkillCryptography(), self::SKILL_DATABASES_STRING, $profile->getSkillDatabases());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_ELECTRONICS_STRING, $profile->getSkillElectronics(), self::SKILL_FORENSICS_STRING, $profile->getSkillForensics());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_REVERSE_ENGINEERING_STRING, $profile->getSkillReverseEngineering(), self::SKILL_SOCIAL_ENGINEERING_STRING, $profile->getSkillSocialEngineering());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_ADVANCED_CODING_STRING, $profile->getSkillAdvancedCoding(), self::SKILL_ADVANCED_NETWORKING_STRING, $profile->getSkillAdvancedNetworking());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>', self::SKILL_NETWORKING_STRING, $profile->getSkillNetworking());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_BLADES_STRING, $profile->getSkillBlades(), self::SKILL_CODE_BLADES_STRING, $profile->getSkillCodeBlades());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_BLASTERS_STRING, $profile->getSkillBlasters(), self::SKILL_CODE_BLASTERS_STRING, $profile->getSkillCodeBlasters());
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s%-20s: %s</pre>', self::SKILL_SHIELDS_STRING, $profile->getSkillShields(), self::SKILL_CODE_SHIELDS_STRING, $profile->getSkillCodeShields());
+        $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
+        foreach ($skills as $skill) {
+            /** @var Skill $skill */
+            $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+            /** @var SkillRatingRepository $skillRatingRepo */
+            $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
+            $skillRating = $skillRatingObject->getRating();
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>', $skill->getName(), $skillRating);
+        }
         $response = array(
-            'command' => 'skills',
+            'command' => 'showoutput',
             'message' => $returnMessage
         );
         return $response;

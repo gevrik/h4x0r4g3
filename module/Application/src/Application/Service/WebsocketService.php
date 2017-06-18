@@ -387,12 +387,10 @@ class WebsocketService implements MessageComponentInterface {
                 }
                 break;
             case 'promptForPassword':
-                var_dump('in prompt for password');
                 $user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientsData[$resourceId]['userId']);
                 $currentPassword = $user->getPassword();
                 $bcrypt = new Bcrypt();
                 if (!$bcrypt->verify($content, $currentPassword)) {
-                    var_dump('wrong password');
                     $response = array(
                         'command' => 'showmessage',
                         'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>'
@@ -401,7 +399,6 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 else {
-                    var_dump('correct password');
                     foreach ($this->clients as $client) {
                         if ($client->resourceId != $resourceId && $this->clientsData[$client->resourceId]['username'] == $this->clientsData[$resourceId]['username']) {
                             $loginResponse = array(
@@ -412,7 +409,6 @@ class WebsocketService implements MessageComponentInterface {
                             $client->close();
                         }
                     }
-                    var_dump('after dupe check');
                     $hash = hash('sha256', $this->hash . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(

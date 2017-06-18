@@ -267,13 +267,6 @@
                     });
                     if (!data.silent) showprompt();
                     break;
-                case 'skills':
-                    messageArray = data.message;
-                    $.each(messageArray, function(i, messageData){
-                        md.append(messageData);
-                    });
-                    showprompt();
-                    break;
                 case 'showmessage':
                     md.append(data.message);
                     showprompt();
