@@ -35,7 +35,7 @@ class NotificationService extends BaseService
         $view->setTemplate('netrunners/notification/list.phtml');
         $view->setVariable('notifications', $unreadNotifications);
         $response = array(
-            'command' => 'showPanel',
+            'command' => 'showpanel',
             'type' => 'default',
             'content' => $this->viewRenderer->render($view),
             'silent' => true

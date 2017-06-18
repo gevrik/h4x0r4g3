@@ -88,7 +88,7 @@ class MailMessageService extends BaseService
             );
         }
         $response = array(
-            'command' => 'enterMailMode',
+            'command' => 'entermailmode',
             'message' => $message,
             'mailNumber' => $mailNumber
         );
@@ -98,7 +98,7 @@ class MailMessageService extends BaseService
     public function exitMailMode()
     {
         $response = array(
-            'command' => 'exitMailMode'
+            'command' => 'exitmailmode'
         );
         return $response;
     }

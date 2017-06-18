@@ -349,7 +349,7 @@ class NodeService extends BaseService
             }
             $view->setVariable('description', $processedDescription);
             $response = array(
-                'command' => 'showPanel',
+                'command' => 'showpanel',
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );

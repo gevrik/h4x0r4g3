@@ -84,7 +84,7 @@ class ProfileService extends BaseService
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_CREDITS_STRING, $profile->getCredits());
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_SNIPPETS_STRING, $profile->getSnippets());
         $response = array(
-            'command' => 'score',
+            'command' => 'showoutput',
             'message' => $returnMessage
         );
         return $response;
@@ -161,7 +161,7 @@ class ProfileService extends BaseService
                 $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-4s|%-10s|%-20s|%-20s|%s</pre>', $jobId, $type, $newCode->getName(), $completionDate->format('y/m/d H:i:s'), $difficulty);
             }
             $response = array(
-                'command' => 'jobs',
+                'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
@@ -193,7 +193,7 @@ class ProfileService extends BaseService
                 $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
             }
             $response = array(
-                'command' => 'parts',
+                'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }

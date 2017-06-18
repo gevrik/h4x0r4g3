@@ -77,7 +77,7 @@
             var textClass = 'muted';
             var data = JSON.parse(e.data);
             var command = data.command;
-            if (command != 'showMessagePrepend' && command != 'updatePrompt' && command != 'ticker') commandInput.attr('type', 'text').detach();
+            if (command != 'showmessageprepend' && command != 'updateprompt' && command != 'ticker') commandInput.attr('type', 'text').detach();
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
@@ -91,48 +91,47 @@
                     };
                     conn.send(JSON.stringify(jsonData));
                     break;
-                case 'echoCommand':
-                    if (loginStage != 'createPassword' && loginStage != 'createPasswordConfirm' && loginStage != 'promptForPassword') {
+                case 'echocommand':
+                    if (loginStage !== 'createpassword' && loginStage !== 'createpasswordconfirm' && loginStage !== 'promptforpassword') {
                         md.append(data.content + '<br />');
                     }
-                    else if (command == 'updatePrompt') {
+                    else if (command === 'updateprompt') {
 
                     }
                     else {
                         md.append('<br />');
                     }
                     break;
-                case 'confirmUserCreate':
-                    loginStage = 'confirmUserCreate';
+                case 'confirmusercreate':
+                    loginStage = 'confirmusercreate';
                     md.append('<span class="text-muted">Unknown user, do you want to create an account for this username? (y/n) </span>');
                     break;
-                case 'createPassword':
-                    loginStage = 'createPassword';
+                case 'createpassword':
+                    loginStage = 'createpassword';
                     //commandInput.attr('type', 'password');
                     md.append('<span class="text-muted">Please enter a password for the new user: </span>');
                     break;
-                case 'createPasswordConfirm':
-                    loginStage = 'createPasswordConfirm';
+                case 'createpasswordconfirm':
+                    loginStage = 'createpasswordconfirm';
                     //commandInput.attr('type', 'password');
                     md.append('<span class="text-muted">Please confirm the password for the new user: </span>');
                     break;
-                case 'createUserDone':
+                case 'createuserdone':
                     loginStage = 'complete';
                     hash = data.hash;
                     md.append('<span class="text-muted">A new user account and system has been generated.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1</span><br />');
                     showprompt();
                     break;
-                case 'promptForPassword':
-                    loginStage = 'promptForPassword';
+                case 'promptforpassword':
+                    loginStage = 'promptforpassword';
                     //commandInput.attr('type', 'password');
                     md.append('<span class="text-muted">password: </span>');
                     break;
-                case 'loginComplete':
+                case 'logincomplete':
                     var jsonData;
                     loginStage = 'complete';
                     resetConsoleOptionsMail();
-                    resetConsoleOptionsCode();
                     hash = data.hash;
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
@@ -161,9 +160,6 @@
                 case 'ticker':
                     var notiAmount = data.amount;
                     $('.notification-box').removeClass('btn-default').removeClass('btn-info').addClass((notiAmount>0)?'btn-info':'btn-default').html('<span>' + notiAmount + '</span>');
-                    break;
-                case 'refreshPrompt':
-                    showprompt();
                     break;
                 case 'ls':
                     var directoryArray = data.message;
@@ -197,70 +193,23 @@
                     break;
                 case 'entercodemode':
                     consoleMode = 'code';
-                    consoleOptionsCode = data.options;
-                    console.log(consoleOptionsCode);
                     md.append(data.message);
                     break;
-                case 'enterMailMode':
+                case 'entermailmode':
                     consoleMode = 'mail';
                     consoleOptionsMail.currentMailNumber = (data.mailNumber < 1) ? 0 : 1;
                     md.append(data.message);
                     break;
-                case 'exitCodeMode':
+                case 'exitcodemode':
                     consoleMode = 'default';
-                    resetConsoleOptionsCode();
                     showprompt();
                     break;
-                case 'exitMailMode':
+                case 'exitmailmode':
                     consoleMode = 'default';
                     resetConsoleOptionsMail();
                     showprompt();
                     break;
-                case 'jobs':
-                    messageArray = data.message;
-                    $.each(messageArray, function(i, messageData){
-                        md.append(messageData);
-                    });
-                    showprompt();
-                    break;
-                case 'parts':
-                    messageArray = data.message;
-                    $.each(messageArray, function(i, messageData){
-                        md.append(messageData);
-                    });
-                    showprompt();
-                    break;
-                case 'ps':
-                    var fileArray = data.message;
-                    $.each(fileArray, function(i, fileData){
-                        md.append(fileData);
-                    });
-                    showprompt();
-                    break;
-                case 'score':
-                    messageArray = data.message;
-                    $.each(messageArray, function(i, messageData){
-                        md.append(messageData);
-                    });
-                    showprompt();
-                    break;
-                case 'setCodeLevel':
-                    consoleOptionsCode.fileLevel = data.value;
-                    md.append(data.message);
-                    showprompt();
-                    break;
-                case 'setcodemode':
-                    resetConsoleOptionsCode();
-                    consoleOptionsCode.mode = data.value;
-                    md.append(data.message);
-                    showprompt();
-                    break;
-                case 'setcodetype':
-                    consoleOptionsCode.fileType = data.value;
-                    md.append(data.message);
-                    showprompt();
-                    break;
-                case 'showPanel':
+                case 'showpanel':
                     $('#panel-container').html('').append(data.content);
                     $('.draggable').draggable({
                         handle: '.panel-heading'
@@ -278,29 +227,15 @@
                     });
                     showprompt();
                     break;
-                case 'stat':
-                    messageArray = data.message;
-                    $.each(messageArray, function(i, messageData){
-                        md.append(messageData);
-                    });
-                    showprompt();
-                    break;
-                case 'system':
-                    messageArray = data.message;
-                    $.each(messageArray, function(i, messageData){
-                        md.append(messageData);
-                    });
-                    showprompt();
-                    break;
-                case 'updatePrompt':
+                case 'updateprompt':
                     commandInput.val(data.message);
                     break;
-                case 'showMessagePrepend':
+                case 'showmessageprepend':
                     var lastPrompt = $('.prompt').last();
                     $(data.message).insertBefore(lastPrompt);
                     return true;
             }
-            if (command != 'echoCommand' && command != 'updatePrompt' && command != 'ticker') {
+            if (command !== 'echocommand' && command !== 'updateprompt' && command !== 'ticker') {
                 commandInput.appendTo(md).focus();
             }
         };
@@ -333,30 +268,30 @@
                                     content: message
                                 };
                                 break;
-                            case 'confirmUserCreate':
+                            case 'confirmusercreate':
                                 jsonData = {
-                                    command: 'confirmUserCreate',
+                                    command: 'confirmusercreate',
                                     hash: hash,
                                     content: message
                                 };
                                 break;
-                            case 'createPassword':
+                            case 'createpassword':
                                 jsonData = {
-                                    command: 'createPassword',
+                                    command: 'createpassword',
                                     hash: hash,
                                     content: message
                                 };
                                 break;
-                            case 'createPasswordConfirm':
+                            case 'createpasswordconfirm':
                                 jsonData = {
-                                    command: 'createPasswordConfirm',
+                                    command: 'createpasswordconfirm',
                                     hash: hash,
                                     content: message
                                 };
                                 break;
-                            case 'promptForPassword':
+                            case 'promptforpassword':
                                 jsonData = {
-                                    command: 'promptForPassword',
+                                    command: 'promptforpassword',
                                     hash: hash,
                                     content: message
                                 };

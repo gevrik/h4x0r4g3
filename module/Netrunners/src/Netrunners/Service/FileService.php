@@ -72,7 +72,7 @@ class FileService extends BaseService
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Birth", $targetFile->getCreated()->format('Y/m/d H:i:s'));
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Modified", ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : "---");
             $response = array(
-                'command' => 'stat',
+                'command' => 'showoutput',
                 'message' => $returnMessage
             );
             return $response;
@@ -560,7 +560,7 @@ class FileService extends BaseService
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s|%-20s|%s</pre>', $runningFile->getId(), $runningFile->getFileType()->getName() ,$runningFile->getName());
         }
         $response = array(
-            'command' => 'ps',
+            'command' => 'showoutput',
             'message' => $returnMessage
         );
         return $response;

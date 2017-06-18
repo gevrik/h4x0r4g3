@@ -79,14 +79,14 @@ class ConnectionService extends BaseService
             // message everyone in source node
             $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
             $message = array(
-                'command' => 'showMessagePrepend',
+                'command' => 'showmessageprepend',
                 'message' => $messageText
             );
             $this->messageEveryoneInNode($sourceNode, $message, $profile);
             $profile->setCurrentNode($connection->getTargetNode());
             $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
             $message = array(
-                'command' => 'showMessagePrepend',
+                'command' => 'showmessageprepend',
                 'message' => $messageText
             );
             $this->messageEveryoneInNode($targetNode, $message, $profile);

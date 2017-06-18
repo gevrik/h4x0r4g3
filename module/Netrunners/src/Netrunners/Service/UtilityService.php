@@ -87,7 +87,7 @@ class UtilityService extends BaseService
             $promptContent = $content;
         }
         $response = array(
-            'command' => 'updatePrompt',
+            'command' => 'updateprompt',
             'message' => $promptContent
         );
         return $from->send(json_encode($response));

@@ -52,7 +52,7 @@ class ChatService extends BaseService
             }
             else {
                 $response = array(
-                    'command' => 'showMessagePrepend',
+                    'command' => 'showmessageprepend',
                     'type' => ChatService::CHANNEL_GLOBAL,
                     'message' => $messageContent
                 );

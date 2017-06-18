@@ -82,7 +82,6 @@ class CodingService extends BaseService
             $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">NeoCode - version 0.1 - "?" for help, "q" to quit</pre>');
             $response = array(
                 'command' => 'entercodemode',
-                'options' => $clientData->codingOptions,
                 'message' => $message
             );
         }
@@ -106,18 +105,16 @@ class CodingService extends BaseService
         switch ($parameter) {
             default:
             case 'resource':
-                $command = 'setcodemode';
                 $value = 'resource';
                 break;
             case 'program':
-                $command = 'setcodemode';
                 $value = 'program';
                 break;
         }
+        $this->getWebsocketServer()->setCodingOption($resourceId, 'mode', $value);
         $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">mode set to [%s]</pre>', $value);
         $response = array(
-            'command' => $command,
-            'value' => $value,
+            'command' => 'showmessage',
             'message' => $message
         );
         return $response;
@@ -620,12 +617,16 @@ class CodingService extends BaseService
     public function exitCodeMode()
     {
         $response = array(
-            'command' => 'exitCodeMode'
+            'command' => 'exitcodemode'
         );
         return $response;
     }
 
-
+    /**
+     * @param FileType $fileType
+     * @param Profile $profile
+     * @return int
+     */
     protected function getSkillModifierForFileType(FileType $fileType, Profile $profile)
     {
         $rating = 0;
@@ -646,7 +647,11 @@ class CodingService extends BaseService
         return (int)$rating;
     }
 
-
+    /**
+     * @param FilePart $filePart
+     * @param Profile $profile
+     * @return int
+     */
     protected function getSkillModifierForFilePart(FilePart $filePart, Profile $profile)
     {
         $rating = 0;

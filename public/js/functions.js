@@ -21,15 +21,3 @@ function resetConsoleOptionsMail()
         currentMailNumber: 0
     };
 }
-
-/**
- * Reset the code mode console options.
- */
-function resetConsoleOptionsCode()
-{
-    consoleOptionsCode = {
-        mode: 'resource',
-        fileType: 0,
-        fileLevel: 0
-    };
-}

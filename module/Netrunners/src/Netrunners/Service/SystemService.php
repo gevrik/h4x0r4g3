@@ -50,7 +50,7 @@ class SystemService extends BaseService
         $returnMessage[] = sprintf('<pre>%-12s: %s/%s</pre>', self::MEMORY_STRING, $this->getUsedMemory($profile), $this->getSystemMemory($currentSystem));
         $returnMessage[] = sprintf('<pre>%-12s: %s/%s</pre>', self::STORAGE_STRING, $this->getUsedStorage($profile), $this->getSystemStorage($currentSystem));
         $response = array(
-            'command' => 'system',
+            'command' => 'showoutput',
             'message' => $returnMessage
         );
         return $response;
@@ -97,7 +97,7 @@ class SystemService extends BaseService
         $view->setTemplate('netrunners/partials/map.phtml');
         $view->setVariable('json', json_encode($mapArray));
         $response = array(
-            'command' => 'showPanel',
+            'command' => 'showpanel',
             'type' => 'default',
             'content' => $this->viewRenderer->render($view)
         );
@@ -157,7 +157,7 @@ class SystemService extends BaseService
         $view->setTemplate('netrunners/partials/map.phtml');
         $view->setVariable('json', json_encode($mapArray));
         $response = array(
-            'command' => 'showPanel',
+            'command' => 'showpanel',
             'type' => 'default',
             'content' => $this->viewRenderer->render($view)
         );

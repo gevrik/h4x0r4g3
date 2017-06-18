@@ -171,6 +171,18 @@ class WebsocketService implements MessageComponentInterface {
     }
 
     /**
+     * @param int $resourceId
+     * @param string $optionName
+     * @param mixed $optionValue
+     */
+    public function setCodingOption($resourceId, $optionName, $optionValue)
+    {
+        if (isset($this->clientsData[$resourceId])) {
+            $this->clientsData[$resourceId]['codingOptions'][$optionName] = $optionValue;
+        }
+    }
+
+    /**
      * @param ConnectionInterface $conn
      */
     public function onOpen(ConnectionInterface $conn)
@@ -218,7 +230,7 @@ class WebsocketService implements MessageComponentInterface {
         if ($content != 'default' && $command != 'autocomplete' && !$silent) {
             $content = htmLawed($content, ['safe'=>1,'elements'=>'strong, em, strike, u']);
             $response = array(
-                'command' => 'echoCommand',
+                'command' => 'echocommand',
                 'content' => $content
             );
             $from->send(json_encode($response));
@@ -242,7 +254,7 @@ class WebsocketService implements MessageComponentInterface {
                 if (!$user) {
                     $this->clientsData[$resourceId]['username'] = $username;
                     $response = array(
-                        'command' => 'confirmUserCreate',
+                        'command' => 'confirmusercreate',
                     );
                 }
                 else {
@@ -250,17 +262,17 @@ class WebsocketService implements MessageComponentInterface {
                     $this->clientsData[$resourceId]['userId'] = $user->getId();
                     $this->clientsData[$resourceId]['profileId'] = $user->getProfile()->getId();
                     $response = array(
-                        'command' => 'promptForPassword',
+                        'command' => 'promptforpassword',
                     );
                 }
                 $from->send(json_encode($response));
                 break;
-            case 'confirmUserCreate':
+            case 'confirmusercreate':
                 if ($content == 'yes' || $content == 'y') {
                     $validator = new Alnum();
                     if ($validator->isValid($this->clientsData[$resourceId]['username'])) {
                         $response = array(
-                            'command' => 'createPassword',
+                            'command' => 'createpassword',
                         );
                         $from->send(json_encode($response));
                     }
@@ -277,12 +289,12 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 break;
-            case 'createPassword':
+            case 'createpassword':
                 $validator = new Alnum();
                 if ($validator->isValid($content)) {
                     $this->clientsData[$resourceId]['tempPassword'] = $content;
                     $response = array(
-                        'command' => 'createPasswordConfirm',
+                        'command' => 'createpasswordconfirm',
                     );
                     $from->send(json_encode($response));
                 }
@@ -295,7 +307,7 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 break;
-            case 'createPasswordConfirm':
+            case 'createpasswordconfirm':
                 $tempPassword = $this->clientsData[$resourceId]['tempPassword'];
                 if ($tempPassword != $content) {
                     $response = array(
@@ -380,13 +392,13 @@ class WebsocketService implements MessageComponentInterface {
                     $this->clientsData[$resourceId]['username'] = $user->getUsername();
                     $this->clientsData[$resourceId]['jobs'] = [];
                     $response = array(
-                        'command' => 'createUserDone',
+                        'command' => 'createuserdone',
                         'hash' => $hash
                     );
                     $from->send(json_encode($response));
                 }
                 break;
-            case 'promptForPassword':
+            case 'promptforpassword':
                 $user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientsData[$resourceId]['userId']);
                 $currentPassword = $user->getPassword();
                 $bcrypt = new Bcrypt();
@@ -412,14 +424,14 @@ class WebsocketService implements MessageComponentInterface {
                     $hash = hash('sha256', $this->hash . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(
-                        'command' => 'loginComplete',
+                        'command' => 'logincomplete',
                         'hash' => $hash
                     );
                     $from->send(json_encode($response));
                     // message everyone in node
                     $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has logged in to this node</pre>', $user->getUsername());
                     $message = array(
-                        'command' => 'showMessagePrepend',
+                        'command' => 'showmessageprepend',
                         'message' => $messageText
                     );
                     $this->codingService->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $message, $user->getProfile());
