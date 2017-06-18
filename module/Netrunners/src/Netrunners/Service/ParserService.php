@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\NotificationRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 
@@ -125,7 +126,9 @@ class ParserService
      */
     public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($from->resourceId);
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $from->resourceId;
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $response = false;
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -147,22 +150,22 @@ class ParserService
                 );
                 break;
             case 'addnode':
-                $response = $this->nodeService->addNode($from->resourceId);
+                $response = $this->nodeService->addNode($resourceId);
                 break;
             case 'addconnection':
-                $response = $this->connectionService->addConnection($from->resourceId, $contentArray);
+                $response = $this->connectionService->addConnection($resourceId, $contentArray);
                 break;
             case 'cd':
-                $response = $this->connectionService->useConnection($from->resourceId, $contentArray);
+                $response = $this->connectionService->useConnection($resourceId, $contentArray);
                 break;
             case 'code':
-                $response = $this->codingService->enterCodeMode($from->resourceId);
+                $response = $this->codingService->enterCodeMode($resourceId);
                 break;
             case 'commands':
-                $response = $this->showCommands($from->resourceId);
+                $response = $this->showCommands($resourceId);
                 break;
             case 'connect':
-                $response = $this->nodeService->systemConnect($from->resourceId, $contentArray);
+                $response = $this->nodeService->systemConnect($resourceId, $contentArray);
                 break;
             case 'ticker':
                 $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -170,103 +173,105 @@ class ParserService
                 /** @var User $user */
                 $profile = $user->getProfile();
                 /** @var Profile $profile */
-                $countUnreadNotifications = $this->entityManager->getRepository('Netrunners\Entity\Notification')->countUnreadByProfile($profile);
+                $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
+                /** @var NotificationRepository $notificationRepo */
+                $countUnreadNotifications = $notificationRepo->countUnreadByProfile($profile);
                 $response = array(
                     'command' => 'ticker',
                     'amount' => $countUnreadNotifications
                 );
                 break;
             case 'shownotifications':
-                $response = $this->notificationService->showNotifications($from->resourceId);
+                $response = $this->notificationService->showNotifications($resourceId);
                 break;
             case 'dismissnotification':
-                $this->notificationService->dismissNotification($from->resourceId, $entityId);
+                $this->notificationService->dismissNotification($resourceId, $entityId);
                 break;
             case 'dismissallnotifications':
-                $this->notificationService->dismissNotification($from->resourceId, $entityId, true);
+                $this->notificationService->dismissNotification($resourceId, $entityId, true);
                 break;
             case 'editnode':
-                $response = $this->nodeService->editNodeDescription($from->resourceId);
+                $response = $this->nodeService->editNodeDescription($resourceId);
                 break;
             case 'exe':
             case 'execute':
-                $response = $this->fileService->executeFile($from->resourceId, $contentArray);
+                $response = $this->fileService->executeFile($resourceId, $contentArray);
                 break;
             case 'fn':
             case 'filename':
-                $response = $this->fileService->changeFileName($from->resourceId, $contentArray);
+                $response = $this->fileService->changeFileName($resourceId, $contentArray);
                 break;
             case 'gc':
-                return $this->chatService->globalChat($from->resourceId, $contentArray);
+                return $this->chatService->globalChat($resourceId, $contentArray);
             case 'home':
             case 'homerecall':
-                $response = $this->systemService->homeRecall($from->resourceId);
+                $response = $this->systemService->homeRecall($resourceId);
                 break;
             case 'i':
             case 'inv':
             case 'inventory':
-                $response = $this->profileService->showInventory($from->resourceId);
+                $response = $this->profileService->showInventory($resourceId);
                 break;
             case 'kill':
-                $response = $this->fileService->killProcess($from->resourceId, $contentArray);
+                $response = $this->fileService->killProcess($resourceId, $contentArray);
                 break;
             case 'jobs':
-                $response = $this->profileService->showJobs($from->resourceId, $jobs);
+                $response = $this->profileService->showJobs($resourceId, $jobs);
                 break;
             case 'ls':
-                $response = $this->nodeService->showNodeInfo($from->resourceId);
+                $response = $this->nodeService->showNodeInfo($resourceId);
                 break;
             case 'mail':
-                $response = $this->mailMessageService->enterMailMode($from->resourceId);
+                $response = $this->mailMessageService->enterMailMode($resourceId);
                 break;
             case 'map':
                 if ($profile->getCurrentNode()->getSystem()->getProfile() != $profile) {
-                    $response = $this->systemService->showAreaMap($from->resourceId);
+                    $response = $this->systemService->showAreaMap($resourceId);
                 }
                 else {
-                    $response = $this->systemService->showSystemMap($from->resourceId);
+                    $response = $this->systemService->showSystemMap($resourceId);
                 }
                 break;
             case 'nodename':
-                $response = $this->nodeService->changeNodeName($from->resourceId, $contentArray);
+                $response = $this->nodeService->changeNodeName($resourceId, $contentArray);
                 break;
             case 'nodes':
-                $response = $this->nodeService->listNodes($from->resourceId);
+                $response = $this->nodeService->listNodes($resourceId);
                 break;
             case 'nodetype':
-                $response = $this->nodeService->changeNodeType($from->resourceId, $contentArray);
+                $response = $this->nodeService->changeNodeType($resourceId, $contentArray);
                 break;
             case 'removenode':
-                $response = $this->nodeService->removeNode($from->resourceId);
+                $response = $this->nodeService->removeNode($resourceId);
                 break;
             case 'parts':
             case 'resources':
             case 'res':
-                $response = $this->profileService->showFilePartInstances($from->resourceId);
+                $response = $this->profileService->showFilePartInstances($resourceId);
                 break;
             case 'ps':
-                $response = $this->fileService->listProcesses($from->resourceId);
+                $response = $this->fileService->listProcesses($resourceId);
                 break;
             case 'score':
-                $response = $this->profileService->showScore($from->resourceId);
+                $response = $this->profileService->showScore($resourceId);
                 break;
             case 'secureconnection':
-                $response = $this->connectionService->secureConnection($from->resourceId, $contentArray);
+                $response = $this->connectionService->secureConnection($resourceId, $contentArray);
                 break;
             case 'skills':
-                $response = $this->profileService->showSkills($from->resourceId);
+                $response = $this->profileService->showSkills($resourceId);
                 break;
             case 'showunreadmails':
-                $response = $this->mailMessageService->displayAmountUnreadMails($from->resourceId);
+                $response = $this->mailMessageService->displayAmountUnreadMails($resourceId);
                 break;
             case 'stat':
-                $response = $this->fileService->statFile($from->resourceId, $contentArray);
+                $response = $this->fileService->statFile($resourceId, $contentArray);
                 break;
             case 'survey':
-                $response = $this->nodeService->surveyNode($from->resourceId);
+                $response = $this->nodeService->surveyNode($resourceId);
                 break;
             case 'system':
-                $response = $this->systemService->showSystemStats($from->resourceId);
+                $response = $this->systemService->showSystemStats($resourceId);
                 break;
             case 'time':
                 $now = new \DateTime();
@@ -276,7 +281,7 @@ class ParserService
                 );
                 break;
             case 'touch':
-                $response = $this->fileService->touchFile($from->resourceId, $contentArray);
+                $response = $this->fileService->touchFile($resourceId, $contentArray);
                 break;
             /** ADMIN STUFF */
         }
@@ -293,20 +298,20 @@ class ParserService
      */
     public function parseMailInput(ConnectionInterface $from, $content = '', $mailOptions = array())
     {
-        $clientData = $this->getWebsocketServer()->getClientData($from->resourceId);
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $from->resourceId;
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         $contentArray = explode(' ', $content);
         $userCommand = array_shift($contentArray);
         $mailOptions = (object)$mailOptions;
         switch ($userCommand) {
             default:
-                $response = $this->mailMessageService->displayMail($from->resourceId, $mailOptions);
+                $response = $this->mailMessageService->displayMail($resourceId, $mailOptions);
                 break;
             case 'd':
-                $response = $this->mailMessageService->deleteMail($from->resourceId, $contentArray, $mailOptions);
+                $response = $this->mailMessageService->deleteMail($resourceId, $contentArray, $mailOptions);
                 break;
             case 'q':
                 $response = $this->mailMessageService->exitMailMode();
@@ -317,37 +322,37 @@ class ParserService
 
     public function parseCodeInput(ConnectionInterface $from, $content = '', $jobs = false)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($from->resourceId);
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $from->resourceId;
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         $contentArray = explode(' ', $content);
         $userCommand = array_shift($contentArray);
         $codeOptions = (object)$clientData->codingOptions;
         switch ($userCommand) {
             default:
             case 'options':
-                $response = $this->codingService->commandOptions($from->resourceId, $codeOptions);
+                $response = $this->codingService->commandOptions($resourceId, $codeOptions);
                 break;
             case 'code':
-                return $this->codingService->commandCode($from->resourceId, $codeOptions);
+                return $this->codingService->commandCode($resourceId, $codeOptions);
             case 'jobs':
-                $response = $this->profileService->showJobs($from->resourceId, $jobs);
+                $response = $this->profileService->showJobs($resourceId, $jobs);
                 break;
             case 'level':
-                $response = $this->codingService->commandLevel($from->resourceId, $contentArray);
+                $response = $this->codingService->commandLevel($resourceId, $contentArray);
                 break;
             case 'mode':
-                $response = $this->codingService->switchCodeMode($from->resourceId, $contentArray);
+                $response = $this->codingService->switchCodeMode($resourceId, $contentArray);
                 break;
             case 'parts':
             case 'resources':
             case 'res':
-                $response = $this->profileService->showFilePartInstances($from->resourceId);
+                $response = $this->profileService->showFilePartInstances($resourceId);
                 break;
             case 'type':
-                $response = $this->codingService->commandType($from->resourceId, $contentArray, $codeOptions);
+                $response = $this->codingService->commandType($resourceId, $contentArray, $codeOptions);
                 break;
             case 'q':
                 $response = $this->codingService->exitCodeMode();
