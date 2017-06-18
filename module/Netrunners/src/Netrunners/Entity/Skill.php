@@ -49,6 +49,13 @@ class Skill
     protected $added;
 
     /**
+     * @ORM\Column(type="integer")
+     * @var int
+     */
+    protected $level;
+
+
+    /**
      * @return int
      */
     public function getId()
@@ -135,6 +142,24 @@ class Skill
     public function setAdded($added)
     {
         $this->added = $added;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getLevel()
+    {
+        return $this->level;
+    }
+
+    /**
+     * @param int $level
+     * @return Skill
+     */
+    public function setLevel($level)
+    {
+        $this->level = $level;
         return $this;
     }
 
