@@ -168,7 +168,7 @@ class WebsocketService implements MessageComponentInterface {
             }
         }
         if ($content != 'default' && $command != 'autocomplete' && !$silent) {
-            $content = htmLawed($content);
+            $content = htmLawed($content, ['safe'=>1,'elements'=>'strong, em, strike, u']);
             $response = array(
                 'command' => 'echoCommand',
                 'content' => $content

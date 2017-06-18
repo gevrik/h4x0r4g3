@@ -170,7 +170,7 @@ class ProfileService extends BaseService
         }
         else {
             foreach ($filePartInstances as $data) {
-                $returnMessage[] = sprintf('<pre>%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
+                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
             }
             $response = array(
                 'command' => 'parts',
@@ -189,10 +189,10 @@ class ProfileService extends BaseService
         /** @var Profile $profile */
         $returnMessage = array();
         $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByProfile($profile);
-        $returnMessage[] = sprintf('<pre>%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's');
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's', 'system', 'node');
         foreach ($files as $file) {
             /** @var File $file */
-            $returnMessage[] = sprintf('<pre>%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s</pre>',
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
                 $file->getId(),
                 $file->getFileType()->getName(),
                 $file->getName(),
@@ -200,7 +200,9 @@ class ProfileService extends BaseService
                 $file->getLevel(),
                 $file->getSize(),
                 ($file->getRunning()) ? 'Y' : 'N',
-                $file->getSlots()
+                $file->getSlots(),
+                ($file->getSystem()) ? $file->getSystem()->getName() : '',
+                ($file->getNode()) ? $file->getNode()->getName() : ''
             );
         }
         $response = array(

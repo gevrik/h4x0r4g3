@@ -180,7 +180,7 @@ class NodeService extends BaseService
         if (!$parameter) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name for the node</pre>')
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name for the node (alpha-numeric-only, 32-chars-max)</pre>')
             );
         }
         // check if they can change the type
@@ -196,6 +196,13 @@ class NodeService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node name (alpha-numeric only)</pre>')
+            );
+        }
+        // check if max of 32 characters
+        if (mb_strlen($parameter) > 32) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node name (32-characters-max)</pre>')
             );
         }
         if (!$response) {
@@ -330,7 +337,7 @@ class NodeService extends BaseService
             $description = $currentNode->getDescription();
             $processedDescription = '';
             if ($description) {
-                $processedDescription = htmLawed($description);
+                $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
             }
             $view->setVariable('description', $processedDescription);
             $response = array(
@@ -479,6 +486,10 @@ class NodeService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @return array|bool
+     */
     public function listNodes($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -514,6 +525,11 @@ class NodeService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $clientData
+     * @param $contentArray
+     * @return array|bool
+     */
     public function systemConnect($clientData, $contentArray)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);

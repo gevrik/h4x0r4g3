@@ -93,7 +93,7 @@ class FileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
         // get file repo
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
@@ -200,12 +200,12 @@ class FileService extends BaseService
             );
         }
         // now ge the new name
-        $newName = array_shift($contentArray);
+        $newName = implode(' ', $contentArray);
         $newName = trim($newName);
         if (!$response && !$newName) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name</pre>')
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name (alpha-numeric only, 32-chars-max)</pre>')
             );
         }
         // check if they can change the type
@@ -220,9 +220,17 @@ class FileService extends BaseService
         if (!$response && !$validator->isValid($newName)) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (alpha-numeric, no whitespace)</pre>')
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (alpha-numeric only)</pre>')
             );
         }
+        // check if max of 32 characters
+        if (mb_strlen($newName) > 32) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (32-characters-max)</pre>')
+            );
+        }
+        //
         if (!$response) {
             $newName = str_replace(' ', '_', $newName);
             $file->setName($newName);
