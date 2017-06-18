@@ -84,7 +84,7 @@ class Manpage
 
     /**
      * @param int $id
-     * @return MailMessage
+     * @return Manpage
      */
     public function setId($id)
     {
@@ -102,7 +102,7 @@ class Manpage
 
     /**
      * @param string $subject
-     * @return MailMessage
+     * @return Manpage
      */
     public function setSubject($subject)
     {
@@ -120,7 +120,7 @@ class Manpage
 
     /**
      * @param string $content
-     * @return MailMessage
+     * @return Manpage
      */
     public function setContent($content)
     {

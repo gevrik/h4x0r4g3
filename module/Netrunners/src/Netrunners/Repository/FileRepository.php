@@ -11,7 +11,6 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
-use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;

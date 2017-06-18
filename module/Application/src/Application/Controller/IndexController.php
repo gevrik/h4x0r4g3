@@ -12,6 +12,7 @@ namespace Application\Controller;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
+use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\NodeService;
@@ -117,6 +118,7 @@ class IndexController extends AbstractActionController
         $loop = Factory::create();
         $webSock = new Server($loop);
         $webSock->listen(8080, '0.0.0.0');
+        /** @noinspection PhpUnusedLocalVariableInspection */
         $server = new IoServer(
             new HttpServer(
                 new WsServer(
@@ -147,7 +149,9 @@ class IndexController extends AbstractActionController
         foreach ($profiles as $profile) {
             foreach ($skills as $skill) {
                 /** @var Skill $skill */
-                $skillRating = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill($profile, $skill);
+                $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+                /** @var SkillRatingRepository $skillRatingRepo */
+                $skillRating = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
                 if ($skillRating) continue;
                 $skillRating = new SkillRating();
                 $skillRating->setProfile($profile);

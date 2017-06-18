@@ -11,7 +11,6 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
-use Netrunners\Entity\Profile;
 
 class FilePartRepository extends EntityRepository
 {

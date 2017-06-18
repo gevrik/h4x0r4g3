@@ -19,6 +19,12 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\KnownNodeRepository;
+use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\ProfileRepository;
+use Netrunners\Repository\SkillRatingRepository;
+use Netrunners\Repository\SystemRepository;
 
 class BaseService
 {
@@ -99,7 +105,9 @@ class BaseService
      */
     protected function getSystemMemory(System $system)
     {
-        $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystemAndType($system, Node::ID_MEMORY);
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_MEMORY);
         $total = 0;
         foreach ($nodes as $node) {
             /** @var Node $node */
@@ -115,7 +123,9 @@ class BaseService
      */
     protected function getSystemStorage(System $system)
     {
-        $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystemAndType($system, Node::ID_STORAGE);
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_STORAGE);
         $total = 0;
         foreach ($nodes as $node) {
             /** @var Node $node */
@@ -132,11 +142,15 @@ class BaseService
      */
     protected function getTotalMemory(Profile $profile)
     {
-        $systems = $this->entityManager->getRepository('Netrunners\Entity\System')->findByProfile($profile);
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $systems = $systemRepo->findByProfile($profile);
         $total = 0;
         foreach ($systems as $system) {
             /** @var System $system */
-            $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystemAndType($system, Node::ID_MEMORY);
+            $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_MEMORY);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $total += $node->getLevel() * SystemService::BASE_MEMORY_VALUE;
@@ -153,11 +167,15 @@ class BaseService
      */
     protected function getTotalStorage(Profile $profile)
     {
-        $systems = $this->entityManager->getRepository('Netrunners\Entity\System')->findByProfile($profile);
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $systems = $systemRepo->findByProfile($profile);
         $total = 0;
         foreach ($systems as $system) {
             /** @var System $system */
-            $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystemAndType($system, Node::ID_STORAGE);
+            $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_STORAGE);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $total += $node->getLevel() * SystemService::BASE_STORAGE_VALUE;
@@ -173,8 +191,10 @@ class BaseService
      */
     protected function getUsedMemory(Profile $profile)
     {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
         $amount = 0;
-        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByProfile($profile);
+        $files = $fileRepo->findByProfile($profile);
         foreach ($files as $file) {
             /** @var File $file */
             if ($file->getRunning()) $amount += $file->getSize();
@@ -189,8 +209,10 @@ class BaseService
      */
     protected function getUsedStorage(Profile $profile)
     {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
         $amount = 0;
-        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByProfile($profile);
+        $files = $fileRepo->findByProfile($profile);
         foreach ($files as $file) {
             /** @var File $file */
             $amount += $file->getSize();
@@ -201,10 +223,9 @@ class BaseService
     /**
      * @param Profile $profile
      * @param $jobData
-     * @param $roll
      * @return bool
      */
-    protected function learnFromSuccess(Profile $profile, $jobData, $roll)
+    protected function learnFromSuccess(Profile $profile, $jobData)
     {
         foreach ($jobData['skills'] as $skillId) {
             $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
@@ -224,13 +245,13 @@ class BaseService
     /**
      * @param Profile $profile
      * @param $jobData
-     * @param $roll
      * @return bool
      */
-    protected function learnFromFailure(Profile $profile, $jobData, $roll)
+    protected function learnFromFailure(Profile $profile, $jobData)
     {
         foreach ($jobData['skills'] as $skillId) {
             $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+            /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill);
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
@@ -243,10 +264,16 @@ class BaseService
         return true;
     }
 
-
+    /**
+     * @param Profile $profile
+     * @param Skill $skill
+     * @return int
+     */
     protected function getSkillRating(Profile $profile, Skill $skill)
     {
-        $skillRatingObject = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill($profile, $skill);
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
         /** @var SkillRating $skillRatingObject */
         return ($skillRatingObject) ? $skillRatingObject->getRating() : 0;
     }
@@ -259,7 +286,9 @@ class BaseService
      */
     public function setSkillRating(Profile $profile, Skill $skill, $newSkillRating)
     {
-        $skillRatingObject = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill($profile, $skill);
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
         /** @var SkillRating $skillRatingObject */
         $skillRatingObject->setRating($newSkillRating);
         $this->entityManager->flush($skillRatingObject);
@@ -272,7 +301,9 @@ class BaseService
      */
     protected function addKnownNode(Profile $profile, Node $node)
     {
-        $row = $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);
+        $knownNodeRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        /** @var KnownNodeRepository $knownNodeRepo */
+        $row = $knownNodeRepo->findByProfileAndNode($profile, $node);
         if ($row) {
             /** @var KnownNode $row */
             $row->setType($node->getType());
@@ -296,7 +327,9 @@ class BaseService
      */
     protected function getKnownNode(Profile $profile, Node $node)
     {
-        return $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);
+        $knownNodeRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        /** @var KnownNodeRepository $knownNodeRepo */
+        return $knownNodeRepo->findByProfileAndNode($profile, $node);
     }
 
     /**
@@ -306,9 +339,11 @@ class BaseService
      */
     public function messageEveryoneInNode(Node $node, $message, $profile)
     {
+        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        /** @var ProfileRepository $profileRepo */
         $wsClients = $this->getWebsocketServer()->getClients();
         $wsClientsData = $this->getWebsocketServer()->getClientsData();
-        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($node, $profile);
+        $profiles = $profileRepo->findByCurrentNode($node, $profile);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */
             if ($xprofile == $profile) continue;
