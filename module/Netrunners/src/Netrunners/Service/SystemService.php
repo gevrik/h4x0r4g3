@@ -48,8 +48,8 @@ class SystemService extends BaseService
         $returnMessage = array();
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SYSTEM_STRING, $currentSystem->getName());
         $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::ADDY_STRING, $currentSystem->getAddy());
-        $returnMessage[] = sprintf('<pre>%-12s: %s/%s</pre>', self::MEMORY_STRING, $this->getUsedMemory($profile), $this->getSystemMemory($currentSystem));
-        $returnMessage[] = sprintf('<pre>%-12s: %s/%s</pre>', self::STORAGE_STRING, $this->getUsedStorage($profile), $this->getSystemStorage($currentSystem));
+        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::MEMORY_STRING, $this->getSystemMemory($currentSystem));
+        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::STORAGE_STRING, $this->getSystemStorage($currentSystem));
         $response = array(
             'command' => 'showoutput',
             'message' => $returnMessage

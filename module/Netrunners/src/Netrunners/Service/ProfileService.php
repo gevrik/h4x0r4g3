@@ -235,6 +235,7 @@ class ProfileService extends BaseService
                 ($file->getNode()) ? $file->getNode()->getName() : ''
             );
         }
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">mem: %s/%s sto: %s/%s</pre>', $this->getUsedMemory($profile), $this->getTotalMemory($profile), $this->getUsedStorage($profile), $this->getTotalStorage($profile));
         $response = array(
             'command' => 'showoutput',
             'message' => $returnMessage

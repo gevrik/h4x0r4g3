@@ -317,8 +317,7 @@
                         jsonData = {
                             command: 'parseCodeInput',
                             hash: hash,
-                            content: message,
-                            codeOptions: consoleOptionsCode
+                            content: message
                         };
                         break;
                 }

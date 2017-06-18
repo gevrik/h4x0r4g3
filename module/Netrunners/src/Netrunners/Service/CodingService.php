@@ -144,20 +144,18 @@ class CodingService extends BaseService
             );
         }
         else {
-            $value = false;
             $parameter = (int)$parameter;
             if ($parameter < 1 || $parameter > 100) {
                 $command = 'showmessage';
                 $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Choose a number between 1 and 100</pre>');
             }
             else {
-                $command = 'setCodeLevel';
-                $value = $parameter;
+                $command = 'showmessage';
                 $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">level set to [%s]</pre>', $parameter);
+                $this->getWebsocketServer()->setCodingOption($resourceId, 'fileLevel', $parameter);
             }
             $response = array(
                 'command' => $command,
-                'value' => $value,
                 'message' => $message
             );
         }
@@ -191,28 +189,30 @@ class CodingService extends BaseService
             $partsString = '';
             $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
             /** @var FilePartInstanceRepository $filePartInstanceRepo */
-            foreach ($fileType->getFileParts() as $filePart) {
-                /** @var FilePart $filePart */
-                $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
-                $name = $filePart->getName();
-                $shortName = explode(' ', $name);
-                if (empty($filePartInstances)) {
-                    $partsString .= '<span class="text-danger">' . $shortName[0] . '</span> ';
+            if ($fileType) {
+                foreach ($fileType->getFileParts() as $filePart) {
+                    /** @var FilePart $filePart */
+                    $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
+                    $name = $filePart->getName();
+                    $shortName = explode(' ', $name);
+                    if (empty($filePartInstances)) {
+                        $partsString .= '<span class="text-danger">' . $shortName[0] . '</span> ';
+                    }
+                    else {
+                        $partsString .= '<span class="text-success">' . $shortName[0] . '</span> ';
+                    }
                 }
-                else {
-                    $partsString .= '<span class="text-success">' . $shortName[0] . '</span> ';
+                $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "resources", $partsString);
+                // add optional parts to the ouput
+                $partsString = '';
+                foreach ($fileType->getOptionalFileParts() as $filePart) {
+                    /** @var FilePart $filePart */
+                    $name = $filePart->getName();
+                    $shortName = explode(' ', $name);
+                    $partsString .= $shortName[0] . ' ';
                 }
+                $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "optional", $partsString);
             }
-            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "resources", $partsString);
-            // add optional parts to the ouput
-            $partsString = '';
-            foreach ($fileType->getOptionalFileParts() as $filePart) {
-                /** @var FilePart $filePart */
-                $name = $filePart->getName();
-                $shortName = explode(' ', $name);
-                $partsString .= $shortName[0] . ' ';
-            }
-            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "optional", $partsString);
         }
         else {
             /* resource mode */
@@ -298,83 +298,68 @@ class CodingService extends BaseService
             $value = false;
             switch ($parameter) {
                 default:
-                    $command = 'showmessage';
                     $message = '<pre style="white-space: pre-wrap;" class="text-warning">Invalid type given</pre>';
                     break;
                 case FileType::STRING_CHATCLIENT:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FileType::ID_CHATCLIENT;
                     break;
                 case FileType::STRING_DATAMINER:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FileType::ID_DATAMINER;
                     break;
                 case FilePart::STRING_CONTROLLER:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_CONTROLLER;
                     break;
                 case FilePart::STRING_FRONTEND:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_FRONTEND;
                     break;
                 case FilePart::STRING_WHITEHAT:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_WHITEHAT;
                     break;
                 case FilePart::STRING_BLACKHAT:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_BLACKHAT;
                     break;
                 case FilePart::STRING_CRYPTO:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_CRYPTO;
                     break;
                 case FilePart::STRING_DATABASE:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_DATABASE;
                     break;
                 case FilePart::STRING_ELECTRONICS:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_ELECTRONICS;
                     break;
                 case FilePart::STRING_FORENSICS:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_FORENSICS;
                     break;
                 case FilePart::STRING_NETWORK:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_NETWORK;
                     break;
                 case FilePart::STRING_REVERSE:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_REVERSE;
                     break;
                 case FilePart::STRING_SOCIAL:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FilePart::ID_SOCIAL;
                     break;
                 case FileType::STRING_COINMINER:
-                    $command = 'setcodetype';
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FileType::ID_COINMINER;
                     break;
             }
+            $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
             $response = array(
-                'command' => $command,
-                'value' => $value,
+                'command' => 'showmessage',
                 'message' => $message
             );
         }
