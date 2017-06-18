@@ -49,7 +49,7 @@ class ProfileService extends BaseService
 
     const DEFAULT_STARTING_CREDITS = 1000;
 
-    const DEFAULT_STARTING_SNIPPETS = 100;
+    const DEFAULT_STARTING_SNIPPETS = 1000;
 
     const DEFAULT_SKILL_POINTS = 20;
 

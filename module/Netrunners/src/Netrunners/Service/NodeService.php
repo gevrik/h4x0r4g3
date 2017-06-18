@@ -553,7 +553,6 @@ class NodeService extends BaseService
         // check if the target system exists
         $targetSystem = $this->entityManager->getRepository('Netrunners\Entity\System')->findByAddy($addy);
         if (!$response && !$targetSystem) {
-            var_dump('invalid addy');
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid system address</pre>')

@@ -51,9 +51,9 @@ class BaseService
      */
     protected function canExecuteFile(Profile $profile, File $file)
     {
-        $result = true;
+        $result = false;
         if ($file->getSize() + $this->getUsedMemory($profile) <= $this->getTotalMemory($profile)) {
-            $result = false;
+            $result = true;
         }
         return $result;
     }
@@ -67,7 +67,7 @@ class BaseService
      */
     protected function canStoreFile(Profile $profile, File $file)
     {
-        return ($file->getSize() + $this->getUsedStorage($profile) <= $this->getTotalStorage($profile)) ? false : true;
+        return ($file->getSize() + $this->getUsedStorage($profile) <= $this->getTotalStorage($profile)) ? true : false;
     }
 
     /**
@@ -79,7 +79,7 @@ class BaseService
      */
     protected function canStoreFileOfSize(Profile $profile, $size = 0)
     {
-        return ($size + $this->getUsedStorage($profile) <= $this->getTotalStorage($profile)) ? false : true;
+        return ($size + $this->getUsedStorage($profile) <= $this->getTotalStorage($profile)) ? true : false;
     }
 
     /**

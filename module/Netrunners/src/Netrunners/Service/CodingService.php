@@ -99,11 +99,11 @@ class CodingService extends BaseService
         switch ($parameter) {
             default:
             case 'resource':
-                $command = 'setCodeMode';
+                $command = 'setcodemode';
                 $value = 'resource';
                 break;
             case 'program':
-                $command = 'setCodeMode';
+                $command = 'setcodemode';
                 $value = 'program';
                 break;
         }
@@ -190,6 +190,9 @@ class CodingService extends BaseService
                     break;
                 case 'dataminer':
                     $typeId = FileType::ID_DATAMINER;
+                    break;
+                case 'coinminer':
+                    $typeId = FileType::ID_COINMINER;
                     break;
             }
             $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
@@ -280,8 +283,8 @@ class CodingService extends BaseService
             $value = false;
             switch ($parameter) {
                 default:
-                    $command = 'showMessage';
-                    $message = 'Invalid type given';
+                    $command = 'showmessage';
+                    $message = '<pre style="white-space: pre-wrap;" class="text-warning">Invalid type given</pre>';
                     break;
                 case 'chatclient':
                 case 'dataminer':
@@ -296,7 +299,8 @@ class CodingService extends BaseService
                 case 'network':
                 case 'reverse':
                 case 'social':
-                    $command = 'setCodeType';
+                case 'coinminer':
+                    $command = 'setcodetype';
                     $value = $parameter;
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     break;
@@ -455,16 +459,19 @@ class CodingService extends BaseService
         if (!$response) {
             /** @var FileType $fileType */
             $neededResources = $fileType->getFileParts();
+            $missingResources = [];
             foreach ($neededResources as $neededResource) {
                 /** @var FilePart $neededResource */
                 $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
                 if (empty($filePartInstances)) {
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>', $level, $type, $neededResource->getName())
-                    );
-                    break;
+                    $missingResources[] = sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>', $level, $type, $neededResource->getName());
                 }
+            }
+            if (!empty($missingResources)) {
+                $response = array(
+                    'command' => 'showoutput',
+                    'message' => $missingResources
+                );
             }
         }
         // check if the player can store the file in his total storage

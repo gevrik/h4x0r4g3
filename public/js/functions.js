@@ -1,10 +1,10 @@
-function showPrompt()
+function showprompt()
 {
     if (consoleMode === 'default')
     {
         var jsonData;
         jsonData = {
-            command: 'showPrompt',
+            command: 'showprompt',
             hash: hash,
             content: 'default'
         };

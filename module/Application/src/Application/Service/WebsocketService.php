@@ -177,7 +177,9 @@ class WebsocketService implements MessageComponentInterface {
         }
         // get resource id of socket
         $resourceId = $from->resourceId;
-        $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
+        if ($content != 'ticker') {
+            $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
+        }
         // get the current date
         $currentDate = new \DateTime();
         // data ok, check which command was sent
@@ -380,7 +382,7 @@ class WebsocketService implements MessageComponentInterface {
             case 'saveNodeDescription':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->nodeService->saveNodeDescription($from, (object)$this->clientsData[$resourceId], $content);
-            case 'showPrompt':
+            case 'showprompt':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->utilityService->showPrompt($from, (object)$this->clientsData[$resourceId]);
             case 'autocomplete':
@@ -394,12 +396,12 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->parserService->parseMailInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->mailOptions);
             case 'parseCodeInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                $codeResponse = $this->parserService->parseCodeInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->codeOptions);
+                $codeResponse = $this->parserService->parseCodeInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->codeOptions, $this->loopService->getJobs());
                 if (is_array($codeResponse) && $codeResponse['command'] == 'updateClientData') {
                     $this->clientsData[$resourceId] = (array)$codeResponse['clientData'];
                     $response = array(
                         'command' => 'showmessage',
-                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-%s">%s</pre>', $codeResponse['type'], $codeResponse['message'])
+                        'message' => $codeResponse['message']
                     );
                     $from->send(json_encode($response));
                 }

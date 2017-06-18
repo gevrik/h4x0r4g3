@@ -42,7 +42,7 @@ class UtilityService extends BaseService
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
         $fullPromptString = '<span class="prompt">[' . $userAtHostString . ':' . $promptString . '][' . Node::$data[$currentNode->getType()]['shortname'] . '][' . $currentNode->getLevel() . ']</span> ';
         $response = array(
-            'command' => 'showPrompt',
+            'command' => 'showprompt',
             'message' => $fullPromptString
         );
         return $from->send(json_encode($response));

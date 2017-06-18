@@ -336,7 +336,7 @@ class ParserService
         return $from->send(json_encode($response));
     }
 
-    public function parseCodeInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $codeOptions = array())
+    public function parseCodeInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $codeOptions = array(), $jobs = false)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -353,7 +353,7 @@ class ParserService
             case 'code':
                 return $this->codingService->commandCode($clientData, $codeOptions);
             case 'jobs':
-                $response = $this->profileService->showJobs($clientData);
+                $response = $this->profileService->showJobs($clientData, $jobs);
                 break;
             case 'level':
                 $response = $this->codingService->commandLevel($clientData, $contentArray);
@@ -373,7 +373,7 @@ class ParserService
                 $response = $this->codingService->exitCodeMode();
                 break;
         }
-        return $from->send(json_encode($response));
+        return $response;
     }
 
     public function showCommands($clientData)

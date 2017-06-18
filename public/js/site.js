@@ -73,7 +73,6 @@
         };
         // event listener for server message
         conn.onmessage = function(e) {
-            //console.log(e.data);
             var messageArray;
             var textClass = 'muted';
             var data = JSON.parse(e.data);
@@ -122,7 +121,7 @@
                     hash = data.hash;
                     md.append('<span class="text-muted">A new user account and system has been generated.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1</span><br />');
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'promptForPassword':
                     loginStage = 'promptForPassword';
@@ -154,7 +153,7 @@
                         conn.send(JSON.stringify(jsonData));
                     }, 1000);
                     break;
-                case 'showPrompt':
+                case 'showprompt':
                     var message = data.message;
                     if (promptAddon != '') message = message + ' ' + promptAddon;
                     md.append('<span class="text-muted">' + message + '</span>');
@@ -164,7 +163,7 @@
                     $('.notification-box').removeClass('btn-default').removeClass('btn-info').addClass((notiAmount>0)?'btn-info':'btn-default').html('<span>' + notiAmount + '</span>');
                     break;
                 case 'refreshPrompt':
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'ls':
                     var directoryArray = data.message;
@@ -190,11 +189,11 @@
                         }
                         md.append('<span class="text-' + textClass + '">' + file.name + '</span><br />');
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'clear':
                     md.html('');
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'enterCodeMode':
                     consoleMode = 'code';
@@ -208,95 +207,95 @@
                 case 'exitCodeMode':
                     consoleMode = 'default';
                     resetConsoleOptionsCode();
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'exitMailMode':
                     consoleMode = 'default';
                     resetConsoleOptionsMail();
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'jobs':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'parts':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'ps':
                     var fileArray = data.message;
                     $.each(fileArray, function(i, fileData){
                         md.append(fileData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'score':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'setCodeLevel':
                     consoleOptionsCode.fileLevel = data.value;
                     md.append(data.message);
-                    showPrompt();
+                    showprompt();
                     break;
-                case 'setCodeMode':
+                case 'setcodemode':
                     resetConsoleOptionsCode();
                     consoleOptionsCode.mode = data.value;
                     md.append(data.message);
-                    showPrompt();
+                    showprompt();
                     break;
-                case 'setCodeType':
+                case 'setcodetype':
                     consoleOptionsCode.fileType = data.value;
                     md.append(data.message);
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'showPanel':
                     $('#panel-container').html('').append(data.content);
                     $('.draggable').draggable({
                         handle: '.panel-heading'
                     });
-                    if (!data.silent) showPrompt();
+                    if (!data.silent) showprompt();
                     break;
                 case 'skills':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'showmessage':
                     md.append(data.message);
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'showoutput':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'stat':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'system':
                     messageArray = data.message;
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showPrompt();
+                    showprompt();
                     break;
                 case 'updatePrompt':
                     commandInput.val(data.message);
