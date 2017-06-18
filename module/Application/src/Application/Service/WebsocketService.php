@@ -187,11 +187,13 @@ class WebsocketService implements MessageComponentInterface {
      */
     public function onOpen(ConnectionInterface $conn)
     {
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $conn->resourceId;
         // Store the new connection to send messages to later
         $this->clients->attach($conn);
-        echo "New connection! ({$conn->resourceId})\n";
-        $this->clientsData[$conn->resourceId] = array(
-            'socketId' => $conn->resourceId,
+        echo "New connection! ({$resourceId})\n";
+        $this->clientsData[$resourceId] = array(
+            'socketId' => $resourceId,
             'username' => false,
             'userId' => false,
             'hash' => false,
@@ -236,12 +238,11 @@ class WebsocketService implements MessageComponentInterface {
             $from->send(json_encode($response));
         }
         // get resource id of socket
+        /** @noinspection PhpUndefinedFieldInspection */
         $resourceId = $from->resourceId;
         if ($content != 'ticker') {
             $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
         }
-        // get the current date
-        $currentDate = new \DateTime();
         // data ok, check which command was sent
         switch ($command) {
             default:
@@ -473,14 +474,17 @@ class WebsocketService implements MessageComponentInterface {
 
     public function onClose(ConnectionInterface $conn)
     {
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $conn->resourceId;
         // The connection is closed, remove it, as we can no longer send it messages
-        unset($this->clientsData[$conn->resourceId]);
+        unset($this->clientsData[$resourceId]);
         $this->clients->detach($conn);
-        echo "Connection {$conn->resourceId} has disconnected\n";
+        echo "Connection {$resourceId} has disconnected\n";
     }
 
     public function onError(ConnectionInterface $conn, \Exception $e)
     {
+        /** @noinspection PhpUndefinedFieldInspection */
         unset($this->clientsData[$conn->resourceId]);
         echo "An error has occurred: {$e->getMessage()}\n";
         $conn->close();
