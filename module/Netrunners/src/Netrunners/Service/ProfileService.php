@@ -13,6 +13,8 @@ namespace Netrunners\Service;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
+use Netrunners\Repository\FilePartInstanceRepository;
+use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use TmoAuth\Entity\User;
 
@@ -96,6 +98,9 @@ class ProfileService extends BaseService
      */
     public function showSkills($resourceId)
     {
+        $skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -103,11 +108,9 @@ class ProfileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $returnMessage = array();
-        $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
+        $skills = $skillRepo->findAll();
         foreach ($skills as $skill) {
             /** @var Skill $skill */
-            $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-            /** @var SkillRatingRepository $skillRatingRepo */
             $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
             $skillRating = $skillRatingObject->getRating();
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>', $skill->getName(), $skillRating);
@@ -130,8 +133,6 @@ class ProfileService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         $userJobs = [];
         foreach ($jobs as $jobId => $jobData) {
             if ($jobData['socketId'] == $clientData->socketId) {
@@ -174,6 +175,8 @@ class ProfileService extends BaseService
      */
     public function showFilePartInstances($resourceId)
     {
+        $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
+        /** @var FilePartInstanceRepository $filePartInstanceRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -181,7 +184,7 @@ class ProfileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $returnMessage = array();
-        $filePartInstances = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance')->findForPartsCommand($profile);
+        $filePartInstances = $filePartInstanceRepo->findForPartsCommand($profile);
         if (empty($filePartInstances)) {
             $response = array(
                 'command' => 'showmessage',
@@ -206,6 +209,8 @@ class ProfileService extends BaseService
      */
     public function showInventory($resourceId)
     {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -213,7 +218,7 @@ class ProfileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $returnMessage = array();
-        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByProfile($profile);
+        $files = $fileRepo->findByProfile($profile);
         $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's', 'system', 'node');
         foreach ($files as $file) {
             /** @var File $file */

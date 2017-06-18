@@ -13,10 +13,11 @@ namespace Netrunners\Service;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
-use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\NodeRepository;
 
 class LoopService extends BaseService
 {
@@ -75,10 +76,12 @@ class LoopService extends BaseService
      */
     public function loopResources()
     {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
         // init var to keep track of who receives what
         $items = [];
         // get all the db nodes (for snippet generation)
-        $databaseNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_DATABASE);
+        $databaseNodes = $nodeRepo->findByType(Node::ID_DATABASE);
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
             $currentNodeProfileId = $databaseNode->getSystem()->getProfile()->getId();
@@ -90,7 +93,7 @@ class LoopService extends BaseService
             // now check if there are running files in the same node that could affect the resource amount
             $items = $this->checkForModifyingFiles($databaseNode, $currentNodeProfileId, FileType::ID_DATAMINER, $items, 'snippets');
         }
-        $terminalNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_TERMINAL);
+        $terminalNodes = $nodeRepo->findByType(Node::ID_TERMINAL);
         foreach ($terminalNodes as $terminalNode) {
             /** @var Node $terminalNode */
             $currentNodeProfileId = $terminalNode->getSystem()->getProfile()->getId();
@@ -121,7 +124,9 @@ class LoopService extends BaseService
 
     protected function checkForModifyingFiles(Node $node, $profileId, $fileTypeId, $items, $resource)
     {
-        $filesInNode = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($node);
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $filesInNode = $fileRepo->findByNode($node);
         foreach ($filesInNode as $fileInNode) {
             /** @var File $fileInNode */
             // skip if the file is not running or has 0 integrity or is not connected to a profile
@@ -212,14 +217,14 @@ class LoopService extends BaseService
             if (!$newCode->getProfile()) {
                 $add = '<br />The file could not be stored in storage - it has been added to the node that it was coded in';
             }
-            $this->learnFromSuccess($profile, $jobData, $roll);
+            $this->learnFromSuccess($profile, $jobData);
             $response = [
                 'severity' => 'success',
                 'message' => sprintf("[%s] Coding project complete: %s [level: %s]%s", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty, $add)
             ];
         }
         else {
-            $this->learnFromFailure($profile, $jobData, $roll);
+            $this->learnFromFailure($profile, $jobData);
             $response = [
                 'severity' => 'warning',
                 'message' => sprintf("[%s] Coding project failed: %s [level: %s]", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty)

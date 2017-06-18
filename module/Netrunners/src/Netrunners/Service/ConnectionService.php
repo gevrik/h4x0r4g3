@@ -14,6 +14,8 @@ use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\NodeRepository;
 use TmoAuth\Entity\User;
 
 class ConnectionService extends BaseService
@@ -26,6 +28,8 @@ class ConnectionService extends BaseService
 
     public function useConnection($resourceId, $contentArray)
     {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         // TODO check for codegate and permission
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -45,7 +49,7 @@ class ConnectionService extends BaseService
         if (is_numeric($parameter)) {
             $searchByNumber = true;
         }
-        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        $connections = $connectionRepo->findBySourceNode($currentNode);
         $connection = false;
         if ($searchByNumber) {
             if (isset($connections[$parameter - 1])) {
@@ -107,6 +111,8 @@ class ConnectionService extends BaseService
      */
     public function addConnection($resourceId, $contentArray)
     {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -125,7 +131,7 @@ class ConnectionService extends BaseService
         if (!$parameter) {
             $returnMessage = array();
             $returnMessage[] = sprintf('<pre class="text-sysmsg">Please choose the target node:</pre>');
-            $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
+            $nodes = $nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 if ($node === $currentNode) continue;
@@ -213,6 +219,8 @@ class ConnectionService extends BaseService
      */
     public function secureConnection($resourceId, $contentArray)
     {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -245,7 +253,7 @@ class ConnectionService extends BaseService
         if (is_numeric($parameter)) {
             $searchByNumber = true;
         }
-        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        $connections = $connectionRepo->findBySourceNode($currentNode);
         $connection = false;
         if ($searchByNumber) {
             if (isset($connections[$parameter - 1])) {
@@ -270,7 +278,7 @@ class ConnectionService extends BaseService
             $profile->setCredits($profile->getCredits() - self::SECURE_CONNECTION_COST);
             $connection->setType(Connection::TYPE_CODEGATE);
             $targetnode = $connection->getTargetNode();
-            $targetConnection = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNodeAndTargetNode($targetnode, $currentNode);
+            $targetConnection = $connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
             $targetConnection = array_shift($targetConnection);
             $targetConnection->setType(Connection::TYPE_CODEGATE);
             $this->entityManager->flush();

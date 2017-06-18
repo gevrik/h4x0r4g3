@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\MailMessageRepository;
 use TmoAuth\Entity\User;
 
 class MailMessageService extends BaseService
@@ -30,7 +31,9 @@ class MailMessageService extends BaseService
      */
     protected function getAmountMails(Profile $profile)
     {
-        return $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->countByTotalMails($profile);
+        $mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
+        /** @var MailMessageRepository $mailMessageRepo */
+        return $mailMessageRepo->countByTotalMails($profile);
     }
 
     /**
@@ -40,13 +43,15 @@ class MailMessageService extends BaseService
      */
     public function displayAmountUnreadMails($resourceId)
     {
+        $mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
+        /** @var MailMessageRepository $mailMessageRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $countUnreadMails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->countByUnreadMails($profile);
+        $countUnreadMails = $mailMessageRepo->countByUnreadMails($profile);
         $response = array(
             'command' => 'showmessage',
             'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>', $countUnreadMails)

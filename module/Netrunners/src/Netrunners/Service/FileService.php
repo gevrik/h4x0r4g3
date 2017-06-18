@@ -14,7 +14,6 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
-use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
@@ -181,10 +180,6 @@ class FileService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
         $response = false;
         // get parameter
         $parameter = array_shift($contentArray);
@@ -324,13 +319,13 @@ class FileService extends BaseService
                     $response = $this->executeChatClient($file);
                     break;
                 case FileType::ID_DATAMINER:
-                    $response = $this->executeDataminer($file, $profile, $profile->getCurrentNode());
+                    $response = $this->executeDataminer($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_COINMINER:
-                    $response = $this->executeCoinminer($file, $profile, $profile->getCurrentNode());
+                    $response = $this->executeCoinminer($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_ICMP_BLOCKER:
-                    $response = $this->executeIcmpBlocker($file, $profile, $profile->getCurrentNode());
+                    $response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
                     break;
             }
         }
@@ -355,11 +350,10 @@ class FileService extends BaseService
 
     /**
      * @param File $file
-     * @param Profile $profile
      * @param Node $node
      * @return array|bool
      */
-    protected function executeDataminer(File $file, Profile $profile, Node $node)
+    protected function executeDataminer(File $file, Node $node)
     {
         $response = false;
         if ($node->getType() != Node::ID_DATABASE) {
@@ -383,11 +377,10 @@ class FileService extends BaseService
 
     /**
      * @param File $file
-     * @param Profile $profile
      * @param Node $node
      * @return array|bool
      */
-    protected function executeCoinminer(File $file, Profile $profile, Node $node)
+    protected function executeCoinminer(File $file, Node $node)
     {
         $response = false;
         if ($node->getType() != Node::ID_TERMINAL) {
@@ -411,11 +404,10 @@ class FileService extends BaseService
 
     /**
      * @param File $file
-     * @param Profile $profile
      * @param Node $node
      * @return array|bool
      */
-    protected function executeIcmpBlocker(File $file, Profile $profile, Node $node)
+    protected function executeIcmpBlocker(File $file, Node $node)
     {
         $response = false;
         if ($node->getType() != Node::ID_IO) {
@@ -502,38 +494,6 @@ class FileService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Process with id %s has been killed</pre>', $runningFile->getId())
             );
         }
-        return $response;
-    }
-
-    /**
-     * Lists all files in a directory.
-     * @param $clientData
-     * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function listDirectory($clientData)
-    {
-        // TODO output format parameters
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $directoryChildren = $profile->getCurrentDirectory()->getChildren();
-        $returnMessage = array();
-        foreach ($directoryChildren as $directoryChild) {
-            /** @var File $directoryChild */
-            $returnMessage[] = array(
-                'type' => $directoryChild->getFileType()->getId(),
-                'name' => $directoryChild->getName(),
-                'running' => ($directoryChild->getRunning()) ? 1 : 0
-            );
-        }
-        $response = array(
-            'command' => 'ls',
-            'message' => $returnMessage
-        );
         return $response;
     }
 

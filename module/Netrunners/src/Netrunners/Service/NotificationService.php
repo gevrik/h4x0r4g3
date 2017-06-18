@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\NotificationRepository;
 use TmoAuth\Entity\User;
 use Zend\View\Model\ViewModel;
 
@@ -24,13 +25,15 @@ class NotificationService extends BaseService
      */
     public function showNotifications($resourceId)
     {
+        $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
+        /** @var NotificationRepository $notificationRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $unreadNotifications = $this->entityManager->getRepository('Netrunners\Entity\Notification')->findUnreadByProfile($profile);
+        $unreadNotifications = $notificationRepo->findUnreadByProfile($profile);
         $view = new ViewModel();
         $view->setTemplate('netrunners/notification/list.phtml');
         $view->setVariable('notifications', $unreadNotifications);
@@ -51,6 +54,8 @@ class NotificationService extends BaseService
      */
     public function dismissNotification($resourceId, $entityId, $all = false)
     {
+        $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
+        /** @var NotificationRepository $notificationRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -58,7 +63,7 @@ class NotificationService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         if ($all) {
-            $notifications = $this->entityManager->getRepository('Netrunners\Entity\Notification')->findUnreadByProfile($profile);
+            $notifications = $notificationRepo->findUnreadByProfile($profile);
             foreach ($notifications as $notification) {
                 /** @var Notification $notification */
                 $this->entityManager->remove($notification);

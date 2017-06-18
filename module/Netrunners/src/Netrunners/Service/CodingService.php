@@ -21,7 +21,10 @@ use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
+use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileTypeRepository;
+use Netrunners\Repository\FileTypeSkillRepository;
+use Netrunners\Repository\SkillRatingRepository;
 use TmoAuth\Entity\User;
 
 class CodingService extends BaseService
@@ -131,12 +134,9 @@ class CodingService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         // get parameter
         $parameter = array_shift($contentArray);
         // init message
-        $message = '';
         if (!$parameter) {
             $response = array(
                 'command' => 'showmessage',
@@ -264,8 +264,6 @@ class CodingService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         // get parameter
         $parameter = array_shift($contentArray);
         // init message
@@ -629,16 +627,20 @@ class CodingService extends BaseService
      */
     protected function getSkillModifierForFileType(FileType $fileType, Profile $profile)
     {
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $fileTypeSkillRepo = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill');
+        /** @var FileTypeSkillRepository $fileTypeSkillRepo */
         $rating = 0;
-        $fileTypeSkills = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill')->findBy([
+        $fileTypeSkills = $fileTypeSkillRepo->findBy([
             'fileType' => $fileType
         ]);
         $amount = 0;
         foreach ($fileTypeSkills as $fileTypeSkill) {
             /** @var FileTypeSkill $fileTypeSkill */
             $amount++;
-            $skillRating = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill(
-                $profile, $fileTypeSkill
+            $skillRating = $skillRatingRepo->findByProfileAndSkill(
+                $profile, $fileTypeSkill->getSkill()
             );
             /** @var SkillRating $skillRating */
             $rating += ($skillRating->getRating()) ? $skillRating->getRating() : 0;
@@ -654,16 +656,20 @@ class CodingService extends BaseService
      */
     protected function getSkillModifierForFilePart(FilePart $filePart, Profile $profile)
     {
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $filePartSkillRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill');
+        /** @var FilePartSkillRepository $filePartSkillRepo */
         $rating = 0;
-        $filePartSkills = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill')->findBy([
+        $filePartSkills = $filePartSkillRepo->findBy([
             'filePart' => $filePart
         ]);
         $amount = 0;
         foreach ($filePartSkills as $filePartSkill) {
             /** @var FilePartSkill $filePartSkill */
             $amount++;
-            $skillRating = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill(
-                $profile, $filePartSkill
+            $skillRating = $skillRatingRepo->findByProfileAndSkill(
+                $profile, $filePartSkill->getSkill()
             );
             /** @var SkillRating $skillRating */
             $rating += ($skillRating->getRating()) ? $skillRating->getRating() : 0;

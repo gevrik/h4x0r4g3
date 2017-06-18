@@ -39,7 +39,9 @@ class ChatService extends BaseService
         $wsClientsData = $this->getWebsocketServer()->getClientsData();
         foreach ($wsClients as $wsClient) {
             /** @var ConnectionInterface $wsClient */
+            /** @noinspection PhpUndefinedFieldInspection */
             if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+            /** @noinspection PhpUndefinedFieldInspection */
             $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
             if (!$clientUser) continue;
             /** @var User $clientUser */

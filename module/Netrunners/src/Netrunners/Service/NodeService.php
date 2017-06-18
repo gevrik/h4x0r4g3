@@ -15,6 +15,11 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\ProfileRepository;
+use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
@@ -39,6 +44,10 @@ class NodeService extends BaseService
      */
     public function showNodeInfo($resourceId)
     {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -47,10 +56,8 @@ class NodeService extends BaseService
         /** @var Profile $profile */
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
-        $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
         $returnMessage = array();
-        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        $connections = $connectionRepo->findBySourceNode($currentNode);
         if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', self::CONNECTIONS_STRING);
         $counter = 0;
         foreach ($connections as $connection) {
@@ -58,7 +65,7 @@ class NodeService extends BaseService
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getTargetNode()->getName());
         }
-        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($currentNode);
+        $files = $fileRepo->findByNode($currentNode);
         if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', self::FILES_STRING);
         $counter = 0;
         foreach ($files as $file) {
@@ -393,8 +400,10 @@ class NodeService extends BaseService
      */
     public function countTargetNodesOfType(Node $node, $type)
     {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
         $amount = 0;
-        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($node);
+        $connections = $connectionRepo->findBySourceNode($node);
         foreach ($connections as $connection) {
             /** @var Connection $connection */
             if ($connection->getTargetNode()->getType() == $type) $amount++;
@@ -408,6 +417,12 @@ class NodeService extends BaseService
      */
     public function removeNode($resourceId)
     {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        /** @var ProfileRepository $profileRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -427,7 +442,7 @@ class NodeService extends BaseService
             );
         }
         // check if there are still connections to this node
-        $connections = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNode($currentNode);
+        $connections = $connectionRepo->findBySourceNode($currentNode);
         if (!$response && count($connections) > 1) {
             $response = array(
                 'command' => 'showmessage',
@@ -435,7 +450,7 @@ class NodeService extends BaseService
             );
         }
         // check if there are still files in this node
-        $files = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($currentNode);
+        $files = $fileRepo->findByNode($currentNode);
         if (!$response && count($files) > 0) {
             $response = array(
                 'command' => 'showmessage',
@@ -443,7 +458,7 @@ class NodeService extends BaseService
             );
         }
         // check if there are still other profiles in this node
-        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($currentNode);
+        $profiles = $profileRepo->findByCurrentNode($currentNode);
         if (!$response && count($profiles) > 1) {
             $response = array(
                 'command' => 'showmessage',
@@ -456,7 +471,7 @@ class NodeService extends BaseService
             foreach ($connections as $connection) {
                 /** @var Connection $connection */
                 $newCurrentNode = $connection->getTargetNode();
-                $targetConnection = $this->entityManager->getRepository('Netrunners\Entity\Connection')->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
+                $targetConnection = $connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
                 $targetConnection = array_shift($targetConnection);
                 $sourceConnection = $connection;
             }
@@ -502,6 +517,8 @@ class NodeService extends BaseService
      */
     public function listNodes($resourceId)
     {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -523,7 +540,7 @@ class NodeService extends BaseService
         if (!$response) {
             $returnMessage = array();
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>', 'id', 'type', 'lvl', 'name');
-            $nodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findBySystem($currentSystem);
+            $nodes = $nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>', $node->getId(), Node::$lookup[$node->getType()], $node->getLevel(), $node->getName());
@@ -543,6 +560,10 @@ class NodeService extends BaseService
      */
     public function systemConnect($resourceId, $contentArray)
     {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -551,8 +572,6 @@ class NodeService extends BaseService
         /** @var Profile $profile */
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
-        $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
         $response = false;
         // check if they are in an io-node
         if ($currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
@@ -566,7 +585,7 @@ class NodeService extends BaseService
         $parameter = trim($parameter);
         if (!$response && !$parameter) {
             $returnMessage = array();
-            $publicIoNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_PUBLICIO);
+            $publicIoNodes = $nodeRepo->findByType(Node::ID_PUBLICIO);
             $returnMessage[] = sprintf('<pre>%-40s|%-12s|%-20s</pre>', 'address', 'id', 'name');
             foreach ($publicIoNodes as $publicIoNode) {
                 /** @var Node $publicIoNode */
@@ -579,7 +598,7 @@ class NodeService extends BaseService
         }
         $addy = $parameter;
         // check if the target system exists
-        $targetSystem = $this->entityManager->getRepository('Netrunners\Entity\System')->findByAddy($addy);
+        $targetSystem = $systemRepo->findByAddy($addy);
         if (!$response && !$targetSystem) {
             $response = array(
                 'command' => 'showmessage',
