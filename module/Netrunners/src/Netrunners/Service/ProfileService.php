@@ -67,11 +67,12 @@ class ProfileService extends BaseService
 
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showScore($clientData)
+    public function showScore($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -88,11 +89,12 @@ class ProfileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showSkills($clientData)
+    public function showSkills($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -117,12 +119,13 @@ class ProfileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $jobs
      * @return array|bool
      */
-    public function showJobs($clientData, $jobs)
+    public function showJobs($resourceId, $jobs)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -165,11 +168,12 @@ class ProfileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showFilePartInstances($clientData)
+    public function showFilePartInstances($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -196,11 +200,12 @@ class ProfileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showInventory($clientData)
+    public function showInventory($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */

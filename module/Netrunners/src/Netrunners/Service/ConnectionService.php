@@ -24,8 +24,9 @@ class ConnectionService extends BaseService
     const SECURE_CONNECTION_COST = 50;
 
 
-    public function useConnection($clientData, $contentArray, $wsClientsData = [], $wsClients)
+    public function useConnection($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         // TODO check for codegate and permission
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -81,14 +82,14 @@ class ConnectionService extends BaseService
                 'command' => 'showMessagePrepend',
                 'message' => $messageText
             );
-            $this->messageEveryoneInNode($sourceNode, $wsClientsData, $wsClients, $message, $profile);
+            $this->messageEveryoneInNode($sourceNode, $message, $profile);
             $profile->setCurrentNode($connection->getTargetNode());
             $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
             $message = array(
                 'command' => 'showMessagePrepend',
                 'message' => $messageText
             );
-            $this->messageEveryoneInNode($targetNode, $wsClientsData, $wsClients, $message, $profile);
+            $this->messageEveryoneInNode($targetNode, $message, $profile);
             $this->entityManager->flush($profile);
             $response = array(
                 'command' => 'cd',
@@ -100,12 +101,13 @@ class ConnectionService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function addConnection($clientData, $contentArray)
+    public function addConnection($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -204,8 +206,14 @@ class ConnectionService extends BaseService
         return $response;
     }
 
-    public function secureConnection($clientData, $contentArray)
+    /**
+     * @param int $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function secureConnection($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */

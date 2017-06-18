@@ -195,8 +195,10 @@
                     md.html('');
                     showprompt();
                     break;
-                case 'enterCodeMode':
+                case 'entercodemode':
                     consoleMode = 'code';
+                    consoleOptionsCode = data.options;
+                    console.log(consoleOptionsCode);
                     md.append(data.message);
                     break;
                 case 'enterMailMode':

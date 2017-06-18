@@ -16,6 +16,26 @@ use Doctrine\ORM\Mapping as ORM;
 class Skill
 {
 
+    const ID_CODING = 1;
+    const ID_BLACKHAT = 2;
+    const ID_WHITEHAT = 3;
+    const ID_NETWORKING = 4;
+    const ID_COMPUTING = 5;
+    const ID_DATABASE = 6;
+    const ID_ELECTRONICS = 7;
+    const ID_FORENSICS = 8;
+    const ID_SOCIAL_ENGINEERING = 9;
+    const ID_CRYPTOGRAPHY = 10;
+    const ID_REVERSE_ENGINEERING = 11;
+    const ID_ADVANCED_NETWORKING = 12;
+    const ID_ADVANCED_CODING = 13;
+    const ID_BLADES = 14;
+    const ID_BLASTERS = 15;
+    const ID_SHIELDS = 16;
+    const ID_BLADECODING = 17;
+    const ID_BLASTERCODING = 18;
+    const ID_SHIELDCODING = 19;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

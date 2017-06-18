@@ -31,11 +31,12 @@ class SystemService extends BaseService
 
     /**
      * Shows important stats of the current system.
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showSystemStats($clientData)
+    public function showSystemStats($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -56,11 +57,12 @@ class SystemService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showSystemMap($clientData)
+    public function showSystemMap($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -103,11 +105,12 @@ class SystemService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showAreaMap($clientData)
+    public function showAreaMap($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -164,11 +167,12 @@ class SystemService extends BaseService
     /**
      * Allows a player to recall to their home node.
      * TODO add this as an action that takes time
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function homeRecall($clientData)
+    public function homeRecall($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */

@@ -10,11 +10,9 @@
 
 namespace Netrunners\Service;
 
+use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\File;
-use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
-use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 
@@ -110,20 +108,25 @@ class ParserService
     }
 
     /**
+     * @return WebsocketService
+     */
+    private function getWebsocketServer()
+    {
+        return WebsocketService::getInstance();
+    }
+
+    /**
      * Main method that takes care of delegating commands to their corresponding service.
      * @param ConnectionInterface $from
-     * @param $clientData
      * @param string $content
-     * @param \SplObjectStorage $wsClients
-     * @param array $wsClientsData
-     * @param bool $entityId
+     * @param int|bool $entityId
+     * @param bool $jobs
      * @return bool|ConnectionInterface
      */
-    public function parseInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $entityId = false, $jobs = false)
+    public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($from->resourceId);
         $response = false;
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         $profile = $user->getProfile();
@@ -144,22 +147,22 @@ class ParserService
                 );
                 break;
             case 'addnode':
-                $response = $this->nodeService->addNode($clientData);
+                $response = $this->nodeService->addNode($from->resourceId);
                 break;
             case 'addconnection':
-                $response = $this->connectionService->addConnection($clientData, $contentArray);
+                $response = $this->connectionService->addConnection($from->resourceId, $contentArray);
                 break;
             case 'cd':
-                $response = $this->connectionService->useConnection($clientData, $contentArray, $wsClientsData, $wsClients);
+                $response = $this->connectionService->useConnection($from->resourceId, $contentArray);
                 break;
             case 'code':
-                $response = $this->codingService->enterCodeMode($clientData);
+                $response = $this->codingService->enterCodeMode($from->resourceId);
                 break;
             case 'commands':
-                $response = $this->showCommands($clientData);
+                $response = $this->showCommands($from->resourceId);
                 break;
             case 'connect':
-                $response = $this->nodeService->systemConnect($clientData, $contentArray);
+                $response = $this->nodeService->systemConnect($from->resourceId, $contentArray);
                 break;
             case 'ticker':
                 $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -174,119 +177,96 @@ class ParserService
                 );
                 break;
             case 'shownotifications':
-                $response = $this->notificationService->showNotifications($clientData);
+                $response = $this->notificationService->showNotifications($from->resourceId);
                 break;
             case 'dismissnotification':
-                $this->notificationService->dismissNotification($clientData, $entityId);
+                $this->notificationService->dismissNotification($from->resourceId, $entityId);
                 break;
             case 'dismissallnotifications':
-                $this->notificationService->dismissNotification($clientData, $entityId, true);
+                $this->notificationService->dismissNotification($from->resourceId, $entityId, true);
                 break;
             case 'editnode':
-                $response = $this->nodeService->editNodeDescription($clientData);
+                $response = $this->nodeService->editNodeDescription($from->resourceId);
                 break;
             case 'exe':
             case 'execute':
-                $response = $this->fileService->executeFile($clientData, $contentArray);
+                $response = $this->fileService->executeFile($from->resourceId, $contentArray);
                 break;
             case 'fn':
             case 'filename':
-                $response = $this->fileService->changeFileName($clientData, $contentArray);
+                $response = $this->fileService->changeFileName($from->resourceId, $contentArray);
                 break;
             case 'gc':
-                $messageContent = $this->chatService->globalChat($clientData, $contentArray);
-                foreach ($wsClients as $wsClient) {
-                    /** @var ConnectionInterface $wsClient */
-                    if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-                    $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-                    if (!$clientUser) continue;
-                    /** @var User $clientUser */
-                    if ($clientUser == $user) {
-                        $response = array(
-                            'command' => 'showmessage',
-                            'type' => ChatService::CHANNEL_GLOBAL,
-                            'message' => $messageContent
-                        );
-                    }
-                    else {
-                        $response = array(
-                            'command' => 'showMessagePrepend',
-                            'type' => ChatService::CHANNEL_GLOBAL,
-                            'message' => $messageContent
-                        );
-                    }
-                    $wsClient->send(json_encode($response));
-                }
-                return true;
+                return $this->chatService->globalChat($from->resourceId, $contentArray);
             case 'home':
             case 'homerecall':
-                $response = $this->systemService->homeRecall($clientData);
+                $response = $this->systemService->homeRecall($from->resourceId);
                 break;
             case 'i':
             case 'inv':
             case 'inventory':
-                $response = $this->profileService->showInventory($clientData);
+                $response = $this->profileService->showInventory($from->resourceId);
                 break;
             case 'kill':
-                $response = $this->fileService->killProcess($clientData, $contentArray);
+                $response = $this->fileService->killProcess($from->resourceId, $contentArray);
                 break;
             case 'jobs':
-                $response = $this->profileService->showJobs($clientData, $jobs);
+                $response = $this->profileService->showJobs($from->resourceId, $jobs);
                 break;
             case 'ls':
-                $response = $this->nodeService->showNodeInfo($clientData, $wsClientsData);
+                $response = $this->nodeService->showNodeInfo($from->resourceId);
                 break;
             case 'mail':
-                $response = $this->mailMessageService->enterMailMode($clientData);
+                $response = $this->mailMessageService->enterMailMode($from->resourceId);
                 break;
             case 'map':
                 if ($profile->getCurrentNode()->getSystem()->getProfile() != $profile) {
-                    $response = $this->systemService->showAreaMap($clientData);
+                    $response = $this->systemService->showAreaMap($from->resourceId);
                 }
                 else {
-                    $response = $this->systemService->showSystemMap($clientData);
+                    $response = $this->systemService->showSystemMap($from->resourceId);
                 }
                 break;
             case 'nodename':
-                $response = $this->nodeService->changeNodeName($clientData, $contentArray);
+                $response = $this->nodeService->changeNodeName($from->resourceId, $contentArray);
                 break;
             case 'nodes':
-                $response = $this->nodeService->listNodes($clientData);
+                $response = $this->nodeService->listNodes($from->resourceId);
                 break;
             case 'nodetype':
-                $response = $this->nodeService->changeNodeType($clientData, $contentArray);
+                $response = $this->nodeService->changeNodeType($from->resourceId, $contentArray);
                 break;
             case 'removenode':
-                $response = $this->nodeService->removeNode($clientData);
+                $response = $this->nodeService->removeNode($from->resourceId);
                 break;
             case 'parts':
             case 'resources':
             case 'res':
-                $response = $this->profileService->showFilePartInstances($clientData);
+                $response = $this->profileService->showFilePartInstances($from->resourceId);
                 break;
             case 'ps':
-                $response = $this->fileService->listProcesses($clientData);
+                $response = $this->fileService->listProcesses($from->resourceId);
                 break;
             case 'score':
-                $response = $this->profileService->showScore($clientData);
+                $response = $this->profileService->showScore($from->resourceId);
                 break;
             case 'secureconnection':
-                $response = $this->connectionService->secureConnection($clientData, $contentArray);
+                $response = $this->connectionService->secureConnection($from->resourceId, $contentArray);
                 break;
             case 'skills':
-                $response = $this->profileService->showSkills($clientData);
+                $response = $this->profileService->showSkills($from->resourceId);
                 break;
             case 'showunreadmails':
-                $response = $this->mailMessageService->displayAmountUnreadMails($clientData);
+                $response = $this->mailMessageService->displayAmountUnreadMails($from->resourceId);
                 break;
             case 'stat':
-                $response = $this->fileService->statFile($clientData, $contentArray);
+                $response = $this->fileService->statFile($from->resourceId, $contentArray);
                 break;
             case 'survey':
-                $response = $this->nodeService->surveyNode($clientData);
+                $response = $this->nodeService->surveyNode($from->resourceId);
                 break;
             case 'system':
-                $response = $this->systemService->showSystemStats($clientData);
+                $response = $this->systemService->showSystemStats($from->resourceId);
                 break;
             case 'time':
                 $now = new \DateTime();
@@ -296,7 +276,7 @@ class ParserService
                 );
                 break;
             case 'touch':
-                $response = $this->fileService->touchFile($clientData, $contentArray);
+                $response = $this->fileService->touchFile($from->resourceId, $contentArray);
                 break;
             /** ADMIN STUFF */
         }
@@ -307,14 +287,13 @@ class ParserService
     /**
      * Method that takes care of delegating commands within the mail console mode.
      * @param ConnectionInterface $from
-     * @param $clientData
      * @param string $content
-     * @param \SplObjectStorage $wsClients
-     * @param array $wsClientsData
+     * @param array $mailOptions
      * @return bool|ConnectionInterface
      */
-    public function parseMailInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $mailOptions = array())
+    public function parseMailInput(ConnectionInterface $from, $content = '', $mailOptions = array())
     {
+        $clientData = $this->getWebsocketServer()->getClientData($from->resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         $profile = $user->getProfile();
@@ -324,10 +303,10 @@ class ParserService
         $mailOptions = (object)$mailOptions;
         switch ($userCommand) {
             default:
-                $response = $this->mailMessageService->displayMail($clientData, $mailOptions);
+                $response = $this->mailMessageService->displayMail($from->resourceId, $mailOptions);
                 break;
             case 'd':
-                $response = $this->mailMessageService->deleteMail($clientData, $contentArray, $mailOptions);
+                $response = $this->mailMessageService->deleteMail($from->resourceId, $contentArray, $mailOptions);
                 break;
             case 'q':
                 $response = $this->mailMessageService->exitMailMode();
@@ -336,38 +315,39 @@ class ParserService
         return $from->send(json_encode($response));
     }
 
-    public function parseCodeInput(ConnectionInterface $from, $clientData, $content = '', \SplObjectStorage $wsClients, $wsClientsData = array(), $codeOptions = array(), $jobs = false)
+    public function parseCodeInput(ConnectionInterface $from, $content = '', $jobs = false)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($from->resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $contentArray = explode(' ', $content);
         $userCommand = array_shift($contentArray);
-        $codeOptions = (object)$codeOptions;
+        $codeOptions = (object)$clientData->codingOptions;
         switch ($userCommand) {
             default:
             case 'options':
-                $response = $this->codingService->commandOptions($clientData, $contentArray, $codeOptions);
+                $response = $this->codingService->commandOptions($from->resourceId, $codeOptions);
                 break;
             case 'code':
-                return $this->codingService->commandCode($clientData, $codeOptions);
+                return $this->codingService->commandCode($from->resourceId, $codeOptions);
             case 'jobs':
-                $response = $this->profileService->showJobs($clientData, $jobs);
+                $response = $this->profileService->showJobs($from->resourceId, $jobs);
                 break;
             case 'level':
-                $response = $this->codingService->commandLevel($clientData, $contentArray);
+                $response = $this->codingService->commandLevel($from->resourceId, $contentArray);
                 break;
             case 'mode':
-                $response = $this->codingService->switchCodeMode($clientData, $contentArray);
+                $response = $this->codingService->switchCodeMode($from->resourceId, $contentArray);
                 break;
             case 'parts':
             case 'resources':
             case 'res':
-                $response = $this->profileService->showFilePartInstances($clientData);
+                $response = $this->profileService->showFilePartInstances($from->resourceId);
                 break;
             case 'type':
-                $response = $this->codingService->commandType($clientData, $contentArray, $codeOptions);
+                $response = $this->codingService->commandType($from->resourceId, $contentArray, $codeOptions);
                 break;
             case 'q':
                 $response = $this->codingService->exitCodeMode();
@@ -376,12 +356,17 @@ class ParserService
         return $response;
     }
 
-    public function showCommands($clientData)
+    /**
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function showCommands($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br /></pre>',
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br /></pre>',
             'clear',
             'code',
             'commands',

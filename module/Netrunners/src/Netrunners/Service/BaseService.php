@@ -10,13 +10,15 @@
 
 namespace Netrunners\Service;
 
+use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
-use Ratchet\ConnectionInterface;
 
 class BaseService
 {
@@ -40,6 +42,14 @@ class BaseService
     {
         $this->entityManager = $entityManager;
         $this->viewRenderer = $viewRenderer;
+    }
+
+    /**
+     * @return WebsocketService
+     */
+    protected function getWebsocketServer()
+    {
+        return WebsocketService::getInstance();
     }
 
     /**
@@ -196,13 +206,15 @@ class BaseService
      */
     protected function learnFromSuccess(Profile $profile, $jobData, $roll)
     {
-        foreach ($jobData['skills'] as $skillName) {
-            $skillRating = $this->getSkillRating($profile, $skillName);
+        foreach ($jobData['skills'] as $skillId) {
+            $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+            /** @var Skill $skill */
+            $skillRating = $this->getSkillRating($profile, $skill);
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
             if (rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;
-                $this->setSkillRating($profile, $skillName, $newSkillRating);
+                $this->setSkillRating($profile, $skill, $newSkillRating);
             }
         }
         $this->entityManager->flush($profile);
@@ -217,113 +229,40 @@ class BaseService
      */
     protected function learnFromFailure(Profile $profile, $jobData, $roll)
     {
-        foreach ($jobData['skills'] as $skillName) {
-            $skillRating = $this->getSkillRating($profile, $skillName);
+        foreach ($jobData['skills'] as $skillId) {
+            $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+            $skillRating = $this->getSkillRating($profile, $skill);
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
             if (rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;
-                $this->setSkillRating($profile, $skillName, $newSkillRating);
+                $this->setSkillRating($profile, $skill, $newSkillRating);
             }
         }
         $this->entityManager->flush($profile);
         return true;
     }
 
-    /**
-     * @param Profile $profile
-     * @param $skillName
-     * @return int
-     */
-    protected function getSkillRating(Profile $profile, $skillName)
+
+    protected function getSkillRating(Profile $profile, Skill $skill)
     {
-        $skillRating = 0;
-        switch ($skillName) {
-            default:
-                break;
-            case 'coding':
-                $skillRating = $profile->getSkillCoding();
-                break;
-            case 'advancedcoding':
-                $skillRating = $profile->getSkillAdvancedCoding();
-                break;
-            case 'whitehat':
-                $skillRating = $profile->getSkillWhitehat();
-                break;
-            case 'blackhat':
-                $skillRating = $profile->getSkillBlackhat();
-                break;
-            case 'crypto':
-                $skillRating = $profile->getSkillCryptography();
-                break;
-            case 'database':
-                $skillRating = $profile->getSkillDatabases();
-                break;
-            case 'electronics':
-                $skillRating = $profile->getSkillElectronics();
-                break;
-            case 'forensics':
-                $skillRating = $profile->getSkillForensics();
-                break;
-            case 'networking':
-                $skillRating = $profile->getSkillNetworking();
-                break;
-            case 'reverse':
-                $skillRating = $profile->getSkillReverseEngineering();
-                break;
-            case 'social':
-                $skillRating = $profile->getSkillSocialEngineering();
-                break;
-        }
-        return $skillRating;
+        $skillRatingObject = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill($profile, $skill);
+        /** @var SkillRating $skillRatingObject */
+        return ($skillRatingObject) ? $skillRatingObject->getRating() : 0;
     }
 
     /**
      * @param Profile $profile
-     * @param $skillName
+     * @param Skill $skill
      * @param $newSkillRating
      * @return bool
      */
-    public function setSkillRating(Profile $profile, $skillName, $newSkillRating)
+    public function setSkillRating(Profile $profile, Skill $skill, $newSkillRating)
     {
-        switch ($skillName) {
-            default:
-                break;
-            case 'coding':
-                $profile->setSkillCoding($newSkillRating);
-                break;
-            case 'advancedcoding':
-                $profile->setSkillAdvancedCoding($newSkillRating);
-                break;
-            case 'whitehat':
-                $profile->setSkillWhitehat($newSkillRating);
-                break;
-            case 'blackhat':
-                $profile->setSkillBlackhat($newSkillRating);
-                break;
-            case 'crypto':
-                $profile->setSkillCryptography($newSkillRating);
-                break;
-            case 'database':
-                $profile->setSkillDatabases($newSkillRating);
-                break;
-            case 'electronics':
-                $profile->setSkillElectronics($newSkillRating);
-                break;
-            case 'forensics':
-                $profile->setSkillForensics($newSkillRating);
-                break;
-            case 'networking':
-                $profile->setSkillNetworking($newSkillRating);
-                break;
-            case 'reverse':
-                $profile->setSkillReverseEngineering($newSkillRating);
-                break;
-            case 'social':
-                $profile->setSkillSocialEngineering($newSkillRating);
-                break;
-        }
-        $this->entityManager->flush($profile);
+        $skillRatingObject = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill($profile, $skill);
+        /** @var SkillRating $skillRatingObject */
+        $skillRatingObject->setRating($newSkillRating);
+        $this->entityManager->flush($skillRatingObject);
         return true;
     }
 
@@ -360,8 +299,15 @@ class BaseService
         return $this->entityManager->getRepository('Netrunners\Entity\KnownNode')->findByProfileAndNode($profile, $node);
     }
 
-    public function messageEveryoneInNode(Node $node, $wsClientsData, $wsClients, $message, $profile)
+    /**
+     * @param Node $node
+     * @param $message
+     * @param $profile
+     */
+    public function messageEveryoneInNode(Node $node, $message, $profile)
     {
+        $wsClients = $this->getWebsocketServer()->getClients();
+        $wsClientsData = $this->getWebsocketServer()->getClientsData();
         $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findByCurrentNode($node, $profile);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */

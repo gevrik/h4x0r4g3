@@ -3,17 +3,16 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\File;
-use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\ProfileService;
-use Netrunners\Service\SystemService;
 use Netrunners\Service\UtilityService;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
@@ -28,6 +27,8 @@ class WebsocketService implements MessageComponentInterface {
 
     const LOOP_TIME_JOBS = 5;
     const LOOP_TIME_RESOURCES = 300;
+
+    public static $instance;
 
     /**
      * @var \SplObjectStorage
@@ -133,8 +134,45 @@ class WebsocketService implements MessageComponentInterface {
             $this->loopService->loopResources();
         });
 
+        self::$instance = $this;
+
     }
 
+    /**
+     * @return WebsocketService
+     */
+    public static function getInstance() {
+        return self::$instance;
+    }
+
+    /**
+     * @return \SplObjectStorage
+     */
+    public function getClients()
+    {
+        return $this->clients;
+    }
+
+    /**
+     * @return array
+     */
+    public function getClientsData()
+    {
+        return $this->clientsData;
+    }
+
+    /**
+     * @param $resourceId
+     * @return mixed|null
+     */
+    public function getClientData($resourceId)
+    {
+        return (isset($this->clientsData[$resourceId])) ? (object)$this->clientsData[$resourceId] : NULL;
+    }
+
+    /**
+     * @param ConnectionInterface $conn
+     */
     public function onOpen(ConnectionInterface $conn)
     {
         // Store the new connection to send messages to later
@@ -146,10 +184,20 @@ class WebsocketService implements MessageComponentInterface {
             'userId' => false,
             'hash' => false,
             'tempPassword' => false,
-            'profileId' => false
+            'profileId' => false,
+            'codingOptions' => [
+                'fileType' => 0,
+                'fileLevel' => 0,
+                'mode' => 'resource'
+            ]
         );
     }
 
+    /**
+     * @param ConnectionInterface $from
+     * @param string $msg
+     * @return bool
+     */
     public function onMessage(ConnectionInterface $from, $msg)
     {
         // decode received data and if the data is not valid, disconnect the client
@@ -292,25 +340,17 @@ class WebsocketService implements MessageComponentInterface {
                     $profile->setUser($user);
                     $profile->setCredits(ProfileService::DEFAULT_STARTING_CREDITS);
                     $profile->setSnippets(ProfileService::DEFAULT_STARTING_SNIPPETS);
-                    $profile->setSkillAdvancedCoding(0);
-                    $profile->setSkillAdvancedNetworking(0);
-                    $profile->setSkillBlackhat(20);
-                    $profile->setSkillCoding(30);
-                    $profile->setSkillComputing(30);
-                    $profile->setSkillCryptography(0);
-                    $profile->setSkillDatabases(0);
-                    $profile->setSkillElectronics(0);
-                    $profile->setSkillForensics(0);
-                    $profile->setSkillNetworking(0);
-                    $profile->setSkillReverseEngineering(0);
-                    $profile->setSkillSocialEngineering(0);
-                    $profile->setSkillWhitehat(0);
-                    $profile->setSkillBlades(0);
-                    $profile->setSkillCodeBlades(0);
-                    $profile->setSkillBlasters(0);
-                    $profile->setSkillCodeBlasters(0);
-                    $profile->setSkillShields(0);
-                    $profile->setSkillCodeShields(0);
+                    // add skills
+                    $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
+                    foreach ($skills as $skill) {
+                        /** @var Skill $skill */
+                        $skillRating = new SkillRating();
+                        $skillRating->setProfile($profile);
+                        $skillRating->setRating($skill->getLevel());
+                        $skillRating->setSkill($skill);
+                        $this->entityManager->persist($skillRating);
+                    }
+                    // add default skillpoints
                     $profile->setSkillPoints(ProfileService::DEFAULT_SKILL_POINTS);
                     $this->entityManager->persist($profile);
                     $user->setProfile($profile);
@@ -347,10 +387,12 @@ class WebsocketService implements MessageComponentInterface {
                 }
                 break;
             case 'promptForPassword':
+                var_dump('in prompt for password');
                 $user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientsData[$resourceId]['userId']);
                 $currentPassword = $user->getPassword();
                 $bcrypt = new Bcrypt();
                 if (!$bcrypt->verify($content, $currentPassword)) {
+                    var_dump('wrong password');
                     $response = array(
                         'command' => 'showmessage',
                         'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>'
@@ -359,6 +401,7 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 else {
+                    var_dump('correct password');
                     foreach ($this->clients as $client) {
                         if ($client->resourceId != $resourceId && $this->clientsData[$client->resourceId]['username'] == $this->clientsData[$resourceId]['username']) {
                             $loginResponse = array(
@@ -369,6 +412,7 @@ class WebsocketService implements MessageComponentInterface {
                             $client->close();
                         }
                     }
+                    var_dump('after dupe check');
                     $hash = hash('sha256', $this->hash . $user->getId());
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(
@@ -382,7 +426,7 @@ class WebsocketService implements MessageComponentInterface {
                         'command' => 'showMessagePrepend',
                         'message' => $messageText
                     );
-                    $this->codingService->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $this->clientsData, $this->clients, $message, $user->getProfile());
+                    $this->codingService->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $message, $user->getProfile());
                 }
                 break;
             case 'saveNodeDescription':
@@ -396,13 +440,13 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->utilityService->autocomplete($from, (object)$this->clientsData[$resourceId], $content);
             case 'parseInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->parserService->parseInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $entityId, $this->loopService->getJobs());
+                return $this->parserService->parseInput($from, $content, $entityId, $this->loopService->getJobs());
             case 'parseMailInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->parserService->parseMailInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->mailOptions);
+                return $this->parserService->parseMailInput($from, $content, $msgData->mailOptions);
             case 'parseCodeInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                $codeResponse = $this->parserService->parseCodeInput($from, (object)$this->clientsData[$from->resourceId], $content, $this->clients, $this->clientsData, $msgData->codeOptions, $this->loopService->getJobs());
+                $codeResponse = $this->parserService->parseCodeInput($from, $content, $this->loopService->getJobs());
                 if (is_array($codeResponse) && $codeResponse['command'] == 'updateClientData') {
                     $this->clientsData[$resourceId] = (array)$codeResponse['clientData'];
                     $response = array(

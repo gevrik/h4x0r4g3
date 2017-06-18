@@ -24,18 +24,16 @@ class FileService extends BaseService
 
     /**
      * Get detailed information about a file.
-     * @param $clientData
+     * @param $resourceId
      * @param $contentArray
      * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function statFile($clientData, $contentArray)
+    public function statFile($resourceId, $contentArray)
     {
         // init response
         $response = false;
         // get user
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         // get profile
@@ -83,15 +81,16 @@ class FileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function touchFile($clientData, $contentArray)
+    public function touchFile($resourceId, $contentArray)
     {
         // init response
         $response = false;
         // get user
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         // get profile
@@ -170,12 +169,13 @@ class FileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function changeFileName($clientData, $contentArray)
+    public function changeFileName($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -256,13 +256,14 @@ class FileService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function executeFile($clientData, $contentArray)
+    public function executeFile($resourceId, $contentArray)
     {
         // get user
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         // get profile
@@ -438,15 +439,13 @@ class FileService extends BaseService
 
     /**
      * Kill a running program.
-     * @param $clientData
+     * @param $resourceId
      * @param $contentArray
      * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function killProcess($clientData, $contentArray)
+    public function killProcess($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         $profile = $user->getProfile();
@@ -540,15 +539,13 @@ class FileService extends BaseService
 
     /**
      * Shows all running processes of the current system.
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function listProcesses($clientData)
+    public function listProcesses($resourceId)
     {
         // TODO add more info to output
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         $profile = $user->getProfile();

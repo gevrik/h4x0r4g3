@@ -10,6 +10,8 @@
 namespace Application\Controller;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\NodeService;
@@ -135,6 +137,26 @@ class IndexController extends AbstractActionController
         );
         $console->writeLine("=== WEBSOCKET SERVICE STARTED ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
         $loop->run();
+    }
+
+    public function cliResetSkillsAction()
+    {
+        // add skills
+        $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
+        foreach ($profiles as $profile) {
+            foreach ($skills as $skill) {
+                /** @var Skill $skill */
+                $skillRating = $this->entityManager->getRepository('Netrunners\Entity\SkillRating')->findByProfileAndSkill($profile, $skill);
+                if ($skillRating) continue;
+                $skillRating = new SkillRating();
+                $skillRating->setProfile($profile);
+                $skillRating->setRating($skill->getLevel());
+                $skillRating->setSkill($skill);
+                $this->entityManager->persist($skillRating);
+            }
+        }
+        $this->entityManager->flush();
     }
 
     public function cliParseStackOverflowForPostsAction()

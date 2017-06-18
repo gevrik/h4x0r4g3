@@ -11,6 +11,8 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\Profile;
+use Ratchet\ConnectionInterface;
+use TmoAuth\Entity\User;
 
 class ChatService extends BaseService
 {
@@ -21,17 +23,10 @@ class ChatService extends BaseService
     const CHANNEL_GLOBAL = 'gchat';
 
 
-    /**
-     * @param $clientData
-     * @param $contentArray
-     * @return bool|string
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function globalChat($clientData, $contentArray)
+    public function globalChat($resourceId, $contentArray)
     {
         // get user
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         // get profile
@@ -40,7 +35,31 @@ class ChatService extends BaseService
         $messageContent = implode(' ', $contentArray);
         if (!$messageContent || $messageContent == '') return true;
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
-        return $messageContent;
+        $wsClients = $this->getWebsocketServer()->getClients();
+        $wsClientsData = $this->getWebsocketServer()->getClientsData();
+        foreach ($wsClients as $wsClient) {
+            /** @var ConnectionInterface $wsClient */
+            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+            if (!$clientUser) continue;
+            /** @var User $clientUser */
+            if ($clientUser == $user) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'type' => ChatService::CHANNEL_GLOBAL,
+                    'message' => $messageContent
+                );
+            }
+            else {
+                $response = array(
+                    'command' => 'showMessagePrepend',
+                    'type' => ChatService::CHANNEL_GLOBAL,
+                    'message' => $messageContent
+                );
+            }
+            $wsClient->send(json_encode($response));
+        }
+        return true;
     }
 
     /**

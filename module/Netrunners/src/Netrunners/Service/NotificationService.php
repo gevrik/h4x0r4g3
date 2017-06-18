@@ -18,8 +18,13 @@ use Zend\View\Model\ViewModel;
 class NotificationService extends BaseService
 {
 
-    public function showNotifications($clientData)
+    /**
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function showNotifications($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -38,8 +43,15 @@ class NotificationService extends BaseService
         return $response;
     }
 
-    public function dismissNotification($clientData, $entityId, $all = false)
+    /**
+     * @param $resourceId
+     * @param $entityId
+     * @param bool $all
+     * @return bool
+     */
+    public function dismissNotification($resourceId, $entityId, $all = false)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */

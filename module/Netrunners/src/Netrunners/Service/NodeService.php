@@ -34,12 +34,12 @@ class NodeService extends BaseService
 
     /**
      * Shows important information about a node.
-     * @param $clientData
-     * @param $clientsData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function showNodeInfo($clientData, $clientsData)
+    public function showNodeInfo($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -67,7 +67,7 @@ class NodeService extends BaseService
             $returnMessage[] = sprintf('<pre class="text-executable">%-12s: %s</pre>', $counter, $file->getName());
         }
         $profiles = [];
-        foreach ($clientsData as $clientId => $xClientData) {
+        foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
             $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
             if($requestedProfile && $requestedProfile != $profile && $requestedProfile->getCurrentNode() == $currentNode) $profiles[] = $requestedProfile;
         }
@@ -87,11 +87,12 @@ class NodeService extends BaseService
 
     /**
      * Adds a new node to the current system.
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function addNode($clientData)
+    public function addNode($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -157,12 +158,13 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function changeNodeName($clientData, $contentArray)
+    public function changeNodeName($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -219,12 +221,13 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function changeNodeType($clientData, $contentArray)
+    public function changeNodeType($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -313,8 +316,13 @@ class NodeService extends BaseService
         return $response;
     }
 
-    public function editNodeDescription($clientData)
+    /**
+     * @param $resourceId
+     * @return array|bool
+     */
+    public function editNodeDescription($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -395,11 +403,12 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function removeNode($clientData)
+    public function removeNode($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -465,11 +474,12 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function surveyNode($clientData)
+    public function surveyNode($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -487,11 +497,12 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function listNodes($clientData)
+    public function listNodes($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -526,12 +537,13 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param $clientData
+     * @param int $resourceId
      * @param $contentArray
      * @return array|bool
      */
-    public function systemConnect($clientData, $contentArray)
+    public function systemConnect($resourceId, $contentArray)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */

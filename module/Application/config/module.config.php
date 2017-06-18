@@ -138,6 +138,15 @@ return array(
                         )
                     )
                 ),
+                'resset-skills' => array(
+                    'options' => array(
+                        'route'    => 'reset-skills',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-reset-skills'
+                        )
+                    )
+                ),
             ),
         ),
     ),

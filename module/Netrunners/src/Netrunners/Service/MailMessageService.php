@@ -35,11 +35,12 @@ class MailMessageService extends BaseService
 
     /**
      * Returns a string that shows how many unread messages a profile has in its inbox.
-     * @param $clientData
+     * @param int $resourceId
      * @return array|bool
      */
-    public function displayAmountUnreadMails($clientData)
+    public function displayAmountUnreadMails($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -53,8 +54,13 @@ class MailMessageService extends BaseService
         return $response;
     }
 
-    public function enterMailMode($clientData)
+    /**
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function enterMailMode($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
@@ -97,8 +103,14 @@ class MailMessageService extends BaseService
         return $response;
     }
 
-    public function displayMail($clientData, $mailOptions)
+    /**
+     * @param int $resourceId
+     * @param $mailOptions
+     * @return array|bool
+     */
+    public function displayMail($resourceId, $mailOptions)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         // init response
@@ -142,8 +154,15 @@ class MailMessageService extends BaseService
         return $response;
     }
 
-    public function deleteMail($clientData, $contentArray, $mailOptions)
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @param $mailOptions
+     * @return array|bool
+     */
+    public function deleteMail($resourceId, $contentArray, $mailOptions)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
