@@ -194,7 +194,7 @@ class ProfileService extends BaseService
             /** @var File $file */
             $returnMessage[] = sprintf('<pre>%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s</pre>',
                 $file->getId(),
-                File::$fileTypeData[$file->getFileType()->getId()]['label'],
+                $file->getFileType()->getName(),
                 $file->getName(),
                 $file->getIntegrity(),
                 $file->getLevel(),

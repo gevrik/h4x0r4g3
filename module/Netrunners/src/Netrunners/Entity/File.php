@@ -10,42 +10,11 @@
 
 namespace Netrunners\Entity;
 
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\FileRepository") */
 class File
 {
-
-    /**
-     * @const TYPE_DIRECTORY
-     */
-    const TYPE_DIRECTORY = 1;
-
-    /**
-     * @const TYPE_CHAT_CLIENT
-     */
-    const TYPE_CHAT_CLIENT = 2;
-
-    /**
-     * @const TYPE_DATA_MINER
-     */
-    const TYPE_DATA_MINER = 3;
-
-    const TYPE_KEY_LABEL = 'label';
-
-    const TYPE_KEY_CODABLE = 'codable';
-
-    /**
-     * Data for file type.
-     * @var array
-     */
-    static $fileTypeData = array(
-        array(self::TYPE_KEY_LABEL => 'INVALID', self::TYPE_KEY_CODABLE => false),
-        array(self::TYPE_KEY_LABEL => 'directory', self::TYPE_KEY_CODABLE => false),
-        array(self::TYPE_KEY_LABEL => 'chatclient', self::TYPE_KEY_CODABLE => true),
-        array(self::TYPE_KEY_LABEL => 'dataminer', self::TYPE_KEY_CODABLE => true),
-    );
 
     /**
      * @ORM\Id

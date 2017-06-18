@@ -284,7 +284,7 @@ class FileService extends BaseService
             );
         }
         // check if there is enough memory to execute this
-        if (!$response && $this->canExecuteFile($profile, $file)) {
+        if (!$response && !$this->canExecuteFile($profile, $file)) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You do not have enough memory to execute %s - build more memory nodes</pre>', $file->getName())
@@ -304,6 +304,9 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_DATAMINER:
                     $response = $this->executeDataminer($file, $profile, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_COINMINER:
+                    $response = $this->executeCoinminer($file, $profile, $profile->getCurrentNode());
                     break;
             }
         }
@@ -472,6 +475,34 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>', $file->getName())
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Profile $profile
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeCoinminer(File $file, Profile $profile, Node $node)
+    {
+        $response = false;
+        if ($node->getType() != Node::ID_TERMINAL) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>', $file->getName())
             );
         }
         if (!$response) {

@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePartInstance;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Notification;
@@ -74,24 +75,30 @@ class LoopService extends BaseService
      */
     public function loopResources()
     {
+        // init var to keep track of who receives what
         $items = [];
+        // get all the db nodes (for snippet generation)
         $databaseNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_DATABASE);
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
-            if (!isset($items[$databaseNode->getSystem()->getProfile()->getId()])) $items[$databaseNode->getSystem()->getProfile()->getId()] = [
-                'snippets' => 0,
-                'credits' => 0
-            ];
-            $items[$databaseNode->getSystem()->getProfile()->getId()]['snippets'] += $databaseNode->getLevel();
+            $currentNodeProfileId = $databaseNode->getSystem()->getProfile()->getId();
+            /** @var Profile $currentNodeProfile */
+            // add the profile id to the items if it is not already set
+            $items = $this->addProfileIdToItems($items, $currentNodeProfileId);
+            // add the snippets
+            $items[$currentNodeProfileId]['snippets'] += $databaseNode->getLevel();
+            // now check if there are running files in the same node that could affect the resource amount
+            $items = $this->checkForModifyingFiles($databaseNode, $currentNodeProfileId, FileType::ID_DATAMINER, $items, 'snippets');
         }
         $terminalNodes = $this->entityManager->getRepository('Netrunners\Entity\Node')->findByType(Node::ID_TERMINAL);
         foreach ($terminalNodes as $terminalNode) {
             /** @var Node $terminalNode */
-            if (!isset($items[$terminalNode->getSystem()->getProfile()->getId()])) $items[$terminalNode->getSystem()->getProfile()->getId()] = [
-                'snippets' => 0,
-                'credits' => 0
-            ];
-            $items[$terminalNode->getSystem()->getProfile()->getId()]['credits'] += $terminalNode->getLevel();
+            $currentNodeProfileId = $terminalNode->getSystem()->getProfile()->getId();
+            /** @var Profile $currentNodeProfile */
+            // add the profile id to the items if it is not already set
+            $items = $this->addProfileIdToItems($items, $currentNodeProfileId);
+            $items[$currentNodeProfileId]['credits'] += $terminalNode->getLevel();
+            $items = $this->checkForModifyingFiles($terminalNode, $currentNodeProfileId, FileType::ID_COINMINER, $items, 'credits');
         }
         foreach ($items as $profileId => $amountData) {
             $profile = $this->entityManager->find('Netrunners\Entity\Profile', $profileId);
@@ -100,6 +107,42 @@ class LoopService extends BaseService
             $profile->setCredits($profile->getCredits() + $amountData['credits']);
         }
         $this->entityManager->flush();
+    }
+
+    protected function addProfileIdToItems($items, $profileId)
+    {
+        // check if the owning profile of this node is already in our item list, if not, add the profile
+        if (!isset($items[$profileId])) $items[$profileId] = [
+            'snippets' => 0,
+            'credits' => 0
+        ];
+        return $items;
+    }
+
+    protected function checkForModifyingFiles(Node $node, $profileId, $fileTypeId, $items, $resource)
+    {
+        $filesInNode = $this->entityManager->getRepository('Netrunners\Entity\File')->findByNode($node);
+        foreach ($filesInNode as $fileInNode) {
+            /** @var File $fileInNode */
+            // skip if the file is not running or has 0 integrity or is not connected to a profile
+            if (!$fileInNode->getRunning()) continue;
+            if ($fileInNode->getIntegrity() < 1) continue;
+            if (!$fileInNode->getProfile()) continue;
+            if ($fileInNode->getFileType()->getId() == $fileTypeId) {
+                if ($fileInNode->getProfile()->getId() != $profileId) {
+                    // check if the owning profile of this node is already in our item list, if not, add the profile
+                    if (!isset($items[$fileInNode->getProfile()->getId()])) $items[$fileInNode->getProfile()->getId()] = [
+                        'snippets' => 0,
+                        'credits' => 0
+                    ];
+                    $items[$fileInNode->getProfile()->getId()][$resource] += $fileInNode->getLevel();
+                }
+                else {
+                    $items[$profileId][$resource] += $fileInNode->getLevel();
+                }
+            }
+        }
+        return $items;
     }
 
     /**

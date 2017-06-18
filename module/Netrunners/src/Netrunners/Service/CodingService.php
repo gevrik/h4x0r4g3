@@ -227,6 +227,15 @@ class CodingService extends BaseService
             /* resource */
             $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-10s: %s</pre>', "snippets", ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 'unknown');
         }
+        if ($codeOptions->fileLevel && $codeOptions->fileType) {
+            $difficulty = $codeOptions->fileLevel;
+            $skillCoding = $profile->getSkillCoding();
+            $skillModifier = $this->getSkillModifier($codeOptions->fileType, $profile);
+            $skillList = $this->getSkillListForType($codeOptions->fileType);
+            $modifier = floor(($skillCoding + $skillModifier)/2);
+            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-10s: %s</pre>', "skills", implode(' ', $skillList));
+            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-10s: %s</pre>', "chance", ($modifier - $difficulty));
+        }
         // build response
         $response = array(
             'command' => 'showmessage',
@@ -587,7 +596,10 @@ class CodingService extends BaseService
                 $skillModifier = $profile->getSkillNetworking();
                 break;
             case 'dataminer':
-                $skillModifier = floor(($profile->getSkillForensics() + $profile->getSkillNetworking())/2);
+                $skillModifier = floor(($profile->getSkillDatabases() + $profile->getSkillNetworking())/2);
+                break;
+            case 'coinminer':
+                $skillModifier = floor(($profile->getSkillCryptography() + $profile->getSkillNetworking())/2);
                 break;
         }
         return $skillModifier;
@@ -640,8 +652,12 @@ class CodingService extends BaseService
                 $skillList[] = 'networking';
                 break;
             case 'dataminer':
-                $skillList[] = 'networking';
+                $skillList[] = 'database';
                 $skillList[] = 'forensics';
+                break;
+            case 'coinminer':
+                $skillList[] = 'networking';
+                $skillList[] = 'crypto';
                 break;
         }
         return $skillList;
