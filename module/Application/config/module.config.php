@@ -147,6 +147,15 @@ return array(
                         )
                     )
                 ),
+                'populate-words' => array(
+                    'options' => array(
+                        'route'    => 'populate-words',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-populate-word-table'
+                        )
+                    )
+                ),
             ),
         ),
     ),

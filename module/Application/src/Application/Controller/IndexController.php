@@ -12,6 +12,7 @@ namespace Application\Controller;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
+use Netrunners\Entity\Word;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\LoopService;
@@ -184,6 +185,30 @@ class IndexController extends AbstractActionController
                 echo $link->href . "\n\r";
             }
         }
+    }
+
+    public function cliPopulateWordTableAction()
+    {
+        set_time_limit(0);
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('Reading in CSV', \Zend\Console\ColorInterface::GREEN);
+        if (($handle = fopen(getcwd() . '/public/nouns.csv', "r")) !== FALSE) {
+            while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
+                $theWord = $data[0];
+                $wordLength = strlen($theWord);
+                if ($wordLength < 4) continue;
+                $console->writeLine('ADDING: ' . $theWord, \Zend\Console\ColorInterface::WHITE);
+                $word = new Word();
+                $word->setContent($theWord);
+                $word->setLength($wordLength);
+                $this->entityManager->persist($word);
+            }
+            fclose($handle);
+        }
+        $this->entityManager->flush();
+        $console->writeLine('DONE reading in CSV', \Zend\Console\ColorInterface::GREEN);
+        return true;
+
     }
 
 }
