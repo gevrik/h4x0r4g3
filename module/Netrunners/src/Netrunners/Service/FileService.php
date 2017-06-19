@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
@@ -512,7 +513,47 @@ class FileService extends BaseService
         $returnMessage = array();
         foreach ($runningFiles as $runningFile) {
             /** @var File $runningFile */
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s|%-20s|%s</pre>', $runningFile->getId(), $runningFile->getFileType()->getName() ,$runningFile->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s|%-20s|%s</pre>', $runningFile->getId(), $runningFile->getFileType()->getName() ,$runningFile->getName());
+        }
+        $response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        );
+        return $response;
+    }
+
+    /**
+     * @return array
+     */
+    public function showFileTypes()
+    {
+        $fileTypes = $this->entityManager->getRepository('Netrunners\Entity\FileType')->findBy([
+            'codable' => true
+        ]);
+        $returnMessage = array();
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%-4s|%s</pre>', 'name', 'size', 'description');
+        foreach ($fileTypes as $fileType) {
+            /** @var FileType $fileType */
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s|%-4s|%s</pre>', $fileType->getName(), $fileType->getSize(), $fileType->getDescription());
+        }
+        $response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        );
+        return $response;
+    }
+
+    /**
+     * @return array
+     */
+    public function showFileMods()
+    {
+        $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileMod')->findAll();
+        $returnMessage = array();
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%s</pre>', 'name', 'description');
+        foreach ($fileMods as $fileMod) {
+            /** @var FileMod $fileMod */
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s|%s</pre>', $fileMod->getName(), $fileMod->getDescription());
         }
         $response = array(
             'command' => 'showoutput',

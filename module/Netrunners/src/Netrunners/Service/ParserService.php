@@ -198,9 +198,15 @@ class ParserService
             case 'execute':
                 $response = $this->fileService->executeFile($resourceId, $contentArray);
                 break;
+            case 'filemods':
+                $response = $this->fileService->showFileMods();
+                break;
             case 'fn':
             case 'filename':
                 $response = $this->fileService->changeFileName($resourceId, $contentArray);
+                break;
+            case 'filetypes':
+                $response = $this->fileService->showFileTypes();
                 break;
             case 'gc':
                 return $this->chatService->globalChat($resourceId, $contentArray);
