@@ -243,4 +243,15 @@ class ProfileService extends BaseService
         return $response;
     }
 
+    public function spendSkillPoints($resourceId, $contentArray)
+    {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+
+    }
+
 }

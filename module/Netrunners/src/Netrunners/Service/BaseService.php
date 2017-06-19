@@ -355,4 +355,27 @@ class BaseService
         }
     }
 
+    /**
+     * @param array $contentArray
+     * @param bool $returnContent
+     * @param bool $castToInt
+     * @param bool $implode
+     * @param bool $makeSafe
+     * @param array $safeOptions
+     * @return array|int|mixed|null|string
+     */
+    protected function getNextParameter($contentArray = [], $returnContent = true, $castToInt = false, $implode = false, $makeSafe = false, $safeOptions = ['safe'=>1,'elements'=>'strong'])
+    {
+        $parameter = NULL;
+        $nextParameter = (!$implode) ? array_shift($contentArray) : implode(' ', $contentArray);
+        if ($nextParameter) {
+            trim($nextParameter);
+            if ($makeSafe) $nextParameter = htmLawed($nextParameter, $safeOptions);
+            if ($castToInt) $nextParameter = (int)$nextParameter;
+            $parameter = $nextParameter;
+        }
+        $result = ($returnContent) ? [$contentArray, $parameter] : $parameter;
+        return $result;
+    }
+
 }

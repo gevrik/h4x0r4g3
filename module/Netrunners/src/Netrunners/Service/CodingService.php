@@ -103,7 +103,7 @@ class CodingService extends BaseService
         if (!$user) return true;
         /** @var User $user */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = $this->getNextParameter($contentArray, false);
         // init message
         switch ($parameter) {
             default:
@@ -135,7 +135,7 @@ class CodingService extends BaseService
         if (!$user) return true;
         /** @var User $user */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = $this->getNextParameter($contentArray, false, true, false, true);
         // init message
         if (!$parameter) {
             $response = array(
@@ -144,7 +144,6 @@ class CodingService extends BaseService
             );
         }
         else {
-            $parameter = (int)$parameter;
             if ($parameter < 1 || $parameter > 100) {
                 $command = 'showmessage';
                 $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Choose a number between 1 and 100</pre>');
@@ -265,7 +264,7 @@ class CodingService extends BaseService
         if (!$user) return true;
         /** @var User $user */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = $this->getNextParameter($contentArray, false);
         // init message
         $message = '';
         if (!$parameter) {

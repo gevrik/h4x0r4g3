@@ -39,8 +39,7 @@ class FileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
+        $parameter = $this->getNextParameter($contentArray, false);
         // get file repo
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
@@ -182,8 +181,7 @@ class FileService extends BaseService
         /** @var Profile $profile */
         $response = false;
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // get file repo
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
@@ -206,9 +204,8 @@ class FileService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">File not found</pre>')
             );
         }
-        // now ge the new name
-        $newName = implode(' ', $contentArray);
-        $newName = trim($newName);
+        // now get the new name
+        $newName = $this->getNextParameter($contentArray, false, false, true, true);
         if (!$response && !$newName) {
             $response = array(
                 'command' => 'showmessage',
@@ -267,8 +264,7 @@ class FileService extends BaseService
         // init response
         $response = false;
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
+        $parameter = $this->getNextParameter($contentArray, false);
         // get file repo
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
@@ -443,8 +439,7 @@ class FileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = (int)$parameter;
+        $parameter = $this->getNextParameter($contentArray, false, true);
         // init response
         $response = false;
         if (!$parameter) {

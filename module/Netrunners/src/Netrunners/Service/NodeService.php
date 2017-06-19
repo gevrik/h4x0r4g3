@@ -247,8 +247,7 @@ class NodeService extends BaseService
         $response = false;
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
+        $parameter = $this->getNextParameter($contentArray, false);
         if (!$parameter) {
             $returnMessage = array();
             $nodeTypes = Node::$lookup;
@@ -581,8 +580,7 @@ class NodeService extends BaseService
             );
         }
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
+        $parameter = $this->getNextParameter($contentArray);
         if (!$response && !$parameter) {
             $returnMessage = array();
             $publicIoNodes = $nodeRepo->findByType(Node::ID_PUBLICIO);
@@ -606,9 +604,7 @@ class NodeService extends BaseService
             );
         }
         // now check if the node id exists
-        $targetNodeId = array_shift($contentArray);
-        $targetNodeId = trim($targetNodeId);
-        $targetNodeId = (int)$targetNodeId;
+        $targetNodeId = $this->getNextParameter($contentArray, false, true);
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
         if (!$response && !$targetNode) {
             $response = array(

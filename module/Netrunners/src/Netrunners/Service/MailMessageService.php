@@ -174,7 +174,7 @@ class MailMessageService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = $this->getNextParameter($contentArray, false, true);
         // init response
         $response = false;
         if (!$parameter) {

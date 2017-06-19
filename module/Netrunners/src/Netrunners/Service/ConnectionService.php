@@ -44,7 +44,7 @@ class ConnectionService extends BaseService
         $response = false;
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = $this->getNextParameter($contentArray, false);
         $searchByNumber = false;
         if (is_numeric($parameter)) {
             $searchByNumber = true;
@@ -125,9 +125,7 @@ class ConnectionService extends BaseService
         /** @var System $currentSystem */
         $response = false;
         // get parameter
-        $parameter = array_shift($contentArray);
-        $parameter = trim($parameter);
-        $parameter = (int)$parameter;
+        $parameter = $this->getNextParameter($contentArray, false, true);
         if (!$parameter) {
             $returnMessage = array();
             $returnMessage[] = sprintf('<pre class="text-sysmsg">Please choose the target node:</pre>');
@@ -248,7 +246,7 @@ class ConnectionService extends BaseService
         }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
-        $parameter = array_shift($contentArray);
+        $parameter = $this->getNextParameter($contentArray, false);
         $searchByNumber = false;
         if (is_numeric($parameter)) {
             $searchByNumber = true;

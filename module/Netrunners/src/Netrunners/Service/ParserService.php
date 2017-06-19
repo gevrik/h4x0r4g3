@@ -136,6 +136,7 @@ class ParserService
         /** @var Profile $profile */
         $contentArray = explode(' ', $content);
         $userCommand = array_shift($contentArray);
+        $userCommand = trim($userCommand);
         switch ($userCommand) {
             default:
                 $response = array(
@@ -305,6 +306,7 @@ class ParserService
         if (!$user) return true;
         $contentArray = explode(' ', $content);
         $userCommand = array_shift($contentArray);
+        $userCommand = trim($userCommand);
         $mailOptions = (object)$mailOptions;
         switch ($userCommand) {
             default:
@@ -329,6 +331,7 @@ class ParserService
         if (!$user) return true;
         $contentArray = explode(' ', $content);
         $userCommand = array_shift($contentArray);
+        $userCommand = trim($userCommand);
         $codeOptions = (object)$clientData->codingOptions;
         switch ($userCommand) {
             default:
