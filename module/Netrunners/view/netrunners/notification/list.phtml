@@ -1,10 +1,14 @@
-<?php foreach ($this->notifications as $notification) : /** @var \Netrunners\Entity\Notification $notification */ ?>
+<div id="notification-container" class="notification-container">
+    <?php foreach ($this->notifications as $notification) : /** @var \Netrunners\Entity\Notification $notification */ ?>
 
-<div class="alert alert-<?php echo $notification->getSeverity(); ?>">
-    <button type="button" class="close close-btn" data-notification-id="<?php echo $notification->getId(); ?>" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-    <?php echo $notification->getSubject(); ?>
+    <div class="alert alert-<?php echo $notification->getSeverity(); ?>">
+        <button type="button" class="close close-btn" data-notification-id="<?php echo $notification->getId(); ?>" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <?php echo $notification->getSubject(); ?>
+    </div>
+
+    <?php endforeach; ?>
+
+    <?php if (count($this->notifications)>=1) : ?>
+        <button id="btn-dismiss-all-notifications" class="btn btn-default btn-xs"><?php echo $this->translate("dismiss all"); ?></button>
+    <?php endif; ?>
 </div>
-
-<?php endforeach; ?>
-
-<button id="btn-dismiss-all-notifications" class="btn btn-default btn-xs"><?php echo $this->translate("dismiss all"); ?></button>

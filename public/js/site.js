@@ -4,6 +4,12 @@
 
     $(document).on('ready', function () {
 
+        var viewportData = getViewport();
+        var viewportWidth = viewportData[0];
+        var viewportHeight = viewportData[1];
+
+        $('.panel-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
+
         var md = $('#messages');
         var commandInput = $('#command-input');
 
@@ -159,7 +165,20 @@
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;
-                    $('.notification-box').removeClass('btn-default').removeClass('btn-info').addClass((notiAmount>0)?'btn-info':'btn-default').html('<span>' + notiAmount + '</span>');
+                    if (notiAmount !== currentNotiAmount) {
+                        currentNotiAmount = notiAmount;
+                        $('.notification-box').removeClass('btn-default').removeClass('btn-info').addClass((notiAmount>0)?'btn-info':'btn-default').html('<span>' + notiAmount + '</span>');
+                        if(document.getElementById('notification-container') !== null && notiAmount >= 1)
+                        {
+                            command = {
+                                command: 'parseInput',
+                                hash: hash,
+                                content: 'shownotifications',
+                                silent: true
+                            };
+                            conn.send(JSON.stringify(command));
+                        }
+                    }
                     break;
                 case 'ls':
                     var directoryArray = data.message;
@@ -214,6 +233,8 @@
                     $('.draggable').draggable({
                         handle: '.panel-heading'
                     });
+                    $('#notification-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
+                    document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
                     if (!data.silent) showprompt();
                     break;
                 case 'showmessage':

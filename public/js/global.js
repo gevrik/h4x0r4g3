@@ -5,3 +5,4 @@ var consoleMode = 'default';
 var executablePrograms = [2];
 var consoleOptionsMail = {};
 var promptAddon = '';
+var currentNotiAmount = 0;

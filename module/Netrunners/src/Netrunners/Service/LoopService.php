@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
+use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
@@ -163,7 +164,7 @@ class LoopService extends BaseService
         /** @var Profile $profile */
         $modifier = $jobData['modifier'];
         $difficulty = $jobData['difficulty'];
-        $roll = rand(1, 100);
+        $roll = mt_rand(1, 100);
         $chance = $modifier - $difficulty;
         $typeId = $jobData['typeId'];
         if ($jobData['mode'] == 'resource') {
@@ -212,7 +213,6 @@ class LoopService extends BaseService
                     $newCode->setNode($targetNode);
                 }
             }
-            $this->entityManager->flush();
             $add = '';
             if (!$newCode->getProfile()) {
                 $add = '<br />The file could not be stored in storage - it has been added to the node that it was coded in';
@@ -222,13 +222,35 @@ class LoopService extends BaseService
                 'severity' => 'success',
                 'message' => sprintf("[%s] Coding project complete: %s [level: %s]%s", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty, $add)
             ];
+            $this->entityManager->flush();
         }
         else {
+            $message = '';
             $this->learnFromFailure($profile, $jobData);
+            if ($basePart instanceof FileType) {
+                $neededParts = $basePart->getFileParts();
+                foreach ($neededParts as $neededPart) {
+                    /** @var FilePart $neededPart */
+                    $chance = mt_rand(1, 100);
+                    if ($chance > 50) {
+                        var_dump('file part recovered');
+                        if (!empty($message)) $message .= '[(';
+                        $fpi = new FilePartInstance();
+                        $fpi->setProfile($profile);
+                        $fpi->setLevel($difficulty);
+                        $fpi->setCoder($profile);
+                        $fpi->setFilePart($neededPart);
+                        $this->entityManager->persist($fpi);
+                        $message .= sprintf('[%s] ', $neededPart->getName());
+                    }
+                }
+                if (!empty($message)) $message .= 'were recovered)]';
+            }
             $response = [
                 'severity' => 'warning',
-                'message' => sprintf("[%s] Coding project failed: %s [level: %s]", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty)
+                'message' => sprintf("[%s] Coding project failed: %s [level: %s] %s", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty, $message)
             ];
+            $this->entityManager->flush();
         }
         return $response;
     }

@@ -222,25 +222,10 @@ class CodingService extends BaseService
         }
         // if level and type have been set, show the needed skills and chance of success
         if ($codeOptions->fileLevel && $codeOptions->fileType) {
-            $difficulty = $codeOptions->fileLevel;
-            $testSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
-            /** @var Skill $testSkill */
-            $skillModifier = 0;
-            if ($codeOptions->mode == 'program') {
-                $targetType = $this->entityManager->find('Netrunners\Entity\FileType', $codeOptions->fileType);
-                /** @var FileType $targetType */
-                $skillModifier = $this->getSkillModifierForFileType($targetType, $profile);
-            }
-            if ($codeOptions->mode == 'resource') {
-                $targetType = $this->entityManager->find('Netrunners\Entity\FilePart', $codeOptions->fileType);
-                /** @var FilePart $targetType */
-                $skillModifier = $this->getSkillModifierForFilePart($targetType, $profile);
-            }
-            $skillCoding = $this->getSkillRating($profile, $testSkill);
-            $skillList = $this->getSkillListForType($codeOptions->fileType);
-            $modifier = floor(($skillCoding + $skillModifier)/2);
+            $skillList = $this->getSkillListForType($codeOptions);
+            $chance = $this->calculateCodingSuccessChance($profile, $codeOptions);
             $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "skills", implode(' ', $skillList));
-            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "chance", ($modifier - $difficulty));
+            $message .= sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>', "chance", $chance);
         }
         // build response
         $response = array(
@@ -287,7 +272,7 @@ class CodingService extends BaseService
                 $shortName = explode(' ', $name);
                 $message .= $shortName[0] . ' ';
             }
-            $returnMessage = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', $message);
+            $returnMessage = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', wordwrap($message, 120));
             $response = array(
                 'command' => 'showmessage',
                 'message' => $returnMessage
@@ -354,6 +339,10 @@ class CodingService extends BaseService
                 case FileType::STRING_COINMINER:
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FileType::ID_COINMINER;
+                    break;
+                case FileType::STRING_PORTSCANNER:
+                    $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
+                    $value = FileType::ID_PORTSCANNER;
                     break;
             }
             $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
@@ -425,13 +414,21 @@ class CodingService extends BaseService
             if (!$filePart) {
                 $response = array(
                     'command' => 'showmessage',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file part: %s</pre>', $level, htmLawed($type,['safe'=>1,'elements'=>'strong']))
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">Invalid file part: %s</pre>',
+                        $level,
+                        htmLawed($type,['safe'=>1,'elements'=>'strong'])
+                    )
                 );
             }
-            if ($level > $profile->getSnippets()) {
+            if (!$response && $level > $profile->getSnippets()) {
                 $response = array(
                     'command' => 'showmessage',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code the %s</pre>', $level, htmLawed($type,['safe'=>1,'elements'=>'strong']))
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code the %s</pre>',
+                        $level,
+                        $filePart->getName()
+                    )
                 );
             }
         }
@@ -443,7 +440,7 @@ class CodingService extends BaseService
             /** @var Skill $skillCoding */
             $skillRating = $this->getSkillRating($profile, $skillCoding);
             $skillModifier = $this->getSkillModifierForFilePart($filePart, $profile);
-            $skillList = $this->getSkillListForType($type);
+            $skillList = $this->getSkillListForType($codeOptions);
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
@@ -510,10 +507,10 @@ class CodingService extends BaseService
                     'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unknown file type: %s</pre>', $level, htmLawed($type,['safe'=>1,'elements'=>'strong']))
                 );
             }
-            if ($level > $profile->getSnippets()) {
+            if (!$response && $level > $profile->getSnippets()) {
                 $response = array(
                     'command' => 'showmessage',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code: %s</pre>', $level, htmLawed($type,['safe'=>1,'elements'=>'strong']))
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code: %s</pre>', $level, $fileType->getName())
                 );
             }
         }
@@ -529,7 +526,12 @@ class CodingService extends BaseService
                 /** @var FilePart $neededResource */
                 $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
                 if (empty($filePartInstances)) {
-                    $missingResources[] = sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>', $level, htmLawed($type,['safe'=>1,'elements'=>'strong']), $neededResource->getName());
+                    $missingResources[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>',
+                        $level,
+                        $fileType->getName(),
+                        $neededResource->getName()
+                    );
                 }
             }
             if (!empty($missingResources)) {
@@ -543,7 +545,11 @@ class CodingService extends BaseService
         if (!$response && !$this->canStoreFileOfSize($profile, $fileType->getSize())) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>', $type, $fileType->getSize())
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>',
+                    $fileType->getName(),
+                    $fileType->getSize()
+                )
             );
         }
         /* checks passed, we can now create the file */
@@ -553,7 +559,7 @@ class CodingService extends BaseService
             /** @var Skill $skillCoding */
             $skillRating = $this->getSkillRating($profile, $skillCoding);
             $skillModifier = $this->getSkillModifierForFileType($fileType, $profile);
-            $skillList = $this->getSkillListForType($type);
+            $skillList = $this->getSkillListForType($codeOptions);
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
@@ -605,121 +611,31 @@ class CodingService extends BaseService
     }
 
     /**
-     * @param FileType $fileType
-     * @param Profile $profile
-     * @return int
-     */
-    protected function getSkillModifierForFileType(FileType $fileType, Profile $profile)
-    {
-        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-        /** @var SkillRatingRepository $skillRatingRepo */
-        $fileTypeSkillRepo = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill');
-        /** @var FileTypeSkillRepository $fileTypeSkillRepo */
-        $rating = 0;
-        $fileTypeSkills = $fileTypeSkillRepo->findBy([
-            'fileType' => $fileType
-        ]);
-        $amount = 0;
-        foreach ($fileTypeSkills as $fileTypeSkill) {
-            /** @var FileTypeSkill $fileTypeSkill */
-            $amount++;
-            $skillRating = $skillRatingRepo->findByProfileAndSkill(
-                $profile, $fileTypeSkill->getSkill()
-            );
-            /** @var SkillRating $skillRating */
-            $rating += ($skillRating->getRating()) ? $skillRating->getRating() : 0;
-        }
-        $rating = ceil($rating/$amount);
-        return (int)$rating;
-    }
-
-    /**
-     * @param FilePart $filePart
-     * @param Profile $profile
-     * @return int
-     */
-    protected function getSkillModifierForFilePart(FilePart $filePart, Profile $profile)
-    {
-        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-        /** @var SkillRatingRepository $skillRatingRepo */
-        $filePartSkillRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill');
-        /** @var FilePartSkillRepository $filePartSkillRepo */
-        $rating = 0;
-        $filePartSkills = $filePartSkillRepo->findBy([
-            'filePart' => $filePart
-        ]);
-        $amount = 0;
-        foreach ($filePartSkills as $filePartSkill) {
-            /** @var FilePartSkill $filePartSkill */
-            $amount++;
-            $skillRating = $skillRatingRepo->findByProfileAndSkill(
-                $profile, $filePartSkill->getSkill()
-            );
-            /** @var SkillRating $skillRating */
-            $rating += ($skillRating->getRating()) ? $skillRating->getRating() : 0;
-        }
-        $rating = ceil($rating/$amount);
-        return (int)$rating;
-    }
-
-    /**
-     * @param $type
+     * @param $codeOptions
      * @return array
      */
-    protected function getSkillListForType($type)
+    protected function getSkillListForType($codeOptions)
     {
         $skillList = [];
-        switch ($type) {
+        switch ($codeOptions->mode) {
             default:
+                $object = $this->entityManager->find('Netrunners\Entity\FilePart', $codeOptions->fileType);
+                $repo = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill');
+                $results = $repo->findBy([
+                    'filePart' => $object
+                ]);
                 break;
-            case 'controller':
-                $skillList[] = 'coding';
+            case 'program':
+                $object = $this->entityManager->find('Netrunners\Entity\FileType', $codeOptions->fileType);
+                $repo = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill');
+                $results = $repo->findBy([
+                    'fileType' => $object
+                ]);
                 break;
-            case 'frontend':
-                $skillList[] = 'advancedcoding';
-                break;
-            case 'whitehat':
-                $skillList[] = 'whitehat';
-                break;
-            case 'blackhat':
-                $skillList[] = 'blackhat';
-                break;
-            case 'crypto':
-                $skillList[] = 'crypto';
-                break;
-            case 'database':
-                $skillList[] = 'database';
-                break;
-            case 'electronics':
-                $skillList[] = 'electronics';
-                break;
-            case 'forensics':
-                $skillList[] = 'forensics';
-                break;
-            case 'network':
-                $skillList[] = 'networking';
-                break;
-            case 'reverse':
-                $skillList[] = 'reverse';
-                break;
-            case 'social':
-                $skillList[] = 'social';
-                break;
-            case 'chatclient':
-                $skillList[] = 'networking';
-                break;
-            case 'dataminer':
-                $skillList[] = 'database';
-                $skillList[] = 'forensics';
-                break;
-            case 'coinminer':
-                $skillList[] = 'networking';
-                $skillList[] = 'crypto';
-                break;
-            case 'icmpblocker':
-                $skillList[] = 'networking';
-                $skillList[] = 'whitehat';
-                break;
+        }
+        foreach ($results as $result) {
+            /** @var FilePartSkill|FileTypeSkill $result */
+            $skillList[] = $result->getSkill()->getName();
         }
         return $skillList;
     }

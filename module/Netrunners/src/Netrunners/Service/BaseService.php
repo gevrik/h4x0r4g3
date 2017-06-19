@@ -13,13 +13,19 @@ namespace Netrunners\Service;
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FilePart;
+use Netrunners\Entity\FilePartSkill;
+use Netrunners\Entity\FileType;
+use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\FileTypeSkillRepository;
 use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\ProfileRepository;
@@ -227,13 +233,15 @@ class BaseService
      */
     protected function learnFromSuccess(Profile $profile, $jobData)
     {
-        foreach ($jobData['skills'] as $skillId) {
-            $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+        foreach ($jobData['skills'] as $skillName) {
+            $skill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findOneBy([
+                'name' => $skillName
+            ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill);
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
-            if (rand(1, 100) <= $chance) {
+            if (mt_rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
             }
@@ -249,13 +257,15 @@ class BaseService
      */
     protected function learnFromFailure(Profile $profile, $jobData)
     {
-        foreach ($jobData['skills'] as $skillId) {
-            $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+        foreach ($jobData['skills'] as $skillName) {
+            $skill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findOneBy([
+                'name' => $skillName
+            ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill);
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
-            if (rand(1, 100) <= $chance) {
+            if (mt_rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
             }
@@ -385,6 +395,91 @@ class BaseService
     protected function getInputNameOfSkill(Skill $skill)
     {
         return str_replace(' ', '', $skill->getName());
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $codeOptions
+     * @return int
+     */
+    protected function calculateCodingSuccessChance(Profile $profile, $codeOptions)
+    {
+        $difficulty = $codeOptions->fileLevel;
+        $testSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
+        /** @var Skill $testSkill */
+        $skillModifier = 0;
+        if ($codeOptions->mode == 'program') {
+            $targetType = $this->entityManager->find('Netrunners\Entity\FileType', $codeOptions->fileType);
+            /** @var FileType $targetType */
+            $skillModifier = $this->getSkillModifierForFileType($targetType, $profile);
+        }
+        if ($codeOptions->mode == 'resource') {
+            $targetType = $this->entityManager->find('Netrunners\Entity\FilePart', $codeOptions->fileType);
+            /** @var FilePart $targetType */
+            $skillModifier = $this->getSkillModifierForFilePart($targetType, $profile);
+        }
+        $skillCoding = $this->getSkillRating($profile, $testSkill);
+        $skillRating = floor(($skillCoding + $skillModifier)/2);
+        $chance = $skillRating - $difficulty;
+        return (int)$chance;
+    }
+
+    /**
+     * @param FileType $fileType
+     * @param Profile $profile
+     * @return int
+     */
+    protected function getSkillModifierForFileType(FileType $fileType, Profile $profile)
+    {
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $fileTypeSkillRepo = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill');
+        /** @var FileTypeSkillRepository $fileTypeSkillRepo */
+        $rating = 0;
+        $fileTypeSkills = $fileTypeSkillRepo->findBy([
+            'fileType' => $fileType
+        ]);
+        $amount = 0;
+        foreach ($fileTypeSkills as $fileTypeSkill) {
+            /** @var FileTypeSkill $fileTypeSkill */
+            $amount++;
+            $skillRating = $skillRatingRepo->findByProfileAndSkill(
+                $profile, $fileTypeSkill->getSkill()
+            );
+            /** @var SkillRating $skillRating */
+            $rating += ($skillRating->getRating()) ? $skillRating->getRating() : 0;
+        }
+        $rating = ceil($rating/$amount);
+        return (int)$rating;
+    }
+
+    /**
+     * @param FilePart $filePart
+     * @param Profile $profile
+     * @return int
+     */
+    protected function getSkillModifierForFilePart(FilePart $filePart, Profile $profile)
+    {
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $filePartSkillRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill');
+        /** @var FilePartSkillRepository $filePartSkillRepo */
+        $rating = 0;
+        $filePartSkills = $filePartSkillRepo->findBy([
+            'filePart' => $filePart
+        ]);
+        $amount = 0;
+        foreach ($filePartSkills as $filePartSkill) {
+            /** @var FilePartSkill $filePartSkill */
+            $amount++;
+            $skillRating = $skillRatingRepo->findByProfileAndSkill(
+                $profile, $filePartSkill->getSkill()
+            );
+            /** @var SkillRating $skillRating */
+            $rating += ($skillRating->getRating()) ? $skillRating->getRating() : 0;
+        }
+        $rating = ceil($rating/$amount);
+        return (int)$rating;
     }
 
 }

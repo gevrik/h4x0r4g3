@@ -1,11 +1,4 @@
 <?php
-/**
- * Zend Framework (http://framework.zend.com/)
- *
- * @link      http://github.com/zendframework/ZendSkeletonApplication for the canonical source repository
- * @copyright Copyright (c) 2005-2015 Zend Technologies USA Inc. (http://www.zend.com)
- * @license   http://framework.zend.com/license/new-bsd New BSD License
- */
 
 namespace Application\Controller;
 
@@ -191,13 +184,13 @@ class IndexController extends AbstractActionController
     {
         set_time_limit(0);
         $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('Reading in CSV', \Zend\Console\ColorInterface::GREEN);
+        $console->writeLine('Reading in CSV', ColorInterface::GREEN);
         if (($handle = fopen(getcwd() . '/public/nouns.csv', "r")) !== FALSE) {
             while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
                 $theWord = $data[0];
                 $wordLength = strlen($theWord);
                 if ($wordLength < 4) continue;
-                $console->writeLine('ADDING: ' . $theWord, \Zend\Console\ColorInterface::WHITE);
+                $console->writeLine('ADDING: ' . $theWord, ColorInterface::WHITE);
                 $word = new Word();
                 $word->setContent($theWord);
                 $word->setLength($wordLength);
@@ -206,7 +199,7 @@ class IndexController extends AbstractActionController
             fclose($handle);
         }
         $this->entityManager->flush();
-        $console->writeLine('DONE reading in CSV', \Zend\Console\ColorInterface::GREEN);
+        $console->writeLine('DONE reading in CSV', ColorInterface::GREEN);
         return true;
 
     }

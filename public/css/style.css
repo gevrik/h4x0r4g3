@@ -65,6 +65,10 @@ pre {
     color: #e730f4;
 }
 
+.text-addon {
+    color: #245269;
+}
+
 .panel-container {
     position: fixed;
     width: 40%;
@@ -123,6 +127,10 @@ textarea {
     position: fixed;
     bottom: 1em;
     right: 1em;
+}
+
+.notification-container{
+    overflow-y: scroll;
 }
 
 .popover {

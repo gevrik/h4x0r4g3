@@ -68,7 +68,7 @@ class ProfileService extends BaseService
 
     const DEFAULT_STARTING_SNIPPETS = 1000;
 
-    const DEFAULT_SKILL_POINTS = 20;
+    const DEFAULT_SKILL_POINTS = 50;
 
 
     /**
@@ -108,7 +108,8 @@ class ProfileService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $returnMessage = array();
+        $returnMessage = [];
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>', 'skillpoints', $profile->getSkillPoints());
         $skills = $skillRepo->findAll();
         foreach ($skills as $skill) {
             /** @var Skill $skill */
@@ -220,10 +221,10 @@ class ProfileService extends BaseService
         /** @var Profile $profile */
         $returnMessage = array();
         $files = $fileRepo->findByProfile($profile);
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's', 'system', 'node');
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's', 'system', 'node');
         foreach ($files as $file) {
             /** @var File $file */
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-10s|%-20s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
                 $file->getId(),
                 $file->getFileType()->getName(),
                 $file->getName(),
@@ -236,7 +237,7 @@ class ProfileService extends BaseService
                 ($file->getNode()) ? $file->getNode()->getName() : ''
             );
         }
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">mem: %s/%s sto: %s/%s</pre>', $this->getUsedMemory($profile), $this->getTotalMemory($profile), $this->getUsedStorage($profile), $this->getTotalStorage($profile));
+        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">mem: %s/%s sto: %s/%s</pre>', $this->getUsedMemory($profile), $this->getTotalMemory($profile), $this->getUsedStorage($profile), $this->getTotalStorage($profile));
         $response = array(
             'command' => 'showoutput',
             'message' => $returnMessage

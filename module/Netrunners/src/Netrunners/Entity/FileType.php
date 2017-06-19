@@ -28,6 +28,7 @@ class FileType
     const ID_CODEARMOR = 9;
     const ID_CODESHIELD = 10;
     const ID_SYSMAPPER = 11;
+    const ID_PORTSCANNER = 12;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -40,6 +41,7 @@ class FileType
     const STRING_CODEARMOR = 'codearmor';
     const STRING_CODESHIELD = 'codeshield';
     const STRING_SYSMAPPER = 'sysmapper';
+    const STRING_PORTSCANNER = 'portscanner';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -53,6 +55,7 @@ class FileType
         self::STRING_CODEARMOR => self::ID_CODEARMOR,
         self::STRING_CODESHIELD => self::ID_CODESHIELD,
         self::STRING_SYSMAPPER => self::ID_SYSMAPPER,
+        self::STRING_PORTSCANNER => self::ID_PORTSCANNER,
     ];
 
     /**
