@@ -259,6 +259,9 @@ class ParserService
             case 'secureconnection':
                 $response = $this->connectionService->secureConnection($resourceId, $contentArray);
                 break;
+            case 'skillpoints':
+                $response = $this->profileService->spendSkillPoints($resourceId, $contentArray);
+                break;
             case 'skills':
                 $response = $this->profileService->showSkills($resourceId);
                 break;

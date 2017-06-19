@@ -75,7 +75,7 @@ class ChatService extends BaseService
     protected function prepareMessage(Profile $profile, $messageContent, $channel, $removeHtmlEntities = true)
     {
         $messageContent = ($removeHtmlEntities) ? htmLawed($messageContent, array('safe'=>1, 'elements'=>'strong, em, strike, u')) : $messageContent;
-        $messageContent = "[" . strtoupper($channel) . "] " . $profile->getUser()->getDisplayName() . ' : ' . $messageContent;
+        $messageContent = sprintf('<pre style="white-space: pre-wrap;" class="text-%s">[%s] %s : %s</pre>', strtolower($channel), strtoupper($channel), $profile->getUser()->getDisplayName(), wordwrap($messageContent, 120));
         return $messageContent;
     }
 

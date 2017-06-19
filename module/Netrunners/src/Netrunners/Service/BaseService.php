@@ -378,4 +378,13 @@ class BaseService
         return $result;
     }
 
+    /**
+     * @param Skill $skill
+     * @return string
+     */
+    protected function getInputNameOfSkill(Skill $skill)
+    {
+        return str_replace(' ', '', $skill->getName());
+    }
+
 }

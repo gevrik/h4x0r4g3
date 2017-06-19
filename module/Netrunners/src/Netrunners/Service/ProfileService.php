@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\SkillRatingRepository;
@@ -245,13 +246,94 @@ class ProfileService extends BaseService
 
     public function spendSkillPoints($resourceId, $contentArray)
     {
+        $skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-
+        $response = false;
+        $message = [];
+        // get skill input name
+        list($contentArray, $skillNameParam) = $this->getNextParameter($contentArray);
+        // if none given, show a list of all skill input names
+        if (!$skillNameParam) {
+            $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the skill that you want to improve (%s skillpoints available) :</pre>', $profile->getSkillPoints());
+            $skillsString = '';
+            foreach ($skillRepo->findAll() as $skill) {
+                /** @var Skill $skill */
+                $skillsString .= $this->getInputNameOfSkill($skill) . ' ';
+            }
+            $skillsString = wordwrap($skillsString, 120);
+            $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%s</pre>', $skillsString);
+            $response = [
+                'command' => 'showoutput',
+                'message' => $message
+            ];
+        }
+        // init target skill
+        $targetSkill = NULL;
+        // now try to get the actual skill
+        if (!$response) {
+            foreach ($skillRepo->findAll() as $skill) {
+                /** @var Skill $skill */
+                if ($this->getInputNameOfSkill($skill) == $skillNameParam) {
+                    $targetSkill = $skill;
+                    break;
+                }
+            }
+        }
+        if (!$response && !$targetSkill) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unknown skill</pre>')
+            ];
+        }
+        // get the amount of skillpoints the player wants to invest
+        $skillPointAmount = $this->getNextParameter($contentArray, false, true);
+        // check if they want to spend at least 1 sp
+        if (!$response && $skillPointAmount < 1) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify how many skill points you want to invest</pre>')
+            ];
+        }
+        // now check if they want to spend more than they have
+        if (!$response && $skillPointAmount > $profile->getSkillPoints()) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints</pre>', $profile->getSkillPoints())
+            ];
+        }
+        // now check if the total skill rating would exceed 100
+        $skillRatingObject = NULL;
+        $skillRating = 0;
+        if (!$response) {
+            $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $targetSkill);
+            /** @var SkillRating $skillRatingObject */
+            $skillRating = ($skillRatingObject) ? $skillRatingObject->getRating() : 0;
+            if ($skillRating + $skillPointAmount > 100) {
+                $possible = 100 - $skillRating;
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints on that skill</pre>', $possible)
+                ];
+            }
+        }
+        /* all checks passed, we can now spend the skillpoints */
+        if (!$response) {
+            $profile->setSkillPoints($profile->getSkillPoints() - $skillPointAmount);
+            $skillRatingObject->setRating($skillRating + $skillPointAmount);
+            $this->entityManager->flush();
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have raised [%s] to %s by spending %s skillpoints</pre>', $targetSkill->getName(), $skillRatingObject->getRating(), $skillPointAmount)
+            ];
+        }
+        return $response;
     }
 
 }
