@@ -16,4 +16,9 @@ return array(
         )
     ),
     'hashmod' => 'netrunners',
+    'wsconfig' => [
+            'wsprotocol' => 'ws',
+            'wshost' => 'yourhosthere',
+            'wsport' => '8082',
+        ],
 );

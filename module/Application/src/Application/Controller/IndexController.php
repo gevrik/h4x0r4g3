@@ -102,7 +102,14 @@ class IndexController extends AbstractActionController
      */
     public function indexAction()
     {
-        return new ViewModel();
+        $config = $this->getServiceLocator()->get('config');
+        $view = new ViewModel();
+        $view->setVariables([
+            'wsprotocol' => $config['wsconfig']['wsprotocol'],
+            'wshost' => $config['wsconfig']['wshost'],
+            'wsport' => $config['wsconfig']['wsport']
+        ]);
+        return $view;
     }
 
     // CLI

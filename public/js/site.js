@@ -61,7 +61,7 @@
         md.css({'height': vph + 'px', 'max-height': vph + 'px'});
 
         // websocket stuff
-        conn = new WebSocket('wss://dev.h4x0r4g3.com:8082');
+        conn = new WebSocket(wsprotocol + '://' + wshost + ':' + wsport);
         // even listener for connection open
         conn.onopen = function() {
             commandInput.detach();
@@ -77,7 +77,7 @@
             var textClass = 'muted';
             var data = JSON.parse(e.data);
             var command = data.command;
-            if (command != 'showmessageprepend' && command != 'updateprompt' && command != 'ticker') commandInput.attr('type', 'text').detach();
+            if (command !== 'showmessageprepend' && command !== 'updateprompt' && command !== 'ticker') commandInput.attr('type', 'text').detach();
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');

@@ -1,3 +1,7 @@
+<?php
+$this->headScript()->appendScript('var wsprotocol = "' . $this->wsprotocol . '"; wshost = "' . $this->wshost . '"; wsport = "' . $this->wsport . '";');
+$this->headScript()->appendFile('js/site.js');
+?>
 <div id="main-content" class="content">
     <div id="messages">
         <input id="command-input" type="text" autocomplete="off" />
