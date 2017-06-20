@@ -21,14 +21,10 @@ class UtilityService extends BaseService
 {
 
     /**
-     * @param ConnectionInterface $from
      * @param $clientData
-     * @return bool|ConnectionInterface
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @return bool|string
      */
-    public function showPrompt(ConnectionInterface $from, $clientData)
+    public function showPrompt($clientData)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -42,22 +38,14 @@ class UtilityService extends BaseService
         $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
         $fullPromptString = '<span class="prompt">[' . $userAtHostString . ':' . $promptString . '][' . Node::$data[$currentNode->getType()]['shortname'] . '][' . $currentNode->getLevel() . ']</span> ';
-        $response = array(
-            'command' => 'showprompt',
-            'message' => $fullPromptString
-        );
-        return $from->send(json_encode($response));
+        return $fullPromptString;
     }
 
     /**
-     * Autocomplete a partially typed file or folder name.
      * @param ConnectionInterface $from
      * @param $clientData
      * @param string $content
      * @return bool|ConnectionInterface
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function autocomplete(ConnectionInterface $from, $clientData, $content = '')
     {

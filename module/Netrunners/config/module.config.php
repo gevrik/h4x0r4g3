@@ -30,6 +30,7 @@ return array(
         'factories' => array(
             'translator' => 'Zend\Mvc\Service\TranslatorServiceFactory',
             'Netrunners\Service\BaseService' => 'Netrunners\Factory\BaseServiceFactory',
+            'Netrunners\Service\AdminService' => 'Netrunners\Factory\AdminServiceFactory',
             'Netrunners\Service\ChatService' => 'Netrunners\Factory\ChatServiceFactory',
             'Netrunners\Service\CodingService' => 'Netrunners\Factory\CodingServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',

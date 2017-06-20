@@ -69,7 +69,7 @@
         // websocket stuff
         conn = new WebSocket(wsprotocol + '://' + wshost + ':' + wsport);
         // even listener for connection open
-        conn.onopen = function() {
+        conn.onopen = function(e) {
             commandInput.detach();
             // fluff
             md.append('<span class="text-info">Establishing connection to NeoCortex network...</span><br />');
@@ -83,19 +83,32 @@
             var textClass = 'muted';
             var data = JSON.parse(e.data);
             var command = data.command;
-            if (command !== 'showmessageprepend' && command !== 'updateprompt' && command !== 'ticker') commandInput.attr('type', 'text').detach();
+            if (command !== 'getipaddy' && command !== 'showmessageprepend' && command !== 'updateprompt' && command !== 'ticker') commandInput.attr('type', 'text').detach();
+            prompt = (data.prompt) ? data.prompt : 'INVALID PROMPT';
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
                     break;
-                case 'cd':
+                case 'getipaddy':
+                    var ipaddy = $('#ipaddy').val();
                     jsonData = {
-                        command: 'parseInput',
+                        command: 'setIpAddy',
                         hash: hash,
-                        content: 'ls',
+                        content: ipaddy,
                         silent: true
                     };
                     conn.send(JSON.stringify(jsonData));
+                    break;
+                case 'cd':
+                    // jsonData = {
+                    //     command: 'parseInput',
+                    //     hash: hash,
+                    //     content: 'ls',
+                    //     silent: true
+                    // };
+                    // conn.send(JSON.stringify(jsonData));
+                    md.append(data.message);
+                    showprompt();
                     break;
                 case 'echocommand':
                     if (loginStage !== 'createpassword' && loginStage !== 'createpasswordconfirm' && loginStage !== 'promptforpassword') {
@@ -141,13 +154,7 @@
                     hash = data.hash;
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
-                    jsonData = {
-                        command: 'parseInput',
-                        hash: hash,
-                        content: 'showunreadmails',
-                        silent: true
-                    };
-                    conn.send(JSON.stringify(jsonData));
+                    showprompt();
                     ticker = window.setInterval(function(){
                         jsonData = {
                             command: 'parseInput',
@@ -160,7 +167,7 @@
                     break;
                 case 'showprompt':
                     var message = data.message;
-                    if (promptAddon != '') message = message + ' ' + promptAddon;
+                    if (promptAddon !== '') message = message + ' ' + promptAddon;
                     md.append('<span class="text-muted">' + message + '</span>');
                     break;
                 case 'ticker':

@@ -6,3 +6,4 @@ var executablePrograms = [2];
 var consoleOptionsMail = {};
 var promptAddon = '';
 var currentNotiAmount = 0;
+var prompt = '';

@@ -61,15 +61,15 @@ class FileService extends BaseService
             $targetFile = array_shift($targetFiles);
             /** @var File $targetFile */
             $returnMessage = array();
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Name", $targetFile->getName());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %smu</pre>', "Size", $targetFile->getSize());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Level", $targetFile->getLevel());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Version", $targetFile->getVersion());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Type", $targetFile->getFileType()->getName());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s/%s</pre>', "Integrity", $targetFile->getIntegrity(), $targetFile->getMaxIntegrity());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Slots", $targetFile->getSlots());
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Birth", $targetFile->getCreated()->format('Y/m/d H:i:s'));
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-12s: %s</pre>', "Modified", ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : "---");
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Name", $targetFile->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %smu</pre>', "Size", $targetFile->getSize());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Level", $targetFile->getLevel());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Version", $targetFile->getVersion());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Type", $targetFile->getFileType()->getName());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s/%s</pre>', "Integrity", $targetFile->getIntegrity(), $targetFile->getMaxIntegrity());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Slots", $targetFile->getSlots());
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Birth", $targetFile->getCreated()->format('Y/m/d H:i:s'));
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>', "Modified", ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : "---");
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage

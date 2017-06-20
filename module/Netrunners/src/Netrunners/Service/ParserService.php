@@ -70,6 +70,11 @@ class ParserService
      */
     protected $notificationService;
 
+    /**
+     * @var AdminService
+     */
+    protected $adminService;
+
 
     /**
      * @param EntityManager $entityManager
@@ -82,6 +87,7 @@ class ParserService
      * @param SystemService $systemService
      * @param ConnectionService $connectionService
      * @param NotificationService $notificationService
+     * @param AdminService $adminService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -93,7 +99,8 @@ class ParserService
         CodingService $codingService,
         SystemService $systemService,
         ConnectionService $connectionService,
-        NotificationService $notificationService
+        NotificationService $notificationService,
+        AdminService $adminService
     )
     {
         $this->entityManager = $entityManager;
@@ -106,6 +113,7 @@ class ParserService
         $this->systemService = $systemService;
         $this->connectionService = $connectionService;
         $this->notificationService = $notificationService;
+        $this->adminService = $adminService;
     }
 
     /**
@@ -294,7 +302,11 @@ class ParserService
                 $response = $this->fileService->touchFile($resourceId, $contentArray);
                 break;
             /** ADMIN STUFF */
+            case 'testadmin':
+                $response = $this->adminService->adminShowClients($resourceId);
+                break;
         }
+        $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         if ($response) $from->send(json_encode($response));
         return true;
     }

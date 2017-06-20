@@ -95,11 +95,7 @@ class ConnectionService extends BaseService
             );
             $this->messageEveryoneInNode($targetNode, $message, $profile);
             $this->entityManager->flush($profile);
-            $response = array(
-                'command' => 'cd',
-                'type' => 'default',
-                'message' => false
-            );
+            $response = $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId);
         }
         return $response;
     }

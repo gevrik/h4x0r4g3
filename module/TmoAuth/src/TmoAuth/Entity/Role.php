@@ -21,6 +21,10 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Role implements HierarchicalRoleInterface
 {
+
+    const ROLE_ID_ADMIN = 'admin';
+    const ROLE_ID_SUPERADMIN = 'superadmin';
+
     /**
      * @var int
      * @ORM\Id

@@ -22,6 +22,7 @@ use TmoAuth\Entity\User;
 use Zend\Crypt\Password\Bcrypt;
 use Zend\I18n\Validator\Alnum;
 use Zend\Log\Logger;
+use Zend\Validator\Ip;
 
 class WebsocketService implements MessageComponentInterface {
 
@@ -171,6 +172,22 @@ class WebsocketService implements MessageComponentInterface {
     }
 
     /**
+     * @return UtilityService
+     */
+    public function getUtilityService()
+    {
+        return $this->utilityService;
+    }
+
+    /**
+     * @return NodeService
+     */
+    public function getNodeService()
+    {
+        return $this->nodeService;
+    }
+
+    /**
      * @param int $resourceId
      * @param string $optionName
      * @param mixed $optionValue
@@ -199,12 +216,35 @@ class WebsocketService implements MessageComponentInterface {
             'hash' => false,
             'tempPassword' => false,
             'profileId' => false,
+            'ipaddy' => false,
             'codingOptions' => [
                 'fileType' => 0,
                 'fileLevel' => 0,
                 'mode' => 'resource'
             ]
         );
+        $response = array(
+            'command' => 'getipaddy',
+            'message' => 'default'
+        );
+        $conn->send(json_encode($response));
+    }
+
+    /**
+     * @param $start
+     * @param null $end
+     * @return float
+     */
+    public function microtime_diff($start, $end = null)
+    {
+        if (!$end) {
+            $end = microtime();
+        }
+        list($start_usec, $start_sec) = explode(" ", $start);
+        list($end_usec, $end_sec) = explode(" ", $end);
+        $diff_sec = intval($end_sec) - intval($start_sec);
+        $diff_usec = floatval($end_usec) - floatval($start_usec);
+        return floatval($diff_sec) + $diff_usec;
     }
 
     /**
@@ -214,11 +254,45 @@ class WebsocketService implements MessageComponentInterface {
      */
     public function onMessage(ConnectionInterface $from, $msg)
     {
+        // get resource id of socket
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $from->resourceId;
         // decode received data and if the data is not valid, disconnect the client
         $msgData = json_decode($msg);
+        // check if we have everything that we need in the $msgData
+        if (!is_object($msgData) || !isset($msgData->command) || !isset($msgData->hash) || !isset($msgData->content)) {
+            $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET IS SENDING GIBBERISH - GET RID OF THEM - ' . $msg);
+            $from->close();
+            return true;
+        }
         // get the message data parts
         $command = $msgData->command;
-        if (!$command) $from->close();
+        // check if socket is spamming messages
+        if (!isset($this->clientsData[$resourceId]['millis'])) {
+            $this->clientsData[$resourceId]['millis'] = microtime();
+            $this->clientsData[$resourceId]['spamcount'] = 0;
+        }
+        else {
+            if ($command != 'ticker') {
+                $querytime = $this->microtime_diff($this->clientsData[$resourceId]['millis']);
+                if ($querytime <= 0.2) {
+                    $this->clientsData[$resourceId]['spamcount']++;
+                    if ($this->clientsData[$resourceId]['spamcount'] >= 10) {
+                        $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET IS SPAMMING - DISCONNECT SOCKET - ' . $msg);
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => '<pre style="white-space: pre-wrap;" class="text-danger">DISCONNECTED - REASON: SPAMMING</pre>'
+                        );
+                        $from->send(json_encode($response));
+                        $from->close();
+                        return true;
+                    }
+                }
+                else {
+                    $this->clientsData[$resourceId]['millis'] = microtime();
+                }
+            }
+        }
         $hash = $msgData->hash;
         $content = $msgData->content;
         $content = trim($content);
@@ -237,15 +311,29 @@ class WebsocketService implements MessageComponentInterface {
             );
             $from->send(json_encode($response));
         }
-        // get resource id of socket
-        /** @noinspection PhpUndefinedFieldInspection */
-        $resourceId = $from->resourceId;
         if ($content != 'ticker') {
             $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
+        }
+        // check if we know the ip addy of the socket - if not, disconnect them
+        if ($command != 'setIpAddy') {
+            if (!$this->clientsData[$resourceId]['ipaddy']) {
+                $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET WITH NO IP ADDY INFO IS SENDING COMMANDS - DISCONNECT SOCKET');
+                $from->close();
+                return true;
+            }
         }
         // data ok, check which command was sent
         switch ($command) {
             default:
+                break;
+            case 'setIpAddy':
+                $validator = new Ip();
+                if ($validator->isValid($content)) {
+                    $this->clientsData[$resourceId]['ipaddy'] = $content;
+                } else {
+                    $this->logger->log(Logger::ALERT, $resourceId . ': SOMETHING FISHY GOING ON - NO IP ADDRESS COULD BE FOUND - DISCONNECT SOCKET');
+                    $from->close();
+                }
                 break;
             case 'login':
                 $username = strtolower($content);
@@ -406,7 +494,7 @@ class WebsocketService implements MessageComponentInterface {
                 if (!$bcrypt->verify($content, $currentPassword)) {
                     $response = array(
                         'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>'
+                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>',
                     );
                     $from->send(json_encode($response));
                     $from->close();
@@ -426,7 +514,8 @@ class WebsocketService implements MessageComponentInterface {
                     $this->clientsData[$resourceId]['hash'] = $hash;
                     $response = array(
                         'command' => 'logincomplete',
-                        'hash' => $hash
+                        'hash' => $hash,
+                        'prompt' => $this->utilityService->showPrompt($this->getClientData($resourceId))
                     );
                     $from->send(json_encode($response));
                     // message everyone in node
@@ -443,7 +532,7 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->nodeService->saveNodeDescription($from, (object)$this->clientsData[$resourceId], $content);
             case 'showprompt':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->utilityService->showPrompt($from, (object)$this->clientsData[$resourceId]);
+                return $this->utilityService->showPrompt($this->getClientData($resourceId));
             case 'autocomplete':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->utilityService->autocomplete($from, (object)$this->clientsData[$resourceId], $content);

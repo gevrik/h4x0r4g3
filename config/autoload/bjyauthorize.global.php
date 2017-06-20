@@ -18,6 +18,7 @@ return [
         'resource_providers' => [
             'BjyAuthorize\Provider\Resource\Config' => [
                 'profile' => [],
+                'adminactions' => []
             ],
         ],
 
@@ -27,6 +28,7 @@ return [
                     // allow guests and users (and admins, through inheritance)
                     ['user', 'profile', ['detail']],
                     ['admin', 'profile', ['update']],
+                    ['superadmin', 'adminactions', ['canuse']],
                 ],
 
                 'deny' => [
