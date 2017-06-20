@@ -302,7 +302,8 @@ class ParserService
                 $response = $this->fileService->touchFile($resourceId, $contentArray);
                 break;
             /** ADMIN STUFF */
-            case 'testadmin':
+            case 'clients':
+            case 'showclients':
                 $response = $this->adminService->adminShowClients($resourceId);
                 break;
         }
