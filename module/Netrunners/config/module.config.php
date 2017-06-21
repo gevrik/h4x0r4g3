@@ -40,6 +40,7 @@ return array(
             'Netrunners\Service\NodeService' => 'Netrunners\Factory\NodeServiceFactory',
             'Netrunners\Service\NotificationService' => 'Netrunners\Factory\NotificationServiceFactory',
             'Netrunners\Service\MailMessageService' => 'Netrunners\Factory\MailMessageServiceFactory',
+            'Netrunners\Service\MilkrunService' => 'Netrunners\Factory\MilkrunServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',
             'Netrunners\Service\ProfileService' => 'Netrunners\Factory\ProfileServiceFactory',
             'Netrunners\Service\SystemService' => 'Netrunners\Factory\SystemServiceFactory',

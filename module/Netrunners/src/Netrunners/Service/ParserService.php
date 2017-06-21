@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\NotificationRepository;
 use Ratchet\ConnectionInterface;
@@ -75,6 +76,7 @@ class ParserService
      */
     protected $adminService;
 
+    protected $milkrunService;
 
     /**
      * @param EntityManager $entityManager
@@ -88,6 +90,7 @@ class ParserService
      * @param ConnectionService $connectionService
      * @param NotificationService $notificationService
      * @param AdminService $adminService
+     * @param MilkrunService $milkrunService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -100,7 +103,8 @@ class ParserService
         SystemService $systemService,
         ConnectionService $connectionService,
         NotificationService $notificationService,
-        AdminService $adminService
+        AdminService $adminService,
+        MilkrunService $milkrunService
     )
     {
         $this->entityManager = $entityManager;
@@ -114,6 +118,7 @@ class ParserService
         $this->connectionService = $connectionService;
         $this->notificationService = $notificationService;
         $this->adminService = $adminService;
+        $this->milkrunService = $milkrunService;
     }
 
     /**
@@ -266,6 +271,9 @@ class ParserService
                 break;
             case 'ps':
                 $response = $this->fileService->listProcesses($resourceId);
+                break;
+            case 'requestmilkrun':
+                $response = $this->milkrunService->requestMilkrun($resourceId);
                 break;
             case 'score':
                 $response = $this->profileService->showScore($resourceId);

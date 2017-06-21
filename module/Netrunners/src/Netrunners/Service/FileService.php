@@ -15,7 +15,13 @@ use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
+use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\SkillRatingRepository;
+use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
 
@@ -265,7 +271,7 @@ class FileService extends BaseService
         // init response
         $response = false;
         // get parameter
-        $parameter = $this->getNextParameter($contentArray, false);
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // get file repo
         $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepository */
@@ -323,6 +329,26 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_ICMP_BLOCKER:
                     $response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_PORTSCANNER:
+                    $completionDate = new \DateTime();
+                    $completionDate->add(new \DateInterval('PT5S')); // TODO add executionTime to fileType or file
+                    $actionData = [
+                        'command' => 'executeprogram',
+                        'completion' => $completionDate,
+                        'blocking' => true,
+                        'fullblock' => false,
+                        'parameter' => [
+                            'fileId' => $file->getId(),
+                            'contentArray' => $contentArray
+                        ]
+                    ];
+                    $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start portscanning with [%s]</pre>', $file->getName())
+                    );
+                    //$response = $this->executePortscanner($file, $contentArray);
                     break;
             }
         }
@@ -421,6 +447,90 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>', $file->getName(), $file->getId())
+            );
+        }
+        return $response;
+    }
+
+    public function executePortscanner(File $file, $contentArray)
+    {
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $response = false;
+        $addy = $this->getNextParameter($contentArray, false);
+        if (!$addy) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a system address to scan</pre>'),
+            );
+        }
+        $system = false;
+        if (!$response) {
+            $system = $systemRepo->findOneBy([
+                'addy' => $addy
+            ]);
+        }
+        if (!$response && !$system) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system address</pre>'),
+            );
+        }
+        /** @var System $system */
+        $profile = $file->getProfile();
+        /** @var Profile $profile */
+        if (!$response && $system->getProfile() == $profile) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system - unable to scan own systems</pre>'),
+            );
+        }
+        if (!$response) {
+            $fileLevel = $file->getLevel();
+            $fileIntegrity = $file->getIntegrity();
+            $computingSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_COMPUTING);
+            /** @var Skill $computingSkill */
+            $skillRating = $this->getSkillRating($profile, $computingSkill);
+            $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
+            $nodes = $nodeRepo->findBySystem($system);
+            $messages = [];
+            foreach ($nodes as $node) {
+                /** @var Node $node */
+                $difficulty = false;
+                switch ($node->getType()) {
+                    default:
+                        break;
+                    case Node::ID_PUBLICIO:
+                    case Node::ID_IO:
+                        $difficulty = $node->getLevel() * 10;
+                        break;
+                }
+                if ($difficulty) {
+                    $roll = mt_rand(1, 100);
+                    if ($roll <= $baseChance - $difficulty) {
+                        $messages[] = sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-white">%-45s|%-11s|%-20s|%s</pre>',
+                            $addy,
+                            $node->getId(),
+                            Node::$lookup[$node->getType()],
+                            $node->getName()
+                        );
+                    }
+                }
+            }
+            if (empty($messages)) {
+                $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">No vulnerable nodes detected</pre>');
+            }
+            else {
+                array_unshift($messages, sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-45s|%-11s|%-20s|%s</pre>', 'address', 'id', 'nodetype', 'nodename'));
+            }
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $messages
             );
         }
         return $response;

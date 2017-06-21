@@ -104,29 +104,25 @@
                     showprompt();
                     break;
                 case 'echocommand':
+                    var lastOutput = $('#messages div.output-line:last');
                     if (loginStage !== 'createpassword' && loginStage !== 'createpasswordconfirm' && loginStage !== 'promptforpassword') {
-                        md.append(data.content + '<br />');
-                    }
-                    else if (command === 'updateprompt') {
-
-                    }
-                    else {
-                        md.append('<br />');
+                        //lastOutput.append(data.content + '<br />');
+                        lastOutput.append(data.content);
                     }
                     break;
                 case 'confirmusercreate':
                     loginStage = 'confirmusercreate';
-                    md.append('<span class="text-muted">Unknown user, do you want to create an account for this username? (y/n) </span>');
+                    md.append('<div class="text-muted output-line">Unknown user, do you want to create an account for this username? (y/n) </div>');
                     break;
                 case 'createpassword':
                     loginStage = 'createpassword';
                     //commandInput.attr('type', 'password');
-                    md.append('<span class="text-muted">Please enter a password for the new user: </span>');
+                    md.append('<div class="text-muted output-line">Please enter a password for the new user: </div>');
                     break;
                 case 'createpasswordconfirm':
                     loginStage = 'createpasswordconfirm';
                     //commandInput.attr('type', 'password');
-                    md.append('<span class="text-muted">Please confirm the password for the new user: </span>');
+                    md.append('<div class="text-muted output-line">Please confirm the password for the new user: </div>');
                     break;
                 case 'createuserdone':
                     loginStage = 'complete';
@@ -138,7 +134,7 @@
                 case 'promptforpassword':
                     loginStage = 'promptforpassword';
                     //commandInput.attr('type', 'password');
-                    md.append('<span class="text-muted">password: </span>');
+                    md.append('<div class="text-muted output-line">password: </div>');
                     break;
                 case 'logincomplete':
                     var jsonData;
@@ -157,11 +153,6 @@
                         };
                         conn.send(JSON.stringify(jsonData));
                     }, 1000);
-                    break;
-                case 'showprompt':
-                    var message = data.message;
-                    if (promptAddon !== '') message = message + ' ' + promptAddon;
-                    md.append('<span class="text-muted">' + message + '</span>');
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;
@@ -260,7 +251,9 @@
                     return true;
             }
             if (command !== 'echocommand' && command !== 'updateprompt' && command !== 'ticker') {
-                commandInput.appendTo(md).focus();
+                var lastOutput = $('#messages div.output-line:last');
+                console.log(lastOutput);
+                commandInput.appendTo(lastOutput).focus();
             }
         };
         conn.onclose = function() {

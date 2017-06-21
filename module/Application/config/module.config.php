@@ -156,6 +156,15 @@ return array(
                         )
                     )
                 ),
+                'populate-company-names' => array(
+                    'options' => array(
+                        'route'    => 'populate-company-names',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-populate-company-names-table'
+                        )
+                    )
+                ),
             ),
         ),
     ),

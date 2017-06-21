@@ -120,7 +120,6 @@ class AdminService extends BaseService
 
     public function adminSetSnippets($resourceId, $contentArray)
     {
-        var_dump($contentArray);
         $response = false;
         if (!$this->isAdmin($resourceId)) {
             $response = [

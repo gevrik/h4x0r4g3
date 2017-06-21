@@ -42,6 +42,18 @@ class Profile
      */
     protected $skillPoints;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":100})
+     * @var int
+     */
+    protected $eeg;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":100})
+     * @var int
+     */
+    protected $willpower;
+
     // ORM
 
     /**
@@ -135,6 +147,42 @@ class Profile
     public function setSkillPoints($skillPoints)
     {
         $this->skillPoints = $skillPoints;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getEeg()
+    {
+        return $this->eeg;
+    }
+
+    /**
+     * @param int $eeg
+     * @return Profile
+     */
+    public function setEeg($eeg)
+    {
+        $this->eeg = $eeg;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getWillpower()
+    {
+        return $this->willpower;
+    }
+
+    /**
+     * @param int $willpower
+     * @return Profile
+     */
+    public function setWillpower($willpower)
+    {
+        $this->willpower = $willpower;
         return $this;
     }
 

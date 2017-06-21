@@ -40,6 +40,10 @@ class CodingService extends BaseService
      */
     const MAX_LEVEL = 100;
 
+    const CODING_TIME_MULTIPLIER_PROGRAM = 15;
+
+    const CODING_TIME_MULTIPLIER_RESOURCE = 5;
+
     /**
      * @var LoopService
      */
@@ -444,7 +448,7 @@ class CodingService extends BaseService
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . $difficulty . 'S'));
+            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE) . 'S'));
             $filePartId = $filePart->getId();
             $this->loopService->addJob([
                 'difficulty' => $difficulty,
@@ -563,7 +567,7 @@ class CodingService extends BaseService
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . ($difficulty*2) . 'S'));
+            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM) . 'S'));
             $fileTypeId = $fileType->getId();
 
             $this->loopService->addJob([

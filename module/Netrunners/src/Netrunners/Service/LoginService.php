@@ -195,6 +195,8 @@ class LoginService extends BaseService
             $profile->setUser($user);
             $profile->setCredits(ProfileService::DEFAULT_STARTING_CREDITS);
             $profile->setSnippets(ProfileService::DEFAULT_STARTING_SNIPPETS);
+            $profile->setEeg(100);
+            $profile->setWillpower(100);
             // add skills
             $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
             foreach ($skills as $skill) {

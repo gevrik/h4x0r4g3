@@ -25,8 +25,20 @@ pre {
 #command-input {
     background-color: inherit !important;
     border: 0 solid #000000;
-    line-height: 12px;
-    width: 80%;
+    flex-grow: 100;
+}
+
+.output-line {
+    display: flex;
+    align-items: center;
+}
+
+.eeg {
+    color: #00ff00;
+}
+
+.willpower {
+    color: #2180ac;
 }
 
 .prompt {

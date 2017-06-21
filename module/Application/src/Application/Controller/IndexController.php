@@ -3,6 +3,7 @@
 namespace Application\Controller;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\CompanyName;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\Word;
@@ -184,6 +185,27 @@ class IndexController extends AbstractActionController
                 $word = new Word();
                 $word->setContent($theWord);
                 $word->setLength($wordLength);
+                $this->entityManager->persist($word);
+            }
+            fclose($handle);
+        }
+        $this->entityManager->flush();
+        $console->writeLine('DONE reading in CSV', ColorInterface::GREEN);
+        return true;
+
+    }
+
+    public function cliPopulateCompanyNamesTableAction()
+    {
+        set_time_limit(0);
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('Reading in CSV', ColorInterface::GREEN);
+        if (($handle = fopen(getcwd() . '/public/compnames.csv', "r")) !== FALSE) {
+            while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
+                $theWord = $data[0];
+                $console->writeLine('ADDING: ' . $theWord, ColorInterface::WHITE);
+                $word = new CompanyName();
+                $word->setContent($theWord);
                 $this->entityManager->persist($word);
             }
             fclose($handle);

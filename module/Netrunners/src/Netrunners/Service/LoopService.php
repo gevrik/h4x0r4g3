@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartInstance;
@@ -19,6 +20,7 @@ use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
+use Ratchet\ConnectionInterface;
 
 class LoopService extends BaseService
 {
@@ -28,6 +30,22 @@ class LoopService extends BaseService
      * @var array
      */
     protected $jobs = [];
+
+    /**
+     * @var FileService
+     */
+    protected $fileService;
+
+
+    public function __construct(
+        EntityManager $entityManager,
+        $viewRenderer,
+        FileService $fileService
+    )
+    {
+        parent::__construct($entityManager, $viewRenderer);
+        $this->fileService = $fileService;
+    }
 
     /**
      * @return array
@@ -69,6 +87,33 @@ class LoopService extends BaseService
                 // remove job from server
                 unset($this->jobs[$jobId]);
             }
+        }
+        $ws = $this->getWebsocketServer();
+        foreach ($ws->getClients() as $wsClient) {
+            /** @var ConnectionInterface $wsClient */
+            $response = false;
+            $clientData = $ws->getClientData($wsClient->resourceId);
+            if (empty($clientData->action)) continue;
+            $actionData = (object)$clientData->action;
+            $completionDate = $actionData->completion;
+            if ($now < $completionDate) continue;
+            switch ($actionData->command) {
+                default:
+                    break;
+                case 'executeprogram':
+                    $parameter = (object)$actionData->parameter;
+                    $fileId = $parameter->fileId;
+                    $contentArray = $parameter->contentArray;
+                    $file = $this->entityManager->find('Netrunners\Entity\File', $fileId);
+                    /** @var File $file */
+                    $response = $this->fileService->executePortscanner($file, $contentArray);
+                    break;
+            }
+            if ($response) {
+                $response['prompt'] = $ws->getUtilityService()->showPrompt($clientData);
+                $wsClient->send(json_encode($response));
+            }
+            $ws->setClientData($wsClient->resourceId, 'action', []);
         }
     }
 

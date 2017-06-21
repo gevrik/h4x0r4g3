@@ -3,7 +3,7 @@ function showprompt()
     if (consoleMode === 'default')
     {
         if (promptAddon !== '') prompt = prompt + ' ' + promptAddon;
-        $('#messages').append('<span class="text-muted">' + prompt + '</span>');
+        $('#messages').append('<div class="text-muted output-line"><span>' + prompt + '</span></div>');
     }
 }
 

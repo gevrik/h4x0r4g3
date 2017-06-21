@@ -1,8 +1,8 @@
 <?php
 
 /**
- * LoopService Factory.
- * Factory for the LoopService.
+ * MilkrunService Factory.
+ * Factory for the MilkrunService.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,11 +10,11 @@
 
 namespace Netrunners\Factory;
 
-use Netrunners\Service\LoopService;
+use Netrunners\Service\MilkrunService;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
-class LoopServiceFactory implements FactoryInterface
+class MilkrunServiceFactory implements FactoryInterface
 {
 
     /**
@@ -24,10 +24,9 @@ class LoopServiceFactory implements FactoryInterface
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new LoopService(
+        return new MilkrunService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('Netrunners\Service\FileService')
+            $serviceLocator->get('ViewRenderer')
         );
     }
 
