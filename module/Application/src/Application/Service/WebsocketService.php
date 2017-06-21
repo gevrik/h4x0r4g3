@@ -3,7 +3,6 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Service\CodingService;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\NodeService;
@@ -53,11 +52,6 @@ class WebsocketService implements MessageComponentInterface {
     protected $parserService;
 
     /**
-     * @var CodingService
-     */
-    protected $codingService;
-
-    /**
      * @var LoopService
      */
     protected $loopService;
@@ -86,7 +80,6 @@ class WebsocketService implements MessageComponentInterface {
      * @param EntityManager $entityManager
      * @param UtilityService $utilityService
      * @param ParserService $parserService
-     * @param CodingService $codingService
      * @param LoopService $loopService
      * @param NodeService $nodeService
      * @param LoginService $loginService
@@ -97,7 +90,6 @@ class WebsocketService implements MessageComponentInterface {
         EntityManager $entityManager,
         UtilityService $utilityService,
         ParserService $parserService,
-        CodingService $codingService,
         LoopService $loopService,
         NodeService $nodeService,
         LoginService $loginService,
@@ -108,7 +100,6 @@ class WebsocketService implements MessageComponentInterface {
         $this->entityManager = $entityManager;
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
-        $this->codingService = $codingService;
         $this->loopService = $loopService;
         $this->nodeService = $nodeService;
         $this->loginService = $loginService;

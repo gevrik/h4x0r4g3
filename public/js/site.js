@@ -233,8 +233,11 @@
                     $('.draggable').draggable({
                         handle: '.panel-heading'
                     });
-                    $('#notification-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
-                    document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
+                    if(document.getElementById('notification-container') !== null)
+                    {
+                        $('#notification-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
+                        document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
+                    }
                     if (!data.silent) showprompt();
                     break;
                 case 'showmessage':

@@ -136,8 +136,10 @@ class AdminService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a user id (use "clients" to get a list)</pre>')
             ];
         }
-        var_dump($targetUserId);
-        $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
+        $targetUser = false;
+        if (!$response) {
+            $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
+        }
         if (!$response && !$targetUser) {
             $response = [
                 'command' => 'showmessage',

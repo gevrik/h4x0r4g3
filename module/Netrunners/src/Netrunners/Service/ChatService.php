@@ -26,7 +26,8 @@ class ChatService extends BaseService
     public function globalChat($resourceId, $contentArray)
     {
         // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $ws = $this->getWebsocketServer();
+        $clientData = $ws->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         // get profile
@@ -35,8 +36,8 @@ class ChatService extends BaseService
         $messageContent = implode(' ', $contentArray);
         if (!$messageContent || $messageContent == '') return true;
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
-        $wsClients = $this->getWebsocketServer()->getClients();
-        $wsClientsData = $this->getWebsocketServer()->getClientsData();
+        $wsClients = $ws->getClients();
+        $wsClientsData = $ws->getClientsData();
         foreach ($wsClients as $wsClient) {
             /** @var ConnectionInterface $wsClient */
             /** @noinspection PhpUndefinedFieldInspection */
@@ -49,7 +50,8 @@ class ChatService extends BaseService
                 $response = array(
                     'command' => 'showmessage',
                     'type' => ChatService::CHANNEL_GLOBAL,
-                    'message' => $messageContent
+                    'message' => $messageContent,
+                    'prompt' => $ws->getUtilityService()->showPrompt($clientData)
                 );
             }
             else {

@@ -7,7 +7,6 @@ use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\Word;
 use Netrunners\Repository\SkillRatingRepository;
-use Netrunners\Service\CodingService;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\NodeService;
@@ -42,11 +41,6 @@ class IndexController extends AbstractActionController
     protected $parserService;
 
     /**
-     * @var CodingService
-     */
-    protected $codingService;
-
-    /**
      * @var LoopService
      */
     protected $loopService;
@@ -67,7 +61,6 @@ class IndexController extends AbstractActionController
      * @param EntityManager $entityManager
      * @param UtilityService $utilityService
      * @param ParserService $parserService
-     * @param CodingService $codingService
      * @param LoopService $loopService
      * @param NodeService $nodeService
      * @param LoginService $loginService
@@ -76,7 +69,6 @@ class IndexController extends AbstractActionController
         EntityManager $entityManager,
         UtilityService $utilityService,
         ParserService $parserService,
-        CodingService $codingService,
         LoopService $loopService,
         NodeService $nodeService,
         LoginService $loginService
@@ -85,7 +77,6 @@ class IndexController extends AbstractActionController
         $this->entityManager = $entityManager;
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
-        $this->codingService = $codingService;
         $this->loopService = $loopService;
         $this->nodeService = $nodeService;
         $this->loginService = $loginService;
@@ -127,7 +118,6 @@ class IndexController extends AbstractActionController
                         $this->entityManager,
                         $this->utilityService,
                         $this->parserService,
-                        $this->codingService,
                         $this->loopService,
                         $this->nodeService,
                         $this->loginService,

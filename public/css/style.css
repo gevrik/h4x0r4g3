@@ -29,6 +29,10 @@ pre {
     width: 80%;
 }
 
+.prompt {
+    color: #afa8af;
+}
+
 #messages {
     overflow-y: auto;
 }
