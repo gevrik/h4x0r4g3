@@ -118,4 +118,51 @@ class AdminService extends BaseService
         return $response;
     }
 
+    public function adminSetSnippets($resourceId, $contentArray)
+    {
+        var_dump($contentArray);
+        $response = false;
+        if (!$this->isAdmin($resourceId)) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
+            ];
+            return $response;
+        }
+        list($contentArray, $targetUserId) = $this->getNextParameter($contentArray, true, true);
+        if (!$targetUserId) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a user id (use "clients" to get a list)</pre>')
+            ];
+        }
+        var_dump($targetUserId);
+        $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
+        if (!$response && !$targetUser) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unable to find a user for that ID</pre>')
+            ];
+        }
+        $amount = $this->getNextParameter($contentArray, false, true);
+        if (!$response && !$amount) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the amount</pre>')
+            ];
+        }
+        if (!$response) {
+            $profile = $targetUser->getProfile();
+            /** @var Profile $profile */
+            $profile->setSnippets($profile->getSnippets() + $amount);
+            $this->entityManager->flush($profile);
+            $message = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">DONE</pre>');
+            $response = [
+                'command' => 'showmessage',
+                'message' => $message
+            ];
+        }
+        return $response;
+    }
+
 }

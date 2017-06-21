@@ -35,6 +35,7 @@ return array(
             'Netrunners\Service\CodingService' => 'Netrunners\Factory\CodingServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
             'Netrunners\Service\ConnectionService' => 'Netrunners\Factory\ConnectionServiceFactory',
+            'Netrunners\Service\LoginService' => 'Netrunners\Factory\LoginServiceFactory',
             'Netrunners\Service\LoopService' => 'Netrunners\Factory\LoopServiceFactory',
             'Netrunners\Service\NodeService' => 'Netrunners\Factory\NodeServiceFactory',
             'Netrunners\Service\NotificationService' => 'Netrunners\Factory\NotificationServiceFactory',

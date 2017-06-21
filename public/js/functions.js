@@ -2,13 +2,6 @@ function showprompt()
 {
     if (consoleMode === 'default')
     {
-        // var jsonData;
-        // jsonData = {
-        //     command: 'showprompt',
-        //     hash: hash,
-        //     content: 'default'
-        // };
-        // conn.send(JSON.stringify(jsonData));
         if (promptAddon !== '') prompt = prompt + ' ' + promptAddon;
         $('#messages').append('<span class="text-muted">' + prompt + '</span>');
     }

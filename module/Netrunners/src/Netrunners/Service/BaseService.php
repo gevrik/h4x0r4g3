@@ -384,8 +384,7 @@ class BaseService
             if ($castToInt) $nextParameter = (int)$nextParameter;
             $parameter = $nextParameter;
         }
-        $result = ($returnContent) ? [$contentArray, $parameter] : $parameter;
-        return $result;
+        return ($returnContent) ? [$contentArray, $parameter] : $parameter;
     }
 
     /**

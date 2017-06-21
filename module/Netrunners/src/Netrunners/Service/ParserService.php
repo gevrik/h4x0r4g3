@@ -306,6 +306,9 @@ class ParserService
             case 'showclients':
                 $response = $this->adminService->adminShowClients($resourceId);
                 break;
+            case 'setsnippets':
+                $response = $this->adminService->adminSetSnippets($resourceId, $contentArray);
+                break;
         }
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         if ($response) $from->send(json_encode($response));

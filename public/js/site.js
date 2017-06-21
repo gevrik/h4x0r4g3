@@ -92,7 +92,7 @@
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
                     jsonData = {
-                        command: 'setIpAddy',
+                        command: 'setipaddy',
                         hash: hash,
                         content: ipaddy,
                         silent: true
@@ -100,13 +100,6 @@
                     conn.send(JSON.stringify(jsonData));
                     break;
                 case 'cd':
-                    // jsonData = {
-                    //     command: 'parseInput',
-                    //     hash: hash,
-                    //     content: 'ls',
-                    //     silent: true
-                    // };
-                    // conn.send(JSON.stringify(jsonData));
                     md.append(data.message);
                     showprompt();
                     break;
@@ -358,7 +351,8 @@
                 jsonData = {
                     command: 'autocomplete',
                     hash: hash,
-                    content: message
+                    content: message,
+                    silent: true
                 };
                 conn.send(JSON.stringify(jsonData));
             }
