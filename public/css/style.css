@@ -85,6 +85,10 @@ pre {
     color: #245269;
 }
 
+.text-say {
+    color: #a6fce4;
+}
+
 .panel-container {
     position: fixed;
     width: 40%;
@@ -142,6 +146,12 @@ textarea {
 .notification-box {
     position: fixed;
     bottom: 1em;
+    right: 1em;
+}
+
+.actiontime-box {
+    position: fixed;
+    bottom: 3em;
     right: 1em;
 }
 

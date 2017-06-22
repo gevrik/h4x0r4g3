@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
@@ -479,6 +480,96 @@ class BaseService
         }
         $rating = ceil($rating/$amount);
         return (int)$rating;
+    }
+
+    /**
+     * @param string $string
+     * @param string $replacer
+     * @return mixed
+     */
+    protected function getNameWithoutSpaces($string = '', $replacer = '-')
+    {
+        return str_replace(' ', $replacer, $string);
+    }
+
+    /**
+     * @param $resourceId
+     * @param Profile $profile
+     * @param Connection|NULL $connection
+     * @param Node|NULL $sourceNode
+     * @param Node|NULL $targetNode
+     * @return array|bool
+     */
+    protected function movePlayerToTargetNode(
+        $resourceId,
+        Profile $profile,
+        Connection $connection = NULL,
+        Node $sourceNode = NULL,
+        Node $targetNode = NULL
+    )
+    {
+        if ($connection) {
+            $sourceNode = $connection->getSourceNode();
+            $targetNode = $connection->getTargetNode();
+        }
+        // message everyone in source node
+        $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
+        $message = array(
+            'command' => 'showmessageprepend',
+            'message' => $messageText
+        );
+        $this->messageEveryoneInNode($sourceNode, $message, $profile);
+        $profile->setCurrentNode($targetNode);
+        $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
+        $message = array(
+            'command' => 'showmessageprepend',
+            'message' => $messageText
+        );
+        $this->messageEveryoneInNode($targetNode, $message, $profile);
+        $this->entityManager->flush($profile);
+        return $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId);
+    }
+
+    protected function isActionBlocked($resourceId, $checkForFullBlock = false)
+    {
+        $ws = $this->getWebsocketServer();
+        $clientData = $ws->getClientData($resourceId);
+        if (empty($clientData->action)) return false;
+        $actionData = (object)$clientData->action;
+        $isBlocked = false;
+        if ($checkForFullBlock) {
+            if ($actionData->fullblock) $isBlocked = true;
+        }
+        if (!$isBlocked) {
+            if ($actionData->blocking) $isBlocked = true;
+        }
+        if ($isBlocked) {
+            $isBlocked = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You are curently busy with something else</pre>')
+            ];
+        }
+        return $isBlocked;
+    }
+
+    /**
+     * @param Node|NULL $node
+     * @return bool|int
+     */
+    protected function getNodeAttackDifficulty(Node $node = NULL)
+    {
+        $result = false;
+        if ($node) {
+            switch ($node->getType()) {
+                default:
+                    break;
+                case Node::ID_PUBLICIO:
+                case Node::ID_IO:
+                    $result = $node->getLevel() * FileService::DEFAULT_DIFFICULTY_MOD;
+                    break;
+            }
+        }
+        return $result;
     }
 
 }

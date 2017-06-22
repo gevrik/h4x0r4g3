@@ -81,15 +81,18 @@ class ProfileService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $returnMessage = array();
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_CREDITS_STRING, $profile->getCredits());
-        $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_SNIPPETS_STRING, $profile->getSnippets());
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response) {
+            $profile = $user->getProfile();
+            /** @var Profile $profile */
+            $returnMessage = array();
+            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_CREDITS_STRING, $profile->getCredits());
+            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_SNIPPETS_STRING, $profile->getSnippets());
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            );
+        }
         return $response;
     }
 
@@ -106,21 +109,24 @@ class ProfileService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $returnMessage = [];
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>', 'skillpoints', $profile->getSkillPoints());
-        $skills = $skillRepo->findAll();
-        foreach ($skills as $skill) {
-            /** @var Skill $skill */
-            $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
-            $skillRating = $skillRatingObject->getRating();
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>', $skill->getName(), $skillRating);
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response) {
+            $profile = $user->getProfile();
+            /** @var Profile $profile */
+            $returnMessage = [];
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>', 'skillpoints', $profile->getSkillPoints());
+            $skills = $skillRepo->findAll();
+            foreach ($skills as $skill) {
+                /** @var Skill $skill */
+                $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
+                $skillRating = $skillRatingObject->getRating();
+                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>', $skill->getName(), $skillRating);
+            }
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            );
         }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
         return $response;
     }
 
@@ -183,24 +189,27 @@ class ProfileService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $returnMessage = array();
-        $filePartInstances = $filePartInstanceRepo->findForPartsCommand($profile);
-        if (empty($filePartInstances)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have no file parts</pre>')
-            );
-        }
-        else {
-            foreach ($filePartInstances as $data) {
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response) {
+            $profile = $user->getProfile();
+            /** @var Profile $profile */
+            $returnMessage = array();
+            $filePartInstances = $filePartInstanceRepo->findForPartsCommand($profile);
+            if (empty($filePartInstances)) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have no file parts</pre>')
+                );
             }
-            $response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+            else {
+                foreach ($filePartInstances as $data) {
+                    $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
+                }
+                $response = array(
+                    'command' => 'showoutput',
+                    'message' => $returnMessage
+                );
+            }
         }
         return $response;
     }
@@ -245,6 +254,11 @@ class ProfileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
     public function spendSkillPoints($resourceId, $contentArray)
     {
         $skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
@@ -256,12 +270,12 @@ class ProfileService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId, true);
         $message = [];
         // get skill input name
         list($contentArray, $skillNameParam) = $this->getNextParameter($contentArray);
         // if none given, show a list of all skill input names
-        if (!$skillNameParam) {
+        if (!$response && !$skillNameParam) {
             $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the skill that you want to improve (%s skillpoints available) :</pre>', $profile->getSkillPoints());
             $skillsString = '';
             foreach ($skillRepo->findAll() as $skill) {

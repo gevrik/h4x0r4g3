@@ -41,7 +41,7 @@ class ConnectionService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
@@ -78,24 +78,7 @@ class ConnectionService extends BaseService
             );
         }
         if (!$response) {
-            $targetNode = $connection->getTargetNode();
-            $sourceNode = $connection->getSourceNode();
-            // message everyone in source node
-            $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
-            $message = array(
-                'command' => 'showmessageprepend',
-                'message' => $messageText
-            );
-            $this->messageEveryoneInNode($sourceNode, $message, $profile);
-            $profile->setCurrentNode($connection->getTargetNode());
-            $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
-            $message = array(
-                'command' => 'showmessageprepend',
-                'message' => $messageText
-            );
-            $this->messageEveryoneInNode($targetNode, $message, $profile);
-            $this->entityManager->flush($profile);
-            $response = $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId);
+            $response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
         }
         return $response;
     }
@@ -119,7 +102,8 @@ class ConnectionService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        // check if they are busy
+        $response = $this->isActionBlocked($resourceId);
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, true);
         if (!$parameter) {
@@ -225,7 +209,7 @@ class ConnectionService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         // check if they can add connections
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(

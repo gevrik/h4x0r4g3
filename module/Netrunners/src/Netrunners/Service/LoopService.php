@@ -21,7 +21,9 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\NotificationRepository;
 use Ratchet\ConnectionInterface;
+use TmoAuth\Entity\User;
 
 class LoopService extends BaseService
 {
@@ -94,6 +96,32 @@ class LoopService extends BaseService
             /** @var ConnectionInterface $wsClient */
             /** @noinspection PhpUndefinedFieldInspection */
             $resourceId = $wsClient->resourceId;
+            $clientData = $ws->getClientData($resourceId);
+            // skip sockets that are not properly connected yet
+            if (!$clientData->hash) continue;
+            // first we get amount of notifications and actiontime
+            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+            if (!$user) return true;
+            /** @var User $user */
+            $profile = $user->getProfile();
+            /** @var Profile $profile */
+            $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
+            /** @var NotificationRepository $notificationRepo */
+            $countUnreadNotifications = $notificationRepo->countUnreadByProfile($profile);
+            $actionTimeRemaining = 0;
+            if (!empty($clientData->action)) {
+                $now = new \DateTime();
+                $completionDate = $clientData->action['completion'];
+                /** @var \DateTime $completionDate */
+                $actionTimeRemaining = $completionDate->getTimestamp() - $now->getTimestamp();
+            }
+            $response = array(
+                'command' => 'ticker',
+                'amount' => $countUnreadNotifications,
+                'actionTimeRemaining' => $actionTimeRemaining
+            );
+            $wsClient->send(json_encode($response));
+            // now handle pending actions
             $response = false;
             $clientData = $ws->getClientData($resourceId);
             if (empty($clientData->action)) continue;
@@ -105,13 +133,25 @@ class LoopService extends BaseService
                     break;
                 case 'executeprogram':
                     $parameter = (object)$actionData->parameter;
-                    $fileId = $parameter->fileId;
-                    $systemId = $parameter->systemId;
-                    $file = $this->entityManager->find('Netrunners\Entity\File', $fileId);
+                    $file = $this->entityManager->find('Netrunners\Entity\File', $parameter->fileId);
                     /** @var File $file */
-                    $system = $this->entityManager->find('Netrunners\Entity\System', $systemId);
-                    /** @var System $system */
-                    $response = $this->fileService->executePortscanner($file, $system);
+                    switch ($file->getFileType()->getId()) {
+                        default:
+                            break;
+                        case FileType::ID_PORTSCANNER:
+                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
+                            /** @var System $system */
+                            $response = $this->fileService->executePortscanner($file, $system);
+                            break;
+                        case FileType::ID_JACKHAMMER:
+                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
+                            /** @var System $system */
+                            $nodeId = $parameter->nodeId;
+                            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
+                            /** @var Node $node */
+                            $response = $this->fileService->executeJackhammer($resourceId, $file, $system, $node);
+                            break;
+                    }
                     break;
             }
             if ($response) {
@@ -120,6 +160,7 @@ class LoopService extends BaseService
             }
             $ws->setClientData($resourceId, 'action', []);
         }
+        return true;
     }
 
     /**
@@ -283,8 +324,7 @@ class LoopService extends BaseService
                     /** @var FilePart $neededPart */
                     $chance = mt_rand(1, 100);
                     if ($chance > 50) {
-                        var_dump('file part recovered');
-                        if (!empty($message)) $message .= '[(';
+                        if (empty($message)) $message .= '(';
                         $fpi = new FilePartInstance();
                         $fpi->setProfile($profile);
                         $fpi->setLevel($difficulty);

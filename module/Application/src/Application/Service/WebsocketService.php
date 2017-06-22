@@ -16,7 +16,7 @@ use Zend\Validator\Ip;
 
 class WebsocketService implements MessageComponentInterface {
 
-    const LOOP_TIME_JOBS = 5;
+    const LOOP_TIME_JOBS = 1;
     const LOOP_TIME_RESOURCES = 300;
 
     public static $instance;
@@ -280,7 +280,7 @@ class WebsocketService implements MessageComponentInterface {
                 $querytime = $this->microtime_diff($this->clientsData[$resourceId]['millis']);
                 if ($querytime <= 0.2) {
                     $this->clientsData[$resourceId]['spamcount']++;
-                    if ($this->clientsData[$resourceId]['spamcount'] >= 10) {
+                    if ($this->clientsData[$resourceId]['spamcount'] >= mt_rand(5, 10)) {
                         $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET IS SPAMMING - DISCONNECT SOCKET - ' . $msg);
                         $response = array(
                             'command' => 'showmessage',
@@ -293,6 +293,7 @@ class WebsocketService implements MessageComponentInterface {
                 }
                 else {
                     $this->clientsData[$resourceId]['millis'] = microtime();
+                    $this->setClientData($resourceId, 'spamcount', 0);
                 }
             }
         }

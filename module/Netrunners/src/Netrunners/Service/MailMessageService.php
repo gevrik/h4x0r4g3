@@ -49,13 +49,16 @@ class MailMessageService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $countUnreadMails = $mailMessageRepo->countByUnreadMails($profile);
-        $response = array(
-            'command' => 'showmessage',
-            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>', $countUnreadMails)
-        );
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response) {
+            $profile = $user->getProfile();
+            /** @var Profile $profile */
+            $countUnreadMails = $mailMessageRepo->countByUnreadMails($profile);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>', $countUnreadMails)
+            );
+        }
         return $response;
     }
 
@@ -71,35 +74,42 @@ class MailMessageService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $mails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->findBy(
-            array(
-                'recipient' => $profile
-            )
-        );
-        $message = "NeoMail - version 0.1 - '?' for help, 'q' to quit";
-        $message .= sprintf('<pre class="text-white"><strong>%-3s</strong> | <strong>%-20s</strong> | <strong>%-20s</strong> | <strong>%s</strong></pre>', '#', 'FROM', 'RECEIVED', 'SUBJECT');
-        $mailNumber = 0;
-        foreach ($mails as $mail) {
-            /** @var MailMessage $mail */
-            $mailNumber++;
-            $preTag = ($mail->getReadDateTime()) ? '<pre>' : '<pre style="white-space: pre-wrap;" class="text-white">';
-            $message .= sprintf(
-                '%s%-3s | %-20s | %-20s | %s</pre>',
-                $preTag,
-                $mailNumber,
-                ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : "[SYSTEM-MAIL]",
-                $mail->getSentDateTime()->format('Y/m/d H:i:s'),
-                $mail->getSubject()
+        $response = $this->isActionBlocked($resourceId);
+        if (!$response) {
+            $mails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->findBy(
+                array(
+                    'recipient' => $profile
+                )
+            );
+            $message = "NeoMail - version 0.1 - '?' for help, 'q' to quit";
+            $message .= sprintf('<pre class="text-white"><strong>%-3s</strong> | <strong>%-20s</strong> | <strong>%-20s</strong> | <strong>%s</strong></pre>', '#', 'FROM', 'RECEIVED', 'SUBJECT');
+            $mailNumber = 0;
+            foreach ($mails as $mail) {
+                /** @var MailMessage $mail */
+                $mailNumber++;
+                $preTag = ($mail->getReadDateTime()) ? '<pre>' : '<pre style="white-space: pre-wrap;" class="text-white">';
+                $message .= sprintf(
+                    '%s%-3s | %-20s | %-20s | %s</pre>',
+                    $preTag,
+                    $mailNumber,
+                    ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : "[SYSTEM-MAIL]",
+                    $mail->getSentDateTime()->format('Y/m/d H:i:s'),
+                    $mail->getSubject()
+                );
+            }
+            $response = array(
+                'command' => 'entermailmode',
+                'message' => $message,
+                'mailNumber' => $mailNumber
             );
         }
-        $response = array(
-            'command' => 'entermailmode',
-            'message' => $message,
-            'mailNumber' => $mailNumber
-        );
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @return array
+     */
     public function exitMailMode($resourceId)
     {
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);

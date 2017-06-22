@@ -181,27 +181,15 @@ class ParserService
             case 'connect':
                 $response = $this->nodeService->systemConnect($resourceId, $contentArray);
                 break;
-            case 'ticker':
-                $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-                if (!$user) return true;
-                /** @var User $user */
-                $profile = $user->getProfile();
-                /** @var Profile $profile */
-                $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
-                /** @var NotificationRepository $notificationRepo */
-                $countUnreadNotifications = $notificationRepo->countUnreadByProfile($profile);
-                $response = array(
-                    'command' => 'ticker',
-                    'amount' => $countUnreadNotifications
-                );
-                break;
             case 'shownotifications':
                 $response = $this->notificationService->showNotifications($resourceId);
                 break;
             case 'dismissnotification':
+            case 'dn':
                 $this->notificationService->dismissNotification($resourceId, $entityId);
                 break;
             case 'dismissallnotifications':
+            case 'dan':
                 $this->notificationService->dismissNotification($resourceId, $entityId, true);
                 break;
             case 'editnode':
@@ -222,7 +210,11 @@ class ParserService
                 $response = $this->fileService->showFileTypes();
                 break;
             case 'gc':
-                return $this->chatService->globalChat($resourceId, $contentArray);
+                $response = $this->chatService->globalChat($resourceId, $contentArray);
+                break;
+            case 'say':
+                $response = $this->chatService->sayChat($resourceId, $contentArray);
+                break;
             case 'home':
             case 'homerecall':
                 $response = $this->systemService->homeRecall($resourceId);

@@ -28,6 +28,8 @@ use Zend\I18n\Validator\Alnum;
 class FileService extends BaseService
 {
 
+    const DEFAULT_DIFFICULTY_MOD = 10;
+
     /**
      * Get detailed information about a file.
      * @param $resourceId
@@ -37,7 +39,7 @@ class FileService extends BaseService
     public function statFile($resourceId, $contentArray)
     {
         // init response
-        $response = false;
+        $response = $this->isActionBlocked($resourceId, true);
         // get user
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -56,7 +58,7 @@ class FileService extends BaseService
             $profile,
             $parameter
         );
-        if (count($targetFiles) < 1) {
+        if (!$response && count($targetFiles) < 1) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => '<pre style="white-space: pre-wrap;" class="text-sysmsg">No such file</pre>'
@@ -93,7 +95,7 @@ class FileService extends BaseService
     public function touchFile($resourceId, $contentArray)
     {
         // init response
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         // get user
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -112,7 +114,7 @@ class FileService extends BaseService
             $profile->getCurrentNode(),
             $parameter
         );
-        if ($profile->getSnippets() < 1) {
+        if (!$response && $profile->getSnippets() < 1) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need 1 snippet to create an empty text file</pre>')
@@ -186,7 +188,7 @@ class FileService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId, true);
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // get file repo
@@ -198,7 +200,7 @@ class FileService extends BaseService
             $profile,
             $parameter
         );
-        if (count($targetFiles) < 1) {
+        if (!$response && count($targetFiles) < 1) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf("<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">No such file</pre>")
@@ -269,7 +271,7 @@ class FileService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         // init response
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // get file repo
@@ -281,7 +283,7 @@ class FileService extends BaseService
             $profile,
             $parameter
         );
-        if (count($targetFiles) < 1) {
+        if (!$response && count($targetFiles) < 1) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No such file</pre>')
@@ -331,32 +333,73 @@ class FileService extends BaseService
                     $response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_PORTSCANNER:
-                    list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $contentArray);
-                    if ($executeWarning) {
-                        $response = $executeWarning;
-                    }
-                    else {
-                        $completionDate = new \DateTime();
-                        $completionDate->add(new \DateInterval('PT5S')); // TODO add executionTime to fileType or file
-                        $actionData = [
-                            'command' => 'executeprogram',
-                            'completion' => $completionDate,
-                            'blocking' => true,
-                            'fullblock' => false,
-                            'parameter' => [
-                                'fileId' => $file->getId(),
-                                'systemId' => $systemId,
-                                'contentArray' => $contentArray,
-                            ]
-                        ];
-                        $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
-                        $response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start portscanning with [%s] - please wait</pre>', $file->getName())
-                        );
-                    }
+                case FileType::ID_JACKHAMMER:
+                    $response = $this->queueProgramExecution($resourceId, $file, $contentArray);
                     break;
             }
+        }
+        return $response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param File $file
+     * @param $contentArray
+     * @return array|bool|mixed
+     */
+    private function queueProgramExecution($resourceId, File $file, $contentArray)
+    {
+        $executeWarning = false;
+        $parameterArray = [];
+        $message = '';
+        switch ($file->getFileType()->getId()) {
+            default:
+                break;
+            case FileType::ID_PORTSCANNER:
+                list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'systemId' => $systemId,
+                    'contentArray' => $contentArray,
+                ];
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">You start portscanning with [%s] - please wait</pre>',
+                    $file->getName()
+                );
+                break;
+            case FileType::ID_JACKHAMMER:
+                list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'systemId' => $systemId,
+                    'nodeId' => $nodeId,
+                    'contentArray' => $contentArray,
+                ];
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">You start breaking into the system with [%s] - please wait</pre>',
+                    $file->getName()
+                );
+                break;
+        }
+        if ($executeWarning) {
+            $response = $executeWarning;
+        }
+        else {
+            $completionDate = new \DateTime();
+            $completionDate->add(new \DateInterval('PT' . $file->getFileType()->getExecutionTime() . 'S'));
+            $actionData = [
+                'command' => 'executeprogram',
+                'completion' => $completionDate,
+                'blocking' => $file->getFileType()->getBlocking(),
+                'fullblock' => $file->getFileType()->getFullblock(),
+                'parameter' => $parameterArray
+            ];
+            $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => $message,
+                'timer' => $file->getFileType()->getExecutionTime()
+            );
         }
         return $response;
     }
@@ -507,6 +550,73 @@ class FileService extends BaseService
 
     /**
      * @param File $file
+     * @param $contentArray
+     * @return array
+     */
+    public function executeWarningJackhammer(File $file, $contentArray)
+    {
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $response = false;
+        list($contentArray, $addy) = $this->getNextParameter($contentArray, true);
+        if (!$addy) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a system address to break in to</pre>'),
+            );
+        }
+        $systemId = false;
+        $system = false;
+        if (!$response) {
+            $system = $systemRepo->findOneBy([
+                'addy' => $addy
+            ]);
+        }
+        if (!$response) {
+            if (!$system) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system address</pre>'),
+                );
+            }
+            else {
+                $systemId = $system->getId();
+            }
+        }
+        /** @var System $system */
+        $profile = $file->getProfile();
+        /** @var Profile $profile */
+        if (!$response && $system->getProfile() == $profile) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system - unable to break in to your own systems</pre>'),
+            );
+        }
+        // now check if a node id was given
+        $nodeId = $this->getNextParameter($contentArray, false, true);
+        if (!$response && !$nodeId) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a node ID to break in to</pre>'),
+            );
+        }
+        if (!$response) {
+            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
+            /** @var Node $node */
+            if (!$this->getNodeAttackDifficulty($node)) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid node ID</pre>'),
+                );
+            }
+        }
+        return [$response, $systemId, $nodeId];
+    }
+
+    /**
+     * @param File $file
      * @param System $system
      * @return array|bool
      */
@@ -526,15 +636,7 @@ class FileService extends BaseService
             $messages = [];
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $difficulty = false;
-                switch ($node->getType()) {
-                    default:
-                        break;
-                    case Node::ID_PUBLICIO:
-                    case Node::ID_IO:
-                        $difficulty = $node->getLevel() * 10;
-                        break;
-                }
+                $difficulty = $this->getNodeAttackDifficulty($node);
                 if ($difficulty) {
                     $roll = mt_rand(1, 100);
                     if ($roll <= $baseChance - $difficulty) {
@@ -565,6 +667,45 @@ class FileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @param File $file
+     * @param System $system
+     * @param Node $node
+     * @return array|bool
+     */
+    public function executeJackhammer($resourceId, File $file, System $system, Node $node)
+    {
+        $response = false;
+        $fileLevel = $file->getLevel();
+        $fileIntegrity = $file->getIntegrity();
+        $computingSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_COMPUTING);
+        /** @var Skill $computingSkill */
+        $skillRating = $this->getSkillRating($file->getProfile(), $computingSkill);
+        $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
+        $difficulty = $node->getLevel() * self::DEFAULT_DIFFICULTY_MOD;
+        $messages = [];
+        $roll = mt_rand(1, 100);
+        if ($roll <= $baseChance - $difficulty) {
+            $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">JACKHAMMER RESULTS FOR %s:%s</pre>', $system->getAddy(), $node->getId());
+            $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You break in to the target system\'s node</pre>');
+            $profile = $file->getProfile();
+            /** @var Profile $profile */
+            $response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $file->getProfile()->getCurrentNode(), $node);
+        }
+        else {
+            $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">JACKHAMMER RESULTS FOR %s:%s</pre>', $system->getAddy(), $node->getId());
+            $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You fail to break in to the target system</pre>');
+        }
+        if (!$response) {
+            $response = array(
+                'command' => 'showoutputprepend',
+                'message' => $messages
+            );
+        }
+        return $response;
+    }
+
+    /**
      * Kill a running program.
      * @param $resourceId
      * @param $contentArray
@@ -580,8 +721,8 @@ class FileService extends BaseService
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, true);
         // init response
-        $response = false;
-        if (!$parameter) {
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response && !$parameter) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the process id to kill (ps for list)</pre>')

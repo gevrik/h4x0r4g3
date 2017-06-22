@@ -25,8 +25,8 @@ class MilkrunService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $response = false;
-        if ($profile->getCurrentNode()->getType() != Node::ID_AGENT) {
+        $response = $this->isActionBlocked($resourceId);
+        if (!$response && $profile->getCurrentNode()->getType() != Node::ID_AGENT) {
             $returnMessage = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You need to be in an agent node to request a milkrun</pre>');
             $response = array(
                 'command' => 'showmessage',

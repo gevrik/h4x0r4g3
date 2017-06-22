@@ -18,13 +18,9 @@ use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
-use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
-use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileTypeRepository;
-use Netrunners\Repository\FileTypeSkillRepository;
-use Netrunners\Repository\SkillRatingRepository;
 use TmoAuth\Entity\User;
 
 class CodingService extends BaseService
@@ -78,8 +74,8 @@ class CodingService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $response = false;
-        if ($profile->getCurrentNode()->getType() != Node::ID_CODING) {
+        $response = $this->isActionBlocked($resourceId);
+        if (!$response && $profile->getCurrentNode()->getType() != Node::ID_CODING) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You must be in a coding node to enter coding mode</pre>')
@@ -347,6 +343,14 @@ class CodingService extends BaseService
                 case FileType::STRING_PORTSCANNER:
                     $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
                     $value = FileType::ID_PORTSCANNER;
+                    break;
+                case FileType::STRING_JACKHAMMER:
+                    $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
+                    $value = FileType::ID_JACKHAMMER;
+                    break;
+                case FileType::STRING_WORMER:
+                    $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>', $parameter);
+                    $value = FileType::ID_WORMER;
                     break;
             }
             $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
@@ -642,7 +646,7 @@ class CodingService extends BaseService
         }
         foreach ($results as $result) {
             /** @var FilePartSkill|FileTypeSkill $result */
-            $skillList[] = $result->getSkill()->getName();
+            $skillList[] = $this->getNameWithoutSpaces($result->getSkill()->getName(), '-');
         }
         return $skillList;
     }

@@ -107,9 +107,10 @@ class NodeService extends BaseService
         /** @var Profile $profile */
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
-        $response = false;
+        // check if they are busy
+        $response = $this->isActionBlocked($resourceId);
         // only allow owner of system to add nodes
-        if ($profile != $currentNode->getSystem()->getProfile()) {
+        if (!$response && $profile != $currentNode->getSystem()->getProfile()) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
@@ -181,12 +182,12 @@ class NodeService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
-        if (!$parameter) {
+        if (!$response && !$parameter) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Please specify a new name for the node (alpha-numeric-only, 32-chars-max)</pre>')
@@ -244,11 +245,11 @@ class NodeService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
-        if (!$parameter) {
+        if (!$response && !$parameter) {
             $returnMessage = array();
             $nodeTypes = Node::$lookup;
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please choose a node type:</pre>');
@@ -336,9 +337,9 @@ class NodeService extends BaseService
         /** @var Profile $profile */
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId, true);
         // only allow owner of system to add nodes
-        if ($profile != $currentNode->getSystem()->getProfile()) {
+        if (!$response && $profile != $currentNode->getSystem()->getProfile()) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>')
@@ -432,7 +433,7 @@ class NodeService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         // check if they can change the type
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
@@ -493,20 +494,23 @@ class NodeService extends BaseService
      */
     public function surveyNode($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $returnMessage = array();
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', htmLawed($currentNode->getDescription(), array('safe'=>1, 'elements'=>'strong, em, strike, u')));
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response) {
+            $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+            if (!$user) return true;
+            /** @var User $user */
+            $profile = $user->getProfile();
+            /** @var Profile $profile */
+            $currentNode = $profile->getCurrentNode();
+            /** @var Node $currentNode */
+            $returnMessage = array();
+            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>', htmLawed($currentNode->getDescription(), array('safe'=>1, 'elements'=>'strong, em, strike, u')));
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            );
+        }
         return $response;
     }
 
@@ -528,7 +532,7 @@ class NodeService extends BaseService
         /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
         /** @var System $currentSystem */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId, true);
         // check if they can change the type
         if (!$response && $profile != $currentSystem->getProfile()) {
             $response = array(
@@ -571,9 +575,9 @@ class NodeService extends BaseService
         /** @var Profile $profile */
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
-        $response = false;
+        $response = $this->isActionBlocked($resourceId);
         // check if they are in an io-node
-        if ($currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
+        if (!$response && $currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You must be in an I/O node to connect to another system</pre>')

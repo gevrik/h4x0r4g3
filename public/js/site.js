@@ -16,7 +16,7 @@
         var ticker;
 
         // site ready
-        console.log('site ready');
+        console.log('well, hello there!');
 
         // input history
         commandInput.inputHistory({
@@ -149,18 +149,12 @@
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
                     showprompt();
-                    ticker = window.setInterval(function(){
-                        jsonData = {
-                            command: 'parseInput',
-                            hash: hash,
-                            content: 'ticker',
-                            silent: true
-                        };
-                        conn.send(JSON.stringify(jsonData));
-                    }, 1000);
+                    $('[data-toggle="tooltip"]').tooltip();
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;
+                    var actionTimeRemining = data.actionTimeRemaining;
+                    $('.actiontime-box').removeClass('btn-default').removeClass('btn-info').addClass((actionTimeRemining)?'btn-info':'btn-default').html('<span>' + actionTimeRemining + '</span>');
                     if (notiAmount !== currentNotiAmount) {
                         currentNotiAmount = notiAmount;
                         $('.notification-box').removeClass('btn-default').removeClass('btn-info').addClass((notiAmount>0)?'btn-info':'btn-default').html('<span>' + notiAmount + '</span>');
