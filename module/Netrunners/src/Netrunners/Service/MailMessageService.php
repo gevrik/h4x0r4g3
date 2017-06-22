@@ -100,10 +100,12 @@ class MailMessageService extends BaseService
         return $response;
     }
 
-    public function exitMailMode()
+    public function exitMailMode($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $response = array(
-            'command' => 'exitmailmode'
+            'command' => 'exitmailmode',
+            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData)
         );
         return $response;
     }

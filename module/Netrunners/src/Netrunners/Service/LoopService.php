@@ -18,6 +18,7 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Ratchet\ConnectionInterface;
@@ -91,8 +92,10 @@ class LoopService extends BaseService
         $ws = $this->getWebsocketServer();
         foreach ($ws->getClients() as $wsClient) {
             /** @var ConnectionInterface $wsClient */
+            /** @noinspection PhpUndefinedFieldInspection */
+            $resourceId = $wsClient->resourceId;
             $response = false;
-            $clientData = $ws->getClientData($wsClient->resourceId);
+            $clientData = $ws->getClientData($resourceId);
             if (empty($clientData->action)) continue;
             $actionData = (object)$clientData->action;
             $completionDate = $actionData->completion;
@@ -103,17 +106,19 @@ class LoopService extends BaseService
                 case 'executeprogram':
                     $parameter = (object)$actionData->parameter;
                     $fileId = $parameter->fileId;
-                    $contentArray = $parameter->contentArray;
+                    $systemId = $parameter->systemId;
                     $file = $this->entityManager->find('Netrunners\Entity\File', $fileId);
                     /** @var File $file */
-                    $response = $this->fileService->executePortscanner($file, $contentArray);
+                    $system = $this->entityManager->find('Netrunners\Entity\System', $systemId);
+                    /** @var System $system */
+                    $response = $this->fileService->executePortscanner($file, $system);
                     break;
             }
             if ($response) {
                 $response['prompt'] = $ws->getUtilityService()->showPrompt($clientData);
                 $wsClient->send(json_encode($response));
             }
-            $ws->setClientData($wsClient->resourceId, 'action', []);
+            $ws->setClientData($resourceId, 'action', []);
         }
     }
 

@@ -604,12 +604,15 @@ class CodingService extends BaseService
     }
 
     /**
+     * @param $resourceId
      * @return array
      */
-    public function exitCodeMode()
+    public function exitCodeMode($resourceId)
     {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $response = array(
-            'command' => 'exitcodemode'
+            'command' => 'exitcodemode',
+            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData)
         );
         return $response;
     }

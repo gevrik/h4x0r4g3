@@ -391,7 +391,7 @@ class ParserService
                 $response = $this->codingService->commandType($resourceId, $contentArray, $codeOptions);
                 break;
             case 'q':
-                $response = $this->codingService->exitCodeMode();
+                $response = $this->codingService->exitCodeMode($resourceId);
                 break;
         }
         return $response;

@@ -331,24 +331,30 @@ class FileService extends BaseService
                     $response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_PORTSCANNER:
-                    $completionDate = new \DateTime();
-                    $completionDate->add(new \DateInterval('PT5S')); // TODO add executionTime to fileType or file
-                    $actionData = [
-                        'command' => 'executeprogram',
-                        'completion' => $completionDate,
-                        'blocking' => true,
-                        'fullblock' => false,
-                        'parameter' => [
-                            'fileId' => $file->getId(),
-                            'contentArray' => $contentArray
-                        ]
-                    ];
-                    $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start portscanning with [%s]</pre>', $file->getName())
-                    );
-                    //$response = $this->executePortscanner($file, $contentArray);
+                    list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $contentArray);
+                    if ($executeWarning) {
+                        $response = $executeWarning;
+                    }
+                    else {
+                        $completionDate = new \DateTime();
+                        $completionDate->add(new \DateInterval('PT5S')); // TODO add executionTime to fileType or file
+                        $actionData = [
+                            'command' => 'executeprogram',
+                            'completion' => $completionDate,
+                            'blocking' => true,
+                            'fullblock' => false,
+                            'parameter' => [
+                                'fileId' => $file->getId(),
+                                'systemId' => $systemId,
+                                'contentArray' => $contentArray,
+                            ]
+                        ];
+                        $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start portscanning with [%s] - please wait</pre>', $file->getName())
+                        );
+                    }
                     break;
             }
         }
@@ -452,14 +458,15 @@ class FileService extends BaseService
         return $response;
     }
 
-    public function executePortscanner(File $file, $contentArray)
+    /**
+     * @param File $file
+     * @param $contentArray
+     * @return array
+     */
+    public function executeWarningPortscanner(File $file, $contentArray)
     {
         $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var SystemRepository $systemRepo */
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
-        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-        /** @var SkillRatingRepository $skillRatingRepo */
         $response = false;
         $addy = $this->getNextParameter($contentArray, false);
         if (!$addy) {
@@ -468,17 +475,23 @@ class FileService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a system address to scan</pre>'),
             );
         }
+        $systemId = false;
         $system = false;
         if (!$response) {
             $system = $systemRepo->findOneBy([
                 'addy' => $addy
             ]);
         }
-        if (!$response && !$system) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system address</pre>'),
-            );
+        if (!$response) {
+            if (!$system) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system address</pre>'),
+                );
+            }
+            else {
+                $systemId = $system->getId();
+            }
         }
         /** @var System $system */
         $profile = $file->getProfile();
@@ -489,12 +502,25 @@ class FileService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid system - unable to scan own systems</pre>'),
             );
         }
+        return [$response, $systemId];
+    }
+
+    /**
+     * @param File $file
+     * @param System $system
+     * @return array|bool
+     */
+    public function executePortscanner(File $file, System $system)
+    {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $response = false;
         if (!$response) {
             $fileLevel = $file->getLevel();
             $fileIntegrity = $file->getIntegrity();
             $computingSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_COMPUTING);
             /** @var Skill $computingSkill */
-            $skillRating = $this->getSkillRating($profile, $computingSkill);
+            $skillRating = $this->getSkillRating($file->getProfile(), $computingSkill);
             $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
             $nodes = $nodeRepo->findBySystem($system);
             $messages = [];
@@ -514,7 +540,7 @@ class FileService extends BaseService
                     if ($roll <= $baseChance - $difficulty) {
                         $messages[] = sprintf(
                             '<pre style="white-space: pre-wrap;" class="text-white">%-45s|%-11s|%-20s|%s</pre>',
-                            $addy,
+                            $system->getAddy(),
                             $node->getId(),
                             Node::$lookup[$node->getType()],
                             $node->getName()
@@ -523,13 +549,15 @@ class FileService extends BaseService
                 }
             }
             if (empty($messages)) {
-                $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">No vulnerable nodes detected</pre>');
+                $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR %s</pre>', $system->getAddy());
+                $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No vulnerable nodes detected</pre>');
             }
             else {
+                array_unshift($messages, sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR %s</pre>', $system->getAddy()));
                 array_unshift($messages, sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-45s|%-11s|%-20s|%s</pre>', 'address', 'id', 'nodetype', 'nodename'));
             }
             $response = array(
-                'command' => 'showoutput',
+                'command' => 'showoutputprepend',
                 'message' => $messages
             );
         }

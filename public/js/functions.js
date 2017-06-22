@@ -5,6 +5,9 @@ function showprompt()
         if (promptAddon !== '') prompt = prompt + ' ' + promptAddon;
         $('#messages').append('<div class="text-muted output-line"><span>' + prompt + '</span></div>');
     }
+    else {
+        $('#messages').append('<div class="text-muted output-line"><span>&gt;&nbsp;</span></div>');
+    }
 }
 
 /**

@@ -83,7 +83,12 @@
             var textClass = 'muted';
             var data = JSON.parse(e.data);
             var command = data.command;
-            if (command !== 'getipaddy' && command !== 'showmessageprepend' && command !== 'updateprompt' && command !== 'ticker') commandInput.attr('type', 'text').detach();
+            if (command !== 'getipaddy' &&
+                command !== 'showmessageprepend' &&
+                command !== 'showoutputprepend' &&
+                command !== 'updateprompt' &&
+                command !== 'ticker'
+            ) commandInput.attr('type', 'text').detach();
             prompt = (data.prompt) ? data.prompt : 'INVALID PROMPT';
             switch (command) {
                 default:
@@ -204,11 +209,13 @@
                 case 'entercodemode':
                     consoleMode = 'code';
                     md.append(data.message);
+                    showprompt();
                     break;
                 case 'entermailmode':
                     consoleMode = 'mail';
                     consoleOptionsMail.currentMailNumber = (data.mailNumber < 1) ? 0 : 1;
                     md.append(data.message);
+                    showprompt();
                     break;
                 case 'exitcodemode':
                     consoleMode = 'default';
@@ -246,13 +253,19 @@
                     commandInput.val(data.message);
                     break;
                 case 'showmessageprepend':
-                    var lastPrompt = $('.prompt').last();
+                    var lastPrompt = $('.output-line').last();
                     $(data.message).insertBefore(lastPrompt);
+                    return true;
+                case 'showoutputprepend':
+                    var lastPrompt = $('.output-line').last();
+                    messageArray = data.message;
+                    $.each(messageArray, function(i, messageData){
+                        $(messageData).insertBefore(lastPrompt);
+                    });
                     return true;
             }
             if (command !== 'echocommand' && command !== 'updateprompt' && command !== 'ticker') {
                 var lastOutput = $('#messages div.output-line:last');
-                console.log(lastOutput);
                 commandInput.appendTo(lastOutput).focus();
             }
         };
