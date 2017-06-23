@@ -46,6 +46,12 @@ class Faction
      * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
+    protected $joinable;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
     protected $credits;
 
     /**

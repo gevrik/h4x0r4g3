@@ -31,16 +31,28 @@ class MilkrunInstance
     protected $added;
 
     /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $completed;
+
+    /**
      * @ORM\Column(type="datetime")
      * @var \DateTime
      */
     protected $expires;
 
     /**
-     * @ORM\Column(type="datetime")
-     * @var \DateTime
+     * @ORM\Column(type="integer")
+     * @var int
      */
     protected $level;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     * @var int
+     */
+    protected $expired;
 
     // ORM
 
@@ -99,6 +111,24 @@ class MilkrunInstance
     /**
      * @return \DateTime
      */
+    public function getCompleted()
+    {
+        return $this->completed;
+    }
+
+    /**
+     * @param \DateTime $completed
+     * @return MilkrunInstance
+     */
+    public function setCompleted($completed)
+    {
+        $this->completed = $completed;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
     public function getExpires()
     {
         return $this->expires;
@@ -115,7 +145,7 @@ class MilkrunInstance
     }
 
     /**
-     * @return \DateTime
+     * @return int
      */
     public function getLevel()
     {
@@ -123,12 +153,30 @@ class MilkrunInstance
     }
 
     /**
-     * @param \DateTime $level
+     * @param int $level
      * @return MilkrunInstance
      */
     public function setLevel($level)
     {
         $this->level = $level;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getExpired()
+    {
+        return $this->expired;
+    }
+
+    /**
+     * @param int $expired
+     * @return MilkrunInstance
+     */
+    public function setExpired($expired)
+    {
+        $this->expired = $expired;
         return $this;
     }
 

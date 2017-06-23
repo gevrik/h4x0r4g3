@@ -71,6 +71,16 @@ class Profile
      */
     protected $homeNode;
 
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Faction")
+     */
+    protected $faction;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Group")
+     */
+    protected $group;
+
 
     /**
      * Constructor for Profile.
@@ -239,6 +249,42 @@ class Profile
     public function setHomeNode($homeNode)
     {
         $this->homeNode = $homeNode;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getFaction()
+    {
+        return $this->faction;
+    }
+
+    /**
+     * @param mixed $faction
+     * @return Profile
+     */
+    public function setFaction($faction)
+    {
+        $this->faction = $faction;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getGroup()
+    {
+        return $this->group;
+    }
+
+    /**
+     * @param mixed $group
+     * @return Profile
+     */
+    public function setGroup($group)
+    {
+        $this->group = $group;
         return $this;
     }
 

@@ -224,7 +224,8 @@ class WebsocketService implements MessageComponentInterface {
                 'fileLevel' => 0,
                 'mode' => 'resource'
             ],
-            'action' => []
+            'action' => [],
+            'milkrun' => []
         );
         $response = array(
             'command' => 'getipaddy',

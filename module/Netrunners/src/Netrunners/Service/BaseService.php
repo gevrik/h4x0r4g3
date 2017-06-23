@@ -610,4 +610,9 @@ class BaseService
         return (!$result) ? in_array($node->getType(), $validNodeTypes) : $result;
     }
 
+    protected function canStartActionInNodeType()
+    {
+
+    }
+
 }

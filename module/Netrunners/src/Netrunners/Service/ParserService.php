@@ -18,6 +18,11 @@ use TmoAuth\Entity\User;
 
 class ParserService
 {
+    const CMD_REQUESTMILKRUN = 'requestmilkrun';
+    const CMD_SCORE = 'score';
+    const CMD_SHOWMESSAGE = 'showmessage';
+    const CMD_ADDNODE = 'addnode';
+    const CMD_ADDCONNECTION = 'addconnection';
 
     /**
      * @var EntityManager
@@ -151,7 +156,7 @@ class ParserService
         switch ($userCommand) {
             default:
                 $response = array(
-                    'command' => 'showmessage',
+                    'command' => self::CMD_SHOWMESSAGE,
                     'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
                 );
                 break;
@@ -161,10 +166,10 @@ class ParserService
                     'message' => 'default'
                 );
                 break;
-            case 'addnode':
+            case self::CMD_ADDNODE:
                 $response = $this->nodeService->addNode($resourceId);
                 break;
-            case 'addconnection':
+            case self::CMD_ADDCONNECTION:
                 $response = $this->connectionService->addConnection($resourceId, $contentArray);
                 break;
             case 'cd':
@@ -262,10 +267,10 @@ class ParserService
             case 'ps':
                 $response = $this->fileService->listProcesses($resourceId);
                 break;
-            case 'requestmilkrun':
+            case self::CMD_REQUESTMILKRUN:
                 $response = $this->milkrunService->requestMilkrun($resourceId);
                 break;
-            case 'score':
+            case self::CMD_SCORE:
                 $response = $this->profileService->showScore($resourceId);
                 break;
             case 'secureconnection':
@@ -292,7 +297,7 @@ class ParserService
             case 'time':
                 $now = new \DateTime();
                 $response = array(
-                    'command' => 'showmessage',
+                    'command' => self::CMD_SHOWMESSAGE,
                     'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">current server time: %s</pre>', $now->format('Y/m/d H:i:s'))
                 );
                 break;
@@ -405,13 +410,13 @@ class ParserService
             'kill',
             'mail',
             'ps',
-            'score',
+            self::CMD_SCORE,
             'skills',
             'showunreadmails',
             'stat',
             'system');
         $response = array(
-            'command' => 'score',
+            'command' => self::CMD_SHOWMESSAGE,
             'message' => $returnMessage
         );
         return $response;
