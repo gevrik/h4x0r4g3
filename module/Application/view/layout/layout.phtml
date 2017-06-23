@@ -34,6 +34,9 @@
     <body>
         <?php echo $this->content; ?>
         <?php echo $this->inlineScript() ?>
+        <noscript>
+            <img class="img-noscript" src="<?php echo $this->basePath('img/noscript_img.jpg'); ?>" title="NO JAVASCRIPT - NO GAME!" />
+        </noscript>
         <img class="img-tesseract" src="<?php echo $this->basePath('img/8-cell-orig.gif'); ?>" title="Hi!" />
     </body>
 </html>

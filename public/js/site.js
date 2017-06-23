@@ -74,7 +74,7 @@
             // fluff
             md.append('<span class="text-info">Establishing connection to NeoCortex network...</span><br />');
             // check username
-            md.append('<span class="text-muted">login: </span>');
+            md.append('<span class="text-muted">username: </span>');
             commandInput.appendTo(md).focus();
         };
         // event listener for server message
@@ -149,6 +149,8 @@
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
                     showprompt();
+                    $('.notification-box').show();
+                    $('.actiontime-box').show();
                     $('[data-toggle="tooltip"]').tooltip();
                     break;
                 case 'ticker':
