@@ -203,7 +203,14 @@ class ProfileService extends BaseService
             }
             else {
                 foreach ($filePartInstances as $data) {
-                    $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-10s level-range: %s-%s</pre>', $data['fpname'], $data['fpicount'], $data['minlevel'], $data['maxlevel']);
+                    // prepare message
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-27s: %-10s level-range: %s-%s</pre>',
+                        $data['fpname'],
+                        $data['fpicount'],
+                        $data['minlevel'],
+                        $data['maxlevel']
+                    );
                 }
                 $response = array(
                     'command' => 'showoutput',

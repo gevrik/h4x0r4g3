@@ -12,9 +12,7 @@ namespace Netrunners\Service;
 
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
-use Netrunners\Repository\NotificationRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 
@@ -341,7 +339,7 @@ class ParserService
                 $response = $this->mailMessageService->deleteMail($resourceId, $contentArray, $mailOptions);
                 break;
             case 'q':
-                $response = $this->mailMessageService->exitMailMode();
+                $response = $this->mailMessageService->exitMailMode($resourceId);
                 break;
         }
         return $from->send(json_encode($response));

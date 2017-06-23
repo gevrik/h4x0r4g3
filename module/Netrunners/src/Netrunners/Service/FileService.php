@@ -16,11 +16,9 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
-use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
-use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
@@ -334,7 +332,7 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_PORTSCANNER:
                 case FileType::ID_JACKHAMMER:
-                    $response = $this->queueProgramExecution($resourceId, $file, $contentArray);
+                    $response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
                     break;
             }
         }
@@ -344,10 +342,11 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @param File $file
+     * @param Node $node
      * @param $contentArray
      * @return array|bool|mixed
      */
-    private function queueProgramExecution($resourceId, File $file, $contentArray)
+    private function queueProgramExecution($resourceId, File $file, Node $node, $contentArray)
     {
         $executeWarning = false;
         $parameterArray = [];
@@ -356,7 +355,7 @@ class FileService extends BaseService
             default:
                 break;
             case FileType::ID_PORTSCANNER:
-                list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $contentArray);
+                list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $node, $contentArray);
                 $parameterArray = [
                     'fileId' => $file->getId(),
                     'systemId' => $systemId,
@@ -368,7 +367,7 @@ class FileService extends BaseService
                 );
                 break;
             case FileType::ID_JACKHAMMER:
-                list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $contentArray);
+                list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $node, $contentArray);
                 $parameterArray = [
                     'fileId' => $file->getId(),
                     'systemId' => $systemId,
@@ -427,8 +426,10 @@ class FileService extends BaseService
      */
     protected function executeDataminer(File $file, Node $node)
     {
+        // init response
         $response = false;
-        if ($node->getType() != Node::ID_DATABASE) {
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>', $file->getName())
@@ -455,7 +456,7 @@ class FileService extends BaseService
     protected function executeCoinminer(File $file, Node $node)
     {
         $response = false;
-        if ($node->getType() != Node::ID_TERMINAL) {
+        if (!$this->canExecuteInNodeType($file, $node)) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>', $file->getName())
@@ -482,7 +483,7 @@ class FileService extends BaseService
     protected function executeIcmpBlocker(File $file, Node $node)
     {
         $response = false;
-        if ($node->getType() != Node::ID_IO) {
+        if (!$this->canExecuteInNodeType($file, $node)) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>', $file->getName())
@@ -503,16 +504,24 @@ class FileService extends BaseService
 
     /**
      * @param File $file
+     * @param Node $node
      * @param $contentArray
      * @return array
      */
-    public function executeWarningPortscanner(File $file, $contentArray)
+    public function executeWarningPortscanner(File $file, Node $node, $contentArray)
     {
         $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var SystemRepository $systemRepo */
         $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            var_dump('here');
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>', $file->getName())
+            );
+        }
         $addy = $this->getNextParameter($contentArray, false);
-        if (!$addy) {
+        if (!$response && !$addy) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a system address to scan</pre>'),
@@ -550,16 +559,21 @@ class FileService extends BaseService
 
     /**
      * @param File $file
+     * @param Node $node
      * @param $contentArray
      * @return array
      */
-    public function executeWarningJackhammer(File $file, $contentArray)
+    public function executeWarningJackhammer(File $file, Node $node, $contentArray)
     {
         $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var SystemRepository $systemRepo */
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
         $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>', $file->getName())
+            );
+        }
         list($contentArray, $addy) = $this->getNextParameter($contentArray, true);
         if (!$addy) {
             $response = array(

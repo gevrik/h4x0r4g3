@@ -32,6 +32,7 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
+use Zend\View\Renderer\PhpRenderer;
 
 class BaseService
 {
@@ -41,6 +42,9 @@ class BaseService
      */
     protected $entityManager;
 
+    /**
+     * @var PhpRenderer
+     */
     protected $viewRenderer;
 
     /**
@@ -570,6 +574,40 @@ class BaseService
             }
         }
         return $result;
+    }
+
+    /**
+     * Used to check if a certain file-type can be executed in a node.
+     * @param File $file
+     * @param Node $node
+     * @return bool
+     */
+    protected function canExecuteInNodeType(File $file, Node $node)
+    {
+        $result = false;
+        $validNodeTypes = [];
+        switch ($file->getFileType()->getId()) {
+            default:
+                $result = true;
+                break;
+            case FileType::ID_COINMINER:
+                $validNodeTypes[] = Node::ID_TERMINAL;
+                break;
+            case FileType::ID_DATAMINER:
+                $validNodeTypes[] = Node::ID_DATABASE;
+                break;
+            case FileType::ID_ICMP_BLOCKER:
+                $validNodeTypes[] = Node::ID_IO;
+                break;
+            case FileType::ID_JACKHAMMER:
+            case FileType::ID_PORTSCANNER:
+            case FileType::ID_WORMER:
+                $validNodeTypes[] = Node::ID_IO;
+                $validNodeTypes[] = Node::ID_PUBLICIO;
+                break;
+        }
+        // if result is false, check if the node type matches an entry of the valid-node-types array
+        return (!$result) ? in_array($node->getType(), $validNodeTypes) : $result;
     }
 
 }
