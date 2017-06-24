@@ -1,0 +1,11 @@
+<div id="milkrun-panel" class="panel panel-default draggable milkrun-panel">
+    <div class="panel-heading">
+        <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate(sprintf("milkrun map - %s", $this->mapData['level'])); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div id="milkrun-game-container" class="milkrun-game-container">
+            <?php echo $this->partial('netrunners/milkrun/partial-map.phtml'); ?>
+        </div>
+    </div>
+</div>

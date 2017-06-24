@@ -1,0 +1,74 @@
+<?php foreach ($this->mapData['map'] as $y => $rowData) : ?> <!-- each row -->
+    <?php foreach ($rowData as $x => $tileData) : ?> <!-- each column -->
+        <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_UNKNOWN) : ?>
+            <?php if ($tileData['blocked']) : ?>
+                <img class="milkrun-tile"
+                     src="<?php echo $this->imageUrlHelper() . '/img/node_blocked.png'; ?>"
+                     title="blocked node" />
+            <?php elseif ($tileData['inaccessible']) : ?>
+                <img class="milkrun-tile"
+                     src="<?php echo $this->imageUrlHelper() . '/img/node_inaccessible.png'; ?>"
+                     title="inaccessible node" />
+            <?php else: ?>
+                <img class="milkrun-tile milkrun-clickable"
+                     data-x="<?php echo $x; ?>"
+                     data-y="<?php echo $y; ?>"
+                     src="<?php echo $this->imageUrlHelper() . '/img/node_unknown.png'; ?>"
+                     title="unknown node" />
+            <?php endif; ?>
+        <?php endif; ?>
+        <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_EMPTY) : ?>
+            <img class="milkrun-tile"
+                 data-x="<?php echo $x; ?>"
+                 data-y="<?php echo $y; ?>"
+                 src="<?php echo $this->imageUrlHelper() . '/img/node_empty.png'; ?>"
+                 title="empty node" />
+        <?php endif; ?>
+        <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_ICE) : ?>
+            <img class="milkrun-tile milkrun-clickable"
+                 data-x="<?php echo $x; ?>"
+                 data-y="<?php echo $y; ?>"
+                 src="<?php echo $this->imageUrlHelper() . '/img/node_ice_1.png'; ?>"
+                 title="ice node" />
+        <?php endif; ?>
+        <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_SPECIAL) : ?>
+            <img class="milkrun-tile milkrun-clickable"
+                 data-x="<?php echo $x; ?>"
+                 data-y="<?php echo $y; ?>"
+                 src="<?php echo $this->imageUrlHelper() . ($tileData['subtype'] == \Netrunners\Service\MilkrunService::TILE_SUBTYPE_SPECIAL_CREDITS) ? '/img/node_credits.png' : '/img/node_snippet.png'; ?>"
+                 title="empty node" />
+        <?php endif; ?>
+        <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_KEY) : ?>
+            <img class="milkrun-tile milkrun-clickable"
+                 data-x="<?php echo $x; ?>"
+                 data-y="<?php echo $y; ?>"
+                 src="<?php echo $this->imageUrlHelper() . '/img/node_key.png'; ?>"
+                 title="empty node" />
+        <?php endif; ?>
+        <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_TARGET) : ?>
+            <?php if ($this->mapData['targetUnlocked']) : ?>
+                <?php if ($this->mapData['maxLevel'] == $this->mapData['level']) : ?>
+                    <img class="milkrun-tile<?php echo ($this->mapData['targetUnlocked']) ? ' milkrun-clickable' : ''; ?>"
+                         data-x="<?php echo $x; ?>"
+                         data-y="<?php echo $y; ?>"
+                         src="<?php echo $this->imageUrlHelper() . ($this->mapData['maxLevel'] == $this->mapData['level']) ? '/img/node_payload.png' : ''; ?>"
+                         title="payload node" />
+                <?php else : ?>
+                    <img class="milkrun-tile<?php echo ($this->mapData['targetUnlocked']) ? ' milkrun-clickable' : ''; ?>"
+                         data-x="<?php echo $x; ?>"
+                         data-y="<?php echo $y; ?>"
+                         src="<?php echo $this->imageUrlHelper() . ($this->mapData['maxLevel'] == $this->mapData['level']) ? '/img/node_exit.png' : ''; ?>"
+                         title="exit node" />
+                <?php endif; ?>
+            <?php else : ?>
+                <img class="milkrun-tile"
+                     data-x="<?php echo $x; ?>"
+                     data-y="<?php echo $y; ?>"
+                     src="<?php echo $this->imageUrlHelper() . '/img/node_target.png'; ?>"
+                     title="target node" />
+            <?php endif; ?>
+
+        <?php endif; ?>
+    <?php endforeach; ?>
+    <br />
+<?php endforeach;

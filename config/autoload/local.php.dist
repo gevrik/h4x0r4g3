@@ -11,14 +11,18 @@ return array(
                     'user'     => 'netrunners',
                     'password' => 'netrunners',
                     'dbname'   => 'netrunners',
-                )
-            )
-        )
+                ),
+            ),
+        ),
     ),
     'hashmod' => 'netrunners',
     'wsconfig' => [
-            'wsprotocol' => 'ws',
-            'wshost' => 'yourhosthere',
-            'wsport' => '8082',
-        ],
+        'wsprotocol' => 'ws',
+        'wshost' => 'yourhosthere',
+        'wsport' => '8082',
+    ],
+    'assetsconfig' => [
+        'protocol' => 'http',
+        'host' => 'h4x0r4g3.local',
+    ],
 );

@@ -98,6 +98,21 @@ pre {
     right: 2em;
 }
 
+.milkrun-tile {
+    float: left;
+}
+
+.milkrun-clickable {
+    cursor: pointer;
+}
+
+.milkrun-container {
+    position: fixed;
+    width: 40%;
+    top: 2em;
+    right: 2em;
+}
+
 .map-panel .panel-body{
     height: 500px;
 }

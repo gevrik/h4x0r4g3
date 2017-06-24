@@ -15,19 +15,30 @@ use Netrunners\Entity\Milkrun;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\FactionRepository;
 use TmoAuth\Entity\User;
+use Zend\View\Model\ViewModel;
 
 class MilkrunService extends BaseService
 {
 
-    const TILE_TYPE_EMPTY = 0;
-    const TILE_TYPE_SOURCE = 1;
+    const TILE_TYPE_UNKNOWN = 0;
+    const TILE_TYPE_KEY = 1;
     const TILE_TYPE_TARGET = 2;
     const TILE_TYPE_ICE = 3;
     const TILE_TYPE_SPECIAL = 4;
+    const TILE_TYPE_EMPTY = 5;
 
+    const TILE_SUBTYPE_SPECIAL_CREDITS = 1;
+    const TILE_SUBTYPE_SPECIAL_SNIPPETS = 2;
+
+    /**
+     * @param $resourceId
+     * @return array|bool
+     */
     public function requestMilkrun($resourceId)
     {
+        var_dump('start');
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -44,13 +55,16 @@ class MilkrunService extends BaseService
         }
         if (!$response) {
             if (!empty($clientData->milkrun)) {
+                var_dump('milkrun not empty');
                 $milkrunData = $clientData->milkrun;
             }
             else {
+                var_dump('milkrun empty');
                 $milkruns = $this->entityManager->getRepository('Netrunners\Entity\Milkrun')->findAll();
                 $amount = count($milkruns) - 1;
                 $targetMilkrun = $milkruns[mt_rand(0, $amount)];
                 /** @var Milkrun $targetMilkrun */
+                var_dump('milkrun template found');
                 $milkrunId = $targetMilkrun->getId();
                 $milkrunLevel = 1;
                 $timer = $targetMilkrun->getTimer();
@@ -62,7 +76,10 @@ class MilkrunService extends BaseService
                 /** @var Faction $sourceFaction */
                 $targetFaction = $this->getRandomFaction();
                 /** @var Faction $targetFaction */
-                while ($sourceFaction === $targetFaction) $this->getRandomFaction();
+                while ($sourceFaction === $targetFaction) {
+                    $sourceFaction = $this->getRandomFaction();
+                }
+                var_dump('got factions');
                 $mInstance = new MilkrunInstance();
                 $mInstance->setAdded(new \DateTime());
                 $mInstance->setExpires($expires);
@@ -72,72 +89,239 @@ class MilkrunService extends BaseService
                 $mInstance->setTargetFaction($targetFaction);
                 $this->entityManager->persist($mInstance);
                 $this->entityManager->flush($mInstance);
+                var_dump('flushed milkrun instance');
                 $milkrunData = [
-                    'id' => 0,
+                    'id' => $mInstance->getId(),
                     'milkrun' => $milkrunId,
                     'level' => $milkrunLevel,
+                    'currentLevel' => 1,
                     'expires' => $expires,
                     'started' => $started,
                     'sourceFaction' => $sourceFaction->getId(),
                     'targetFaction' => $targetFaction->getId(),
                     'credits' => $credits,
-                    'currentLevel' => 1,
-                    'mapData' => $this->generateMapData($milkrunLevel)
+                    'keyX' => false,
+                    'keyY' => false,
+                    'mapData' => false
                 ];
+                $milkrunData = $this->generateMapData($milkrunData, $milkrunLevel);
+                var_dump('generated map data');
+                $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
+                var_dump('set milkrundata on ws');
             }
+            var_dump('preparing view');
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/milkrun/game.phtml');
+            $view->setVariable('mapData', $milkrunData['mapData']);
+            $response = [
+                'command' => 'startmilkrun',
+                'content' => $this->viewRenderer->render($view),
+                'level' => (int)$milkrunData['currentLevel']
+            ];
         }
+        var_dump('end');
         return $response;
     }
 
+    /**
+     * @return Faction
+     */
     public function getRandomFaction()
     {
-        $factions = $this->entityManager->getRepository('Netrunners\Entity\Faction')->findAllForMilkrun();
+        $factionRepo = $this->entityManager->getRepository('Netrunners\Entity\Faction');
+        /** @var FactionRepository $factionRepo */
+        $factions = $factionRepo->findAllForMilkrun();
         $factionCount = count($factions) - 1;
         $targetFaction = $factions[mt_rand(0, $factionCount)];
         /** @var Faction $targetFaction */
         return $targetFaction;
     }
 
-    public function generateMapData($level)
+    /**
+     * @param $milkrunData
+     * @param $level
+     * @return mixed
+     */
+    public function generateMapData($milkrunData, $level)
     {
-        $xSource = 0;
-        $ySource = 0;
-        $xTarget = 0;
-        $yTarget = 0;
-        while ($xSource == $xTarget && $ySource == $yTarget) {
-            $xSource = mt_rand(0,$level-1);
-            $ySource = mt_rand(0,$level-1);
-            $xTarget = mt_rand(0,$level-1);
-            $yTarget = mt_rand(0,$level-1);
+        $levelAdd = 4;
+        $realSize = $levelAdd + $level;
+        $xKey = 0;
+        $yKey = 0;
+        $xTarget = 1;
+        $yTarget = 1;
+        var_dump('realsize:' . $realSize);
+        while ($xTarget >= 1 && $yTarget >= 1 ) {
+            $xTarget = mt_rand(0,$realSize-1);
+            $yTarget = mt_rand(0,$realSize-1);
         }
+        var_dump('got target coords x: ' . $xTarget . ' y: ' . $yTarget);
+        while (
+            ($xKey < 1 || $yKey < 1) ||
+            ($xKey == $xTarget && $yKey == $yTarget) ||
+            ($xKey-1 == $xTarget && $yKey == $yTarget) ||
+            ($xKey+1 == $xTarget && $yKey == $yTarget) ||
+            ($xKey == $xTarget && $yKey-1 == $yTarget) ||
+            ($xKey == $xTarget && $yKey+1 == $yTarget) ||
+            ($xKey-1 == $xTarget && $yKey-1 == $yTarget) ||
+            ($xKey+1 == $xTarget && $yKey-1 == $yTarget) ||
+            ($xKey-1 == $xTarget && $yKey+1 == $yTarget) ||
+            ($xKey+1 == $xTarget && $yKey+1 == $yTarget)
+        ) {
+            $xKey = mt_rand(0,$realSize-1);
+            $yKey = mt_rand(0,$realSize-1);
+        }
+        var_dump('got key coords x: ' . $xKey . ' y: ' . $yKey);
+        $milkrunData['keyX'] = $xKey;
+        $milkrunData['keyY'] = $yKey;
         $mapData = [
-            'xSource' => $xSource,
-            'ySource' => $ySource,
-            'xTarget' => $xTarget,
-            'yTarget' => $yTarget,
+            'targetUnlocked' => false,
+            'level' => $milkrunData['currentLevel'],
+            'maxLevel' => $milkrunData['level'],
             'map' => []
         ];
-        for ($y=1; $y<$level; $y++) {
+        for ($y=0; $y<$realSize; $y++) {
             $mapData['map'][$y] = [];
-            for ($x=1; $x<$level; $x++) {
-                if ($y == $ySource && $x == $xSource) {
-                    $tileType = self::TILE_TYPE_SOURCE;
-                    $tileKnown = true;
-                }
-                else {
-                    $tileType = $this->getRandomTileType();
-                    $tileKnown = false;
-                }
+            for ($x=0; $x<$realSize; $x++) {
                 $mapData['map'][$y][$x] = [
-
+                    'type' => 0,
+                    'blocked' => false,
+                    'inaccessible' => true
                 ];
             }
         }
+        $mapData['map'][$yTarget][$xTarget]['type'] = self::TILE_TYPE_TARGET;
+        $mapData['map'][$yTarget][$xTarget]['subtype'] = NULL;
+        $mapData['map'][$yTarget][$xTarget]['blocked'] = false;
+        $mapData['map'][$yTarget][$xTarget]['inaccessible'] = false;
+        $mapData = $this->changeSurroundingTiles($mapData, $xTarget, $yTarget);
+        $milkrunData['mapData'] = $mapData;
+        return $milkrunData;
     }
 
-    private function getRandomTileType()
+    /**
+     * @param $mapData
+     * @param $sourceX
+     * @param $sourceY
+     * @return mixed
+     */
+    private function changeSurroundingTiles($mapData, $sourceX, $sourceY)
     {
+        // first check the one up
+        if (isset($mapData['map'][$sourceY-1][$sourceX]) && $mapData['map'][$sourceY-1][$sourceX]['type'] == self::TILE_TYPE_UNKNOWN) {
+                $mapData['map'][$sourceY-1][$sourceX]['inaccessible'] = false;
+                $mapData['map'][$sourceY-1][$sourceX]['blocked'] = $this->isTileBlocked($mapData, $sourceX, $sourceY-1);
+        }
+        // first check the one right
+        if (isset($mapData['map'][$sourceY][$sourceX+1]) && $mapData['map'][$sourceY][$sourceX+1]['type'] == self::TILE_TYPE_UNKNOWN) {
+                $mapData['map'][$sourceY][$sourceX+1]['inaccessible'] = false;
+                $mapData['map'][$sourceY][$sourceX+1]['blocked'] = $this->isTileBlocked($mapData, $sourceX + 1, $sourceY);
+        }
+        // first check the one down
+        if (isset($mapData['map'][$sourceY+1][$sourceX]) && $mapData['map'][$sourceY+1][$sourceX]['type'] == self::TILE_TYPE_UNKNOWN) {
+            $mapData['map'][$sourceY+1][$sourceX]['inaccessible'] = false;
+            $mapData['map'][$sourceY+1][$sourceX]['blocked'] = $this->isTileBlocked($mapData, $sourceX, $sourceY+1);
+        }
+        // first check the one left
+        if (isset($mapData['map'][$sourceY][$sourceX-1]) && $mapData['map'][$sourceY][$sourceX-1]['type'] == self::TILE_TYPE_UNKNOWN) {
+            $mapData['map'][$sourceY][$sourceX-1]['inaccessible'] = false;
+            $mapData['map'][$sourceY][$sourceX-1]['blocked'] = $this->isTileBlocked($mapData, $sourceX-1, $sourceY);
+        }
+        return $mapData;
+    }
 
+    /**
+     * @param $mapData
+     * @param $sourceX
+     * @param $sourceY
+     * @return bool
+     */
+    private function isTileBlocked($mapData, $sourceX, $sourceY)
+    {
+        $result = false;
+        // first check the one up
+        if (isset($mapData['map'][$sourceY-1][$sourceX])) {
+            $result = ($mapData['map'][$sourceY-1][$sourceX]['type'] == self::TILE_TYPE_ICE) ? true : false;
+        }
+        // first check the one right
+        if (!$result && isset($mapData['map'][$sourceY][$sourceX+1])) {
+            $result = ($mapData['map'][$sourceY][$sourceX+1]['type'] == self::TILE_TYPE_ICE) ? true : false;
+        }
+        // first check the one down
+        if (!$result && isset($mapData['map'][$sourceY+1][$sourceX])) {
+            $result = ($mapData['map'][$sourceY+1][$sourceX]['type'] == self::TILE_TYPE_ICE) ? true : false;
+        }
+        // first check the one left
+        if (!$result && isset($mapData['map'][$sourceY][$sourceX-1])) {
+            $result = ($mapData['map'][$sourceY][$sourceX-1]['type'] == self::TILE_TYPE_ICE) ? true : false;
+        }
+        return $result;
+    }
+
+    public function clickTile($resourceId, $contentArray)
+    {
+        var_dump('click triggered on server');
+        // get user
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        // stop if the player is not on a milkrun
+        if (empty($clientData->milkrun)) return true;
+        // init response
+        $response = $this->isActionBlocked($resourceId);
+        if (!$response) {
+            // get x click
+            list($contentArray, $targetX) = $this->getNextParameter($contentArray, true, true);
+            // get y click
+            $targetY = $this->getNextParameter($contentArray, false);
+            if ($targetX < 0 || $targetY < 0) return true;
+            var_dump('got x: ' . $targetX . ' y: ' . $targetY);
+            // get map tile
+            $milkrunData = $clientData->milkrun;
+            $mapData = $milkrunData['mapData'];
+            $mapTile = $mapData['map'][$targetY][$targetX];
+            if (!$mapTile) return true;
+            switch ($mapTile['type']) {
+                default:
+                    return true;
+                case self::TILE_TYPE_UNKNOWN:
+                    if ($mapTile['blocked'] || $mapTile['inaccessible']) return true;
+                    if ($targetX == $milkrunData['keyX'] && $targetY == $milkrunData['keyY']) {
+                        $newType = self::TILE_TYPE_KEY;
+                        $subType = NULL;
+                    }
+                    else {
+                        $newTypeChance = mt_rand(1, 100);
+                        if ($newTypeChance > 50) {
+                            $newType = self::TILE_TYPE_EMPTY;
+                            $subType = NULL;
+                        }
+                        else if ($newTypeChance < 25) {
+                            $newType = self::TILE_TYPE_ICE;
+                            $subType = mt_rand(1, 2);
+                        }
+                        else {
+                            $newType = self::TILE_TYPE_SPECIAL;
+                            $subType = mt_rand(1, 2);
+                        }
+                    }
+                    break;
+            }
+            $mapData['map'][$targetY][$targetX]['type'] = $newType;
+            $mapData['map'][$targetY][$targetX]['subtype'] = $subType;
+            $mapData = $this->changeSurroundingTiles($mapData, $targetX, $targetY);
+            $milkrunData['mapData'] = $mapData;
+            $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/milkrun/partial-map.phtml');
+            $view->setVariable('mapData', $mapData);
+            $response = [
+                'command' => 'updatedivhtml',
+                'content' => $this->viewRenderer->render($view),
+                'level' => $milkrunData['currentLevel']
+            ];
+        }
+        return $response;
     }
 
 }

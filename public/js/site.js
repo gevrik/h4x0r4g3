@@ -87,12 +87,15 @@
                 command !== 'showmessageprepend' &&
                 command !== 'showoutputprepend' &&
                 command !== 'updateprompt' &&
+                command !== 'updatedivhtml' &&
                 command !== 'ticker'
             ) commandInput.attr('type', 'text').detach();
-            prompt = (data.prompt) ? data.prompt : 'INVALID PROMPT';
+            prompt = (data.prompt) ? data.prompt : prompt;
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
+                    console.log(command);
+                    console.log(data);
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
@@ -234,6 +237,46 @@
                     }
                     if (!data.silent) showprompt();
                     break;
+                case 'startmilkrun':
+                    $('#milkrun-container').html('').append(data.content);
+                    $('.draggable').draggable({
+                        handle: '.panel-heading'
+                    });
+                    var milkrunMapWidth = $('#milkrun-panel').innerWidth();
+                    $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
+                    $('.milkrun-tile').attr('width', milkrunMapWidth/(data.level+4));
+                    $('.milkrun-clickable').on('click', function(){
+                        var clickedX = $(this).data('x');
+                        var clickedY = $(this).data('y');
+                        console.log('x: ' + clickedX + ' y: ' + clickedY);
+                        command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'milkrunclick ' + clickedX + ' ' + clickedY,
+                            silent: true
+                        };
+                        conn.send(JSON.stringify(command));
+                    });
+                    if (!data.silent) showprompt();
+                    break;
+                case 'updatedivhtml':
+                    $('#milkrun-game-container').html('').append(data.content);
+                    var milkrunMapWidth = $('#milkrun-panel').innerWidth();
+                    $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
+                    $('.milkrun-tile').attr('width', milkrunMapWidth/(data.level+4));
+                    $('.milkrun-clickable').on('click', function(){
+                        var clickedX = $(this).data('x');
+                        var clickedY = $(this).data('y');
+                        console.log('x: ' + clickedX + ' y: ' + clickedY);
+                        command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'milkrunclick ' + clickedX + ' ' + clickedY,
+                            silent: true
+                        };
+                        conn.send(JSON.stringify(command));
+                    });
+                    break;
                 case 'showmessage':
                     md.append(data.message);
                     showprompt();
@@ -260,7 +303,12 @@
                     });
                     return true;
             }
-            if (command !== 'echocommand' && command !== 'updateprompt' && command !== 'ticker') {
+            if (
+                command !== 'echocommand' &&
+                command !== 'updateprompt' &&
+                command !== 'ticker' &&
+                command !== 'updatedivhtml'
+            ) {
                 var lastOutput = $('#messages div.output-line:last');
                 commandInput.appendTo(lastOutput).focus();
             }

@@ -57,6 +57,13 @@ return array(
             ),
         ),
     ),
+    'view_helpers' => array(
+        'invokables'=> array(
+        ),
+        'factories' => array(
+            'image_url_helper' => 'Netrunners\Factory\ImageUrlHelperFactory',
+        ),
+    ),
     'view_manager' => array(
         'template_path_stack' => array(
             __DIR__ . '/../view',

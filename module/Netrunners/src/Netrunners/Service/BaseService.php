@@ -383,7 +383,8 @@ class BaseService
     {
         $parameter = NULL;
         $nextParameter = (!$implode) ? array_shift($contentArray) : implode(' ', $contentArray);
-        if ($nextParameter) {
+        if ($nextParameter !== NULL) {
+            var_dump('got next param: ' . $nextParameter);
             trim($nextParameter);
             if ($makeSafe) $nextParameter = htmLawed($nextParameter, $safeOptions);
             if ($castToInt) $nextParameter = (int)$nextParameter;

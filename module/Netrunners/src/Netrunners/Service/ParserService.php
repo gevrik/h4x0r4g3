@@ -268,7 +268,11 @@ class ParserService
                 $response = $this->fileService->listProcesses($resourceId);
                 break;
             case self::CMD_REQUESTMILKRUN:
+            case 'milkrun':
                 $response = $this->milkrunService->requestMilkrun($resourceId);
+                break;
+            case 'milkrunclick':
+                $response = $this->milkrunService->clickTile($resourceId, $contentArray);
                 break;
             case self::CMD_SCORE:
                 $response = $this->profileService->showScore($resourceId);
@@ -313,6 +317,7 @@ class ParserService
                 $response = $this->adminService->adminSetSnippets($resourceId, $contentArray);
                 break;
         }
+        if (!is_array($response)) return true;
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         if ($response) $from->send(json_encode($response));
         return true;
