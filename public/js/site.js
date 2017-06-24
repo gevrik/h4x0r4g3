@@ -4,6 +4,8 @@
 
     $(document).on('ready', function () {
 
+        initSound();
+
         var viewportData = getViewport();
         var viewportWidth = viewportData[0];
         var viewportHeight = viewportData[1];
@@ -155,6 +157,7 @@
                     $('.notification-box').show();
                     $('.actiontime-box').show();
                     $('[data-toggle="tooltip"]').tooltip();
+                    playSoundById(4);
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;

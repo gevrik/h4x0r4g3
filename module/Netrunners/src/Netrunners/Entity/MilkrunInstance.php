@@ -49,10 +49,22 @@ class MilkrunInstance
     protected $level;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":20})
      * @var int
      */
-    protected $expired;
+    protected $health;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":1})
+     * @var int
+     */
+    protected $attack;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $armor;
 
     // ORM
 
@@ -70,6 +82,11 @@ class MilkrunInstance
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
      */
     protected $profile;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Milkrun")
+     */
+    protected $milkrun;
 
 
     /**
@@ -165,18 +182,54 @@ class MilkrunInstance
     /**
      * @return int
      */
-    public function getExpired()
+    public function getHealth()
     {
-        return $this->expired;
+        return $this->health;
     }
 
     /**
-     * @param int $expired
+     * @param int $health
      * @return MilkrunInstance
      */
-    public function setExpired($expired)
+    public function setHealth($health)
     {
-        $this->expired = $expired;
+        $this->health = $health;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAttack()
+    {
+        return $this->attack;
+    }
+
+    /**
+     * @param int $attack
+     * @return MilkrunInstance
+     */
+    public function setAttack($attack)
+    {
+        $this->attack = $attack;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getArmor()
+    {
+        return $this->armor;
+    }
+
+    /**
+     * @param int $armor
+     * @return MilkrunInstance
+     */
+    public function setArmor($armor)
+    {
+        $this->armor = $armor;
         return $this;
     }
 
@@ -233,6 +286,24 @@ class MilkrunInstance
     public function setProfile($profile)
     {
         $this->profile = $profile;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMilkrun()
+    {
+        return $this->milkrun;
+    }
+
+    /**
+     * @param mixed $milkrun
+     * @return MilkrunInstance
+     */
+    public function setMilkrun($milkrun)
+    {
+        $this->milkrun = $milkrun;
         return $this;
     }
 

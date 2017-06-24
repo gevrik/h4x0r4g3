@@ -32,11 +32,19 @@
                  title="ice node" />
         <?php endif; ?>
         <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_SPECIAL) : ?>
-            <img class="milkrun-tile milkrun-clickable"
-                 data-x="<?php echo $x; ?>"
-                 data-y="<?php echo $y; ?>"
-                 src="<?php echo $this->imageUrlHelper() . ($tileData['subtype'] == \Netrunners\Service\MilkrunService::TILE_SUBTYPE_SPECIAL_CREDITS) ? '/img/node_credits.png' : '/img/node_snippet.png'; ?>"
-                 title="empty node" />
+            <?php if ($tileData['subtype'] == \Netrunners\Service\MilkrunService::TILE_SUBTYPE_SPECIAL_CREDITS) : ?>
+                <img class="milkrun-tile milkrun-clickable"
+                     data-x="<?php echo $x; ?>"
+                     data-y="<?php echo $y; ?>"
+                     src="<?php echo $this->imageUrlHelper() . '/img/node_credits.png'; ?>"
+                     title="credits node" />
+            <?php elseif ($tileData['subtype'] == \Netrunners\Service\MilkrunService::TILE_SUBTYPE_SPECIAL_SNIPPETS) : ?>
+                <img class="milkrun-tile milkrun-clickable"
+                     data-x="<?php echo $x; ?>"
+                     data-y="<?php echo $y; ?>"
+                     src="<?php echo $this->imageUrlHelper() . '/img/node_snippet.png'; ?>"
+                     title="snippets node" />
+            <?php endif; ?>
         <?php endif; ?>
         <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_KEY) : ?>
             <img class="milkrun-tile milkrun-clickable"

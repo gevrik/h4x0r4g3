@@ -46,3 +46,55 @@ function getViewport() {
     }
     return [viewPortWidth, viewPortHeight];
 }
+
+function initSound() {
+    if (!createjs.Sound.initializeDefaultPlugins()) {
+        console.log('error');
+        return;
+    }
+    var assetsPath = "../sounds/";
+    var sounds = [
+        {src: "gotsnippets.ogg", id: 1},
+        {src: "accessdenied.ogg", id: 2},
+        {src: "buttonpress.ogg", id: 3},
+        {src: "logincomplete.ogg", id: 4}
+    ];
+    createjs.Sound.alternateExtensions = ["mp3"];
+    createjs.Sound.addEventListener("fileload", createjs.proxy(soundLoaded, this));
+    createjs.Sound.registerSounds(sounds, assetsPath);
+    console.log('sound initialized');
+}
+
+function soundLoaded(event) {
+    // sound loaded
+}
+
+function stopSound() {
+    if (preload != null) {
+        preload.close();
+    }
+    createjs.Sound.stop();
+}
+
+function playSoundByClick(target) {
+    console.log(target);
+    var instance = createjs.Sound.play(target.id);
+    if (instance == null || instance.playState == createjs.Sound.PLAY_FAILED) {
+        return;
+    }
+    instance.addEventListener("complete", function (instance) {
+        // when complete
+    });
+}
+
+function playSoundById(soundId) {
+    console.log('play by id: ' + soundId);
+    var instance = createjs.Sound.play(soundId);
+    if (instance == null || instance.playState == createjs.Sound.PLAY_FAILED) {
+        console.log('failed: ' + soundId);
+        return;
+    }
+    instance.addEventListener("complete", function (instance) {
+        // when complete
+    });
+}

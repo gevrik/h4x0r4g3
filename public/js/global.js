@@ -7,3 +7,4 @@ var consoleOptionsMail = {};
 var promptAddon = '';
 var currentNotiAmount = 0;
 var prompt = '';
+var preload;

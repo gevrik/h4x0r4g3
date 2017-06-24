@@ -16,6 +16,7 @@ use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\FactionRepository;
+use Netrunners\Repository\MilkrunInstanceRepository;
 use TmoAuth\Entity\User;
 use Zend\View\Model\ViewModel;
 
@@ -54,24 +55,20 @@ class MilkrunService extends BaseService
             );
         }
         if (!$response) {
-            if (!empty($clientData->milkrun)) {
-                var_dump('milkrun not empty');
-                $milkrunData = $clientData->milkrun;
-            }
-            else {
+            $milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
+            /** @var MilkrunInstanceRepository $milkrunInstanceRepo */
+            $currentMilkrun = $milkrunInstanceRepo->findCurrentMilkrun($profile);
+            if (!$currentMilkrun) {
                 var_dump('milkrun empty');
                 $milkruns = $this->entityManager->getRepository('Netrunners\Entity\Milkrun')->findAll();
                 $amount = count($milkruns) - 1;
                 $targetMilkrun = $milkruns[mt_rand(0, $amount)];
                 /** @var Milkrun $targetMilkrun */
                 var_dump('milkrun template found');
-                $milkrunId = $targetMilkrun->getId();
                 $milkrunLevel = 1;
                 $timer = $targetMilkrun->getTimer();
                 $expires = new \DateTime();
                 $expires->add(new \DateInterval('PT' . $timer . 'S'));
-                $started = new \DateTime();
-                $credits = $milkrunLevel * 50;
                 $sourceFaction = $this->getRandomFaction();
                 /** @var Faction $sourceFaction */
                 $targetFaction = $this->getRandomFaction();
@@ -87,29 +84,21 @@ class MilkrunService extends BaseService
                 $mInstance->setProfile($profile);
                 $mInstance->setSourceFaction($sourceFaction);
                 $mInstance->setTargetFaction($targetFaction);
+                $mInstance->setMilkrun($targetMilkrun);
                 $this->entityManager->persist($mInstance);
                 $this->entityManager->flush($mInstance);
                 var_dump('flushed milkrun instance');
-                $milkrunData = [
-                    'id' => $mInstance->getId(),
-                    'milkrun' => $milkrunId,
-                    'level' => $milkrunLevel,
-                    'currentLevel' => 1,
-                    'expires' => $expires,
-                    'started' => $started,
-                    'sourceFaction' => $sourceFaction->getId(),
-                    'targetFaction' => $targetFaction->getId(),
-                    'credits' => $credits,
-                    'keyX' => false,
-                    'keyY' => false,
-                    'mapData' => false
-                ];
-                $milkrunData = $this->generateMapData($milkrunData, $milkrunLevel);
-                var_dump('generated map data');
-                $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
-                var_dump('set milkrundata on ws');
+                $milkrunData = $this->prepareMilkrunData($resourceId, $mInstance);
             }
-            var_dump('preparing view');
+            else {
+                /** @var MilkrunInstance $currentMilkrun */
+                if (!empty($clientData->milkrun)) {
+                    $milkrunData = $clientData->milkrun;
+                }
+                else {
+                    $milkrunData = $this->prepareMilkrunData($resourceId, $currentMilkrun);
+                }
+            }
             $view = new ViewModel();
             $view->setTemplate('netrunners/milkrun/game.phtml');
             $view->setVariable('mapData', $milkrunData['mapData']);
@@ -119,8 +108,28 @@ class MilkrunService extends BaseService
                 'level' => (int)$milkrunData['currentLevel']
             ];
         }
-        var_dump('end');
         return $response;
+    }
+
+    private function prepareMilkrunData($resourceId, MilkrunInstance $currentMilkrun)
+    {
+        $milkrunData = [
+            'id' => $currentMilkrun->getId(),
+            'milkrun' => $currentMilkrun->getMilkrun()->getId(),
+            'level' => $currentMilkrun->getLevel(),
+            'currentLevel' => 1,
+            'expires' => $currentMilkrun->getExpires(),
+            'started' => $currentMilkrun->getAdded(),
+            'sourceFaction' => $currentMilkrun->getSourceFaction()->getId(),
+            'targetFaction' => $currentMilkrun->getTargetFaction()->getId(),
+            'credits' => 50,
+            'keyX' => false,
+            'keyY' => false,
+            'mapData' => false
+        ];
+        $milkrunData = $this->generateMapData($milkrunData);
+        $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
+        return true;
     }
 
     /**
@@ -139,13 +148,12 @@ class MilkrunService extends BaseService
 
     /**
      * @param $milkrunData
-     * @param $level
      * @return mixed
      */
-    public function generateMapData($milkrunData, $level)
+    public function generateMapData($milkrunData)
     {
         $levelAdd = 4;
-        $realSize = $levelAdd + $level;
+        $realSize = $levelAdd + $milkrunData['currentLevel'];
         $xKey = 0;
         $yKey = 0;
         $xTarget = 1;
@@ -265,6 +273,8 @@ class MilkrunService extends BaseService
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
         // stop if the player is not on a milkrun
         if (empty($clientData->milkrun)) return true;
         // init response
@@ -305,6 +315,21 @@ class MilkrunService extends BaseService
                             $subType = mt_rand(1, 2);
                         }
                     }
+                    break;
+                case self::TILE_TYPE_SPECIAL:
+                    switch ($mapTile['subtype']) {
+                        default:
+                            $profile->setCredits($profile->getCredits() + mt_rand(1, $milkrunData['currentLevel']));
+                            $newType = self::TILE_TYPE_EMPTY;
+                            $subType = NULL;
+                            break;
+                        case self::TILE_SUBTYPE_SPECIAL_SNIPPETS:
+                            $profile->setSnippets($profile->getSnippets() + mt_rand(1, $milkrunData['currentLevel']));
+                            $newType = self::TILE_TYPE_EMPTY;
+                            $subType = NULL;
+                            break;
+                    }
+                    $this->entityManager->flush($profile);
                     break;
             }
             $mapData['map'][$targetY][$targetX]['type'] = $newType;
