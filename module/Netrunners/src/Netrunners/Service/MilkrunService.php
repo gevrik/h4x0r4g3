@@ -111,6 +111,11 @@ class MilkrunService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @param MilkrunInstance $currentMilkrun
+     * @return bool
+     */
     private function prepareMilkrunData($resourceId, MilkrunInstance $currentMilkrun)
     {
         $milkrunData = [
@@ -129,7 +134,7 @@ class MilkrunService extends BaseService
         ];
         $milkrunData = $this->generateMapData($milkrunData);
         $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
-        return true;
+        return $milkrunData;
     }
 
     /**
@@ -330,6 +335,24 @@ class MilkrunService extends BaseService
                             break;
                     }
                     $this->entityManager->flush($profile);
+                    break;
+                case self::TILE_TYPE_KEY:
+                    $newType = self::TILE_TYPE_EMPTY;
+                    $subType = NULL;
+                    $mapData['targetUnlocked'] = true;
+                    break;
+                case self::TILE_TYPE_TARGET:
+                    if ($mapData['targetUnlocked']) {
+                        if ($milkrunData['currentLevel'] == $milkrunData['level']) {
+                            /* milkrun completed */
+
+                        }
+                        else {
+                            /* generate next level */
+                            $milkrunData['currentLevel'] += 1;
+
+                        }
+                    }
                     break;
             }
             $mapData['map'][$targetY][$targetX]['type'] = $newType;

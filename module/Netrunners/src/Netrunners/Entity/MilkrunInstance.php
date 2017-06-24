@@ -49,13 +49,19 @@ class MilkrunInstance
     protected $level;
 
     /**
-     * @ORM\Column(type="integer", options={"default":20})
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $expired;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":20}, nullable=true)
      * @var int
      */
     protected $health;
 
     /**
-     * @ORM\Column(type="integer", options={"default":1})
+     * @ORM\Column(type="integer", options={"default":1}, nullable=true)
      * @var int
      */
     protected $attack;
@@ -176,6 +182,24 @@ class MilkrunInstance
     public function setLevel($level)
     {
         $this->level = $level;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getExpired()
+    {
+        return $this->expired;
+    }
+
+    /**
+     * @param int $expired
+     * @return MilkrunInstance
+     */
+    public function setExpired($expired)
+    {
+        $this->expired = $expired;
         return $this;
     }
 

@@ -15,11 +15,13 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\MilkrunInstanceRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NotificationRepository;
 use Ratchet\ConnectionInterface;
@@ -72,6 +74,7 @@ class LoopService extends BaseService
     public function loopJobs()
     {
         $now = new \DateTime();
+        /* first we deal with all the coding jobs */
         foreach ($this->jobs as $jobId => $jobData) {
             // if the job is finished now
             if ($jobData['completionDate'] <= $now) {
@@ -79,18 +82,14 @@ class LoopService extends BaseService
                 $result = $this->resolveCoding($jobId);
                 if ($result) {
                     $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
-                    $mail = new Notification();
-                    $mail->setProfile($profile);
-                    $mail->setSentDateTime($now);
-                    $mail->setSubject($result['message']);
-                    $mail->setSeverity($result['severity']);
-                    $this->entityManager->persist($mail);
-                    $this->entityManager->flush($mail);
+                    /** @var Profile $profile */
+                    $this->storeNotification($profile, $result['message'], $result['severity']);
                 }
                 // remove job from server
                 unset($this->jobs[$jobId]);
             }
         }
+        // now we iterate connected sockets for actions
         $ws = $this->getWebsocketServer();
         foreach ($ws->getClients() as $wsClient) {
             /** @var ConnectionInterface $wsClient */
@@ -159,6 +158,53 @@ class LoopService extends BaseService
                 $wsClient->send(json_encode($response));
             }
             $ws->setClientData($resourceId, 'action', []);
+        }
+        /* now we check for milkruns that should expire */
+        $milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
+        /** @var MilkrunInstanceRepository $milkrunInstanceRepo */
+        $expiringMilkruns = $milkrunInstanceRepo->findForExpiredLoop();
+        foreach ($expiringMilkruns as $expiringMilkrun) {
+            /** @var MilkrunInstance $expiringMilkrun */
+            $expiringMilkrun->setExpired(true);
+            $this->entityManager->flush($expiringMilkrun);
+            $targetClient = NULL;
+            $targetClientData = NULL;
+            foreach ($ws->getClients() as $wsClient) {
+                /** @noinspection PhpUndefinedFieldInspection */
+                $clientData = $ws->getClientData($wsClient->resourceId);
+                if (empty($clientData['milkrun'])) continue;
+                if ($clientData['milkrun']['id'] == $expiringMilkrun->getId()) {
+                    $targetClient = $wsClient;
+                    $targetClientData = $clientData;
+                    break;
+                }
+            }
+            if ($targetClient && $targetClientData) {
+                /* send message */
+                $message = sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Your current milkrun has expired before you could complete it</pre>');
+                $response = [
+                    'command' => 'stopmilkrun',
+                    'hash' => $targetClientData->hash,
+                    'content' => 'default',
+                    'silent' => true
+                ];
+                $targetClient->send(json_encode($response));
+                $response = [
+                    'command' => 'showmessageprepend',
+                    'hash' => $targetClientData->hash,
+                    'content' => $message,
+                    'prompt' => $ws->getUtilityService()->showPrompt($targetClientData)
+                ];
+                $targetClient->send(json_encode($response));
+            }
+            else {
+                /* store notification */
+                $this->storeNotification(
+                    $expiringMilkrun->getProfile(),
+                    'Your current milkrun has expired before you could complete it',
+                    'warning'
+                );
+            }
         }
         return true;
     }

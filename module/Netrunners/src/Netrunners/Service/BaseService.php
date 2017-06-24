@@ -19,8 +19,11 @@ use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\KnownNode;
+use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
@@ -609,6 +612,50 @@ class BaseService
         }
         // if result is false, check if the node type matches an entry of the valid-node-types array
         return (!$result) ? in_array($node->getType(), $validNodeTypes) : $result;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param string $subject
+     * @param string $severity
+     * @return bool
+     */
+    protected function storeNotification(Profile $profile, $subject = 'INVALID', $severity = 'danger')
+    {
+        $notification = new Notification();
+        $notification->setProfile($profile);
+        $notification->setSentDateTime(new \DateTime());
+        $notification->setSubject($subject);
+        $notification->setSeverity($severity);
+        $this->entityManager->persist($notification);
+        $this->entityManager->flush($notification);
+        return true;
+    }
+
+    protected function createProfileFactionRating(
+        Profile $profile,
+        MilkrunInstance $milkrunInstance = NULL,
+        Profile $rater = NULL,
+        $source = 0,
+        $sourceRating = 0,
+        $targetRating = 0,
+        $targetFaction = NULL,
+        $sourceFaction = NULL
+    )
+    {
+        $pfr = new ProfileFactionRating();
+        $pfr->setProfile($profile);
+        $pfr->setAdded(new \DateTime());
+        $pfr->setMilkrunInstance($milkrunInstance);
+        $pfr->setRater($rater);
+        $pfr->setSource($source);
+        $pfr->setSourceRating($sourceRating);
+        $pfr->setTargetRating($targetRating);
+        $pfr->setSourceFaction($sourceFaction);
+        $pfr->setTargetFaction($targetFaction);
+        $this->entityManager->persist($pfr);
+        $this->entityManager->flush($pfr);
+        return true;
     }
 
     protected function canStartActionInNodeType()

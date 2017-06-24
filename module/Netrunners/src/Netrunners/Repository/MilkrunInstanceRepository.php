@@ -32,4 +32,16 @@ class MilkrunInstanceRepository extends EntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    /**
+     * Returns the currently active milkruns that should have expired.
+     * @return mixed
+     */
+    public function findForExpiredLoop()
+    {
+        $qb = $this->createQueryBuilder('mri');
+        $qb->where('mri.expires < :now AND mri.expired = 0');
+        $qb->setParameter('now', new \DateTime());
+        return $qb->getQuery()->getResult();
+    }
+
 }

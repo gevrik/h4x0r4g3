@@ -69,6 +69,17 @@ class ProfileFactionRating
     protected $rater;
 
     /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Faction")
+     */
+    protected $sourceFaction;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Faction")
+     */
+    protected $targetFaction;
+
+
+    /**
      * @return int
      */
     public function getId()
@@ -209,6 +220,42 @@ class ProfileFactionRating
     public function setRater($rater)
     {
         $this->rater = $rater;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getSourceFaction()
+    {
+        return $this->sourceFaction;
+    }
+
+    /**
+     * @param mixed $sourceFaction
+     * @return ProfileFactionRating
+     */
+    public function setSourceFaction($sourceFaction)
+    {
+        $this->sourceFaction = $sourceFaction;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getTargetFaction()
+    {
+        return $this->targetFaction;
+    }
+
+    /**
+     * @param mixed $targetFaction
+     * @return ProfileFactionRating
+     */
+    public function setTargetFaction($targetFaction)
+    {
+        $this->targetFaction = $targetFaction;
         return $this;
     }
 

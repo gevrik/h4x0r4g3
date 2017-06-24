@@ -228,6 +228,10 @@
                     resetConsoleOptionsMail();
                     showprompt();
                     break;
+                case 'stopmilkrun':
+                    playSoundById(2);
+                    $('#milkrun-container').html('');
+                    break;
                 case 'showpanel':
                     $('#panel-container').html('').append(data.content);
                     $('.draggable').draggable({
