@@ -232,6 +232,12 @@
                     playSoundById(2);
                     $('#milkrun-container').html('');
                     break;
+                case 'completemilkrun':
+                    playSoundById(1);
+                    $('#milkrun-container').html('');
+                    md.append(data.content);
+                    showprompt();
+                    break;
                 case 'showpanel':
                     $('#panel-container').html('').append(data.content);
                     $('.draggable').draggable({
@@ -252,6 +258,9 @@
                     var milkrunMapWidth = $('#milkrun-panel').innerWidth();
                     $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
                     $('.milkrun-tile').attr('width', milkrunMapWidth/(data.level+4));
+                    $('#milkrun-eeg').html(data.eeg);
+                    $('#milkrun-attack').html(data.attack);
+                    $('#milkrun-armor').html(data.armor);
                     $('.milkrun-clickable').on('click', function(){
                         var clickedX = $(this).data('x');
                         var clickedY = $(this).data('y');

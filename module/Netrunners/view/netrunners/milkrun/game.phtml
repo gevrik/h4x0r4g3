@@ -1,7 +1,12 @@
 <div id="milkrun-panel" class="panel panel-default draggable milkrun-panel">
     <div class="panel-heading">
         <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h3 class="panel-title"><?php echo $this->translate(sprintf("milkrun map - %s", $this->mapData['level'])); ?></h3>
+        <h3 class="panel-title">
+            <?php echo $this->translate(sprintf("milkrun map - %s", $this->mapData['level'])); ?>
+            <img id="milkrun-ui-eeg" src="<?php echo $this->imageUrlHelper() . '/img/milkrun_ui_eeg.png'; ?>" alt="eeg" />&nbsp;<span id="milkrun-eeg"></span>
+            <img id="milkrun-ui-attack" src="<?php echo $this->imageUrlHelper() . '/img/milkrun_ui_attack.png'; ?>" alt="attack" />&nbsp;<span id="milkrun-attack"></span>
+            <img id="milkrun-ui-armor" src="<?php echo $this->imageUrlHelper() . '/img/milkrun_ui_armor.png'; ?>" alt="armor" />&nbsp;<span id="milkrun-armor"></span>
+        </h3>
     </div>
     <div class="panel-body" style="padding: 0;">
         <div id="milkrun-game-container" class="milkrun-game-container">

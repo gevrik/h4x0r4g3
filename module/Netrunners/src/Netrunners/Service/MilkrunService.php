@@ -15,6 +15,7 @@ use Netrunners\Entity\Milkrun;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Repository\FactionRepository;
 use Netrunners\Repository\MilkrunInstanceRepository;
 use TmoAuth\Entity\User;
@@ -85,6 +86,9 @@ class MilkrunService extends BaseService
                 $mInstance->setSourceFaction($sourceFaction);
                 $mInstance->setTargetFaction($targetFaction);
                 $mInstance->setMilkrun($targetMilkrun);
+                $mInstance->setHealth(20);
+                $mInstance->setAttack(1);
+                $mInstance->setArmor(0);
                 $this->entityManager->persist($mInstance);
                 $this->entityManager->flush($mInstance);
                 var_dump('flushed milkrun instance');
@@ -105,7 +109,10 @@ class MilkrunService extends BaseService
             $response = [
                 'command' => 'startmilkrun',
                 'content' => $this->viewRenderer->render($view),
-                'level' => (int)$milkrunData['currentLevel']
+                'level' => (int)$milkrunData['currentLevel'],
+                'eeg' => (int)$milkrunData['eeg'],
+                'attack' => (int)$milkrunData['attack'],
+                'armor' => (int)$milkrunData['armor']
             ];
         }
         return $response;
@@ -114,17 +121,21 @@ class MilkrunService extends BaseService
     /**
      * @param $resourceId
      * @param MilkrunInstance $currentMilkrun
-     * @return bool
+     * @param int $currentLevel
+     * @return array|mixed
      */
-    private function prepareMilkrunData($resourceId, MilkrunInstance $currentMilkrun)
+    private function prepareMilkrunData($resourceId, MilkrunInstance $currentMilkrun, $currentLevel = 1)
     {
         $milkrunData = [
             'id' => $currentMilkrun->getId(),
             'milkrun' => $currentMilkrun->getMilkrun()->getId(),
             'level' => $currentMilkrun->getLevel(),
-            'currentLevel' => 1,
+            'currentLevel' => $currentLevel,
             'expires' => $currentMilkrun->getExpires(),
             'started' => $currentMilkrun->getAdded(),
+            'eeg' => $currentMilkrun->getHealth(),
+            'attack' => $currentMilkrun->getAttack(),
+            'armor' => $currentMilkrun->getArmor(),
             'sourceFaction' => $currentMilkrun->getSourceFaction()->getId(),
             'targetFaction' => $currentMilkrun->getTargetFaction()->getId(),
             'credits' => 50,
@@ -271,6 +282,11 @@ class MilkrunService extends BaseService
         return $result;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
     public function clickTile($resourceId, $contentArray)
     {
         var_dump('click triggered on server');
@@ -296,6 +312,10 @@ class MilkrunService extends BaseService
             $mapData = $milkrunData['mapData'];
             $mapTile = $mapData['map'][$targetY][$targetX];
             if (!$mapTile) return true;
+            $newLevel = false;
+            $complete = false;
+            $newType = NULL;
+            $subType = NULL;
             switch ($mapTile['type']) {
                 default:
                     return true;
@@ -345,29 +365,59 @@ class MilkrunService extends BaseService
                     if ($mapData['targetUnlocked']) {
                         if ($milkrunData['currentLevel'] == $milkrunData['level']) {
                             /* milkrun completed */
-
+                            $complete = true;
                         }
                         else {
                             /* generate next level */
                             $milkrunData['currentLevel'] += 1;
-
+                            $milkrunData['mapData'] = $this->generateMapData($milkrunData);
+                            $newLevel = true;
                         }
                     }
                     break;
             }
-            $mapData['map'][$targetY][$targetX]['type'] = $newType;
-            $mapData['map'][$targetY][$targetX]['subtype'] = $subType;
-            $mapData = $this->changeSurroundingTiles($mapData, $targetX, $targetY);
-            $milkrunData['mapData'] = $mapData;
-            $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
-            $view = new ViewModel();
-            $view->setTemplate('netrunners/milkrun/partial-map.phtml');
-            $view->setVariable('mapData', $mapData);
-            $response = [
-                'command' => 'updatedivhtml',
-                'content' => $this->viewRenderer->render($view),
-                'level' => $milkrunData['currentLevel']
-            ];
+            if ($complete) {
+                var_dump('completed milkrun!');
+                $mri = $this->entityManager->find('Netrunners\Entity\MilkrunInstance', $milkrunData['id']);
+                /** @var MilkrunInstance $mri */
+                $mri->setCompleted(new \DateTime());
+                $this->entityManager->flush($mri);
+                $profile->setCredits($profile->getCredits() + ($mri->getMilkrun()->getCredits() * $mri->getLevel()));
+                $this->entityManager->flush($profile);
+                $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', []);
+                $this->createProfileFactionRating(
+                    $profile,
+                    $mri,
+                    NULL,
+                    ProfileFactionRating::SOURCE_ID_MILKRUN,
+                    $milkrunData['level'],
+                    0,
+                    $mri->getSourceFaction(),
+                    $mri->getTargetFaction()
+                );
+                $response = [
+                    'command' => 'completemilkrun',
+                    'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have completed your current milkrun</pre>')
+                ];
+                var_dump('built completed response!');
+            }
+            else {
+                if (!$newLevel) {
+                    $mapData['map'][$targetY][$targetX]['type'] = $newType;
+                    $mapData['map'][$targetY][$targetX]['subtype'] = $subType;
+                    $mapData = $this->changeSurroundingTiles($mapData, $targetX, $targetY);
+                    $milkrunData['mapData'] = $mapData;
+                }
+                $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
+                $view = new ViewModel();
+                $view->setTemplate('netrunners/milkrun/partial-map.phtml');
+                $view->setVariable('mapData', $milkrunData['mapData']);
+                $response = [
+                    'command' => 'updatedivhtml',
+                    'content' => $this->viewRenderer->render($view),
+                    'level' => $milkrunData['currentLevel']
+                ];
+            }
         }
         return $response;
     }

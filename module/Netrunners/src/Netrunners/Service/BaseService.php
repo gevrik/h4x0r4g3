@@ -639,10 +639,11 @@ class BaseService
         $source = 0,
         $sourceRating = 0,
         $targetRating = 0,
-        $targetFaction = NULL,
-        $sourceFaction = NULL
+        $sourceFaction = NULL,
+        $targetFaction = NULL
     )
     {
+        var_dump('creating pfr!');
         $pfr = new ProfileFactionRating();
         $pfr->setProfile($profile);
         $pfr->setAdded(new \DateTime());
@@ -655,6 +656,7 @@ class BaseService
         $pfr->setTargetFaction($targetFaction);
         $this->entityManager->persist($pfr);
         $this->entityManager->flush($pfr);
+        var_dump('completed adding pfr!');
         return true;
     }
 

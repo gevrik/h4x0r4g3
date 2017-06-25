@@ -314,7 +314,7 @@ class MilkrunInstance
     }
 
     /**
-     * @return mixed
+     * @return mixed|Milkrun
      */
     public function getMilkrun()
     {

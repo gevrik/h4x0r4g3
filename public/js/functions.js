@@ -57,7 +57,8 @@ function initSound() {
         {src: "gotsnippets.ogg", id: 1},
         {src: "accessdenied.ogg", id: 2},
         {src: "buttonpress.ogg", id: 3},
-        {src: "logincomplete.ogg", id: 4}
+        {src: "logincomplete.ogg", id: 4},
+        {src: "meleeattack.ogg", id: 5}
     ];
     createjs.Sound.alternateExtensions = ["mp3"];
     createjs.Sound.addEventListener("fileload", createjs.proxy(soundLoaded, this));
