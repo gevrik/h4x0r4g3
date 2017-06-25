@@ -248,7 +248,7 @@ class ProfileService extends BaseService
                 $file->getIntegrity(),
                 $file->getLevel(),
                 $file->getSize(),
-                ($file->getRunning()) ? 'Y' : 'N',
+                ($file->getRunning()) ? '<span class="text-success">*</span>' : ' ',
                 $file->getSlots(),
                 ($file->getSystem()) ? $file->getSystem()->getName() : '',
                 ($file->getNode()) ? $file->getNode()->getName() : ''
