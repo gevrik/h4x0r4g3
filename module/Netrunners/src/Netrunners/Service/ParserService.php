@@ -202,6 +202,9 @@ class ParserService
             case 'execute':
                 $response = $this->fileService->executeFile($resourceId, $contentArray);
                 break;
+            case 'factionratings':
+                $response = $this->profileService->showFactionRatings($resourceId);
+                break;
             case 'filemods':
                 $response = $this->fileService->showFileMods();
                 break;

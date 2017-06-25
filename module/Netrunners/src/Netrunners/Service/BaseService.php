@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
+use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
@@ -32,6 +33,7 @@ use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
 use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
@@ -658,6 +660,19 @@ class BaseService
         $this->entityManager->flush($pfr);
         var_dump('completed adding pfr!');
         return true;
+    }
+
+    /**
+     * Returns the total rating for the given profile and faction.
+     * @param Profile $profile
+     * @param Faction $faction
+     * @return mixed
+     */
+    protected function getProfileFactionRating(Profile $profile, Faction $faction)
+    {
+        $profileFactionRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFactionRating');
+        /** @var ProfileFactionRatingRepository $profileFactionRatingRepo */
+        return $profileFactionRatingRepo->getProfileFactionRating($profile, $faction);
     }
 
     protected function canStartActionInNodeType()

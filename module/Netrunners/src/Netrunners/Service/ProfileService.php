@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
@@ -354,6 +355,48 @@ class ProfileService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have raised [%s] to %s by spending %s skillpoints</pre>', $targetSkill->getName(), $skillRatingObject->getRating(), $skillPointAmount)
             ];
+        }
+        return $response;
+    }
+
+    /**
+     * Shows the profile's faction ratings.
+     * @param $resourceId
+     * @return array|bool
+     */
+    public function showFactionRatings($resourceId)
+    {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        /** @var User $user */
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $response = $this->isActionBlocked($resourceId, true);
+        if (!$response) {
+            $factions = $this->entityManager->getRepository('Netrunners\Entity\Faction')->findBy([
+                'joinable' => true,
+                'playerRun' => false
+            ]);
+            $returnMessage = array();
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-11s</pre>',
+                'faction',
+                'rating'
+            );
+            foreach ($factions as $faction) {
+                /** @var Faction $faction */
+                var_dump('found faction');
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-11s</pre>',
+                    $faction->getName(),
+                    $this->getProfileFactionRating($profile, $faction)
+                );
+            }
+            $response = array(
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            );
         }
         return $response;
     }
