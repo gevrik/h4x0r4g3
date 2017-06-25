@@ -28,6 +28,11 @@ class ChatService extends BaseService
     const CHANNEL_SAY = 'SAY';
 
     /**
+     * @const CHANNEL_NEWBIE
+     */
+    const CHANNEL_NEWBIE = 'NEWBIE';
+
+    /**
      * @param $resourceId
      * @param $contentArray
      * @return array|bool

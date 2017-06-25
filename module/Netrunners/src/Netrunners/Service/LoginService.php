@@ -239,8 +239,20 @@ class LoginService extends BaseService
             $response = array(
                 'command' => 'createuserdone',
                 'hash' => $hash,
-                'prompt' => $ws->getUtilityService()->showPrompt($clientData)
+                'prompt' => $ws->getUtilityService()->showPrompt($ws->getClientData($resourceId))
             );
+            // inform other clients
+            $informer = array(
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-info">a new user [%s] has connected</pre>',
+                    $user->getUsername()
+                )
+            );
+            foreach ($this->getWebsocketServer()->getClients() as $wsClientId => $wsClient) {
+                if ($wsClient->resourceId == $resourceId) continue;
+                $wsClient->send(json_encode($informer));
+            }
         }
         return [$disconnect, $response];
     }

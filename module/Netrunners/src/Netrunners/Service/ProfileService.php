@@ -65,11 +65,11 @@ class ProfileService extends BaseService
 
     const SCORE_SNIPPETS_STRING = 'snippets';
 
-    const DEFAULT_STARTING_CREDITS = 1000;
+    const DEFAULT_STARTING_CREDITS = 750;
 
-    const DEFAULT_STARTING_SNIPPETS = 1000;
+    const DEFAULT_STARTING_SNIPPETS = 250;
 
-    const DEFAULT_SKILL_POINTS = 50;
+    const DEFAULT_SKILL_POINTS = 20;
 
 
     /**
@@ -386,7 +386,6 @@ class ProfileService extends BaseService
             );
             foreach ($factions as $faction) {
                 /** @var Faction $faction */
-                var_dump('found faction');
                 $returnMessage[] = sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-11s</pre>',
                     $faction->getName(),

@@ -41,7 +41,6 @@ class MilkrunService extends BaseService
      */
     public function requestMilkrun($resourceId)
     {
-        var_dump('start');
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
@@ -61,12 +60,10 @@ class MilkrunService extends BaseService
             /** @var MilkrunInstanceRepository $milkrunInstanceRepo */
             $currentMilkrun = $milkrunInstanceRepo->findCurrentMilkrun($profile);
             if (!$currentMilkrun) {
-                var_dump('milkrun empty');
                 $milkruns = $this->entityManager->getRepository('Netrunners\Entity\Milkrun')->findAll();
                 $amount = count($milkruns) - 1;
                 $targetMilkrun = $milkruns[mt_rand(0, $amount)];
                 /** @var Milkrun $targetMilkrun */
-                var_dump('milkrun template found');
                 $milkrunLevel = 1;
                 $timer = $targetMilkrun->getTimer();
                 $expires = new \DateTime();
@@ -78,7 +75,6 @@ class MilkrunService extends BaseService
                 while ($sourceFaction === $targetFaction) {
                     $sourceFaction = $this->getRandomFaction();
                 }
-                var_dump('got factions');
                 $mInstance = new MilkrunInstance();
                 $mInstance->setAdded(new \DateTime());
                 $mInstance->setExpires($expires);
@@ -92,7 +88,6 @@ class MilkrunService extends BaseService
                 $mInstance->setArmor(0);
                 $this->entityManager->persist($mInstance);
                 $this->entityManager->flush($mInstance);
-                var_dump('flushed milkrun instance');
                 $milkrunData = $this->prepareMilkrunData($resourceId, $mInstance);
             }
             else {
@@ -175,12 +170,10 @@ class MilkrunService extends BaseService
         $yKey = 0;
         $xTarget = 1;
         $yTarget = 1;
-        var_dump('realsize:' . $realSize);
         while ($xTarget >= 1 && $yTarget >= 1 ) {
             $xTarget = mt_rand(0,$realSize-1);
             $yTarget = mt_rand(0,$realSize-1);
         }
-        var_dump('got target coords x: ' . $xTarget . ' y: ' . $yTarget);
         while (
             ($xKey < 1 || $yKey < 1) ||
             ($xKey == $xTarget && $yKey == $yTarget) ||
@@ -196,7 +189,6 @@ class MilkrunService extends BaseService
             $xKey = mt_rand(0,$realSize-1);
             $yKey = mt_rand(0,$realSize-1);
         }
-        var_dump('got key coords x: ' . $xKey . ' y: ' . $yKey);
         $milkrunData['keyX'] = $xKey;
         $milkrunData['keyY'] = $yKey;
         $mapData = [
@@ -290,7 +282,6 @@ class MilkrunService extends BaseService
      */
     public function clickTile($resourceId, $contentArray)
     {
-        var_dump('click triggered on server');
         // get user
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -307,7 +298,6 @@ class MilkrunService extends BaseService
             // get y click
             $targetY = $this->getNextParameter($contentArray, false);
             if ($targetX < 0 || $targetY < 0) return true;
-            var_dump('got x: ' . $targetX . ' y: ' . $targetY);
             // get map tile
             $milkrunData = $clientData->milkrun;
             $mapData = $milkrunData['mapData'];
@@ -335,11 +325,9 @@ class MilkrunService extends BaseService
                     $milkrunIceArmor = $mapTile['iceArmor'];
                     $milkrunIceSpecials = ($milkrunIce->getSpecials()) ? explode(',', $milkrunIce->getSpecials()): false;
                     // player hurts ice
-                    var_dump('pa: ' . $milkrunData['attack'] . ' peeg: ' . $milkrunData['eeg'] . ' ieeg: ' . $milkrunIceEeg . ' ia: ' . $milkrunIceAttack);
                     $newMilkrunIceEeg = (int)$milkrunIceEeg - (int)$milkrunData['attack'];
                     if ($newMilkrunIceEeg < 1) {
                         // player has killed ice
-                        var_dump('player has killed ice: ' . $newMilkrunIceEeg);
                         $newType = self::TILE_TYPE_EMPTY;
                     }
                     else {
@@ -353,12 +341,10 @@ class MilkrunService extends BaseService
                     $newPlayerEeg = (int)$milkrunData['eeg'] - (int)$milkrunIceAttack;
                     if ($newPlayerEeg < 1) {
                         // ice has flatlined player - milkrun has failed
-                        var_dump('player has failed milkrun: ' . $newPlayerEeg);
                         $failed = true;
                     }
                     else {
                         // ice has hurt player, but nothing else
-                        var_dump('player was hurt: ' . $newPlayerEeg);
                         $milkrunData['eeg'] = $newPlayerEeg;
                         $clientMessage = [
                             'command' => 'updatedivhtml',
@@ -446,7 +432,6 @@ class MilkrunService extends BaseService
                     break;
             }
             if ($complete) {
-                var_dump('completed milkrun!');
                 $mri = $this->entityManager->find('Netrunners\Entity\MilkrunInstance', $milkrunData['id']);
                 /** @var MilkrunInstance $mri */
                 $mri->setCompleted(new \DateTime());
@@ -469,10 +454,8 @@ class MilkrunService extends BaseService
                     'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have completed your current milkrun</pre>'),
                     'playsound' => $playSound
                 ];
-                var_dump('built completed response!');
             }
             else if ($failed) {
-                var_dump('failed milkrun!');
                 $mri = $this->entityManager->find('Netrunners\Entity\MilkrunInstance', $milkrunData['id']);
                 /** @var MilkrunInstance $mri */
                 $mri->setExpired(true);
@@ -493,7 +476,6 @@ class MilkrunService extends BaseService
                     'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You have failed your current milkrun</pre>'),
                     'playsound' => $playSound
                 ];
-                var_dump('built completed fail response!');
             }
             else {
                 if (!$newLevel) {

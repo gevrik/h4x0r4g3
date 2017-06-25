@@ -389,7 +389,6 @@ class BaseService
         $parameter = NULL;
         $nextParameter = (!$implode) ? array_shift($contentArray) : implode(' ', $contentArray);
         if ($nextParameter !== NULL) {
-            var_dump('got next param: ' . $nextParameter);
             trim($nextParameter);
             if ($makeSafe) $nextParameter = htmLawed($nextParameter, $safeOptions);
             if ($castToInt) $nextParameter = (int)$nextParameter;
@@ -645,7 +644,6 @@ class BaseService
         $targetFaction = NULL
     )
     {
-        var_dump('creating pfr!');
         $pfr = new ProfileFactionRating();
         $pfr->setProfile($profile);
         $pfr->setAdded(new \DateTime());
@@ -658,7 +656,6 @@ class BaseService
         $pfr->setTargetFaction($targetFaction);
         $this->entityManager->persist($pfr);
         $this->entityManager->flush($pfr);
-        var_dump('completed adding pfr!');
         return true;
     }
 

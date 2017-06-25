@@ -514,7 +514,6 @@ class FileService extends BaseService
         /** @var SystemRepository $systemRepo */
         $response = false;
         if (!$this->canExecuteInNodeType($file, $node)) {
-            var_dump('here');
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>', $file->getName())
