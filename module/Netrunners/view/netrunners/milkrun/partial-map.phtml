@@ -28,8 +28,8 @@
             <img class="milkrun-tile milkrun-clickable"
                  data-x="<?php echo $x; ?>"
                  data-y="<?php echo $y; ?>"
-                 src="<?php echo $this->imageUrlHelper() . '/img/node_ice_1.png'; ?>"
-                 title="ice node" />
+                 src="<?php echo $this->imageUrlHelper() . '/img/node_ice_' . $tileData['subtype'] . '.png'; ?>"
+                 title="ice node - <?php echo $tileData['iceEeg']; ?> - <?php echo $tileData['iceAttack']; ?> - <?php echo $tileData['iceArmor']; ?>" />
         <?php endif; ?>
         <?php if ($tileData['type'] == \Netrunners\Service\MilkrunService::TILE_TYPE_SPECIAL) : ?>
             <?php if ($tileData['subtype'] == \Netrunners\Service\MilkrunService::TILE_SUBTYPE_SPECIAL_CREDITS) : ?>

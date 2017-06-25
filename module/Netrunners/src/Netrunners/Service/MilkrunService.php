@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\Milkrun;
+use Netrunners\Entity\MilkrunIce;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
@@ -314,12 +315,67 @@ class MilkrunService extends BaseService
             if (!$mapTile) return true;
             $newLevel = false;
             $complete = false;
+            $failed = false;
+            $playSound = false;
             $newType = NULL;
             $subType = NULL;
+            $iceEeg = NULL;
+            $iceAttack = NULL;
+            $iceArmor = NULL;
             switch ($mapTile['type']) {
                 default:
                     return true;
+                case self::TILE_TYPE_ICE:
+                    /* player is attacking ICE */
+                    $playSound = 5;
+                    $milkrunIce = $this->entityManager->find('Netrunners\Entity\MilkrunIce', $mapTile['subtype']);
+                    /** @var MilkrunIce $milkrunIce */
+                    $milkrunIceEeg = $mapTile['iceEeg'];
+                    $milkrunIceAttack = $mapTile['iceAttack'];
+                    $milkrunIceArmor = $mapTile['iceArmor'];
+                    $milkrunIceSpecials = ($milkrunIce->getSpecials()) ? explode(',', $milkrunIce->getSpecials()): false;
+                    // player hurts ice
+                    var_dump('pa: ' . $milkrunData['attack'] . ' peeg: ' . $milkrunData['eeg'] . ' ieeg: ' . $milkrunIceEeg . ' ia: ' . $milkrunIceAttack);
+                    $newMilkrunIceEeg = (int)$milkrunIceEeg - (int)$milkrunData['attack'];
+                    if ($newMilkrunIceEeg < 1) {
+                        // player has killed ice
+                        var_dump('player has killed ice: ' . $newMilkrunIceEeg);
+                        $newType = self::TILE_TYPE_EMPTY;
+                    }
+                    else {
+                        $newType = self::TILE_TYPE_ICE;
+                        $subType = $mapTile['subtype'];
+                        $iceEeg = $newMilkrunIceEeg;
+                        $iceAttack = $milkrunIceAttack;
+                        $iceArmor = $milkrunIceArmor;
+                    }
+                    // ice strikes back
+                    $newPlayerEeg = (int)$milkrunData['eeg'] - (int)$milkrunIceAttack;
+                    if ($newPlayerEeg < 1) {
+                        // ice has flatlined player - milkrun has failed
+                        var_dump('player has failed milkrun: ' . $newPlayerEeg);
+                        $failed = true;
+                    }
+                    else {
+                        // ice has hurt player, but nothing else
+                        var_dump('player was hurt: ' . $newPlayerEeg);
+                        $milkrunData['eeg'] = $newPlayerEeg;
+                        $clientMessage = [
+                            'command' => 'updatedivhtml',
+                            'content' => (string)$newPlayerEeg,
+                            'element' => '#milkrun-eeg'
+                        ];
+                        foreach ($this->getWebsocketServer()->getClients() as $wsClientId => $wsClient) {
+                            if ($wsClient->resourceId == $resourceId) {
+                                $wsClient->send(json_encode($clientMessage));
+                                break;
+                            }
+                        }
+                    }
+                    break;
                 case self::TILE_TYPE_UNKNOWN:
+                    /* reveal the unknown tile */
+                    $playSound = 6;
                     if ($mapTile['blocked'] || $mapTile['inaccessible']) return true;
                     if ($targetX == $milkrunData['keyX'] && $targetY == $milkrunData['keyY']) {
                         $newType = self::TILE_TYPE_KEY;
@@ -334,6 +390,11 @@ class MilkrunService extends BaseService
                         else if ($newTypeChance < 25) {
                             $newType = self::TILE_TYPE_ICE;
                             $subType = mt_rand(1, 2);
+                            $milkrunIce = $this->entityManager->find('Netrunners\Entity\MilkrunIce', $subType);
+                            /** @var MilkrunIce $milkrunIce */
+                            $iceEeg = mt_rand($milkrunIce->getBaseEeg()+($milkrunData['currentLevel']-1), $milkrunIce->getBaseEeg()+$milkrunData['currentLevel']);
+                            $iceAttack = mt_rand($milkrunIce->getBaseAttack()+($milkrunData['currentLevel']-1), $milkrunIce->getBaseAttack()+$milkrunData['currentLevel']);
+                            $iceArmor = ($milkrunIce->getBaseArmor() > 0) ? mt_rand($milkrunIce->getBaseArmor(), $milkrunIce->getBaseArmor()+$milkrunData['currentLevel']) : 0;
                         }
                         else {
                             $newType = self::TILE_TYPE_SPECIAL;
@@ -342,13 +403,16 @@ class MilkrunService extends BaseService
                     }
                     break;
                 case self::TILE_TYPE_SPECIAL:
+                    /* player clicked on a special tile */
                     switch ($mapTile['subtype']) {
                         default:
+                            $playSound = 1;
                             $profile->setCredits($profile->getCredits() + mt_rand(1, $milkrunData['currentLevel']));
                             $newType = self::TILE_TYPE_EMPTY;
                             $subType = NULL;
                             break;
                         case self::TILE_SUBTYPE_SPECIAL_SNIPPETS:
+                            $playSound = 10;
                             $profile->setSnippets($profile->getSnippets() + mt_rand(1, $milkrunData['currentLevel']));
                             $newType = self::TILE_TYPE_EMPTY;
                             $subType = NULL;
@@ -357,18 +421,23 @@ class MilkrunService extends BaseService
                     $this->entityManager->flush($profile);
                     break;
                 case self::TILE_TYPE_KEY:
+                    /* player clicked on key tile */
+                    $playSound = 7;
                     $newType = self::TILE_TYPE_EMPTY;
                     $subType = NULL;
                     $mapData['targetUnlocked'] = true;
                     break;
                 case self::TILE_TYPE_TARGET:
+                    /* player clicked on target tile */
                     if ($mapData['targetUnlocked']) {
                         if ($milkrunData['currentLevel'] == $milkrunData['level']) {
                             /* milkrun completed */
+                            $playSound = 8;
                             $complete = true;
                         }
                         else {
                             /* generate next level */
+                            $playSound = 9;
                             $milkrunData['currentLevel'] += 1;
                             $milkrunData['mapData'] = $this->generateMapData($milkrunData);
                             $newLevel = true;
@@ -397,14 +466,42 @@ class MilkrunService extends BaseService
                 );
                 $response = [
                     'command' => 'completemilkrun',
-                    'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have completed your current milkrun</pre>')
+                    'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have completed your current milkrun</pre>'),
+                    'playsound' => $playSound
                 ];
                 var_dump('built completed response!');
+            }
+            else if ($failed) {
+                var_dump('failed milkrun!');
+                $mri = $this->entityManager->find('Netrunners\Entity\MilkrunInstance', $milkrunData['id']);
+                /** @var MilkrunInstance $mri */
+                $mri->setExpired(true);
+                $this->entityManager->flush($mri);
+                $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', []);
+                $this->createProfileFactionRating(
+                    $profile,
+                    $mri,
+                    NULL,
+                    ProfileFactionRating::SOURCE_ID_MILKRUN,
+                    $milkrunData['level'] * -1,
+                    $milkrunData['level'] * -1,
+                    $mri->getSourceFaction(),
+                    $mri->getTargetFaction()
+                );
+                $response = [
+                    'command' => 'completemilkrun',
+                    'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You have failed your current milkrun</pre>'),
+                    'playsound' => $playSound
+                ];
+                var_dump('built completed fail response!');
             }
             else {
                 if (!$newLevel) {
                     $mapData['map'][$targetY][$targetX]['type'] = $newType;
                     $mapData['map'][$targetY][$targetX]['subtype'] = $subType;
+                    $mapData['map'][$targetY][$targetX]['iceEeg'] = $iceEeg;
+                    $mapData['map'][$targetY][$targetX]['iceAttack'] = $iceAttack;
+                    $mapData['map'][$targetY][$targetX]['iceArmor'] = $iceArmor;
                     $mapData = $this->changeSurroundingTiles($mapData, $targetX, $targetY);
                     $milkrunData['mapData'] = $mapData;
                 }
@@ -415,7 +512,9 @@ class MilkrunService extends BaseService
                 $response = [
                     'command' => 'updatedivhtml',
                     'content' => $this->viewRenderer->render($view),
-                    'level' => $milkrunData['currentLevel']
+                    'element' => '#milkrun-game-container',
+                    'level' => $milkrunData['currentLevel'],
+                    'playsound' => $playSound
                 ];
             }
         }

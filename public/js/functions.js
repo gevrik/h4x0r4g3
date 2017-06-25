@@ -54,11 +54,16 @@ function initSound() {
     }
     var assetsPath = "../sounds/";
     var sounds = [
-        {src: "gotsnippets.ogg", id: 1},
+        {src: "gotcredits.ogg", id: 1},
         {src: "accessdenied.ogg", id: 2},
         {src: "buttonpress.ogg", id: 3},
         {src: "logincomplete.ogg", id: 4},
-        {src: "meleeattack.ogg", id: 5}
+        {src: "meleeattack.ogg", id: 5},
+        {src: "revealunknownnode.ogg", id: 6},
+        {src: "keyfound.ogg", id: 7},
+        {src: "payloadfound.ogg", id: 8},
+        {src: "milkrunnextlevel.ogg", id: 9},
+        {src: "gotsnippets.ogg", id: 10}
     ];
     createjs.Sound.alternateExtensions = ["mp3"];
     createjs.Sound.addEventListener("fileload", createjs.proxy(soundLoaded, this));

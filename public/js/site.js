@@ -233,7 +233,7 @@
                     $('#milkrun-container').html('');
                     break;
                 case 'completemilkrun':
-                    playSoundById(1);
+                    playSoundById(data.playsound);
                     $('#milkrun-container').html('');
                     md.append(data.content);
                     showprompt();
@@ -276,22 +276,26 @@
                     if (!data.silent) showprompt();
                     break;
                 case 'updatedivhtml':
-                    $('#milkrun-game-container').html('').append(data.content);
-                    var milkrunMapWidth = $('#milkrun-panel').innerWidth();
-                    $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
-                    $('.milkrun-tile').attr('width', milkrunMapWidth/(data.level+4));
-                    $('.milkrun-clickable').on('click', function(){
-                        var clickedX = $(this).data('x');
-                        var clickedY = $(this).data('y');
-                        console.log('x: ' + clickedX + ' y: ' + clickedY);
-                        command = {
-                            command: 'parseInput',
-                            hash: hash,
-                            content: 'milkrunclick ' + clickedX + ' ' + clickedY,
-                            silent: true
-                        };
-                        conn.send(JSON.stringify(command));
-                    });
+                    var targetElement = $(data.element);
+                    targetElement.html('').append(data.content);
+                    if (data.playsound) playSoundById(data.playsound);
+                    if (data.element === '#milkrun-game-container') {
+                        var milkrunMapWidth = $('#milkrun-panel').innerWidth();
+                        $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
+                        $('.milkrun-tile').attr('width', milkrunMapWidth/(data.level+4));
+                        $('.milkrun-clickable').on('click', function(){
+                            var clickedX = $(this).data('x');
+                            var clickedY = $(this).data('y');
+                            console.log('x: ' + clickedX + ' y: ' + clickedY);
+                            command = {
+                                command: 'parseInput',
+                                hash: hash,
+                                content: 'milkrunclick ' + clickedX + ' ' + clickedY,
+                                silent: true
+                            };
+                            conn.send(JSON.stringify(command));
+                        });
+                    }
                     break;
                 case 'showmessage':
                     md.append(data.message);
