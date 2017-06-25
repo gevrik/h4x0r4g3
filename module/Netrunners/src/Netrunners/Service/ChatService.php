@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 
@@ -39,16 +40,27 @@ class ChatService extends BaseService
      */
     public function globalChat($resourceId, $contentArray)
     {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        // get user
+        $ws = $this->getWebsocketServer();
+        $clientData = $ws->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        // get profile
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
         $response = $this->isActionBlocked($resourceId, true);
+        // check if the have a running chat client
         if (!$response) {
-            // get user
-            $ws = $this->getWebsocketServer();
-            $clientData = $ws->getClientData($resourceId);
-            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            if (!$user) return true;
-            // get profile
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+            if (!$fileRepo->findChatClientForProfile($profile)) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need a running chatclient to use global chat</pre>')
+                ];
+            }
+        }
+        if (!$response) {
             $messageContent = implode(' ', $contentArray);
             if (!$messageContent || $messageContent == '') return true;
             $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
@@ -70,6 +82,7 @@ class ChatService extends BaseService
                     );
                 }
                 else {
+                    if (!$fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
                     $xresponse = array(
                         'command' => 'showmessageprepend',
                         'type' => ChatService::CHANNEL_GLOBAL,

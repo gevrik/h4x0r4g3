@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
@@ -139,6 +140,23 @@ class FileRepository extends EntityRepository
         }
         $qb->setParameter('system', $system);
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Returns the first running chat client for the given profile or null.
+     * @param Profile $profile
+     * @return null|File
+     */
+    public function findChatClientForProfile(Profile $profile)
+    {
+        $chatclient = $this->getEntityManager()->find('Netrunners\Entity\FileType', FileType::ID_CHATCLIENT);
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.fileType = :fileType AND f.running IS NOT NULL AND f.integrity >= 1 AND f.profile = :profile');
+        $qb->setParameters([
+            'fileType' => $chatclient,
+            'profile' => $profile
+        ]);
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
 }
