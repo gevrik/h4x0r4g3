@@ -17,6 +17,11 @@ class SkillRating
 {
 
     /**
+     * @const MAX_SKILL_RATING_FAIL_LEARN the maximum amount of skill rating that can be achieved by failure.
+     */
+    const MAX_SKILL_RATING_FAIL_LEARN = 40;
+
+    /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
      * @ORM\Column(type="integer")

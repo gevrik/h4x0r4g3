@@ -261,6 +261,7 @@ class BaseService
     }
 
     /**
+     * Players can learn from failure, but not a lot.
      * @param Profile $profile
      * @param $jobData
      * @return bool
@@ -273,6 +274,7 @@ class BaseService
             ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill);
+            if ($skillRating >= SkillRating::MAX_SKILL_RATING_FAIL_LEARN) continue;
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
             if (mt_rand(1, 100) <= $chance) {
