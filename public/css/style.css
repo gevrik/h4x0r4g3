@@ -91,6 +91,10 @@ pre {
     color: #a6fce4;
 }
 
+.text-newbie {
+    color: #ffff99;
+}
+
 .panel-container {
     position: fixed;
     width: 40%;

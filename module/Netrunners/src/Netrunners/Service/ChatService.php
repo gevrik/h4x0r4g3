@@ -147,6 +147,49 @@ class ChatService extends BaseService
         return $response;
     }
 
+    public function newbieChat($resourceId, $contentArray)
+    {
+        // get user
+        $ws = $this->getWebsocketServer();
+        $clientData = $ws->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        // get profile
+        $profile = $user->getProfile();
+        /** @var Profile $profile */
+        $messageContent = implode(' ', $contentArray);
+        if (!$messageContent || $messageContent == '') return true;
+        $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_NEWBIE);
+        $wsClients = $ws->getClients();
+        $wsClientsData = $ws->getClientsData();
+        $response = false;
+        foreach ($wsClients as $wsClient) {
+            /** @var ConnectionInterface $wsClient */
+            /** @noinspection PhpUndefinedFieldInspection */
+            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+            /** @noinspection PhpUndefinedFieldInspection */
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+            if (!$clientUser) continue;
+            /** @var User $clientUser */
+            if ($clientUser == $user) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'type' => ChatService::CHANNEL_NEWBIE,
+                    'message' => $messageContent
+                );
+            }
+            else {
+                $xresponse = array(
+                    'command' => 'showmessageprepend',
+                    'type' => ChatService::CHANNEL_NEWBIE,
+                    'message' => $messageContent
+                );
+                $wsClient->send(json_encode($xresponse));
+            }
+        }
+        return $response;
+    }
+
     /**
      * Prepares a message according to its channel and other options.
      * @param Profile $profile

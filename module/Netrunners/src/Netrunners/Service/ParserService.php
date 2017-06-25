@@ -250,6 +250,10 @@ class ParserService
                     $response = $this->systemService->showSystemMap($resourceId);
                 }
                 break;
+            case 'new':
+            case 'newbie':
+                $response = $this->chatService->newbieChat($resourceId, $contentArray);
+                break;
             case 'nodename':
                 $response = $this->nodeService->changeNodeName($resourceId, $contentArray);
                 break;
