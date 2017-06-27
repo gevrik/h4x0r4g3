@@ -79,7 +79,13 @@ class ParserService
      */
     protected $adminService;
 
+    /**
+     * @var MilkrunService
+     */
     protected $milkrunService;
+
+    protected $hangmanService;
+
 
     /**
      * @param EntityManager $entityManager
@@ -94,6 +100,7 @@ class ParserService
      * @param NotificationService $notificationService
      * @param AdminService $adminService
      * @param MilkrunService $milkrunService
+     * @param HangmanService $hangmanService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -107,7 +114,8 @@ class ParserService
         ConnectionService $connectionService,
         NotificationService $notificationService,
         AdminService $adminService,
-        MilkrunService $milkrunService
+        MilkrunService $milkrunService,
+        HangmanService $hangmanService
     )
     {
         $this->entityManager = $entityManager;
@@ -122,6 +130,7 @@ class ParserService
         $this->notificationService = $notificationService;
         $this->adminService = $adminService;
         $this->milkrunService = $milkrunService;
+        $this->hangmanService = $hangmanService;
     }
 
     /**
@@ -217,6 +226,9 @@ class ParserService
                 break;
             case 'gc':
                 $response = $this->chatService->globalChat($resourceId, $contentArray);
+                break;
+            case 'hangman':
+                $response = $this->hangmanService->startHangmanGame($resourceId);
                 break;
             case 'say':
                 $response = $this->chatService->sayChat($resourceId, $contentArray);
