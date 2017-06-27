@@ -64,7 +64,7 @@ class MilkrunService extends BaseService
                 $amount = count($milkruns) - 1;
                 $targetMilkrun = $milkruns[mt_rand(0, $amount)];
                 /** @var Milkrun $targetMilkrun */
-                $milkrunLevel = 1;
+                $milkrunLevel = 2;
                 $timer = $targetMilkrun->getTimer();
                 $expires = new \DateTime();
                 $expires->add(new \DateInterval('PT' . $timer . 'S'));
@@ -425,7 +425,7 @@ class MilkrunService extends BaseService
                             /* generate next level */
                             $playSound = 9;
                             $milkrunData['currentLevel'] += 1;
-                            $milkrunData['mapData'] = $this->generateMapData($milkrunData);
+                            $milkrunData = $this->generateMapData($milkrunData);
                             $newLevel = true;
                         }
                     }
