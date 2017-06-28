@@ -248,6 +248,28 @@
                         $('#notification-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
                         document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
                     }
+                    $('.btn-hangman-letter').on('click', function(){
+                        var hangmanLetter = $(this).data('letter');
+                        console.log('letter: ' + hangmanLetter);
+                        command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'hangmanletterclick ' + hangmanLetter,
+                            silent: true
+                        };
+                        conn.send(JSON.stringify(command));
+                    });
+                    $('#btn-hangman-solve').on('click', function(){
+                        var wordguess = $('#hangman-solution').val();
+                        console.log('guess: ' + wordguess);
+                        command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'hangmansolution ' + wordguess,
+                            silent: true
+                        };
+                        conn.send(JSON.stringify(command));
+                    });
                     if (!data.silent) showprompt();
                     break;
                 case 'startmilkrun':

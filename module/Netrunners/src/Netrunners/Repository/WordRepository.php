@@ -35,7 +35,7 @@ class WordRepository extends EntityRepository
      * @param int $length
      * @return array
      */
-    public function getRandomWordsByLength($amount = 1, $length = 4)
+    public function getRandomWordsByLength($amount = 1, $length = 5)
     {
         return $this->getRandomWordByLengthNativeQuery($amount)->getResult();
     }
@@ -44,7 +44,7 @@ class WordRepository extends EntityRepository
      * @param int $amount
      * @return @ORM\NativeQuery
      */
-    public function getRandomWordByLengthNativeQuery($amount = 1, $length = 4)
+    public function getRandomWordByLengthNativeQuery($amount = 1, $length = 5)
     {
         $table = $this->getClassMetadata()->getTableName();
         $rsm = new ResultSetMapping();

@@ -230,6 +230,12 @@ class ParserService
             case 'hangman':
                 $response = $this->hangmanService->startHangmanGame($resourceId);
                 break;
+            case 'hangmanletterclick':
+                $response = $this->hangmanService->letterClicked($resourceId, $contentArray);
+                break;
+            case 'hangmansolution':
+                $response = $this->hangmanService->solutionAttempt($resourceId, $contentArray);
+                break;
             case 'say':
                 $response = $this->chatService->sayChat($resourceId, $contentArray);
                 break;

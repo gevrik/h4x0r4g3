@@ -203,3 +203,14 @@ textarea {
     margin: auto;
     overflow: auto;
 }
+
+.btn-hangman-letter {
+    margin-bottom: .25em;
+}
+
+.hangman-solution {
+    background-color: inherit;
+    border: solid 1px #2e6da4;
+    line-height: 30px;
+    width: 100%;
+}
