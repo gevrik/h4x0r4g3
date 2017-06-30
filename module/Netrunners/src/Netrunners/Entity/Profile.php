@@ -11,6 +11,7 @@
 namespace Netrunners\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use TmoAuth\Entity\User;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\ProfileRepository") */
 class Profile
@@ -53,6 +54,12 @@ class Profile
      * @var int
      */
     protected $willpower;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $securityRating;
 
     // ORM
 
@@ -196,10 +203,28 @@ class Profile
         return $this;
     }
 
+    /**
+     * @return int
+     */
+    public function getSecurityRating()
+    {
+        return $this->securityRating;
+    }
+
+    /**
+     * @param int $securityRating
+     * @return Profile
+     */
+    public function setSecurityRating($securityRating)
+    {
+        $this->securityRating = $securityRating;
+        return $this;
+    }
+
     // ORM
 
     /**
-     * @return mixed
+     * @return NULL|User
      */
     public function getUser()
     {
@@ -207,7 +232,7 @@ class Profile
     }
 
     /**
-     * @param mixed $user
+     * @param NULL|User $user
      * @return Profile
      */
     public function setUser($user)
@@ -217,7 +242,7 @@ class Profile
     }
 
     /**
-     * @return mixed
+     * @return NULL|Node
      */
     public function getCurrentNode()
     {
@@ -225,7 +250,7 @@ class Profile
     }
 
     /**
-     * @param mixed $currentNode
+     * @param NULL|Node $currentNode
      * @return Profile
      */
     public function setCurrentNode($currentNode)
@@ -235,7 +260,7 @@ class Profile
     }
 
     /**
-     * @return mixed
+     * @return NULL|Node
      */
     public function getHomeNode()
     {
@@ -243,7 +268,7 @@ class Profile
     }
 
     /**
-     * @param mixed $homeNode
+     * @param NULL|Node $homeNode
      * @return Profile
      */
     public function setHomeNode($homeNode)
@@ -253,7 +278,7 @@ class Profile
     }
 
     /**
-     * @return mixed
+     * @return NULL|Faction
      */
     public function getFaction()
     {
@@ -261,7 +286,7 @@ class Profile
     }
 
     /**
-     * @param mixed $faction
+     * @param NULL|Faction $faction
      * @return Profile
      */
     public function setFaction($faction)
@@ -271,7 +296,7 @@ class Profile
     }
 
     /**
-     * @return mixed
+     * @return NULL|Group
      */
     public function getGroup()
     {
@@ -279,7 +304,7 @@ class Profile
     }
 
     /**
-     * @param mixed $group
+     * @param NULL|Group $group
      * @return Profile
      */
     public function setGroup($group)

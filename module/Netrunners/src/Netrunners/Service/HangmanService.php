@@ -32,34 +32,39 @@ class HangmanService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         $response = $this->isActionBlocked($resourceId);
-        $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
-        /** @var WordRepository $wordRepo */
-        $words = $wordRepo->getRandomWordsByLength();
-        $word = array_shift($words);
-        if (!$word) return true;
-        /** @var Word $word */
-        $theWord = strtolower($word->getContent());
-        $hangman = [
-            'word' => $theWord,
-            'attempts' => 5,
-            'known' => str_repeat('*', strlen($theWord)),
-            'letters' => []
-        ];
-        $ws->setClientData($resourceId, 'hangman', $hangman);
-        $view = new ViewModel();
-        $view->setTemplate('netrunners/word/hangman-game.phtml');
-        $view->setVariable('hangman', (object)$hangman);
-        $response = array(
-            'command' => 'showpanel',
-            'type' => 'default',
-            'content' => $this->viewRenderer->render($view)
-        );
+        if (!$response) {
+            $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
+            /** @var WordRepository $wordRepo */
+            $words = $wordRepo->getRandomWordsByLength();
+            $word = array_shift($words);
+            if (!$word) return true;
+            /** @var Word $word */
+            $theWord = strtolower($word->getContent());
+            $hangman = [
+                'word' => $theWord,
+                'attempts' => 5,
+                'known' => str_repeat('*', strlen($theWord)),
+                'letters' => []
+            ];
+            $ws->setClientData($resourceId, 'hangman', $hangman);
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/word/hangman-game.phtml');
+            $view->setVariable('hangman', (object)$hangman);
+            $response = array(
+                'command' => 'showpanel',
+                'type' => 'default',
+                'content' => $this->viewRenderer->render($view)
+            );
+        }
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
     public function letterClicked($resourceId, $contentArray)
     {
         $ws = $this->getWebsocketServer();
@@ -67,15 +72,11 @@ class HangmanService extends BaseService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = false;
         $letter = $this->getNextParameter($contentArray, false);
         if (!$letter) return true;
         $letter = strtolower($letter);
         $hangmanData = $clientData->hangman;
         if ($hangmanData['attempts'] < 1) return true;
-        $known = $hangmanData['known'];
         $chars = str_split($hangmanData['word']);
         $letterFound = false;
         foreach($chars as $pos => $char){
@@ -86,13 +87,11 @@ class HangmanService extends BaseService
         }
         if ($letterFound) {
             if (!array_key_exists($letter, $hangmanData['letters'])) {
-                var_dump('adding letter as true');
                 $hangmanData['letters'][$letter] = true;
             }
         }
         else {
             if (!array_key_exists($letter, $hangmanData['letters'])) {
-                var_dump('adding letter as false');
                 $hangmanData['letters'][$letter] = false;
             }
         }
@@ -109,6 +108,11 @@ class HangmanService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool
+     */
     public function solutionAttempt($resourceId, $contentArray)
     {
         $ws = $this->getWebsocketServer();

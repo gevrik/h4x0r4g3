@@ -46,7 +46,7 @@ class FileTypeMod
 
     /**
      * @param int $id
-     * @return FileTypeSkill
+     * @return FileTypeMod
      */
     public function setId($id)
     {
@@ -64,7 +64,7 @@ class FileTypeMod
 
     /**
      * @param mixed $fileType
-     * @return FileTypeSkill
+     * @return FileTypeMod
      */
     public function setFileType($fileType)
     {
@@ -82,7 +82,7 @@ class FileTypeMod
 
     /**
      * @param mixed $fileMod
-     * @return FileTypeSkill
+     * @return FileTypeMod
      */
     public function setFileMod($fileMod)
     {

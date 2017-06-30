@@ -22,6 +22,7 @@ use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
@@ -123,7 +124,7 @@ class BaseService
     {
         $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         /** @var NodeRepository $nodeRepo */
-        $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_MEMORY);
+        $nodes = $nodeRepo->findBySystemAndType($system, NodeType::ID_MEMORY);
         $total = 0;
         foreach ($nodes as $node) {
             /** @var Node $node */
@@ -141,7 +142,7 @@ class BaseService
     {
         $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         /** @var NodeRepository $nodeRepo */
-        $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_STORAGE);
+        $nodes = $nodeRepo->findBySystemAndType($system, NodeType::ID_STORAGE);
         $total = 0;
         foreach ($nodes as $node) {
             /** @var Node $node */
@@ -166,7 +167,7 @@ class BaseService
         $total = 0;
         foreach ($systems as $system) {
             /** @var System $system */
-            $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_MEMORY);
+            $nodes = $nodeRepo->findBySystemAndType($system, NodeType::ID_MEMORY);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $total += $node->getLevel() * SystemService::BASE_MEMORY_VALUE;
@@ -191,7 +192,7 @@ class BaseService
         $total = 0;
         foreach ($systems as $system) {
             /** @var System $system */
-            $nodes = $nodeRepo->findBySystemAndType($system, Node::ID_STORAGE);
+            $nodes = $nodeRepo->findBySystemAndType($system, NodeType::ID_STORAGE);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $total += $node->getLevel() * SystemService::BASE_STORAGE_VALUE;
@@ -328,7 +329,7 @@ class BaseService
         $row = $knownNodeRepo->findByProfileAndNode($profile, $node);
         if ($row) {
             /** @var KnownNode $row */
-            $row->setType($node->getType());
+            $row->setType($node->getNodeType()->getId());
             $row->setCreated(new \DateTime());
         }
         else {
@@ -336,7 +337,7 @@ class BaseService
             $row->setCreated(new \DateTime());
             $row->setProfile($profile);
             $row->setNode($node);
-            $row->setType($node->getType());
+            $row->setType($node->getNodeType()->getId());
             $this->entityManager->persist($row);
         }
         $this->entityManager->flush($row);
@@ -386,7 +387,14 @@ class BaseService
      * @param array $safeOptions
      * @return array|int|mixed|null|string
      */
-    protected function getNextParameter($contentArray = [], $returnContent = true, $castToInt = false, $implode = false, $makeSafe = false, $safeOptions = ['safe'=>1,'elements'=>'strong'])
+    protected function getNextParameter(
+        $contentArray = [],
+        $returnContent = true,
+        $castToInt = false,
+        $implode = false,
+        $makeSafe = false,
+        $safeOptions = ['safe'=>1,'elements'=>'strong']
+    )
     {
         $parameter = NULL;
         $nextParameter = (!$implode) ? array_shift($contentArray) : implode(' ', $contentArray);
@@ -571,11 +579,11 @@ class BaseService
     {
         $result = false;
         if ($node) {
-            switch ($node->getType()) {
+            switch ($node->getNodeType()->getId()) {
                 default:
                     break;
-                case Node::ID_PUBLICIO:
-                case Node::ID_IO:
+                case NodeType::ID_PUBLICIO:
+                case NodeType::ID_IO:
                     $result = $node->getLevel() * FileService::DEFAULT_DIFFICULTY_MOD;
                     break;
             }
@@ -598,23 +606,23 @@ class BaseService
                 $result = true;
                 break;
             case FileType::ID_COINMINER:
-                $validNodeTypes[] = Node::ID_TERMINAL;
+                $validNodeTypes[] = NodeType::ID_TERMINAL;
                 break;
             case FileType::ID_DATAMINER:
-                $validNodeTypes[] = Node::ID_DATABASE;
+                $validNodeTypes[] = NodeType::ID_DATABASE;
                 break;
             case FileType::ID_ICMP_BLOCKER:
-                $validNodeTypes[] = Node::ID_IO;
+                $validNodeTypes[] = NodeType::ID_IO;
                 break;
             case FileType::ID_JACKHAMMER:
             case FileType::ID_PORTSCANNER:
             case FileType::ID_WORMER:
-                $validNodeTypes[] = Node::ID_IO;
-                $validNodeTypes[] = Node::ID_PUBLICIO;
+                $validNodeTypes[] = NodeType::ID_IO;
+                $validNodeTypes[] = NodeType::ID_PUBLICIO;
                 break;
         }
         // if result is false, check if the node type matches an entry of the valid-node-types array
-        return (!$result) ? in_array($node->getType(), $validNodeTypes) : $result;
+        return (!$result) ? in_array($node->getNodeType()->getId(), $validNodeTypes) : $result;
     }
 
     /**

@@ -136,7 +136,7 @@ class Connection
     // ORM
 
     /**
-     * @return mixed
+     * @return NULL|Node
      */
     public function getSourceNode()
     {
@@ -144,7 +144,7 @@ class Connection
     }
 
     /**
-     * @param mixed $sourceNode
+     * @param NULL|Node $sourceNode
      * @return Connection
      */
     public function setSourceNode($sourceNode)
@@ -154,7 +154,7 @@ class Connection
     }
 
     /**
-     * @return mixed
+     * @return NULL|Node
      */
     public function getTargetNode()
     {
@@ -162,7 +162,7 @@ class Connection
     }
 
     /**
-     * @param mixed $targetNode
+     * @param NULL|Node $targetNode
      * @return Connection
      */
     public function setTargetNode($targetNode)

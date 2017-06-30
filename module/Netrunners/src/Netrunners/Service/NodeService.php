@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
@@ -124,7 +125,7 @@ class NodeService extends BaseService
             );
         }
         // check if we are in a home node, you can't add nodes to a home node
-        if (!$response && $currentNode->getType() == Node::ID_HOME) {
+        if (!$response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You can not add nodes to a home node</pre>')
@@ -135,12 +136,15 @@ class NodeService extends BaseService
             // take creds from user
             $newCredits = $profile->getCredits() - self::RAW_NODE_COST;
             $profile->setCredits($newCredits);
+            // create the new node
+            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
+            /** @var NodeType $nodeType */
             $node = new Node();
             $node->setCreated(new \DateTime());
             $node->setLevel(1);
-            $node->setName(Node::STRING_RAW);
+            $node->setName($nodeType->getName());
             $node->setSystem($currentNode->getSystem());
-            $node->setType(Node::ID_RAW);
+            $node->setNodeType($nodeType);
             $this->entityManager->persist($node);
             $sourceConnection = new Connection();
             $sourceConnection->setType(Connection::TYPE_NORMAL);
@@ -251,11 +255,17 @@ class NodeService extends BaseService
         $parameter = $this->getNextParameter($contentArray, false);
         if (!$response && !$parameter) {
             $returnMessage = array();
-            $nodeTypes = Node::$lookup;
+            $nodeTypes = $this->entityManager->getRepository('Netrunners\Entity\NodeType')->findAll();
             $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please choose a node type:</pre>');
-            foreach ($nodeTypes as $typeId => $typeString) {
-                if ($typeId === 0) continue;
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-2s|%-18s|%sc</pre>', $typeId, $typeString, Node::$data[$typeId]['cost']);
+            foreach ($nodeTypes as $nodeType) {
+                /** @var NodeType $nodeType */
+                if ($nodeType->getId() == NodeType::ID_RAW) continue;
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-2s|%-18s|%sc</pre>',
+                    $nodeType->getId(),
+                    $nodeType->getName(),
+                    $nodeType->getCost()
+                );
             }
             $response = array(
                 'command' => 'showoutput',
@@ -276,26 +286,22 @@ class NodeService extends BaseService
         $type = false;
         $name = "";
         if ($searchByNumber) {
-            if (isset(Node::$lookup[$parameter])) {
-                $type = $parameter;
-                $name = Node::$lookup[$parameter];
-            }
+            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', $parameter);
         }
         else {
-            if (isset(Node::$revLookup[$parameter])) {
-                $type = Node::$revLookup[$parameter];
-                $name = Node::$lookup[$type];
-            }
+            $nodeType = $this->entityManager->getRepository('Netrunners\Entity\NodeType')->findOneBy([
+                'name' => $type
+            ]);
         }
-        if (!$response && !$type) {
+        if (!$response && !$nodeType) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No such node type</pre>')
             );
         }
         // check a few combinations that are not valid
-        if (!$response && $type == Node::ID_HOME) {
-            if ($this->countTargetNodesOfType($currentNode, Node::ID_HOME) > 0) {
+        if (!$response && $nodeType->getId() == NodeType::ID_HOME) {
+            if ($this->countTargetNodesOfType($currentNode, NodeType::ID_HOME) > 0) {
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">There is already a home node around this node</pre>')
@@ -303,16 +309,19 @@ class NodeService extends BaseService
             }
         }
         // check if they have enough credits
-        if (!$response && $profile->getCredits() < Node::$data[$type]['cost']) {
+        if (!$response && $profile->getCredits() < $nodeType->getCost()) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>', Node::$data[$type]['cost'])
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>',
+                    $nodeType->getCost()
+                )
             );
         }
         if (!$response) {
             $currentCredits = $profile->getCredits();
-            $profile->setCredits($currentCredits - Node::$data[$type]['cost']);
-            $currentNode->setType($type);
+            $profile->setCredits($currentCredits - $nodeType->getCost());
+            $currentNode->setNodeType($nodeType);
             $currentNode->setName($name);
             $this->entityManager->flush();
             $response = array(
@@ -406,7 +415,7 @@ class NodeService extends BaseService
         $connections = $connectionRepo->findBySourceNode($node);
         foreach ($connections as $connection) {
             /** @var Connection $connection */
-            if ($connection->getTargetNode()->getType() == $type) $amount++;
+            if ($connection->getTargetNode()->getNodeType()->getId() == $type) $amount++;
         }
         return $amount;
     }
@@ -546,7 +555,13 @@ class NodeService extends BaseService
             $nodes = $nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>', $node->getId(), Node::$lookup[$node->getType()], $node->getLevel(), $node->getName());
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>',
+                    $node->getId(),
+                    $node->getNodeType()->getName(),
+                    $node->getLevel(),
+                    $node->getName()
+                );
             }
             $response = array(
                 'command' => 'showoutput',
@@ -577,7 +592,7 @@ class NodeService extends BaseService
         /** @var Node $currentNode */
         $response = $this->isActionBlocked($resourceId);
         // check if they are in an io-node
-        if (!$response && $currentNode->getType() != Node::ID_PUBLICIO && $currentNode->getType() != Node::ID_IO) {
+        if (!$response && $currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $currentNode->getNodeType()->getId() != NodeType::ID_IO) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You must be in an I/O node to connect to another system</pre>')
@@ -587,7 +602,7 @@ class NodeService extends BaseService
         $parameter = $this->getNextParameter($contentArray);
         if (!$response && !$parameter) {
             $returnMessage = array();
-            $publicIoNodes = $nodeRepo->findByType(Node::ID_PUBLICIO);
+            $publicIoNodes = $nodeRepo->findByType(NodeType::ID_PUBLICIO);
             $returnMessage[] = sprintf('<pre>%-40s|%-12s|%-20s</pre>', 'address', 'id', 'name');
             foreach ($publicIoNodes as $publicIoNode) {
                 /** @var Node $publicIoNode */
@@ -610,19 +625,20 @@ class NodeService extends BaseService
         // now check if the node id exists
         $targetNodeId = $this->getNextParameter($contentArray, false, true);
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+        /** @var Node $targetNode */
         if (!$response && !$targetNode) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node id</pre>')
             );
         }
-        if (!$response && ($targetNode->getType() != Node::ID_PUBLICIO && $targetNode->getType() != Node::ID_IO)) {
+        if (!$response && ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node id</pre>')
             );
         }
-        if (!$response && ($targetNode->getType() == Node::ID_IO && $targetSystem->getProfile() != $profile)) {
+        if (!$response && ($targetNode->getNodeType()->getId() == NodeType::ID_IO && $targetSystem->getProfile() != $profile)) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid node id</pre>')

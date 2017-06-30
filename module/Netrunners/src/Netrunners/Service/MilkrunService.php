@@ -14,7 +14,7 @@ use Netrunners\Entity\Faction;
 use Netrunners\Entity\Milkrun;
 use Netrunners\Entity\MilkrunIce;
 use Netrunners\Entity\MilkrunInstance;
-use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Repository\FactionRepository;
@@ -48,8 +48,10 @@ class MilkrunService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $response = $this->isActionBlocked($resourceId);
-        if (!$response && $profile->getCurrentNode()->getType() != Node::ID_AGENT) {
-            $returnMessage = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You need to be in an agent node to request a milkrun</pre>');
+        if (!$response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
+            $returnMessage = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">You need to be in an agent node to request a milkrun</pre>'
+            );
             $response = array(
                 'command' => 'showmessage',
                 'message' => $returnMessage

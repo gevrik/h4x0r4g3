@@ -27,17 +27,19 @@ class NodeRepository extends EntityRepository
     public function findByType($type)
     {
         $qb = $this->createQueryBuilder('n');
-        $qb->where('n.type = :type');
-        $qb->setParameter('type', $type);
+        $qb->where('n.nodeType = :type');
+        $nodeType = $this->getEntityManager()->find('Netrunners\Entity\NodeType', $type);
+        $qb->setParameter('type', $nodeType);
         return $qb->getQuery()->getResult();
     }
 
     public function findBySystemAndType(System $system, $type)
     {
         $qb = $this->createQueryBuilder('n');
-        $qb->where('n.type = :type and n.system = :system');
+        $qb->where('n.nodeType = :type and n.system = :system');
+        $nodeType = $this->getEntityManager()->find('Netrunners\Entity\NodeType', $type);
         $qb->setParameters([
-            'type' => $type,
+            'type' => $nodeType,
             'system' => $system
         ]);
         return $qb->getQuery()->getResult();

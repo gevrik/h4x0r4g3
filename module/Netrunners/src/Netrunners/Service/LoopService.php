@@ -17,7 +17,7 @@ use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
-use Netrunners\Entity\Notification;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
@@ -181,7 +181,9 @@ class LoopService extends BaseService
             }
             if ($targetClient && $targetClientData) {
                 /* send message */
-                $message = sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Your current milkrun has expired before you could complete it</pre>');
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">Your current milkrun has expired before you could complete it</pre>'
+                );
                 $response = [
                     'command' => 'stopmilkrun',
                     'hash' => $targetClientData->hash,
@@ -219,7 +221,7 @@ class LoopService extends BaseService
         // init var to keep track of who receives what
         $items = [];
         // get all the db nodes (for snippet generation)
-        $databaseNodes = $nodeRepo->findByType(Node::ID_DATABASE);
+        $databaseNodes = $nodeRepo->findByType(NodeType::ID_DATABASE);
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
             $currentNodeProfileId = $databaseNode->getSystem()->getProfile()->getId();
@@ -231,7 +233,7 @@ class LoopService extends BaseService
             // now check if there are running files in the same node that could affect the resource amount
             $items = $this->checkForModifyingFiles($databaseNode, $currentNodeProfileId, FileType::ID_DATAMINER, $items, 'snippets');
         }
-        $terminalNodes = $nodeRepo->findByType(Node::ID_TERMINAL);
+        $terminalNodes = $nodeRepo->findByType(NodeType::ID_TERMINAL);
         foreach ($terminalNodes as $terminalNode) {
             /** @var Node $terminalNode */
             $currentNodeProfileId = $terminalNode->getSystem()->getProfile()->getId();

@@ -1,0 +1,15 @@
+set foreign_key_checks = 0;
+TRUNCATE Connection;
+TRUNCATE File;
+TRUNCATE FilePartInstance;
+TRUNCATE Milkrun;
+TRUNCATE MilkrunInstance;
+TRUNCATE Node;
+TRUNCATE Notification;
+TRUNCATE Profile;
+TRUNCATE ProfileFactionRating;
+TRUNCATE SkillRating;
+TRUNCATE System;
+TRUNCATE User;
+TRUNCATE user_role_linker;
+set foreign_key_checks = 1;

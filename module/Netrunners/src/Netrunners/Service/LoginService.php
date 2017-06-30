@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
@@ -220,12 +221,14 @@ class LoginService extends BaseService
             $system->setAddy($addy);
             $this->entityManager->persist($system);
             // default io node
+            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
+            /** @var NodeType $nodeType */
             $ioNode = new Node();
             $ioNode->setCreated(new \DateTime());
             $ioNode->setLevel(1);
-            $ioNode->setName(Node::STRING_CPU);
+            $ioNode->setName($nodeType->getName());
             $ioNode->setSystem($system);
-            $ioNode->setType(Node::ID_CPU);
+            $ioNode->setNodeType($nodeType);
             $this->entityManager->persist($ioNode);
             $profile->setCurrentNode($ioNode);
             $profile->setHomeNode($ioNode);

@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
@@ -128,7 +129,7 @@ class ConnectionService extends BaseService
             );
         }
         // check if this is a home node
-        if (!$response && $currentNode->getType() == Node::ID_HOME) {
+        if (!$response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unable to add a connection to a home node</pre>')
@@ -149,8 +150,9 @@ class ConnectionService extends BaseService
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid target node</pre>')
             );
         }
+        /** @var Node $targetNode */
         // check if the target node is the current ndoe
-        if (!$response && $targetNode == $currentNode) {
+        if (!$response && $targetNode === $currentNode) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Invalid target node</pre>')

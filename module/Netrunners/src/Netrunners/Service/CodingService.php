@@ -15,7 +15,7 @@ use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
-use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Repository\FilePartInstanceRepository;
@@ -75,7 +75,7 @@ class CodingService extends BaseService
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $response = $this->isActionBlocked($resourceId);
-        if (!$response && $profile->getCurrentNode()->getType() != Node::ID_CODING) {
+        if (!$response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_CODING) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You must be in a coding node to enter coding mode</pre>')

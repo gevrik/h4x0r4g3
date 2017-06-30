@@ -87,17 +87,17 @@ class SystemService extends BaseService
             $nodes = $nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
+                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
                 $mapArray['nodes'][] = [
-                    'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+                    'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
                     'type' => $group
                 ];
                 $connections = $connectionRepo->findBySourceNode($node);
                 foreach ($connections as $connection) {
                     /** @var Connection $connection */
                     $mapArray['links'][] = [
-                        'source' => (string)$connection->getSourceNode()->getId() . '_' . Node::$lookup[$connection->getSourceNode()->getType()] . '_' . $connection->getSourceNode()->getName(),
-                        'target' => (string)$connection->getTargetNode()->getId() . '_' . Node::$lookup[$connection->getTargetNode()->getType()] . '_' . $connection->getTargetNode()->getName(),
+                        'source' => (string)$connection->getSourceNode()->getId() . '_' . $connection->getSourceNode()->getNodeType()->getShortName() . '_' . $connection->getSourceNode()->getName(),
+                        'target' => (string)$connection->getTargetNode()->getId() . '_' . $connection->getTargetNode()->getNodeType()->getShortName() . '_' . $connection->getTargetNode()->getName(),
                         'value' => 2,
                         'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
                     ];
@@ -133,8 +133,6 @@ class SystemService extends BaseService
             /** @var Profile $profile */
             $currentNode = $profile->getCurrentNode();
             /** @var Node $currentNode */
-            $currentSystem = $currentNode->getSystem();
-            /** @var System $currentSystem */
             $mapArray = [
                 'nodes' => [],
                 'links' => []
@@ -149,9 +147,9 @@ class SystemService extends BaseService
             $counter = true;
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getType();
+                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
                 $mapArray['nodes'][] = [
-                    'name' => (string)$node->getId() . '_' . Node::$lookup[$node->getType()] . '_' . $node->getName(),
+                    'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
                     'type' => $group
                 ];
                 if ($counter) {
@@ -159,8 +157,8 @@ class SystemService extends BaseService
                     foreach ($connections as $connection) {
                         /** @var Connection $connection */
                         $mapArray['links'][] = [
-                            'source' => (string)$connection->getSourceNode()->getId() . '_' . Node::$lookup[$connection->getSourceNode()->getType()] . '_' . $connection->getSourceNode()->getName(),
-                            'target' => (string)$connection->getTargetNode()->getId() . '_' . Node::$lookup[$connection->getTargetNode()->getType()] . '_' . $connection->getTargetNode()->getName(),
+                            'source' => (string)$connection->getSourceNode()->getId() . '_' . $connection->getSourceNode()->getNodeType()->getShortName() . '_' . $connection->getSourceNode()->getName(),
+                            'target' => (string)$connection->getTargetNode()->getId() . '_' . $connection->getTargetNode()->getNodeType()->getShortName() . '_' . $connection->getTargetNode()->getName(),
                             'value' => 2,
                             'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
                         ];

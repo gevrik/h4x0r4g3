@@ -37,7 +37,9 @@ class UtilityService extends BaseService
         // init prompt string
         $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
-        $fullPromptString = '[<span class="eeg">' . $profile->getEeg() . '/100</span>][<span class="willpower">' . $profile->getWillpower() . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString . '][' . Node::$data[$currentNode->getType()]['shortname'] . '][' . $currentNode->getLevel() . ']</span> ';
+        $fullPromptString = '[<span class="eeg">' . $profile->getEeg() . '/100</span>][<span class="willpower">' .
+            $profile->getWillpower() . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
+            '][' . $currentNode->getNodeType()->getShortName() . '][' . $currentNode->getLevel() . ']</span> ';
         return $fullPromptString;
     }
 

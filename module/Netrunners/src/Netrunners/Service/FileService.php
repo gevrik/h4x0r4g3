@@ -657,7 +657,7 @@ class FileService extends BaseService
                             '<pre style="white-space: pre-wrap;" class="text-white">%-45s|%-11s|%-20s|%s</pre>',
                             $system->getAddy(),
                             $node->getId(),
-                            Node::$lookup[$node->getType()],
+                            $node->getNodeType()->getName(),
                             $node->getName()
                         );
                     }
