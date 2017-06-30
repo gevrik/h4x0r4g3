@@ -9,10 +9,13 @@
 </div>
 <script>
 
-    var mapWidth = $('.panel-body').innerWidth();
-    var mapHeight = $('.panel-body').innerHeight();
+    var panelBody = $('.panel-body');
+    var mapSvg = $('#map-svg');
+    var mapWidth = panelBody.innerWidth();
+    var mapHeight = panelBody.innerHeight();
 
     var xcolors = [
+        'rgb(199, 199, 199)', // INVALID
         'rgb(199, 199, 199)', // raw
         'rgb(31, 119, 180)', // io
         'rgb(23, 190, 207)', // memory
@@ -40,83 +43,7 @@
         'rgb(31, 119, 180)'
     ];
 
-    $('#map-svg').attr('height', mapHeight);
-    $('#map-svg').attr('width', mapWidth);
-
-//    var svg = d3.select("svg"),
-//        width = +svg.attr("width"),
-//        height = +svg.attr("height");
-//
-//    var color = d3.scaleOrdinal(d3.schemeCategory20);
-//
-//    var simulation = d3.forceSimulation()
-//        .force("link", d3.forceLink().id(function(d) { return d.id; }))
-//        .force("charge", d3.forceManyBody())
-//        .force("center", d3.forceCenter(width / 2, height / 2));
-//
-//    graph = <?php //echo $this->json; ?>//;
-//
-//        var link = svg.append("g")
-//            .attr("class", "links")
-//            .selectAll("line")
-//            .data(graph.links)
-//            .enter().append("line")
-//            .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
-//
-//        var node = svg.append("g")
-//            .attr("class", "nodes")
-//            .selectAll("circle")
-//            .data(graph.nodes)
-//            .enter().append("circle")
-//            .attr("r", 5)
-//            .attr("fill", function (d) {
-//              return (d.group === 99) ? '#000000' : xcolors[d.group];
-//            })
-//            .call(d3.drag()
-//                .on("start", dragstarted)
-//                .on("drag", dragged)
-//                .on("end", dragended));
-//
-//        node.append("title")
-//            .text(function (d) {
-//                return (d.group === 99) ? d.id + ' [you are here]' : d.id;
-//            });
-//
-//        simulation
-//            .nodes(graph.nodes)
-//            .on("tick", ticked);
-//
-//        simulation.force("link")
-//            .links(graph.links);
-//
-//        function ticked() {
-//            link
-//                .attr("x1", function(d) { return d.source.x; })
-//                .attr("y1", function(d) { return d.source.y; })
-//                .attr("x2", function(d) { return d.target.x; })
-//                .attr("y2", function(d) { return d.target.y; });
-//
-//            node
-//                .attr("cx", function(d) { return d.x; })
-//                .attr("cy", function(d) { return d.y; });
-//        }
-//
-//    function dragstarted(d) {
-//        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-//        d.fx = d.x;
-//        d.fy = d.y;
-//    }
-//
-//    function dragged(d) {
-//        d.fx = d3.event.x;
-//        d.fy = d3.event.y;
-//    }
-//
-//    function dragended(d) {
-//        if (!d3.event.active) simulation.alphaTarget(0);
-//        d.fx = null;
-//        d.fy = null;
-//    }
+    mapSvg.attr('height', mapHeight).attr('width', mapWidth);
 
     //create somewhere to put the force directed graph
     var svg = d3.select("svg"),
@@ -126,9 +53,6 @@
     var radius = 8;
 
     var jsonData = <?php echo $this->json; ?>;
-
-    //var jsonData = JSON.parse(<?php echo $this->json; ?>);
-
     var nodes_data = jsonData.nodes;
     var links_data = jsonData.links;
 
@@ -136,8 +60,10 @@
     var simulation = d3.forceSimulation()
         .nodes(nodes_data);
 
-    var link_force =  d3.forceLink(links_data)
-        .id(function(d) { return d.name; });
+    var link_force = d3.forceLink(links_data)
+        .id(function (d) {
+            return d.name;
+        });
 
     var charge_force = d3.forceManyBody()
         .strength(-100);
@@ -147,11 +73,11 @@
     simulation
         .force("charge_force", charge_force)
         .force("center_force", center_force)
-        .force("links",link_force)
+        .force("links", link_force)
     ;
 
     //add tick instructions:
-    simulation.on("tick", tickActions );
+    simulation.on("tick", tickActions);
 
     //add encompassing group for the zoom
     var g = svg.append("g")
@@ -197,16 +123,16 @@
 
     /** Functions **/
 
-//Function to choose what color circle we have
-    function circleColour(d){
+    //Function to choose what color circle we have
+    function circleColour(d) {
         return xcolors[d.type];
     }
 
     //Function to choose the line colour and thickness
     //If the link type is "A" return green
     //If the link type is "E" return red
-    function linkColour(d){
-        if(d.type == "A"){
+    function linkColour(d) {
+        if (d.type === "A") {
             return "green";
         } else {
             return "red";
@@ -234,21 +160,33 @@
     }
 
     //Zoom functions
-    function zoom_actions(){
+    function zoom_actions() {
         g.attr("transform", d3.event.transform)
     }
 
     function tickActions() {
         //update circle positions each tick of the simulation
         node
-            .attr("cx", function(d) { return d.x; })
-            .attr("cy", function(d) { return d.y; });
+            .attr("cx", function (d) {
+                return d.x;
+            })
+            .attr("cy", function (d) {
+                return d.y;
+            });
 
         //update link positions
         link
-            .attr("x1", function(d) { return d.source.x; })
-            .attr("y1", function(d) { return d.source.y; })
-            .attr("x2", function(d) { return d.target.x; })
-            .attr("y2", function(d) { return d.target.y; });
+            .attr("x1", function (d) {
+                return d.source.x;
+            })
+            .attr("y1", function (d) {
+                return d.source.y;
+            })
+            .attr("x2", function (d) {
+                return d.target.x;
+            })
+            .attr("y2", function (d) {
+                return d.target.y;
+            });
     }
 </script>

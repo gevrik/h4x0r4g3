@@ -284,13 +284,12 @@ class NodeService extends BaseService
             $searchByNumber = true;
         }
         $type = false;
-        $name = "";
         if ($searchByNumber) {
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', $parameter);
         }
         else {
             $nodeType = $this->entityManager->getRepository('Netrunners\Entity\NodeType')->findOneBy([
-                'name' => $type
+                'name' => $parameter
             ]);
         }
         if (!$response && !$nodeType) {
@@ -322,11 +321,11 @@ class NodeService extends BaseService
             $currentCredits = $profile->getCredits();
             $profile->setCredits($currentCredits - $nodeType->getCost());
             $currentNode->setNodeType($nodeType);
-            $currentNode->setName($name);
+            $currentNode->setName($nodeType->getShortName());
             $this->entityManager->flush();
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node type changed to %s</pre>', $name)
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node type changed to %s</pre>', $nodeType->getName())
             );
         }
         return $response;
@@ -373,6 +372,12 @@ class NodeService extends BaseService
         return $response;
     }
 
+    /**
+     * @param ConnectionInterface $conn
+     * @param $clientData
+     * @param $content
+     * @return bool|ConnectionInterface
+     */
     public function saveNodeDescription(ConnectionInterface $conn, $clientData, $content)
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -556,7 +561,7 @@ class NodeService extends BaseService
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-20s|%-3s|%s</pre>',
                     $node->getId(),
                     $node->getNodeType()->getName(),
                     $node->getLevel(),

@@ -118,6 +118,11 @@ class AdminService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
     public function adminSetSnippets($resourceId, $contentArray)
     {
         $response = false;
@@ -156,6 +161,59 @@ class AdminService extends BaseService
             $profile = $targetUser->getProfile();
             /** @var Profile $profile */
             $profile->setSnippets($profile->getSnippets() + $amount);
+            $this->entityManager->flush($profile);
+            $message = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">DONE</pre>');
+            $response = [
+                'command' => 'showmessage',
+                'message' => $message
+            ];
+        }
+        return $response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function adminSetCredits($resourceId, $contentArray)
+    {
+        $response = false;
+        if (!$this->isAdmin($resourceId)) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
+            ];
+            return $response;
+        }
+        list($contentArray, $targetUserId) = $this->getNextParameter($contentArray, true, true);
+        if (!$targetUserId) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a user id (use "clients" to get a list)</pre>')
+            ];
+        }
+        $targetUser = false;
+        if (!$response) {
+            $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
+        }
+        if (!$response && !$targetUser) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unable to find a user for that ID</pre>')
+            ];
+        }
+        $amount = $this->getNextParameter($contentArray, false, true);
+        if (!$response && !$amount) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the amount</pre>')
+            ];
+        }
+        if (!$response) {
+            $profile = $targetUser->getProfile();
+            /** @var Profile $profile */
+            $profile->setCredits($profile->getCredits() + $amount);
             $this->entityManager->flush($profile);
             $message = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">DONE</pre>');
             $response = [

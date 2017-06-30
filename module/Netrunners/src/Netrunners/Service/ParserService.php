@@ -341,6 +341,9 @@ class ParserService
             case 'setsnippets':
                 $response = $this->adminService->adminSetSnippets($resourceId, $contentArray);
                 break;
+            case 'setcredits':
+                $response = $this->adminService->adminSetCredits($resourceId, $contentArray);
+                break;
         }
         if (!is_array($response)) return true;
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);

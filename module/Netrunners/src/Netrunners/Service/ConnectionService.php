@@ -139,7 +139,10 @@ class ConnectionService extends BaseService
         if (!$response && $profile->getCredits() < self::CONNECTION_COST) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You need %s credits to add a connection to the node</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">You need %s credits to add a connection to the node</pre>',
+                    self::CONNECTION_COST
+                )
             );
         }
         // check if the target node exists
