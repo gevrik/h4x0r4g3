@@ -26,7 +26,8 @@ class ProfileServiceFactory implements FactoryInterface
     {
         return new ProfileService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

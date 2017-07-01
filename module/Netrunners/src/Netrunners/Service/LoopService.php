@@ -26,6 +26,7 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NotificationRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
 
 class LoopService extends BaseService
 {
@@ -42,13 +43,21 @@ class LoopService extends BaseService
     protected $fileService;
 
 
+    /**
+     * LoopService constructor.
+     * @param EntityManager $entityManager
+     * @param \Zend\View\Renderer\PhpRenderer $viewRenderer
+     * @param FileService $fileService
+     * @param Translator $translator
+     */
     public function __construct(
         EntityManager $entityManager,
         $viewRenderer,
-        FileService $fileService
+        FileService $fileService,
+        Translator $translator
     )
     {
-        parent::__construct($entityManager, $viewRenderer);
+        parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileService = $fileService;
     }
 

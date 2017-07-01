@@ -17,32 +17,19 @@ class WordRepository extends EntityRepository
 {
 
     /**
-     * TODO does not work - RAND not in this version of doctrine
-     * @param $length
-     * @return mixed
-     */
-    public function findRandomByLength($length)
-    {
-        $qb = $this->createQueryBuilder('w');
-        $qb->where('w.length = :length');
-        $qb->setParameter('length', $length);
-        $qb->orderBy('RAND()');
-        return $qb->getQuery()->getOneOrNullResult();
-    }
-
-    /**
      * @param int $amount
      * @param int $length
      * @return array
      */
     public function getRandomWordsByLength($amount = 1, $length = 5)
     {
-        return $this->getRandomWordByLengthNativeQuery($amount)->getResult();
+        return $this->getRandomWordByLengthNativeQuery($amount, $length)->getResult();
     }
 
     /**
      * @param int $amount
-     * @return @ORM\NativeQuery
+     * @param int $length
+     * @return \Doctrine\ORM\NativeQuery
      */
     public function getRandomWordByLengthNativeQuery($amount = 1, $length = 5)
     {

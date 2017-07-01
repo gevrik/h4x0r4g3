@@ -84,8 +84,15 @@ class ParserService
      */
     protected $milkrunService;
 
+    /**
+     * @var HangmanService
+     */
     protected $hangmanService;
 
+    /**
+     * @var CodebreakerService
+     */
+    protected $codebreakerService;
 
     /**
      * @param EntityManager $entityManager
@@ -101,6 +108,7 @@ class ParserService
      * @param AdminService $adminService
      * @param MilkrunService $milkrunService
      * @param HangmanService $hangmanService
+     * @param CodebreakerService $codebreakerService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -115,7 +123,8 @@ class ParserService
         NotificationService $notificationService,
         AdminService $adminService,
         MilkrunService $milkrunService,
-        HangmanService $hangmanService
+        HangmanService $hangmanService,
+        CodebreakerService $codebreakerService
     )
     {
         $this->entityManager = $entityManager;
@@ -131,6 +140,7 @@ class ParserService
         $this->adminService = $adminService;
         $this->milkrunService = $milkrunService;
         $this->hangmanService = $hangmanService;
+        $this->codebreakerService = $codebreakerService;
     }
 
     /**
@@ -186,6 +196,9 @@ class ParserService
                 break;
             case 'code':
                 $response = $this->codingService->enterCodeMode($resourceId);
+                break;
+            case 'codebreaker':
+                $response = $this->codebreakerService->startCodebreaker($resourceId);
                 break;
             case 'commands':
                 $response = $this->showCommands($resourceId);

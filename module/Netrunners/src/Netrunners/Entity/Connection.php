@@ -48,6 +48,12 @@ class Connection
      */
     protected $created;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $isOpen;
+
     // ORM
 
     /**
@@ -130,6 +136,24 @@ class Connection
     public function setCreated($created)
     {
         $this->created = $created;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getisOpen()
+    {
+        return $this->isOpen;
+    }
+
+    /**
+     * @param int $isOpen
+     * @return Connection
+     */
+    public function setIsOpen($isOpen)
+    {
+        $this->isOpen = $isOpen;
         return $this;
     }
 

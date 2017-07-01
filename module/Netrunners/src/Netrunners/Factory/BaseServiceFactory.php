@@ -28,7 +28,8 @@ class BaseServiceFactory implements FactoryInterface
     {
         return new BaseService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

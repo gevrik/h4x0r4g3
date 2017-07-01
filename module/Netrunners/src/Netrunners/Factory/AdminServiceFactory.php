@@ -27,7 +27,8 @@ class AdminServiceFactory implements FactoryInterface
         return new AdminService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('BjyAuthorize\Service\Authorize')
+            $serviceLocator->get('BjyAuthorize\Service\Authorize'),
+            $serviceLocator->get('translator')
         );
     }
 

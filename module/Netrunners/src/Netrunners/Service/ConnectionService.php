@@ -23,10 +23,13 @@ class ConnectionService extends BaseService
 {
 
     const CONNECTION_COST = 10;
-
     const SECURE_CONNECTION_COST = 50;
 
-
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
     public function useConnection($resourceId, $contentArray)
     {
         $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
@@ -72,7 +75,9 @@ class ConnectionService extends BaseService
             );
         }
         // check if they can access the connection
-        if (!$response && ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile())) {
+        if (!$response &&
+            ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen())
+        ) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>', "Access denied")
@@ -178,6 +183,7 @@ class ConnectionService extends BaseService
             $aconnection->setSourceNode($currentNode);
             $aconnection->setCreated(new \DateTime());
             $aconnection->setLevel(1);
+            $aconnection->setIsOpen(false);
             $this->entityManager->persist($aconnection);
             $bconnection = new Connection();
             $bconnection->setType(Connection::TYPE_NORMAL);
@@ -185,6 +191,7 @@ class ConnectionService extends BaseService
             $bconnection->setSourceNode($targetNode);
             $bconnection->setCreated(new \DateTime());
             $bconnection->setLevel(1);
+            $bconnection->setIsOpen(false);
             $this->entityManager->persist($bconnection);
             $this->entityManager->flush();
             $response = array(
@@ -260,10 +267,12 @@ class ConnectionService extends BaseService
         if (!$response) {
             $profile->setCredits($profile->getCredits() - self::SECURE_CONNECTION_COST);
             $connection->setType(Connection::TYPE_CODEGATE);
+            $connection->setIsOpen(false);
             $targetnode = $connection->getTargetNode();
             $targetConnection = $connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
             $targetConnection = array_shift($targetConnection);
             $targetConnection->setType(Connection::TYPE_CODEGATE);
+            $targetConnection->setIsOpen(false);
             $this->entityManager->flush();
             $response = array(
                 'command' => 'showmessage',

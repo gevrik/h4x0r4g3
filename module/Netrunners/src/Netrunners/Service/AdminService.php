@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Profile;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
 
 class AdminService extends BaseService
 {
@@ -29,10 +30,11 @@ class AdminService extends BaseService
      * @param EntityManager $entityManager
      * @param $viewRenderer
      * @param Authorize $authorize
+     * @param Translator $translator
      */
-    public function __construct(EntityManager $entityManager, $viewRenderer, $authorize)
+    public function __construct(EntityManager $entityManager, $viewRenderer, $authorize, $translator)
     {
-        parent::__construct($entityManager, $viewRenderer);
+        parent::__construct($entityManager, $viewRenderer, $translator);
         $this->authorize = $authorize;
     }
 

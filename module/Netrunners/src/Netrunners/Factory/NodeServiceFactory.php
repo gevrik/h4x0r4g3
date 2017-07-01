@@ -26,7 +26,8 @@ class NodeServiceFactory implements FactoryInterface
     {
         return new NodeService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

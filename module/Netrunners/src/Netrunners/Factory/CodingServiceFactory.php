@@ -27,7 +27,8 @@ class CodingServiceFactory implements FactoryInterface
         return new CodingService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('Netrunners\Service\LoopService')
+            $serviceLocator->get('Netrunners\Service\LoopService'),
+            $serviceLocator->get('translator')
         );
     }
 

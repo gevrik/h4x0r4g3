@@ -152,6 +152,7 @@ class NodeService extends BaseService
             $sourceConnection->setCreated(new \DateTime());
             $sourceConnection->setSourceNode($currentNode);
             $sourceConnection->setTargetNode($node);
+            $sourceConnection->setIsOpen(false);
             $this->entityManager->persist($sourceConnection);
             $targetConnection = new Connection();
             $targetConnection->setType(Connection::TYPE_NORMAL);
@@ -159,6 +160,7 @@ class NodeService extends BaseService
             $targetConnection->setCreated(new \DateTime());
             $targetConnection->setSourceNode($node);
             $targetConnection->setTargetNode($currentNode);
+            $targetConnection->setIsOpen(false);
             $this->entityManager->persist($targetConnection);
             $this->entityManager->flush();
             $response = array(

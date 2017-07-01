@@ -26,7 +26,8 @@ class MilkrunServiceFactory implements FactoryInterface
     {
         return new MilkrunService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

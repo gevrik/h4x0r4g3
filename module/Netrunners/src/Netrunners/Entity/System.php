@@ -36,6 +36,12 @@ class System
      */
     protected $addy;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $alertLevel;
+
     // ORM
 
     /**
@@ -95,6 +101,24 @@ class System
     public function setAddy($addy)
     {
         $this->addy = $addy;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAlertLevel()
+    {
+        return $this->alertLevel;
+    }
+
+    /**
+     * @param int $alertLevel
+     * @return System
+     */
+    public function setAlertLevel($alertLevel)
+    {
+        $this->alertLevel = $alertLevel;
         return $this;
     }
 

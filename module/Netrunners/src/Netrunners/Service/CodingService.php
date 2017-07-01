@@ -22,6 +22,7 @@ use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
 use Netrunners\Repository\FileTypeRepository;
 use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
 
 class CodingService extends BaseService
 {
@@ -51,14 +52,16 @@ class CodingService extends BaseService
      * @param EntityManager $entityManager
      * @param $viewRenderer
      * @param LoopService $loopService
+     * @param Translator $translator
      */
     public function __construct(
         EntityManager $entityManager,
         $viewRenderer,
-        LoopService $loopService
+        LoopService $loopService,
+        Translator $translator
     )
     {
-        parent::__construct($entityManager, $viewRenderer);
+        parent::__construct($entityManager, $viewRenderer, $translator);
         $this->loopService = $loopService;
     }
 

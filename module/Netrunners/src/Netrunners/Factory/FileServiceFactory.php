@@ -26,7 +26,8 @@ class FileServiceFactory implements FactoryInterface
     {
         return new FileService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

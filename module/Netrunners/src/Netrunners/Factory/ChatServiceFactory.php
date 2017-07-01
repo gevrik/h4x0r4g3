@@ -26,7 +26,8 @@ class ChatServiceFactory implements FactoryInterface
     {
         return new ChatService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

@@ -26,7 +26,8 @@ class MailMessageServiceFactory implements FactoryInterface
     {
         return new MailMessageService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

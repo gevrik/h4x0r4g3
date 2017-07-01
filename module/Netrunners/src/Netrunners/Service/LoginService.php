@@ -219,6 +219,7 @@ class LoginService extends BaseService
             $system->setProfile($profile);
             $system->setName($user->getUsername());
             $system->setAddy($addy);
+            $system->setAlertLevel(0);
             $this->entityManager->persist($system);
             // default io node
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);

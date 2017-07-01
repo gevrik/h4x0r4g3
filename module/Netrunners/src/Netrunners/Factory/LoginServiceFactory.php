@@ -26,7 +26,8 @@ class LoginServiceFactory implements FactoryInterface
     {
         return new LoginService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer')
+            $serviceLocator->get('ViewRenderer'),
+            $serviceLocator->get('translator')
         );
     }
 

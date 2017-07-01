@@ -38,6 +38,7 @@ use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
+use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
 class BaseService
@@ -54,17 +55,25 @@ class BaseService
     protected $viewRenderer;
 
     /**
+     * @var Translator
+     */
+    protected $translator;
+
+    /**
      * BaseService constructor.
      * @param EntityManager $entityManager
      * @param $viewRenderer
+     * @param $translator
      */
     public function __construct(
         EntityManager $entityManager,
-        $viewRenderer
+        PhpRenderer $viewRenderer,
+        Translator $translator
     )
     {
         $this->entityManager = $entityManager;
         $this->viewRenderer = $viewRenderer;
+        $this->translator = $translator;
     }
 
     /**
@@ -371,7 +380,10 @@ class BaseService
             /** @var Profile $xprofile */
             if ($xprofile == $profile) continue;
             foreach ($wsClients as $wsClient) {
-                if (isset($wsClientsData[$wsClient->resourceId]) && $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()) {
+                if (
+                    isset($wsClientsData[$wsClient->resourceId]) &&
+                    $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()
+                ) {
                     $wsClient->send(json_encode($message));
                 }
             }
@@ -532,14 +544,22 @@ class BaseService
             $targetNode = $connection->getTargetNode();
         }
         // message everyone in source node
-        $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>', $profile->getUser()->getUsername(), $targetNode->getName());
+        $messageText = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>',
+            $profile->getUser()->getUsername(),
+            $targetNode->getName()
+        );
         $message = array(
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
         $this->messageEveryoneInNode($sourceNode, $message, $profile);
         $profile->setCurrentNode($targetNode);
-        $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>', $profile->getUser()->getUsername(), $sourceNode->getName());
+        $messageText = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>',
+            $profile->getUser()->getUsername(),
+            $sourceNode->getName()
+        );
         $message = array(
             'command' => 'showmessageprepend',
             'message' => $messageText
@@ -549,6 +569,13 @@ class BaseService
         return $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId);
     }
 
+    /**
+     * Checks if the player is blocked from performing another action.
+     * Returns true if the action is blocked, false if it is not blocked.
+     * @param $resourceId
+     * @param bool $checkForFullBlock
+     * @return array|bool
+     */
     protected function isActionBlocked($resourceId, $checkForFullBlock = false)
     {
         $ws = $this->getWebsocketServer();
@@ -643,6 +670,17 @@ class BaseService
         return true;
     }
 
+    /**
+     * @param Profile $profile
+     * @param MilkrunInstance|NULL $milkrunInstance
+     * @param Profile|NULL $rater
+     * @param int $source
+     * @param int $sourceRating
+     * @param int $targetRating
+     * @param null $sourceFaction
+     * @param null $targetFaction
+     * @return bool
+     */
     protected function createProfileFactionRating(
         Profile $profile,
         MilkrunInstance $milkrunInstance = NULL,
@@ -685,6 +723,28 @@ class BaseService
     protected function canStartActionInNodeType()
     {
 
+    }
+
+    /**
+     * Generate a random string, using a cryptographically secure
+     * pseudorandom number generator (random_int)
+     *
+     * For PHP 7, random_int is a PHP core function
+     * For PHP 5.x, depends on https://github.com/paragonie/random_compat
+     *
+     * @param int $length      How many characters do we want?
+     * @param string $keyspace A string of all possible characters
+     *                         to select from
+     * @return string
+     */
+    function getRandomString($length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    {
+        $str = '';
+        $max = mb_strlen($keyspace, '8bit') - 1;
+        for ($i = 0; $i < $length; ++$i) {
+            $str .= $keyspace[random_int(0, $max)];
+        }
+        return $str;
     }
 
 }

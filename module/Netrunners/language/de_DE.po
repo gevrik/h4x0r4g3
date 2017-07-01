@@ -1,0 +1,188 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: H4X0R4G3 0.1 - german\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-07-01 13:36+0200\n"
+"PO-Revision-Date: 2017-07-01 13:37+0200\n"
+"Last-Translator: Evan Coury <me@evancoury.com>\n"
+"Language-Team: TMO\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: translate\n"
+"X-Poedit-Basepath: .\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 2.0.2\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-SearchPath-0: ..\n"
+
+#: ../config/module.config.php:77
+msgid "Profiles"
+msgstr ""
+
+#: ../config/module.config.php:81
+msgid "Detail"
+msgstr ""
+
+#: ../src/Netrunners/Form/ProfileEditForm.php:34
+msgid "Save profile"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodebreakerService.php:45
+#, php-format
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+"password: %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../view/netrunners/node/edit-description.phtml:5
+msgid "edit node description"
+msgstr ""
+
+#: ../view/netrunners/notification/list.phtml:12
+msgid "dismiss all"
+msgstr ""
+
+#: ../view/netrunners/partials/map.phtml:4
+msgid "system map"
+msgstr ""
+
+#~ msgid "Home"
+#~ msgstr "Startseite"
+
+#~ msgid "All rights reserved."
+#~ msgstr "Alle Rechte vorbehalten."
+
+#~ msgid "Welcome to %sZend Framework 2%s"
+#~ msgstr "Willkommen zu dem %sZend Framework 2%s"
+
+#~ msgid ""
+#~ "Congratulations! You have successfully installed the %sZF2 Skeleton "
+#~ "Application%s. You are currently running Zend Framework version %s. This "
+#~ "skeleton can serve as a simple starting point for you to begin building "
+#~ "your application on ZF2."
+#~ msgstr ""
+#~ "Herzlichen Glückwunsch! Sie haben die %sZF2 Skeleton Application%s "
+#~ "erfolgreich installiert und benutzen gerade die Version %s des Zend "
+#~ "Frameworks. Dieses Gerüst kann Ihnen als Einstiegspunkt, für Ihre weitere "
+#~ "Entwicklung, basierend auf dem Zend Framework 2, dienen."
+
+#~ msgid "Fork Zend Framework 2 on GitHub"
+#~ msgstr "Fork Zend Framework 2 auf GitHub"
+
+#~ msgid "Follow Development"
+#~ msgstr "Folge der Entwicklung"
+
+#~ msgid ""
+#~ "Zend Framework 2 is under active development. If you are interested in "
+#~ "following the development of ZF2, there is a special ZF2 portal on the "
+#~ "official Zend Framework website which provides links to the ZF2 %swiki%s, "
+#~ "%sdev blog%s, %sissue tracker%s, and much more. This is a great resource "
+#~ "for staying up to date with the latest developments!"
+#~ msgstr ""
+#~ "Das Zend Framework 2 wird z.Z. aktiv weiterentwickelt.  Sollten Sie daran "
+#~ "interessiert sein, die Entwicklung von ZF2 zu verfolgen, so bietet Ihnen "
+#~ "die offizielle Webseite einen eigens für das Zend Framework 2 "
+#~ "eingerichteten Bereich, auf der Sie Verlinkungen zum ZF2 %sWiki%s, "
+#~ "%sEntwickler Blog%s, einem %sFehlerverfolgungssystem%s und noch vielem "
+#~ "mehr finden. Dieser Bereich ist eine hervorragende Quelle um stets "
+#~ "aktuell zu bleiben."
+
+#~ msgid "ZF2 Development Portal"
+#~ msgstr "ZF2 Entwickler Portal"
+
+#~ msgid "Discover Modules"
+#~ msgstr "Entdecken Sie Module"
+
+#~ msgid ""
+#~ "The community is working on developing a community site to serve as a "
+#~ "repository and gallery for ZF2 modules. The project is available %son "
+#~ "GitHub%s. The site is currently live and currently contains a list of "
+#~ "some of the modules already available for ZF2."
+#~ msgstr ""
+#~ "Die Community arbeitet momentan an einer Community Seite, welche als "
+#~ "Galerie für ZF2 Module dient. Dieses Projekt ist %sauf GitHub%s "
+#~ "verfügbar. Die Webseite ist bereits Online und enthält eine Liste mit "
+#~ "schon veröffentlichten Modulen für das Zend Framework 2."
+
+#~ msgid "Explore ZF2 Modules"
+#~ msgstr "Erkunden Sie ZF2 Module"
+
+#~ msgid "Help &amp; Support"
+#~ msgstr "Hilfe &amp; Support"
+
+#~ msgid ""
+#~ "If you need any help or support while developing with ZF2, you may reach "
+#~ "us via IRC: %s#zftalk on Freenode%s. We'd love to hear any questions or "
+#~ "feedback you may have regarding the beta releases. Alternatively, you may "
+#~ "subscribe and post questions to the %smailing lists%s."
+#~ msgstr ""
+#~ "Sollten Sie Hilfe jeglicher Art bei der Entwicklung mit dem Zend "
+#~ "Framework 2 benötigen, kontaktieren Sie uns doch einfach über das IRC: "
+#~ "%s#zftalk on Freenode%s. Wir freuen uns darauf, Ihnen bei Ihren Fragen zu "
+#~ "helfen oder aber auch Ihre Meinung bezüglich der Beta Versionen zu hören. "
+#~ "Alternativ können Sie auch die %smailing lists%s abonnieren und Ihre "
+#~ "Fragen dort stellen."
+
+#~ msgid "Ping us on IRC"
+#~ msgstr "Schreiben Sie uns im IRC an"
+
+#~ msgid "An error occurred"
+#~ msgstr "Ein Fehler ist aufgetreten"
+
+#~ msgid "Additional information"
+#~ msgstr "Zusätzliche Information"
+
+#~ msgid "File"
+#~ msgstr "Datei"
+
+#~ msgid "Message"
+#~ msgstr "Meldung"
+
+#~ msgid "Stack trace"
+#~ msgstr "Stapelüberwachung"
+
+#~ msgid "Previous exceptions"
+#~ msgstr "Vorherige Ausnahme"
+
+#~ msgid "No Exception available"
+#~ msgstr "Es ist keine Ausnahme verfügbar"
+
+#~ msgid "A 404 error occurred"
+#~ msgstr "Es trat ein 404 Fehler auf"
+
+#~ msgid "The requested controller was unable to dispatch the request."
+#~ msgstr ""
+#~ "Der angeforderte Controller war nicht in der Lage die Anfrage zu "
+#~ "verarbeiten."
+
+#~ msgid ""
+#~ "The requested controller could not be mapped to an existing controller "
+#~ "class."
+#~ msgstr ""
+#~ "Der angeforderte Controller konnte keiner Controller Klasse zugeordnet "
+#~ "werden."
+
+#~ msgid "The requested controller was not dispatchable."
+#~ msgstr "Der angeforderte Controller ist nicht aufrufbar."
+
+#~ msgid "The requested URL could not be matched by routing."
+#~ msgstr ""
+#~ "Für die angeforderte URL konnte keine Übereinstimmung gefunden werden."
+
+#~ msgid "We cannot determine at this time why a 404 was generated."
+#~ msgstr ""
+#~ "Zu diesem Zeitpunkt ist es uns nicht möglich zu bestimmen, warum ein 404 "
+#~ "Fehler aufgetreten ist."
+
+#~ msgid "Controller"
+#~ msgstr "Controller"
+
+#~ msgid "resolves to %s"
+#~ msgstr "wird aufgelöst in %s"
+
+#~ msgid "Exception"
+#~ msgstr "Ausnahme"

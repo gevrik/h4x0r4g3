@@ -1,8 +1,8 @@
 <?php
 
 /**
- * HangmanService Factory.
- * Factory for the HangmanService.
+ * CodebreakerService Factory.
+ * Factory for the CodebreakerService.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,11 +10,11 @@
 
 namespace Netrunners\Factory;
 
-use Netrunners\Service\HangmanService;
+use Netrunners\Service\CodebreakerService;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
-class HangmanServiceFactory implements FactoryInterface
+class CodebreakerServiceFactory implements FactoryInterface
 {
 
     /**
@@ -24,7 +24,7 @@ class HangmanServiceFactory implements FactoryInterface
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new HangmanService(
+        return new CodebreakerService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
             $serviceLocator->get('translator')
