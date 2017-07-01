@@ -95,12 +95,21 @@ class AdminService extends BaseService
         if (!$this->isAdmin($resourceId)) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>'),
+                    $this->translate('Unknown command')
+                )
             ];
         }
         if (!$response) {
             $ws = $this->getWebsocketServer();
-            $message = [sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-5s|%-32s|%s</pre>', 'socket', 'user', 'name', 'ip')];
+            $message = [sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-5s|%-32s|%s</pre>',
+                $this->translate('socket'),
+                $this->translate('user'),
+                $this->translate('name'),
+                $this->translate('ip')
+            )];
             $amountVoid = 0;
             foreach ($ws->getClientsData() as $xClientData) {
                 $currentUser = $this->entityManager->find('TmoAuth\Entity\User', $xClientData['userId']);
@@ -111,7 +120,10 @@ class AdminService extends BaseService
                 }
                 $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-5s|%-32s|%s</pre>', $xClientData['socketId'], $currentUser->getId(), $currentUser->getUsername(), $xClientData['ipaddy']);
             }
-            if ($amountVoid >= 1) $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">%s sockets do not have user data yet</pre>', $amountVoid);
+            if ($amountVoid >= 1) $message[] = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">%s sockets do not have user data yet</pre>'),
+                $amountVoid
+            );
             $response = [
                 'command' => 'showoutput',
                 'message' => $message
@@ -131,7 +143,10 @@ class AdminService extends BaseService
         if (!$this->isAdmin($resourceId)) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Unknown command')
+                )
             ];
             return $response;
         }
@@ -139,7 +154,10 @@ class AdminService extends BaseService
         if (!$targetUserId) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a user id (use "clients" to get a list)</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Please specify a user id (use "clients" to get a list)')
+                )
             ];
         }
         $targetUser = false;
@@ -149,14 +167,20 @@ class AdminService extends BaseService
         if (!$response && !$targetUser) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unable to find a user for that ID</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Please specify a user id (use "clients" to get a list)')
+                )
             ];
         }
         $amount = $this->getNextParameter($contentArray, false, true);
         if (!$response && !$amount) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the amount</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Please specify the amount')
+                )
             ];
         }
         if (!$response) {
@@ -184,7 +208,10 @@ class AdminService extends BaseService
         if (!$this->isAdmin($resourceId)) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Unknown command')
+                )
             ];
             return $response;
         }
@@ -192,7 +219,10 @@ class AdminService extends BaseService
         if (!$targetUserId) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify a user id (use "clients" to get a list)</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Please specify a user id (use "clients" to get a list)')
+                )
             ];
         }
         $targetUser = false;
@@ -202,14 +232,19 @@ class AdminService extends BaseService
         if (!$response && !$targetUser) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unable to find a user for that ID</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Unable to find a user for that ID'))
             ];
         }
         $amount = $this->getNextParameter($contentArray, false, true);
         if (!$response && !$amount) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the amount</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Please specify the amount')
+                )
             ];
         }
         if (!$response) {

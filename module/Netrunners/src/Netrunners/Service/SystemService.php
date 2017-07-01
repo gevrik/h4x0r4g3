@@ -48,10 +48,10 @@ class SystemService extends BaseService
             $currentSystem = $profile->getCurrentNode()->getSystem();
             /** @var System $currentSystem */
             $returnMessage = array();
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SYSTEM_STRING, $currentSystem->getName());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::ADDY_STRING, $currentSystem->getAddy());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::MEMORY_STRING, $this->getSystemMemory($currentSystem));
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::STORAGE_STRING, $this->getSystemStorage($currentSystem));
+            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::SYSTEM_STRING), $currentSystem->getName());
+            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::ADDY_STRING), $currentSystem->getAddy());
+            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::MEMORY_STRING), $this->getSystemMemory($currentSystem));
+            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::STORAGE_STRING), $this->getSystemStorage($currentSystem));
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
@@ -199,7 +199,10 @@ class SystemService extends BaseService
         if (!$response && $profile->getHomeNode() == $currentNode) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You are already there</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are already there')
+                )
             );
         }
         /* checks passed, we can now move the player to their home node */
@@ -208,7 +211,10 @@ class SystemService extends BaseService
             $this->entityManager->flush($profile);
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You recall to your home node</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('You recall to your home node')
+                )
             );
         }
         return $response;

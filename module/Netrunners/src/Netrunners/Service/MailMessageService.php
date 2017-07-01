@@ -56,7 +56,10 @@ class MailMessageService extends BaseService
             $countUnreadMails = $mailMessageRepo->countByUnreadMails($profile);
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>', $countUnreadMails)
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>'),
+                    $countUnreadMails
+                )
             );
         }
         return $response;
@@ -81,8 +84,14 @@ class MailMessageService extends BaseService
                     'recipient' => $profile
                 )
             );
-            $message = "NeoMail - version 0.1 - '?' for help, 'q' to quit";
-            $message .= sprintf('<pre class="text-white"><strong>%-3s</strong> | <strong>%-20s</strong> | <strong>%-20s</strong> | <strong>%s</strong></pre>', '#', 'FROM', 'RECEIVED', 'SUBJECT');
+            $message = $this->translate("NeoMail - version 0.1 - '?' for help, 'q' to quit");
+            $message .= sprintf(
+                '<pre class="text-white"><strong>%-3s</strong> | <strong>%-20s</strong> | <strong>%-20s</strong> | <strong>%s</strong></pre>',
+                $this->translate('#'),
+                $this->translate('FROM'),
+                $this->translate('RECEIVED'),
+                $this->translate('SUBJECT')
+            );
             $mailNumber = 0;
             foreach ($mails as $mail) {
                 /** @var MailMessage $mail */
@@ -92,7 +101,7 @@ class MailMessageService extends BaseService
                     '%s%-3s | %-20s | %-20s | %s</pre>',
                     $preTag,
                     $mailNumber,
-                    ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : "[SYSTEM-MAIL]",
+                    ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : $this->translate("[SYSTEM-MAIL]"),
                     $mail->getSentDateTime()->format('Y/m/d H:i:s'),
                     $mail->getSubject()
                 );
@@ -158,9 +167,19 @@ class MailMessageService extends BaseService
             }
             /** @var MailMessage $mail */
             $authorName = ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : 'SYSTEM';
-            $message = sprintf('<pre class="text-white">Message: %s</pre>', $mailOptions->currentMailNumber);
-            $message .= sprintf('<pre class="text-white">From: %s %s</pre>', $authorName, $mail->getSentDateTime()->format('Y/m/d H:i:s'));
-            $message .= sprintf('<pre class="text-white">Subject: %s</pre>', $mail->getSubject());
+            $message = sprintf(
+                $this->translate('<pre class="text-white">Message: %s</pre>'),
+                $mailOptions->currentMailNumber
+            );
+            $message .= sprintf(
+                $this->translate('<pre class="text-white">From: %s %s</pre>'),
+                $authorName,
+                $mail->getSentDateTime()->format('Y/m/d H:i:s')
+            );
+            $message .= sprintf(
+                $this->translate('<pre class="text-white">Subject: %s</pre>'),
+                $mail->getSubject()
+            );
             $message .= sprintf('<pre class="text-white">%s</pre>', $mail->getContent());
             $response = array(
                 'command' => 'showmessage',
@@ -211,7 +230,10 @@ class MailMessageService extends BaseService
         }
         if (!$response) {
             /** @var MailMessage $mail */
-            $message = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Mail #%s has been deleted</pre>', $mailNumber);
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Mail #%s has been deleted</pre>'),
+                $mailNumber
+            );
             $this->entityManager->remove($mail);
             $this->entityManager->flush();
             $response = array(

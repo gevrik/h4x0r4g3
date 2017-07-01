@@ -191,7 +191,8 @@ class LoopService extends BaseService
             if ($targetClient && $targetClientData) {
                 /* send message */
                 $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">Your current milkrun has expired before you could complete it</pre>'
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Your current milkrun has expired before you could complete it')
                 );
                 $response = [
                     'command' => 'stopmilkrun',
@@ -363,12 +364,18 @@ class LoopService extends BaseService
             }
             $add = '';
             if (!$newCode->getProfile()) {
-                $add = '<br />The file could not be stored in storage - it has been added to the node that it was coded in';
+                $add = $this->translate('<br />The file could not be stored in storage - it has been added to the node that it was coded in');
             }
             $this->learnFromSuccess($profile, $jobData);
             $response = [
                 'severity' => 'success',
-                'message' => sprintf("[%s] Coding project complete: %s [level: %s]%s", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty, $add)
+                'message' => sprintf(
+                    $this->translate('[%s] Coding project complete: %s [level: %s]%s'),
+                    $jobData['completionDate']->format('Y/m/d H:i:s'),
+                    $basePart->getName(),
+                    $difficulty,
+                    $add
+                )
             ];
             $this->entityManager->flush();
         }
@@ -395,7 +402,13 @@ class LoopService extends BaseService
             }
             $response = [
                 'severity' => 'warning',
-                'message' => sprintf("[%s] Coding project failed: %s [level: %s] %s", $jobData['completionDate']->format('Y/m/d H:i:s'), $basePart->getName(), $difficulty, $message)
+                'message' => sprintf(
+                    $this->translate("[%s] Coding project failed: %s [level: %s] %s"),
+                    $jobData['completionDate']->format('Y/m/d H:i:s'),
+                    $basePart->getName(),
+                    $difficulty,
+                    $message
+                )
             ];
             $this->entityManager->flush();
         }

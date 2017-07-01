@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Profile;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
 
 class ParserService
 {
@@ -28,6 +29,11 @@ class ParserService
      * @var EntityManager
      */
     protected $entityManager;
+
+    /**
+     * @var Translator
+     */
+    protected $translator;
 
     /**
      * @var FileService
@@ -96,6 +102,7 @@ class ParserService
 
     /**
      * @param EntityManager $entityManager
+     * @param Translator $translator
      * @param FileService $fileService
      * @param NodeService $nodeService
      * @param ChatService $chatService
@@ -112,6 +119,7 @@ class ParserService
      */
     public function __construct(
         EntityManager $entityManager,
+        Translator $translator,
         FileService $fileService,
         NodeService $nodeService,
         ChatService $chatService,
@@ -128,6 +136,7 @@ class ParserService
     )
     {
         $this->entityManager = $entityManager;
+        $this->translator = $translator;
         $this->fileService = $fileService;
         $this->nodeService = $nodeService;
         $this->chatService = $chatService;
@@ -176,7 +185,10 @@ class ParserService
             default:
                 $response = array(
                     'command' => self::CMD_SHOWMESSAGE,
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Unknown command</pre>')
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translator->translate('Unknown command')
+                    )
                 );
                 break;
             case 'clear':
@@ -340,7 +352,10 @@ class ParserService
                 $now = new \DateTime();
                 $response = array(
                     'command' => self::CMD_SHOWMESSAGE,
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">current server time: %s</pre>', $now->format('Y/m/d H:i:s'))
+                    'message' => sprintf(
+                        $this->translator->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">current server time: %s</pre>'),
+                        $now->format('Y/m/d H:i:s')
+                    )
                 );
                 break;
             case 'touch':

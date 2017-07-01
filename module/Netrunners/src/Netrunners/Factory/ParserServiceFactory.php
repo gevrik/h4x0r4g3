@@ -26,6 +26,7 @@ class ParserServiceFactory implements FactoryInterface
     {
         return new ParserService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
+            $serviceLocator->get('translator'),
             $serviceLocator->get('Netrunners\Service\FileService'),
             $serviceLocator->get('Netrunners\Service\NodeService'),
             $serviceLocator->get('Netrunners\Service\ChatService'),

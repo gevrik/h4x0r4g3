@@ -249,7 +249,7 @@ class LoginService extends BaseService
             $informer = array(
                 'command' => 'showmessageprepend',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-info">a new user [%s] has connected</pre>',
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-info">a new user [%s] has connected</pre>'),
                     $user->getUsername()
                 )
             );
@@ -302,7 +302,10 @@ class LoginService extends BaseService
                 'prompt' => $ws->getUtilityService()->showPrompt($clientData)
             );
             // message everyone in node
-            $messageText = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has logged in to this node</pre>', $user->getUsername());
+            $messageText = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has logged in to this node</pre>'),
+                $user->getUsername()
+            );
             $message = array(
                 'command' => 'showmessageprepend',
                 'message' => $messageText

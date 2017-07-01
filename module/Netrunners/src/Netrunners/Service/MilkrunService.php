@@ -50,7 +50,8 @@ class MilkrunService extends BaseService
         $response = $this->isActionBlocked($resourceId);
         if (!$response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
             $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">You need to be in an agent node to request a milkrun</pre>'
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                $this->translate('You need to be in an agent node to request a milkrun')
             );
             $response = array(
                 'command' => 'showmessage',
@@ -453,7 +454,10 @@ class MilkrunService extends BaseService
                 );
                 $response = [
                     'command' => 'completemilkrun',
-                    'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have completed your current milkrun</pre>'),
+                    'content' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('You have completed your current milkrun')
+                    ),
                     'playsound' => $playSound
                 ];
             }
@@ -475,7 +479,10 @@ class MilkrunService extends BaseService
                 );
                 $response = [
                     'command' => 'completemilkrun',
-                    'content' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You have failed your current milkrun</pre>'),
+                    'content' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You have failed your current milkrun')
+                    ),
                     'playsound' => $playSound
                 ];
             }

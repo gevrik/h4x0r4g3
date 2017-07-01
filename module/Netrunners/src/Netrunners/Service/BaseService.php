@@ -76,6 +76,11 @@ class BaseService
         $this->translator = $translator;
     }
 
+    protected function translate($string)
+    {
+        return $this->translator->translate($string);
+    }
+
     /**
      * @return WebsocketService
      */
@@ -545,7 +550,7 @@ class BaseService
         }
         // message everyone in source node
         $messageText = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>',
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>'),
             $profile->getUser()->getUsername(),
             $targetNode->getName()
         );
@@ -556,7 +561,7 @@ class BaseService
         $this->messageEveryoneInNode($sourceNode, $message, $profile);
         $profile->setCurrentNode($targetNode);
         $messageText = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>',
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>'),
             $profile->getUser()->getUsername(),
             $sourceNode->getName()
         );
@@ -592,7 +597,10 @@ class BaseService
         if ($isBlocked) {
             $isBlocked = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You are curently busy with something else</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('You are curently busy with something else')
+                )
             ];
         }
         return $isBlocked;

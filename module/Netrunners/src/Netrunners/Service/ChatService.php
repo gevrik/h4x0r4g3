@@ -56,7 +56,10 @@ class ChatService extends BaseService
             if (!$fileRepo->findChatClientForProfile($profile)) {
                 $response = [
                     'command' => 'showmessage',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">You need a running chatclient to use global chat</pre>')
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You need a running chatclient to use global chat')
+                    )
                 ];
             }
         }

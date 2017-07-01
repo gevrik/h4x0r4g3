@@ -42,7 +42,10 @@ class CodebreakerService extends BaseService
             $theString = substr_replace($randomString, $thePassword, mt_rand(0, 25), 6);
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf($this->translator->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">find the password: %s</pre>'), $theString)
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">find the password: %s</pre>'),
+                    $theString
+                )
             );
         }
         return $response;

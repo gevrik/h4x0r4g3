@@ -87,8 +87,16 @@ class ProfileService extends BaseService
             $profile = $user->getProfile();
             /** @var Profile $profile */
             $returnMessage = array();
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_CREDITS_STRING, $profile->getCredits());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', self::SCORE_SNIPPETS_STRING, $profile->getSnippets());
+            $returnMessage[] = sprintf(
+                '<pre>%-12s: %s</pre>',
+                $this->translate(self::SCORE_CREDITS_STRING),
+                $profile->getCredits()
+            );
+            $returnMessage[] = sprintf(
+                '<pre>%-12s: %s</pre>',
+                $this->translate(self::SCORE_SNIPPETS_STRING),
+                $profile->getSnippets()
+            );
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
@@ -115,13 +123,21 @@ class ProfileService extends BaseService
             $profile = $user->getProfile();
             /** @var Profile $profile */
             $returnMessage = [];
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>', 'skillpoints', $profile->getSkillPoints());
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>',
+                $this->translate('skillpoints'),
+                $profile->getSkillPoints()
+            );
             $skills = $skillRepo->findAll();
             foreach ($skills as $skill) {
                 /** @var Skill $skill */
                 $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
                 $skillRating = $skillRatingObject->getRating();
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>', $skill->getName(), $skillRating);
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>',
+                    $skill->getName(),
+                    $skillRating
+                );
             }
             $response = array(
                 'command' => 'showoutput',
@@ -152,11 +168,21 @@ class ProfileService extends BaseService
         if (empty($userJobs)) {
             $response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">No running jobs</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('No running jobs')
+                )
             );
         }
         else {
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-4s|%-10s|%-20s|%-20s|%s</pre>', 'id', 'type', 'name', 'time', 'difficulty');
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-4s|%-10s|%-20s|%-20s|%s</pre>',
+                $this->translate('ID'),
+                $this->translate('TYPE'),
+                $this->translate('NAME'),
+                $this->translate('TIME'),
+                $this->translate('DIFFICULTY')
+            );
             foreach ($userJobs as $jobId => $jobData) {
                 $type = $jobData['type'];
                 $typeId = $jobData['typeId'];
@@ -168,7 +194,14 @@ class ProfileService extends BaseService
                 else {
                     $newCode = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
                 }
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-4s|%-10s|%-20s|%-20s|%s</pre>', $jobId, $type, $newCode->getName(), $completionDate->format('y/m/d H:i:s'), $difficulty);
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-4s|%-10s|%-20s|%-20s|%s</pre>',
+                    $jobId,
+                    $type,
+                    $newCode->getName(),
+                    $completionDate->format('y/m/d H:i:s'),
+                    $difficulty
+                );
             }
             $response = array(
                 'command' => 'showoutput',
@@ -199,7 +232,10 @@ class ProfileService extends BaseService
             if (empty($filePartInstances)) {
                 $response = array(
                     'command' => 'showmessage',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have no file parts</pre>')
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('You have no file parts')
+                    )
                 );
             }
             else {
@@ -238,10 +274,23 @@ class ProfileService extends BaseService
         /** @var Profile $profile */
         $returnMessage = array();
         $files = $fileRepo->findByProfile($profile);
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>', 'id', 'type', 'name', 'int', 'lvl', 'sze', 'r', 's', 'system', 'node');
+        $returnMessage[] = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
+            $this->translate('ID'),
+            $this->translate('TYPE'),
+            $this->translate('NAME'),
+            $this->translate('INT'),
+            $this->translate('LVL'),
+            $this->translate('SZE'),
+            $this->translate('R'),
+            $this->translate('S'),
+            $this->translate('SYSTEM'),
+            $this->translate('NODE')
+        );
         foreach ($files as $file) {
             /** @var File $file */
-            $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
                 $file->getId(),
                 $file->getFileType()->getName(),
                 $file->getName(),
@@ -254,7 +303,13 @@ class ProfileService extends BaseService
                 ($file->getNode()) ? $file->getNode()->getName() : ''
             );
         }
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">mem: %s/%s sto: %s/%s</pre>', $this->getUsedMemory($profile), $this->getTotalMemory($profile), $this->getUsedStorage($profile), $this->getTotalStorage($profile));
+        $returnMessage[] = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">mem: %s/%s sto: %s/%s</pre>'),
+            $this->getUsedMemory($profile),
+            $this->getTotalMemory($profile),
+            $this->getUsedStorage($profile),
+            $this->getTotalStorage($profile)
+        );
         $response = array(
             'command' => 'showoutput',
             'message' => $returnMessage
@@ -284,7 +339,10 @@ class ProfileService extends BaseService
         list($contentArray, $skillNameParam) = $this->getNextParameter($contentArray);
         // if none given, show a list of all skill input names
         if (!$response && !$skillNameParam) {
-            $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the skill that you want to improve (%s skillpoints available) :</pre>', $profile->getSkillPoints());
+            $message[] = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the skill that you want to improve (%s skillpoints available) :</pre>'),
+                $profile->getSkillPoints()
+            );
             $skillsString = '';
             foreach ($skillRepo->findAll() as $skill) {
                 /** @var Skill $skill */
@@ -312,7 +370,10 @@ class ProfileService extends BaseService
         if (!$response && !$targetSkill) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Unknown skill</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unknown skill')
+                )
             ];
         }
         // get the amount of skillpoints the player wants to invest
@@ -321,14 +382,20 @@ class ProfileService extends BaseService
         if (!$response && $skillPointAmount < 1) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify how many skill points you want to invest</pre>')
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('Please specify how many skill points you want to invest')
+                )
             ];
         }
         // now check if they want to spend more than they have
         if (!$response && $skillPointAmount > $profile->getSkillPoints()) {
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints</pre>', $profile->getSkillPoints())
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints</pre>'),
+                    $profile->getSkillPoints()
+                )
             ];
         }
         // now check if the total skill rating would exceed 100
@@ -342,7 +409,10 @@ class ProfileService extends BaseService
                 $possible = 100 - $skillRating;
                 $response = [
                     'command' => 'showmessage',
-                    'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints on that skill</pre>', $possible)
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints on that skill</pre>'),
+                        $possible
+                    )
                 ];
             }
         }
@@ -353,7 +423,12 @@ class ProfileService extends BaseService
             $this->entityManager->flush();
             $response = [
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have raised [%s] to %s by spending %s skillpoints</pre>', $targetSkill->getName(), $skillRatingObject->getRating(), $skillPointAmount)
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have raised [%s] to %s by spending %s skillpoints</pre>'),
+                    $targetSkill->getName(),
+                    $skillRatingObject->getRating(),
+                    $skillPointAmount
+                )
             ];
         }
         return $response;
@@ -381,8 +456,8 @@ class ProfileService extends BaseService
             $returnMessage = array();
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-11s</pre>',
-                'faction',
-                'rating'
+                $this->translate('FACTION'),
+                $this->translate('RATING')
             );
             foreach ($factions as $faction) {
                 /** @var Faction $faction */
