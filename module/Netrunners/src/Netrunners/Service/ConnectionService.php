@@ -32,8 +32,6 @@ class ConnectionService extends BaseService
      */
     public function useConnection($resourceId, $contentArray)
     {
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         // TODO check for codegate and permission
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
@@ -49,25 +47,7 @@ class ConnectionService extends BaseService
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
-        $searchByNumber = false;
-        if (is_numeric($parameter)) {
-            $searchByNumber = true;
-        }
-        $connections = $connectionRepo->findBySourceNode($currentNode);
-        $connection = false;
-        if ($searchByNumber) {
-            if (isset($connections[$parameter - 1])) {
-                $connection = $connections[$parameter - 1];
-            }
-        } else {
-            foreach ($connections as $pconnection) {
-                /** @var Connection $pconnection */
-                if ($pconnection->getTargetNode()->getName() == $parameter) {
-                    $connection = $pconnection;
-                    break;
-                }
-            }
-        }
+        $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
         if (!$connection) {
             $response = array(
                 'command' => 'showmessage',

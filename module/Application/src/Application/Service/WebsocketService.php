@@ -226,7 +226,8 @@ class WebsocketService implements MessageComponentInterface {
             ],
             'action' => [],
             'milkrun' => [],
-            'hangman' => []
+            'hangman' => [],
+            'codebreaker' => []
         );
         $response = array(
             'command' => 'getipaddy',

@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
@@ -22,11 +23,36 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class FileService extends BaseService
 {
 
     const DEFAULT_DIFFICULTY_MOD = 10;
+
+    /**
+     * @var CodebreakerService
+     */
+    protected $codebreakerService;
+
+    /**
+     * FileService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     * @param CodebreakerService $codebreakerService
+     */
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        CodebreakerService $codebreakerService
+    )
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->codebreakerService = $codebreakerService;
+    }
 
     /**
      * Get detailed information about a file.
@@ -411,6 +437,9 @@ class FileService extends BaseService
                 case FileType::ID_PORTSCANNER:
                 case FileType::ID_JACKHAMMER:
                     $response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
+                    break;
+                case FileType::ID_CODEBREAKER:
+                    $response = $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
                     break;
             }
         }

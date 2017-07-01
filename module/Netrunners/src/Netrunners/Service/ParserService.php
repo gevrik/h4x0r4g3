@@ -209,9 +209,6 @@ class ParserService
             case 'code':
                 $response = $this->codingService->enterCodeMode($resourceId);
                 break;
-            case 'codebreaker':
-                $response = $this->codebreakerService->startCodebreaker($resourceId);
-                break;
             case 'commands':
                 $response = $this->showCommands($resourceId);
                 break;

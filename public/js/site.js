@@ -96,8 +96,6 @@
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
-                    console.log(command);
-                    console.log(data);
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
@@ -250,7 +248,6 @@
                     }
                     $('.btn-hangman-letter').on('click', function(){
                         var hangmanLetter = $(this).data('letter');
-                        console.log('letter: ' + hangmanLetter);
                         command = {
                             command: 'parseInput',
                             hash: hash,
@@ -261,7 +258,6 @@
                     });
                     $('#btn-hangman-solve').on('click', function(){
                         var wordguess = $('#hangman-solution').val();
-                        console.log('guess: ' + wordguess);
                         command = {
                             command: 'parseInput',
                             hash: hash,
@@ -286,7 +282,6 @@
                     $('.milkrun-clickable').on('click', function(){
                         var clickedX = $(this).data('x');
                         var clickedY = $(this).data('y');
-                        console.log('x: ' + clickedX + ' y: ' + clickedY);
                         command = {
                             command: 'parseInput',
                             hash: hash,
@@ -308,7 +303,6 @@
                         $('.milkrun-clickable').on('click', function(){
                             var clickedX = $(this).data('x');
                             var clickedY = $(this).data('y');
-                            console.log('x: ' + clickedX + ' y: ' + clickedY);
                             command = {
                                 command: 'parseInput',
                                 hash: hash,
@@ -322,6 +316,25 @@
                 case 'showmessage':
                     md.append(data.message);
                     showprompt();
+                    if (data.deadline) {
+                        $('.deadline-progress').show();
+                        $('.deadliner').attr('data-maxseconds', data.deadline).attr('data-seconds', 0).css('width', '100%');
+                        var deadlineTimer = setInterval(function(){
+                            var newSeconds = Number($('.deadliner').attr('data-seconds')) + 1;
+                            $('.deadliner').attr('data-seconds', newSeconds);
+                            var onePercent = 100 / $('.deadliner').attr('data-maxseconds');
+                            var remainingSeconds = Number($('.deadliner').attr('data-maxseconds')) - Number($('.deadliner').attr('data-seconds'));
+                            $('.deadliner').css('width', (remainingSeconds * onePercent) + '%');
+                            if (remainingSeconds === 0) {
+                                $('.deadline-progress').hide();
+                                clearInterval(deadlineTimer);
+                            }
+                        }, 1000);
+                    }
+                    if (data.cleardeadline) {
+                        $('.deadline-progress').hide();
+                        clearInterval(deadlineTimer);
+                    }
                     break;
                 case 'showoutput':
                     messageArray = data.message;

@@ -403,6 +403,9 @@ class CodingService extends BaseService
                 case FileType::STRING_WORMER:
                     $value = FileType::ID_WORMER;
                     break;
+                case FileType::STRING_CODEBREAKER:
+                    $value = FileType::ID_CODEBREAKER;
+                    break;
             }
             // add message if not already set
             if (!$message) $message = sprintf(

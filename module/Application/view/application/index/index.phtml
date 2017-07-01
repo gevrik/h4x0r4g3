@@ -12,4 +12,9 @@ $this->headScript()->appendFile('js/site.js');
 <div class="actiontime-box btn btn-xs btn-default" data-content="" data-toggle="tooltip" data-placement="left" title="Actiontimer"></div>
 <div id="panel-container" class="panel-container"></div>
 <div id="milkrun-container" class="milkrun-container"></div>
+<div id="deadline-timer-container" class="deadline-timer-container">
+    <div class="progress deadline-progress">
+        <div id="deadliner" data-seconds="0" data-maxseconds="0" class="progress-bar progress-bar-warning deadliner" role="progressbar" style="width: 0%"></div>
+    </div>
+</div>
 <input type="hidden" id="ipaddy" name="ipaddy" value="<?php echo $_SERVER['REMOTE_ADDR']; ?>" />

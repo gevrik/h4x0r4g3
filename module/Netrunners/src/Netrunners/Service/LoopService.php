@@ -113,6 +113,7 @@ class LoopService extends BaseService
             /** @var User $user */
             $profile = $user->getProfile();
             /** @var Profile $profile */
+            $this->checkCodebreaker($wsClient);
             $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
             /** @var NotificationRepository $notificationRepo */
             $countUnreadNotifications = $notificationRepo->countUnreadByProfile($profile);
@@ -217,6 +218,35 @@ class LoopService extends BaseService
                     'warning'
                 );
             }
+        }
+        return true;
+    }
+
+    /**
+     * @param ConnectionInterface $wsClient
+     * @return bool
+     */
+    private function checkCodebreaker(ConnectionInterface $wsClient)
+    {
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $wsClient->resourceId;
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        if (!$clientData->codebreaker) return true;
+        $codebreakerData = $clientData->codebreaker;
+        $codebreakerData['deadline']--;
+        if ($codebreakerData['deadline'] < 1) {
+            $this->getWebsocketServer()->setClientData($resourceId, 'codebreaker', []);
+            $response = [
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Codebreaker attempt failed')
+                )
+            ];
+            $wsClient->send(json_encode($response));
+        }
+        else {
+            $this->getWebsocketServer()->setClientData($resourceId, 'codebreaker', $codebreakerData);
         }
         return true;
     }

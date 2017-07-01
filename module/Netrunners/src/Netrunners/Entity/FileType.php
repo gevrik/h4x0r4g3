@@ -31,6 +31,7 @@ class FileType
     const ID_PORTSCANNER = 12;
     const ID_JACKHAMMER = 13;
     const ID_WORMER = 14;
+    const ID_CODEBREAKER = 15;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -46,6 +47,7 @@ class FileType
     const STRING_PORTSCANNER = 'portscanner';
     const STRING_JACKHAMMER = 'jackhammer';
     const STRING_WORMER = 'wormer';
+    const STRING_CODEBREAKER = 'codebreaker';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -62,6 +64,7 @@ class FileType
         self::STRING_PORTSCANNER => self::ID_PORTSCANNER,
         self::STRING_JACKHAMMER => self::ID_JACKHAMMER,
         self::STRING_WORMER => self::ID_WORMER,
+        self::STRING_CODEBREAKER => self::ID_CODEBREAKER,
     ];
 
     /**

@@ -29,6 +29,7 @@ use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
@@ -260,7 +261,7 @@ class BaseService
     {
         foreach ($jobData['skills'] as $skillName) {
             $skill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findOneBy([
-                'name' => $skillName
+                'name' => $this->reverseSkillNameModification($skillName)
             ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill);
@@ -285,7 +286,7 @@ class BaseService
     {
         foreach ($jobData['skills'] as $skillName) {
             $skill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findOneBy([
-                'name' => $skillName
+                'name' => $this->reverseSkillNameModification($skillName)
             ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill);
@@ -299,6 +300,46 @@ class BaseService
         }
         $this->entityManager->flush($profile);
         return true;
+    }
+
+    /**
+     * @param $parameter
+     * @param Node $currentNode
+     * @return bool|Connection
+     */
+    protected function findConnectionByNameOrNumber($parameter, Node $currentNode)
+    {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $connections = $connectionRepo->findBySourceNode($currentNode);
+        $connection = false;
+        if ($searchByNumber) {
+            if (isset($connections[$parameter - 1])) {
+                $connection = $connections[$parameter - 1];
+            }
+        } else {
+            foreach ($connections as $pconnection) {
+                /** @var Connection $pconnection */
+                if ($pconnection->getTargetNode()->getName() == $parameter) {
+                    $connection = $pconnection;
+                    break;
+                }
+            }
+        }
+        return $connection;
+    }
+
+    /**
+     * @param $skillName
+     * @return mixed
+     */
+    protected function reverseSkillNameModification($skillName)
+    {
+        return str_replace('-', ' ', $skillName);
     }
 
     /**

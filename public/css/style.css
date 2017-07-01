@@ -214,3 +214,14 @@ textarea {
     line-height: 30px;
     width: 100%;
 }
+
+.deadline-timer-container {
+    position: fixed;
+    width: 40%;
+    bottom: 2em;
+    right: 30%;
+}
+
+.deadline-progress {
+    display: none;
+}
