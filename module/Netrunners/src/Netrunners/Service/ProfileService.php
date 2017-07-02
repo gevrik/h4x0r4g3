@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Profile;
@@ -18,7 +19,10 @@ use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\SkillRatingRepository;
+use Netrunners\Repository\SkillRepository;
 use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class ProfileService extends BaseService
 {
@@ -71,6 +75,35 @@ class ProfileService extends BaseService
 
     const DEFAULT_SKILL_POINTS = 20;
 
+    /**
+     * @var SkillRepository
+     */
+    protected $skillRepo;
+
+    /**
+     * @var SkillRatingRepository
+     */
+    protected $skillRatingRepo;
+
+    /**
+     * @var FilePartInstanceRepository
+     */
+    protected $filePartInstanceRepo;
+
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
+
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
+        $this->skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+    }
 
     /**
      * @param int $resourceId
@@ -78,13 +111,12 @@ class ProfileService extends BaseService
      */
     public function showScore($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $profile = $user->getProfile();
+        // init service
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
             /** @var Profile $profile */
             $returnMessage = array();
             $returnMessage[] = sprintf(
@@ -97,12 +129,12 @@ class ProfileService extends BaseService
                 $this->translate(self::SCORE_SNIPPETS_STRING),
                 $profile->getSnippets()
             );
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -111,27 +143,21 @@ class ProfileService extends BaseService
      */
     public function showSkills($resourceId)
     {
-        $skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
-        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-        /** @var SkillRatingRepository $skillRatingRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
             $returnMessage = [];
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>',
                 $this->translate('skillpoints'),
                 $profile->getSkillPoints()
             );
-            $skills = $skillRepo->findAll();
+            $skills = $this->skillRepo->findAll();
             foreach ($skills as $skill) {
                 /** @var Skill $skill */
-                $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
+                $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $skill);
                 $skillRating = $skillRatingObject->getRating();
                 $returnMessage[] = sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>',
@@ -139,12 +165,12 @@ class ProfileService extends BaseService
                     $skillRating
                 );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -154,19 +180,17 @@ class ProfileService extends BaseService
      */
     public function showJobs($resourceId, $jobs)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         $userJobs = [];
         foreach ($jobs as $jobId => $jobData) {
-            if ($jobData['socketId'] == $clientData->socketId) {
+            if ($jobData['socketId'] == $this->clientData->socketId) {
                 $userJobs[] = $jobData;
             }
         }
         $returnMessage = array();
         if (empty($userJobs)) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -203,12 +227,12 @@ class ProfileService extends BaseService
                     $difficulty
                 );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -217,20 +241,16 @@ class ProfileService extends BaseService
      */
     public function showFilePartInstances($resourceId)
     {
-        $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
-        /** @var FilePartInstanceRepository $filePartInstanceRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $profile = $user->getProfile();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
             /** @var Profile $profile */
             $returnMessage = array();
-            $filePartInstances = $filePartInstanceRepo->findForPartsCommand($profile);
+            $filePartInstances = $this->filePartInstanceRepo->findForPartsCommand($profile);
             if (empty($filePartInstances)) {
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -249,13 +269,13 @@ class ProfileService extends BaseService
                         $data['maxlevel']
                     );
                 }
-                $response = array(
+                $this->response = array(
                     'command' => 'showoutput',
                     'message' => $returnMessage
                 );
             }
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -264,16 +284,11 @@ class ProfileService extends BaseService
      */
     public function showInventory($resourceId)
     {
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $returnMessage = array();
-        $files = $fileRepo->findByProfile($profile);
+        $files = $this->fileRepo->findByProfile($profile);
         $returnMessage[] = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
             $this->translate('ID'),
@@ -310,11 +325,11 @@ class ProfileService extends BaseService
             $this->getUsedStorage($profile),
             $this->getTotalStorage($profile)
         );
-        $response = array(
+        $this->response = array(
             'command' => 'showoutput',
             'message' => $returnMessage
         );
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -324,33 +339,27 @@ class ProfileService extends BaseService
      */
     public function spendSkillPoints($resourceId, $contentArray)
     {
-        $skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
-        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-        /** @var SkillRatingRepository $skillRatingRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId, true);
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
         $message = [];
         // get skill input name
         list($contentArray, $skillNameParam) = $this->getNextParameter($contentArray);
         // if none given, show a list of all skill input names
-        if (!$response && !$skillNameParam) {
+        if (!$this->response && !$skillNameParam) {
             $message[] = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the skill that you want to improve (%s skillpoints available) :</pre>'),
                 $profile->getSkillPoints()
             );
             $skillsString = '';
-            foreach ($skillRepo->findAll() as $skill) {
+            foreach ($this->skillRepo->findAll() as $skill) {
                 /** @var Skill $skill */
                 $skillsString .= $this->getInputNameOfSkill($skill) . ' ';
             }
             $skillsString = wordwrap($skillsString, 120);
             $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%s</pre>', $skillsString);
-            $response = [
+            $this->response = [
                 'command' => 'showoutput',
                 'message' => $message
             ];
@@ -358,8 +367,8 @@ class ProfileService extends BaseService
         // init target skill
         $targetSkill = NULL;
         // now try to get the actual skill
-        if (!$response) {
-            foreach ($skillRepo->findAll() as $skill) {
+        if (!$this->response) {
+            foreach ($this->skillRepo->findAll() as $skill) {
                 /** @var Skill $skill */
                 if ($this->getInputNameOfSkill($skill) == $skillNameParam) {
                     $targetSkill = $skill;
@@ -367,8 +376,8 @@ class ProfileService extends BaseService
                 }
             }
         }
-        if (!$response && !$targetSkill) {
-            $response = [
+        if (!$this->response && !$targetSkill) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -379,8 +388,8 @@ class ProfileService extends BaseService
         // get the amount of skillpoints the player wants to invest
         $skillPointAmount = $this->getNextParameter($contentArray, false, true);
         // check if they want to spend at least 1 sp
-        if (!$response && $skillPointAmount < 1) {
-            $response = [
+        if (!$this->response && $skillPointAmount < 1) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -389,8 +398,8 @@ class ProfileService extends BaseService
             ];
         }
         // now check if they want to spend more than they have
-        if (!$response && $skillPointAmount > $profile->getSkillPoints()) {
-            $response = [
+        if (!$this->response && $skillPointAmount > $profile->getSkillPoints()) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints</pre>'),
@@ -401,13 +410,13 @@ class ProfileService extends BaseService
         // now check if the total skill rating would exceed 100
         $skillRatingObject = NULL;
         $skillRating = 0;
-        if (!$response) {
-            $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $targetSkill);
+        if (!$this->response) {
+            $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $targetSkill);
             /** @var SkillRating $skillRatingObject */
             $skillRating = ($skillRatingObject) ? $skillRatingObject->getRating() : 0;
             if ($skillRating + $skillPointAmount > 100) {
                 $possible = 100 - $skillRating;
-                $response = [
+                $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints on that skill</pre>'),
@@ -417,11 +426,11 @@ class ProfileService extends BaseService
             }
         }
         /* all checks passed, we can now spend the skillpoints */
-        if (!$response) {
+        if (!$this->response) {
             $profile->setSkillPoints($profile->getSkillPoints() - $skillPointAmount);
             $skillRatingObject->setRating($skillRating + $skillPointAmount);
             $this->entityManager->flush();
-            $response = [
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have raised [%s] to %s by spending %s skillpoints</pre>'),
@@ -431,7 +440,7 @@ class ProfileService extends BaseService
                 )
             ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -441,14 +450,11 @@ class ProfileService extends BaseService
      */
     public function showFactionRatings($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
             $factions = $this->entityManager->getRepository('Netrunners\Entity\Faction')->findBy([
                 'joinable' => true,
                 'playerRun' => false
@@ -467,12 +473,17 @@ class ProfileService extends BaseService
                     $this->getProfileFactionRating($profile, $faction)
                 );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
+    }
+
+    public function setEmail($resourceId, $contentArray)
+    {
+
     }
 
 }

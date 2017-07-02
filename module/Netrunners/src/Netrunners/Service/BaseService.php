@@ -19,7 +19,6 @@ use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
-use Netrunners\Entity\GameOption;
 use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MilkrunInstance;
@@ -42,6 +41,7 @@ use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
+use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -64,6 +64,22 @@ class BaseService
     protected $translator;
 
     /**
+     * @var object
+     */
+    protected $clientData;
+
+    /**
+     * @var User
+     */
+    protected $user;
+
+    /**
+     * @var array|false
+     */
+    protected $response = false;
+
+
+    /**
      * BaseService constructor.
      * @param EntityManager $entityManager
      * @param $viewRenderer
@@ -80,6 +96,10 @@ class BaseService
         $this->translator = $translator;
     }
 
+    /**
+     * @param $string
+     * @return string
+     */
     protected function translate($string)
     {
         return $this->translator->translate($string);
@@ -91,6 +111,40 @@ class BaseService
     protected function getWebsocketServer()
     {
         return WebsocketService::getInstance();
+    }
+
+    /**
+     * @param $resourceId
+     */
+    protected function initService($resourceId)
+    {
+        $this->setClientData($resourceId);
+        $this->setUser();
+        $this->setResponse(false);
+    }
+
+    /**
+     * @param $resourceId
+     */
+    private function setClientData($resourceId)
+    {
+        $this->clientData = $this->getWebsocketServer()->getClientData($resourceId);
+    }
+
+    /**
+     * Sets the user from the client data.
+     */
+    private function setUser()
+    {
+        $this->user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientData->userId);
+    }
+
+    /**
+     * @param $response
+     */
+    protected function setResponse($response)
+    {
+        $this->response = $response;
     }
 
     /**

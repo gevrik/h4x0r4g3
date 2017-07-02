@@ -61,6 +61,12 @@ class Profile
      */
     protected $securityRating;
 
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     * @var string
+     */
+    protected $email;
+
     // ORM
 
     /**
@@ -218,6 +224,24 @@ class Profile
     public function setSecurityRating($securityRating)
     {
         $this->securityRating = $securityRating;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getEmail()
+    {
+        return $this->email;
+    }
+
+    /**
+     * @param string $email
+     * @return Profile
+     */
+    public function setEmail($email)
+    {
+        $this->email = $email;
         return $this;
     }
 

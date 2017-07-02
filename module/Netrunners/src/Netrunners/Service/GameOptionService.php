@@ -75,7 +75,7 @@ class GameOptionService extends BaseService
                 $this->toggleProfileGameOption($profile, $gameOption->getId());
                 $newStatus = $this->getProfileGameOption($profile, $gameOption->getId());
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">Option %s changed to <span class="text-%s">%s</span></pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">Option [%s] changed to [<span class="text-%s">%s</span>]</pre>',
                     $gameOption->getName(),
                     ($newStatus) ? 'success' : 'sysmsg',
                     ($newStatus) ? $this->translate('on') : $this->translate('off')
