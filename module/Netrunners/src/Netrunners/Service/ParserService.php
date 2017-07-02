@@ -342,6 +342,9 @@ class ParserService
             case 'setemail':
                 $response = $this->profileService->setEmail($resourceId, $contentArray);
                 break;
+            case 'setlocale':
+                $response = $this->profileService->setProfileLocale($resourceId, $contentArray);
+                break;
             case 'skillpoints':
                 $response = $this->profileService->spendSkillPoints($resourceId, $contentArray);
                 break;

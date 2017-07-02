@@ -64,6 +64,11 @@ class BaseService
     protected $translator;
 
     /**
+     * @var string
+     */
+    protected $profileLocale = 'en_US';
+
+    /**
      * @var object
      */
     protected $clientData;
@@ -102,6 +107,7 @@ class BaseService
      */
     protected function translate($string)
     {
+        $this->translator->getTranslator()->setLocale($this->profileLocale);
         return $this->translator->translate($string);
     }
 
@@ -120,6 +126,7 @@ class BaseService
     {
         $this->setClientData($resourceId);
         $this->setUser();
+        $this->setProfileLocale();
         $this->setResponse(false);
     }
 
@@ -137,6 +144,11 @@ class BaseService
     private function setUser()
     {
         $this->user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientData->userId);
+    }
+
+    private function setProfileLocale()
+    {
+        if ($this->user && $this->user->getProfile()) $this->profileLocale = $this->user->getProfile()->getLocale();
     }
 
     /**

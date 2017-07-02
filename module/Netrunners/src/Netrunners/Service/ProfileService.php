@@ -20,8 +20,8 @@ use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SkillRepository;
-use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
+use Zend\Validator\EmailAddress;
 use Zend\View\Renderer\PhpRenderer;
 
 class ProfileService extends BaseService
@@ -75,6 +75,10 @@ class ProfileService extends BaseService
 
     const DEFAULT_SKILL_POINTS = 20;
 
+    static $availableLocales = [
+        "en_US", "de_DE"
+    ];
+
     /**
      * @var SkillRepository
      */
@@ -95,7 +99,12 @@ class ProfileService extends BaseService
      */
     protected $fileRepo;
 
-
+    /**
+     * ProfileService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
     public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
@@ -211,6 +220,7 @@ class ProfileService extends BaseService
                 $type = $jobData['type'];
                 $typeId = $jobData['typeId'];
                 $completionDate = $jobData['completionDate'];
+                /** @var \DateTime $completionDate */
                 $difficulty = $jobData['difficulty'];
                 if ($type == 'program') {
                     $newCode = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
@@ -481,9 +491,95 @@ class ProfileService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function setEmail($resourceId, $contentArray)
     {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $emailParameter = $this->getNextParameter($contentArray, false);
+        // if no parameter was give, show their current settings
+        if (!$emailParameter) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">your current e-mail address on record: <span class="text-%s">%s</span></pre>'),
+                    ($profile->getEmail()) ? 'info' : 'sysmsg',
+                    ($profile->getEmail()) ? $profile->getEmail() : $this->translate('no e-mail address set')
+                )
+            ];
+        }
+        else {
+            // player is trying to set email address
+            $validator = new EmailAddress();
+            if (!$validator->isValid($emailParameter)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid e-mail address')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $profile->setEmail($emailParameter);
+                $this->entityManager->flush($profile);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate('E-mail address set')
+                    )
+                ];
+            }
+        }
+        return $this->response;
+    }
 
+    public function setProfileLocale($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $localeParameter = $this->getNextParameter($contentArray, false);
+        // if no parameter was give, show their current settings
+        if (!$localeParameter) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">your current locale on record: <span class="text-info">%s</span></pre>'),
+                    $profile->getLocale()
+                )
+            ];
+        }
+        else {
+            // player is trying to set locale
+            if (!in_array($localeParameter, self::$availableLocales)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid locale, available locales: <span class="text-muted">%s</span></pre>'),
+                        implode(' ', self::$availableLocales)
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $profile->setLocale($localeParameter);
+                $this->entityManager->flush($profile);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate('Locale set')
+                    )
+                ];
+            }
+        }
+        return $this->response;
     }
 
 }

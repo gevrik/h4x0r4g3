@@ -84,24 +84,24 @@ class AdminService extends BaseService
         return $isAdmin;
     }
 
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
     public function adminShowClients($resourceId)
     {
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = false;
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         if (!$this->isAdmin($resourceId)) {
-            $response = [
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>'),
-                    $this->translate('Unknown command')
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
                 )
             ];
         }
-        if (!$response) {
+        if (!$this->response) {
             $ws = $this->getWebsocketServer();
             $message = [sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-5s|%-32s|%s</pre>',
@@ -124,12 +124,12 @@ class AdminService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">%s sockets do not have user data yet</pre>'),
                 $amountVoid
             );
-            $response = [
+            $this->response = [
                 'command' => 'showoutput',
                 'message' => $message
             ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**

@@ -233,6 +233,7 @@ class LoginService extends BaseService
             $this->entityManager->persist($ioNode);
             $profile->setCurrentNode($ioNode);
             $profile->setHomeNode($ioNode);
+            $profile->setLocale(Profile::DEFAULT_PROFILE_LOCALE);
             // flush to db
             $this->entityManager->flush();
             $hash = hash('sha256', $ws->getHash() . $user->getId());

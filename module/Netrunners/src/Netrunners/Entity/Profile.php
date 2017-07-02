@@ -17,6 +17,8 @@ use TmoAuth\Entity\User;
 class Profile
 {
 
+    const DEFAULT_PROFILE_LOCALE = 'en_US';
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -66,6 +68,12 @@ class Profile
      * @var string
      */
     protected $email;
+
+    /**
+     * @ORM\Column(type="string", options={"default":"en_US"}, nullable=true)
+     * @var string
+     */
+    protected $locale;
 
     // ORM
 
@@ -242,6 +250,24 @@ class Profile
     public function setEmail($email)
     {
         $this->email = $email;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLocale()
+    {
+        return $this->locale;
+    }
+
+    /**
+     * @param mixed $locale
+     * @return Profile
+     */
+    public function setLocale($locale)
+    {
+        $this->locale = $locale;
         return $this;
     }
 
