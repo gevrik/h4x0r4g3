@@ -18,6 +18,12 @@ use TmoAuth\Entity\User;
 class CodebreakerService extends BaseService
 {
 
+    /**
+     * @param $resourceId
+     * @param File $file
+     * @param $contentArray
+     * @return array|bool
+     */
     public function startCodebreaker($resourceId, File $file, $contentArray)
     {
         $ws = $this->getWebsocketServer();
@@ -64,7 +70,7 @@ class CodebreakerService extends BaseService
                 /* mini game logic start */
                 $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
                 /** @var WordRepository $wordRepo */
-                $wordLength = 3 + $connection->getLevel();
+                $wordLength = 4 + $connection->getLevel();
                 $hashLength = 8 * $connection->getLevel();
                 $words = $wordRepo->getRandomWordsByLength(1, $wordLength);
                 $word = array_shift($words);
@@ -101,6 +107,11 @@ class CodebreakerService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $guess
+     * @return array|bool
+     */
     private function solveCodebreaker($resourceId, $guess)
     {
         $ws = $this->getWebsocketServer();
@@ -110,9 +121,9 @@ class CodebreakerService extends BaseService
         /** @var User $user */
         $profile = $user->getProfile();
         $codebreakerData = $clientData->codebreaker;
+        $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
+        /** @var Connection $connection */
         if ($guess == $codebreakerData['thePassword']) {
-            $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
-            /** @var Connection $connection */
             $this->movePlayerToTargetNode($resourceId, $profile, $connection);
             $connection->setIsOpen(true);
             $this->entityManager->flush($connection);
@@ -121,7 +132,7 @@ class CodebreakerService extends BaseService
                 'cleardeadline' => true,
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('Codebreaking attempt success')
+                    $this->translate('Codebreaking attempt success - you have bypassed the codegate')
                 )
             );
         }
@@ -131,8 +142,19 @@ class CodebreakerService extends BaseService
                 'cleardeadline' => true,
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Codebreaking attempt failed')
+                    $this->translate('Codebreaking attempt failed - security rating and alert level raised')
                 )
+            );
+            $this->raiseProfileSecurityRating($profile, $connection->getLevel());
+            $targetSystem = $connection->getSourceNode()->getSystem();
+            $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel());
+            $this->writeSystemLogEntry(
+                $targetSystem,
+                'Codebreaking attempt failed',
+                'warning',
+                NULL,
+                NULL,
+                $connection->getSourceNode()
             );
         }
         $ws->setClientData($resourceId, 'codebreaker', []);

@@ -95,6 +95,10 @@ pre {
     color: #ffff99;
 }
 
+.text-survey {
+    color: #0099cc;
+}
+
 .panel-container {
     position: fixed;
     width: 40%;

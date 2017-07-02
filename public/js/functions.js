@@ -1,7 +1,5 @@
-function showprompt()
-{
-    if (consoleMode === 'default')
-    {
+function showprompt() {
+    if (consoleMode === 'default') {
         if (promptAddon !== '') prompt = prompt + ' ' + promptAddon;
         $('#messages').append('<div class="text-muted output-line"><span>' + prompt + '</span></div>');
     }
@@ -13,8 +11,7 @@ function showprompt()
 /**
  * Reset the mail mode console options.
  */
-function resetConsoleOptionsMail()
-{
+function resetConsoleOptionsMail() {
     consoleOptionsMail = {
         currentMailNumber: 0
     };

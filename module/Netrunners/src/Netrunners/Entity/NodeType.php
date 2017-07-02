@@ -32,6 +32,7 @@ class NodeType
     const ID_AGENT = 14;
     const ID_BANK = 15;
     const ID_INTRUSION = 16;
+    const ID_MONITORING = 17;
 
     /**
      * @ORM\Id

@@ -19,6 +19,8 @@ use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
+use Netrunners\Entity\GameOption;
+use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
@@ -29,6 +31,7 @@ use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemLog;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
@@ -786,7 +789,7 @@ class BaseService
      *                         to select from
      * @return string
      */
-    function getRandomString($length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    public function getRandomString($length, $keyspace = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     {
         $str = '';
         $max = mb_strlen($keyspace, '8bit') - 1;
@@ -794,6 +797,112 @@ class BaseService
             $str .= $keyspace[random_int(0, $max)];
         }
         return $str;
+    }
+
+    /**
+     * @param System $system
+     * @param int $amount
+     */
+    public function raiseSystemAlertLevel(System $system, $amount = 0)
+    {
+        $currentLevel = $system->getAlertLevel();
+        $system->setAlertLevel($currentLevel + $amount);
+        $this->entityManager->flush($system);
+    }
+
+    /**
+     * @param Profile $profile
+     * @param int $amount
+     */
+    public function raiseProfileSecurityRating(Profile $profile, $amount = 0)
+    {
+        $currentRating = $profile->getSecurityRating();
+        $profile->setSecurityRating($currentRating + $amount);
+        $this->entityManager->flush($profile);
+    }
+
+    /**
+     * @param System $system
+     * @param string $subject
+     * @param string $severity
+     * @param null $details
+     * @param File|NULL $file
+     * @param Node|NULL $node
+     * @param Profile|NULL $profile
+     */
+    public function writeSystemLogEntry(
+        System $system,
+        $subject = '',
+        $severity = 'info',
+        $details = NULL,
+        File $file = NULL,
+        Node $node = NULL,
+        Profile $profile = NULL
+    )
+    {
+        $log = new SystemLog();
+        $log->setAdded(new \DateTime());
+        $log->setSystem($system);
+        $log->setSubject($subject);
+        $log->setSeverity($severity);
+        $log->setDetails($details);
+        $log->setFile($file);
+        $log->setNode($node);
+        $log->setProfile($profile);
+        $this->entityManager->persist($log);
+        $this->entityManager->flush($log);
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $gameOptionId
+     * @return mixed
+     */
+    protected function getProfileGameOption(Profile $profile, $gameOptionId)
+    {
+        $gameOption = $this->entityManager->find('Netrunners\Entity\GameOption', $gameOptionId);
+        $goiRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOptionInstance');
+        $gameOptionInstance = $goiRepo->findOneBy([
+            'gameOption' => $gameOption,
+            'profile' => $profile
+        ]);
+        return ($gameOptionInstance) ? $gameOptionInstance->getStatus() : $gameOption->getDefaultStatus();
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $gameOptionId
+     */
+    protected function toggleProfileGameOption(Profile $profile, $gameOptionId)
+    {
+        $gameOption = $this->entityManager->find('Netrunners\Entity\GameOption', $gameOptionId);
+        if ($profile && $gameOption) {
+            $goiRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOptionInstance');
+            $gameOptionInstance = $goiRepo->findOneBy([
+                'gameOption' => $gameOption,
+                'profile' => $profile
+            ]);
+            if ($gameOptionInstance) {
+                /** @var GameOptionInstance $gameOptionInstance */
+                $currentStatus = $gameOptionInstance->getStatus();
+            }
+            else {
+                $currentStatus = $gameOption->getDefaultStatus();
+            }
+            $newStatus = ($currentStatus) ? false : true;
+            if ($gameOptionInstance) {
+                $gameOptionInstance->setStatus($newStatus);
+            }
+            else {
+                $gameOptionInstance = new GameOptionInstance();
+                $gameOptionInstance->setStatus($newStatus);
+                $gameOptionInstance->setProfile($profile);
+                $gameOptionInstance->setGameOption($gameOption);
+                $gameOptionInstance->setChanged(new \DateTime());
+                $this->entityManager->persist($gameOptionInstance);
+            }
+            $this->entityManager->flush($gameOptionInstance);
+        }
     }
 
 }

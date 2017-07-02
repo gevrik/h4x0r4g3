@@ -587,10 +587,18 @@ class NodeService extends BaseService
             $currentNode = $profile->getCurrentNode();
             /** @var Node $currentNode */
             $returnMessage = array();
-            $returnMessage[] = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>'),
-                htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u'])
-            );
+            if (!$currentNode->getDescription()) {
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
+                    $this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.')
+                );
+            }
+            else {
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-survey">%s</pre>',
+                    htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u'])
+                );
+            }
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage

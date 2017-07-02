@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\Faction;
+use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Milkrun;
 use Netrunners\Entity\MilkrunIce;
 use Netrunners\Entity\MilkrunInstance;
@@ -457,9 +458,9 @@ class MilkrunService extends BaseService
                     'content' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
                         $this->translate('You have completed your current milkrun')
-                    ),
-                    'playsound' => $playSound
+                    )
                 ];
+                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
             }
             else if ($failed) {
                 $mri = $this->entityManager->find('Netrunners\Entity\MilkrunInstance', $milkrunData['id']);
@@ -482,9 +483,9 @@ class MilkrunService extends BaseService
                     'content' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('You have failed your current milkrun')
-                    ),
-                    'playsound' => $playSound
+                    )
                 ];
+                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
             }
             else {
                 if (!$newLevel) {
@@ -504,9 +505,9 @@ class MilkrunService extends BaseService
                     'command' => 'updatedivhtml',
                     'content' => $this->viewRenderer->render($view),
                     'element' => '#milkrun-game-container',
-                    'level' => $milkrunData['currentLevel'],
-                    'playsound' => $playSound
+                    'level' => $milkrunData['currentLevel']
                 ];
+                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
             }
         }
         return $response;
