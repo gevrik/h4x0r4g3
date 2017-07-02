@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: H4X0R4G3 0.1 - german\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-07-02 16:33+0200\n"
-"PO-Revision-Date: 2017-07-02 16:33+0200\n"
+"PO-Revision-Date: 2017-07-02 17:18+0200\n"
 "Last-Translator: Evan Coury <me@evancoury.com>\n"
 "Language-Team: TMO\n"
 "Language: de_DE\n"
@@ -19,15 +19,15 @@ msgstr ""
 
 #: ../config/module.config.php:78
 msgid "Profiles"
-msgstr ""
+msgstr "Profile"
 
 #: ../config/module.config.php:82
 msgid "Detail"
-msgstr ""
+msgstr "Detail"
 
 #: ../src/Netrunners/Form/ProfileEditForm.php:34
 msgid "Save profile"
-msgstr ""
+msgstr "Profil speichern"
 
 #: ../src/Netrunners/Service/AdminService.php:100
 msgid "unknown command"
@@ -36,21 +36,21 @@ msgstr "unbekannter befehl"
 # 6 chars max
 #: ../src/Netrunners/Service/AdminService.php:108
 msgid "socket"
-msgstr ""
+msgstr "socket"
 
 #: ../src/Netrunners/Service/AdminService.php:109
 msgid "user"
-msgstr ""
+msgstr "user"
 
 #: ../src/Netrunners/Service/AdminService.php:110
 #: ../src/Netrunners/Service/FileService.php:1042
 #: ../src/Netrunners/Service/FileService.php:1071
 msgid "name"
-msgstr ""
+msgstr "name"
 
 #: ../src/Netrunners/Service/AdminService.php:111
 msgid "ip"
-msgstr ""
+msgstr "ip"
 
 #: ../src/Netrunners/Service/AdminService.php:124
 #, php-format
@@ -65,7 +65,7 @@ msgstr ""
 #: ../src/Netrunners/Service/AdminService.php:213
 #: ../src/Netrunners/Service/ParserService.php:199
 msgid "Unknown command"
-msgstr ""
+msgstr "unbekannter befehl"
 
 #: ../src/Netrunners/Service/AdminService.php:159
 #: ../src/Netrunners/Service/AdminService.php:172
@@ -757,16 +757,16 @@ msgstr ""
 #: ../src/Netrunners/Service/GameOptionService.php:81
 #: ../src/Netrunners/Service/GameOptionService.php:109
 msgid "on"
-msgstr ""
+msgstr "an"
 
 #: ../src/Netrunners/Service/GameOptionService.php:81
 #: ../src/Netrunners/Service/GameOptionService.php:109
 msgid "off"
-msgstr ""
+msgstr "aus"
 
 #: ../src/Netrunners/Service/GameOptionService.php:101
 msgid "Please specify which option to toggle:"
-msgstr ""
+msgstr "Welche Option soll umgestellt werden:"
 
 #: ../src/Netrunners/Service/LoginService.php:253
 #, php-format
