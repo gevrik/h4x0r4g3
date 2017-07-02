@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
+use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
@@ -45,6 +46,7 @@ class NodeService extends BaseService
      */
     public function showNodeInfo($resourceId)
     {
+        // grab everything we need
         $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
         /** @var ConnectionRepository $connectionRepo */
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
@@ -58,6 +60,9 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         /** @var Node $currentNode */
         $returnMessage = array();
+        // add survey text if option is turned on
+        if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) $returnMessage[] = $this->getSurveyText($currentNode);
+        // get connections and show them if there are any
         $connections = $connectionRepo->findBySourceNode($currentNode);
         if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', self::CONNECTIONS_STRING);
         $counter = 0;
@@ -66,6 +71,7 @@ class NodeService extends BaseService
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getTargetNode()->getName());
         }
+        // get files and show them if there are any
         $files = $fileRepo->findByNode($currentNode);
         if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', $this->translate(self::FILES_STRING));
         $counter = 0;
@@ -74,6 +80,7 @@ class NodeService extends BaseService
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-executable">%-12s: %s</pre>', $counter, $file->getName());
         }
+        // get profiles and show them if there are any
         $profiles = [];
         foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
             $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
@@ -86,6 +93,7 @@ class NodeService extends BaseService
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-users">%-12s: %s</pre>', $counter, $pprofile->getUser()->getUsername());
         }
+        // prepare and return response
         $response = array(
             'command' => 'showoutput',
             'message' => $returnMessage
@@ -587,24 +595,34 @@ class NodeService extends BaseService
             $currentNode = $profile->getCurrentNode();
             /** @var Node $currentNode */
             $returnMessage = array();
-            if (!$currentNode->getDescription()) {
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
-                    $this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.')
-                );
-            }
-            else {
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-survey">%s</pre>',
-                    htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u'])
-                );
-            }
+            $returnMessage[] = $this->getSurveyText($currentNode);
             $response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
         return $response;
+    }
+
+    /**
+     * @param Node $currentNode
+     * @return string
+     */
+    private function getSurveyText(Node $currentNode)
+    {
+        if (!$currentNode->getDescription()) {
+            $returnMessage = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
+                wordwrap($this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.'), 120)
+            );
+        }
+        else {
+            $returnMessage = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-survey">%s</pre>',
+                wordwrap(htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u']), 120)
+            );
+        }
+        return $returnMessage;
     }
 
     /**

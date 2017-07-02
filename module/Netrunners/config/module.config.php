@@ -36,6 +36,7 @@ return array(
             'Netrunners\Service\CodebreakerService' => 'Netrunners\Factory\CodebreakerServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
             'Netrunners\Service\ConnectionService' => 'Netrunners\Factory\ConnectionServiceFactory',
+            'Netrunners\Service\GameOptionService' => 'Netrunners\Factory\GameOptionServiceFactory',
             'Netrunners\Service\HangmanService' => 'Netrunners\Factory\HangmanServiceFactory',
             'Netrunners\Service\LoginService' => 'Netrunners\Factory\LoginServiceFactory',
             'Netrunners\Service\LoopService' => 'Netrunners\Factory\LoopServiceFactory',

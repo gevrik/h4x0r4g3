@@ -354,9 +354,9 @@ class FileService extends BaseService
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
+        /** @var User $user */
         // get profile
         $profile = $user->getProfile();
-        /** @var Profile $profile */
         // init response
         $response = $this->isActionBlocked($resourceId);
         // get parameter

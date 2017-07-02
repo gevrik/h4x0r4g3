@@ -19,6 +19,7 @@ use Zend\Mvc\I18n\Translator;
 
 class ParserService
 {
+
     const CMD_REQUESTMILKRUN = 'requestmilkrun';
     const CMD_SCORE = 'score';
     const CMD_SHOWMESSAGE = 'showmessage';
@@ -101,6 +102,11 @@ class ParserService
     protected $codebreakerService;
 
     /**
+     * @var GameOptionService
+     */
+    protected $gameOptionService;
+
+    /**
      * @param EntityManager $entityManager
      * @param Translator $translator
      * @param FileService $fileService
@@ -116,6 +122,7 @@ class ParserService
      * @param MilkrunService $milkrunService
      * @param HangmanService $hangmanService
      * @param CodebreakerService $codebreakerService
+     * @param GameOptionService $gameOptionService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -132,7 +139,8 @@ class ParserService
         AdminService $adminService,
         MilkrunService $milkrunService,
         HangmanService $hangmanService,
-        CodebreakerService $codebreakerService
+        CodebreakerService $codebreakerService,
+        GameOptionService $gameOptionService
     )
     {
         $this->entityManager = $entityManager;
@@ -150,6 +158,7 @@ class ParserService
         $this->milkrunService = $milkrunService;
         $this->hangmanService = $hangmanService;
         $this->codebreakerService = $codebreakerService;
+        $this->gameOptionService = $gameOptionService;
     }
 
     /**
@@ -302,6 +311,9 @@ class ParserService
                 break;
             case 'nodetype':
                 $response = $this->nodeService->changeNodeType($resourceId, $contentArray);
+                break;
+            case 'options':
+                $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
                 break;
             case 'removenode':
                 $response = $this->nodeService->removeNode($resourceId);

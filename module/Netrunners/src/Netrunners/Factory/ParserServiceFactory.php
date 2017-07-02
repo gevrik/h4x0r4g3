@@ -39,7 +39,8 @@ class ParserServiceFactory implements FactoryInterface
             $serviceLocator->get('Netrunners\Service\AdminService'),
             $serviceLocator->get('Netrunners\Service\MilkrunService'),
             $serviceLocator->get('Netrunners\Service\HangmanService'),
-            $serviceLocator->get('Netrunners\Service\CodebreakerService')
+            $serviceLocator->get('Netrunners\Service\CodebreakerService'),
+            $serviceLocator->get('Netrunners\Service\GameOptionService')
         );
     }
 
