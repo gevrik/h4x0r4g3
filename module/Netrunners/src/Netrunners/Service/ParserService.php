@@ -377,6 +377,18 @@ class ParserService
                 $response = $this->fileService->touchFile($resourceId, $contentArray);
                 break;
             /** ADMIN STUFF */
+            case 'banip':
+                $response = $this->adminService->banIp($resourceId, $contentArray);
+                break;
+            case 'unbanip':
+                $response = $this->adminService->unbanIp($resourceId, $contentArray);
+                break;
+            case 'banuser':
+                $response = $this->adminService->banUser($resourceId, $contentArray);
+                break;
+            case 'unbanuser':
+                $response = $this->adminService->unbanUser($resourceId, $contentArray);
+                break;
             case 'clients':
             case 'showclients':
                 $response = $this->adminService->adminShowClients($resourceId);

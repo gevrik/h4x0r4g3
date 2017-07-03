@@ -58,6 +58,12 @@ class User implements UserInterface, ProviderInterface
 
     /**
      * @var int
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     */
+    protected $banned;
+
+    /**
+     * @var int
      */
     protected $state;
 
@@ -193,6 +199,24 @@ class User implements UserInterface, ProviderInterface
     public function setPassword($password)
     {
         $this->password = $password;
+    }
+
+    /**
+     * @return int
+     */
+    public function getBanned()
+    {
+        return $this->banned;
+    }
+
+    /**
+     * @param int $banned
+     * @return User
+     */
+    public function setBanned($banned)
+    {
+        $this->banned = $banned;
+        return $this;
     }
 
     /**

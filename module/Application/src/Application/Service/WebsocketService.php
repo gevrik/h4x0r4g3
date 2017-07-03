@@ -3,6 +3,7 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Repository\BannedIpRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\NodeService;
@@ -337,14 +338,42 @@ class WebsocketService implements MessageComponentInterface {
             case 'setipaddy':
                 $validator = new Ip();
                 if ($validator->isValid($content)) {
+                    // check if the ip is banned
+                    $bannedIpRepo = $this->entityManager->getRepository('Netrunners\Entity\BannedIp');
+                    /** @var BannedIpRepository $bannedIpRepo */
+                    $bannedIpEntry = $bannedIpRepo->findOneBy([
+                        'ip' => $content
+                    ]);
+                    if ($bannedIpEntry) {
+                        $response = [
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                '<pre style="white-space: pre-wrap;" class="text-danger">This IP address has been banned!</pre>'
+                            )
+                        ];
+                        $from->send(json_encode($response));
+                        $from->close();
+                        return true;
+                    }
+                    // not banned, set ip addy
                     $this->clientsData[$resourceId]['ipaddy'] = $content;
                 } else {
                     $this->logger->log(Logger::ALERT, $resourceId . ': SOMETHING FISHY GOING ON - NO IP ADDRESS COULD BE FOUND - DISCONNECT SOCKET');
                     $from->close();
+                    return true;
                 }
                 break;
             case 'login':
                 $response = $this->loginService->login($resourceId, $content);
+                if (!$response) {
+                    $response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-danger">DISCONNECTED - REASON: BANNED</pre>')
+                    ];
+                    $from->send(json_encode($response));
+                    $from->close();
+                    return true;
+                }
                 $from->send(json_encode($response));
                 break;
             case 'confirmusercreate':

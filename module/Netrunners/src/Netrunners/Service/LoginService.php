@@ -43,12 +43,19 @@ class LoginService extends BaseService
             );
         }
         else {
-            $ws->setClientData($resourceId, 'username', $user->getUsername());
-            $ws->setClientData($resourceId, 'userId', $user->getId());
-            $ws->setClientData($resourceId, 'profileId', $user->getProfile()->getId());
-            $response = array(
-                'command' => 'promptforpassword',
-            );
+            // check if they are banned
+            if ($user->getBanned()) {
+                $response = false;
+            }
+            else {
+                // not banned, populate ws client data
+                $ws->setClientData($resourceId, 'username', $user->getUsername());
+                $ws->setClientData($resourceId, 'userId', $user->getId());
+                $ws->setClientData($resourceId, 'profileId', $user->getProfile()->getId());
+                $response = array(
+                    'command' => 'promptforpassword',
+                );
+            }
         }
         return $response;
     }

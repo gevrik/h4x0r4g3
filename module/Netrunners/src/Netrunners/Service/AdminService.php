@@ -12,10 +12,13 @@ namespace Netrunners\Service;
 
 use BjyAuthorize\Service\Authorize;
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\BannedIp;
 use Netrunners\Entity\Profile;
+use Netrunners\Repository\BannedIpRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
+use Zend\Validator\Ip;
 
 class AdminService extends BaseService
 {
@@ -259,6 +262,206 @@ class AdminService extends BaseService
             ];
         }
         return $response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function banIp($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin($resourceId)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $ip = $this->getNextParameter($contentArray, false);
+            $validator = new Ip();
+            if (!$validator->isValid($ip)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid IP address')
+                    )
+                ];
+            }
+            else {
+                $bannedIp = new BannedIp();
+                $bannedIp->setBanner($this->user->getProfile());
+                $bannedIp->setAdded(new \DateTime);
+                $bannedIp->setIp($ip);
+                $this->entityManager->persist($bannedIp);
+                $this->entityManager->flush($bannedIp);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                        $this->translate('DONE')
+                    )
+                ];
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function unbanIp($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin($resourceId)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $ip = $this->getNextParameter($contentArray, false);
+            $validator = new Ip();
+            if (!$validator->isValid($ip)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid IP address')
+                    )
+                ];
+            }
+            else {
+                $bannedIpRepo = $this->entityManager->getRepository('Netrunners\Entity\BannedIp');
+                /** @var BannedIpRepository $bannedIpRepo */
+                $bannedIpEntry = $bannedIpRepo->findOneBy([
+                    'ip' => $ip
+                ]);
+                if (!$bannedIpEntry) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('IP address is not in banned list')
+                        )
+                    ];
+                }
+                else {
+                    $this->entityManager->remove($bannedIpEntry);
+                    $this->entityManager->flush($bannedIpEntry);
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                            $this->translate('DONE')
+                        )
+                    ];
+                }
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function banUser($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin($resourceId)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $userId = $this->getNextParameter($contentArray, false, true);
+            $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $userId);
+            if (!$targetUser) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid user id')
+                    )
+                ];
+            }
+            else {
+                $targetUser->setBanned(true);
+                $this->entityManager->flush($targetUser);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                        $this->translate('DONE')
+                    )
+                ];
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function unbanUser($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin($resourceId)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $userId = $this->getNextParameter($contentArray, false, true);
+            $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $userId);
+            if (!$targetUser) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid user id')
+                    )
+                ];
+            }
+            else {
+                $targetUser->setBanned(false);
+                $this->entityManager->flush($targetUser);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                        $this->translate('DONE')
+                    )
+                ];
+            }
+        }
+        return $this->response;
     }
 
 }
