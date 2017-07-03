@@ -393,6 +393,9 @@ class ParserService
             case 'showclients':
                 $response = $this->adminService->adminShowClients($resourceId);
                 break;
+            case 'kickclient':
+                $response = $this->adminService->kickClient($resourceId, $contentArray);
+                break;
             case 'setsnippets':
                 $response = $this->adminService->adminSetSnippets($resourceId, $contentArray);
                 break;

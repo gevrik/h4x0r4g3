@@ -19,7 +19,7 @@ pre {
     word-break: break-all;
     word-wrap: break-word;
     /*background-color: #060606;*/
-    background-color: #000000;
+    background-color: rgba(0, 0, 0, 0);
     border: 0;
     overflow: hidden;
 }
@@ -33,6 +33,7 @@ pre {
 .output-line {
     display: flex;
     align-items: center;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .eeg {

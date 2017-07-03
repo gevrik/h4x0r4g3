@@ -464,4 +464,80 @@ class AdminService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function kickClient($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin($resourceId)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            list($contentArray, $targetResourceId) = $this->getNextParameter($contentArray, true, true);
+            if (!$targetResourceId) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('Please specify the resource id ("clients" for list)')
+                    )
+                ];
+            }
+            if (!$this->response && !array_key_exists($targetResourceId, $this->getWebsocketServer()->getClientsData())) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('That socket is not connected!')
+                    )
+                ];
+            }
+            if (!$this->response && ($this->isAdmin($targetResourceId) || $this->isSuperAdmin($targetResourceId))) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('They really would not like that!')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $reason = $this->getNextParameter($contentArray, false, false, true, true);
+                foreach ($this->getWebsocketServer()->getClients() as $wsClientId => $wsClient) {
+                    if ($wsClient->resourceId === $targetResourceId) {
+                        $clientResponse = [
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been kicked by [%s], reason given: %s</pre>'),
+                                $this->user->getUsername(),
+                                ($reason) ? $reason : $this->translate('no reason given')
+                            )
+                        ];
+                        $wsClient->send(json_encode($clientResponse));
+                        $wsClient->close();
+                        break;
+                    }
+                }
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                        $this->translate('DONE')
+                    )
+                ];
+            }
+        }
+        return $this->response;
+    }
+
 }
