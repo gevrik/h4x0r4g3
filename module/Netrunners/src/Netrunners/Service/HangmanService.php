@@ -10,10 +10,8 @@
 
 namespace Netrunners\Service;
 
-use Netrunners\Entity\Profile;
 use Netrunners\Entity\Word;
 use Netrunners\Repository\WordRepository;
-use TmoAuth\Entity\User;
 use Zend\View\Model\ViewModel;
 
 class HangmanService extends BaseService
@@ -28,12 +26,10 @@ class HangmanService extends BaseService
     public function startHangmanGame($resourceId)
     {
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId);
-        if (!$response) {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
             $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
             /** @var WordRepository $wordRepo */
             $words = $wordRepo->getRandomWordsByLength();
@@ -51,13 +47,13 @@ class HangmanService extends BaseService
             $view = new ViewModel();
             $view->setTemplate('netrunners/word/hangman-game.phtml');
             $view->setVariable('hangman', (object)$hangman);
-            $response = array(
+            $this->response = array(
                 'command' => 'showpanel',
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -68,14 +64,12 @@ class HangmanService extends BaseService
     public function letterClicked($resourceId, $contentArray)
     {
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         $letter = $this->getNextParameter($contentArray, false);
         if (!$letter) return true;
         $letter = strtolower($letter);
-        $hangmanData = $clientData->hangman;
+        $hangmanData = $this->clientData->hangman;
         if ($hangmanData['attempts'] < 1) return true;
         $chars = str_split($hangmanData['word']);
         $letterFound = false;
@@ -100,12 +94,12 @@ class HangmanService extends BaseService
         $view = new ViewModel();
         $view->setTemplate('netrunners/word/hangman-game.phtml');
         $view->setVariable('hangman', (object)$hangmanData);
-        $response = array(
+        $this->response = array(
             'command' => 'showpanel',
             'type' => 'default',
             'content' => $this->viewRenderer->render($view)
         );
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -116,16 +110,12 @@ class HangmanService extends BaseService
     public function solutionAttempt($resourceId, $contentArray)
     {
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = false;
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $guess = $this->getNextParameter($contentArray, false);
         if (!$guess) return true;
-        $hangmanData = $clientData->hangman;
+        $hangmanData = $this->clientData->hangman;
         if ($hangmanData['word'] == $guess) {
             // player has guessed correctly
             var_dump('correct!');
@@ -133,7 +123,7 @@ class HangmanService extends BaseService
         else {
             var_dump('false!');
         }
-        return $response;
+        return $this->response;
     }
 
 }

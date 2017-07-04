@@ -10,14 +10,14 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
-use Netrunners\Entity\Profile;
-use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
-use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class ConnectionService extends BaseService
 {
@@ -26,30 +26,49 @@ class ConnectionService extends BaseService
     const SECURE_CONNECTION_COST = 50;
 
     /**
+     * @var NodeRepository
+     */
+    protected $nodeRepo;
+
+    /**
+     * @var ConnectionRepository
+     */
+    protected $connectionRepo;
+
+
+    /**
+     * ConnectionService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+    }
+
+    /**
      * @param $resourceId
      * @param $contentArray
      * @return array|bool
      */
     public function useConnection($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        // TODO check for codegate and permission
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        // TODO check for player-set permission (not implemented yet)
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
         if (!$connection) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -58,10 +77,10 @@ class ConnectionService extends BaseService
             );
         }
         // check if they can access the connection
-        if (!$response &&
+        if (!$this->response &&
             ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen())
         ) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -69,10 +88,10 @@ class ConnectionService extends BaseService
                 )
             );
         }
-        if (!$response) {
-            $response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
+        if (!$this->response) {
+            $this->response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -82,42 +101,42 @@ class ConnectionService extends BaseService
      */
     public function addConnection($resourceId, $contentArray)
     {
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        // check if they are busy
-        $response = $this->isActionBlocked($resourceId);
-        // get parameter
+        $this->response = $this->isActionBlocked($resourceId);
         $parameter = $this->getNextParameter($contentArray, false, true);
-        if (!$parameter) {
+        if (!$this->response && !$parameter) {
             $returnMessage = array();
             $returnMessage[] = sprintf(
                 '<pre class="text-sysmsg">%s</pre>',
                 $this->translate('Please choose the target node:')
             );
-            $nodes = $nodeRepo->findBySystem($currentSystem);
+            $nodes = $this->nodeRepo->findBySystem($currentSystem);
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%s</pre>',
+                $this->translate('node-id'),
+                $this->translate('node-name')
+            );
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 if ($node === $currentNode) continue;
-                $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;">%-11s|%s</pre>', $node->getId(), $node->getName());
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%s</pre>',
+                    $node->getId(),
+                    $node->getName()
+                );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
         // check if they can add connections
-        if (!$response && $profile != $currentSystem->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -126,8 +145,8 @@ class ConnectionService extends BaseService
             );
         }
         // check if this is a home node
-        if (!$response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
-            $response = array(
+        if (!$this->response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -136,8 +155,8 @@ class ConnectionService extends BaseService
             );
         }
         // check if they have enough credits
-        if (!$response && $profile->getCredits() < self::CONNECTION_COST) {
-            $response = array(
+        if (!$this->response && $profile->getCredits() < self::CONNECTION_COST) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You need %s credits to add a connection to the node</pre>'),
@@ -147,8 +166,8 @@ class ConnectionService extends BaseService
         }
         // check if the target node exists
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
-        if (!$response && !$targetNode) {
-            $response = array(
+        if (!$this->response && !$targetNode) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -158,8 +177,8 @@ class ConnectionService extends BaseService
         }
         /** @var Node $targetNode */
         // check if the target node is the current ndoe
-        if (!$response && $targetNode === $currentNode) {
-            $response = array(
+        if (!$this->response && $targetNode === $currentNode) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -168,8 +187,8 @@ class ConnectionService extends BaseService
             );
         }
         // check if the target node is in the same system
-        if (!$response && $targetNode->getSystem() != $currentSystem) {
-            $response = array(
+        if (!$this->response && $targetNode->getSystem() != $currentSystem) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -178,7 +197,7 @@ class ConnectionService extends BaseService
             );
         }
         /* all checks passed, we can now add the connection */
-        if (!$response) {
+        if (!$this->response) {
             $newCredits = $profile->getCredits() - self::CONNECTION_COST;
             $profile->setCredits($newCredits);
             $aconnection = new Connection();
@@ -198,7 +217,7 @@ class ConnectionService extends BaseService
             $bconnection->setIsOpen(false);
             $this->entityManager->persist($bconnection);
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">The connection has been created for %s credits</pre>'),
@@ -206,7 +225,7 @@ class ConnectionService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -216,22 +235,15 @@ class ConnectionService extends BaseService
      */
     public function secureConnection($resourceId, $contentArray)
     {
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         // check if they can add connections
-        if (!$response && $profile != $currentSystem->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -240,8 +252,8 @@ class ConnectionService extends BaseService
             );
         }
         // check if they have enough credits
-        if (!$response && $profile->getCredits() < self::CONNECTION_COST) {
-            $response = array(
+        if (!$this->response && $profile->getCredits() < self::CONNECTION_COST) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a connection to the node</pre>'),
@@ -256,7 +268,7 @@ class ConnectionService extends BaseService
         if (is_numeric($parameter)) {
             $searchByNumber = true;
         }
-        $connections = $connectionRepo->findBySourceNode($currentNode);
+        $connections = $this->connectionRepo->findBySourceNode($currentNode);
         $connection = false;
         if ($searchByNumber) {
             if (isset($connections[$parameter - 1])) {
@@ -271,8 +283,8 @@ class ConnectionService extends BaseService
                 }
             }
         }
-        if (!$response && !$connection) {
-            $response = array(
+        if (!$this->response && !$connection) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -280,17 +292,17 @@ class ConnectionService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $profile->setCredits($profile->getCredits() - self::SECURE_CONNECTION_COST);
             $connection->setType(Connection::TYPE_CODEGATE);
             $connection->setIsOpen(false);
             $targetnode = $connection->getTargetNode();
-            $targetConnection = $connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
+            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
             $targetConnection = array_shift($targetConnection);
             $targetConnection->setType(Connection::TYPE_CODEGATE);
             $targetConnection->setIsOpen(false);
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -298,7 +310,7 @@ class ConnectionService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
 }

@@ -14,7 +14,6 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\GameOptionRepository;
-use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -49,13 +48,9 @@ class GameOptionService extends BaseService
      */
     public function optionsCommand($resourceId, $contentArray)
     {
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        // get profile
-        $profile = $user->getProfile();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $returnMessage = [];
         $optionValue = $this->getNextParameter($contentArray, false);
         if (!$optionValue) {
@@ -82,11 +77,11 @@ class GameOptionService extends BaseService
                 );
             }
         }
-        $response = [
+        $this->response = [
             'command' => 'showoutput',
             'message' => $returnMessage
         ];
-        return $response;
+        return $this->response;
     }
 
     /**

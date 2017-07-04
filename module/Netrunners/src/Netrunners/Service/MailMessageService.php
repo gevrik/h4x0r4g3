@@ -10,10 +10,12 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\MailMessageRepository;
-use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class MailMessageService extends BaseService
 {
@@ -23,6 +25,23 @@ class MailMessageService extends BaseService
      */
     const STARTING_NUMBER = 1;
 
+    /**
+     * @var MailMessageRepository
+     */
+    protected $mailMessageRepo;
+
+
+    /**
+     * MailMessageService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
+    }
 
     /**
      * Returns the total number of mails for the given profile.
@@ -43,26 +62,21 @@ class MailMessageService extends BaseService
      */
     public function displayAmountUnreadMails($resourceId)
     {
-        $mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
-        /** @var MailMessageRepository $mailMessageRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
-            $countUnreadMails = $mailMessageRepo->countByUnreadMails($profile);
-            $response = array(
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            $countUnreadMails = $this->mailMessageRepo->countByUnreadMails($profile);
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>'),
                     $countUnreadMails
                 )
-            );
+            ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -71,18 +85,15 @@ class MailMessageService extends BaseService
      */
     public function enterMailMode($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId);
-        if (!$response) {
-            $mails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->findBy(
-                array(
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $mails = $this->mailMessageRepo->findBy(
+                [
                     'recipient' => $profile
-                )
+                ]
             );
             $message = $this->translate("NeoMail - version 0.1 - '?' for help, 'q' to quit");
             $message .= sprintf(
@@ -106,13 +117,13 @@ class MailMessageService extends BaseService
                     $mail->getSubject()
                 );
             }
-            $response = array(
+            $this->response = [
                 'command' => 'entermailmode',
                 'message' => $message,
                 'mailNumber' => $mailNumber
-            );
+            ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -121,12 +132,12 @@ class MailMessageService extends BaseService
      */
     public function exitMailMode($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $response = array(
+        $this->initService($resourceId);
+        $this->response = array(
             'command' => 'exitmailmode',
-            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData)
+            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData)
         );
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -136,29 +147,24 @@ class MailMessageService extends BaseService
      */
     public function displayMail($resourceId, $mailOptions)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        // init response
-        $response = false;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $mailNumberArray = $mailOptions->currentMailNumber - 1;
-        $mails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->findBy(
+        $mails = $this->mailMessageRepo->findBy(
             array(
                 'recipient' => $profile
             )
         );
         $mail = (isset($mails[$mailNumberArray])) ? $mails[$mailNumberArray] : NULL;
         if (!$mail) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'type' => 'white',
                 'message' => 'Unknown mail number'
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             /** @var MailMessage $mail */
             // mark mail as read
             if (!$mail->getReadDateTime() && $mail->getRecipient() == $profile) {
@@ -181,13 +187,13 @@ class MailMessageService extends BaseService
                 $mail->getSubject()
             );
             $message .= sprintf('<pre class="text-white">%s</pre>', $mail->getContent());
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'type' => 'white',
                 'message' => $message
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -198,16 +204,11 @@ class MailMessageService extends BaseService
      */
     public function deleteMail($resourceId, $contentArray, $mailOptions)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, true);
-        // init response
-        $response = false;
         if (!$parameter) {
             $mailNumber = $mailOptions->currentMailNumber;
         }
@@ -215,20 +216,20 @@ class MailMessageService extends BaseService
             $mailNumber = $parameter;
         }
         $mailNumberArray = $mailNumber - 1;
-        $mails = $this->entityManager->getRepository('Netrunners\Entity\MailMessage')->findBy(
+        $mails = $this->mailMessageRepo->findBy(
             array(
                 'recipient' => $profile
             )
         );
         $mail = $mails[$mailNumberArray];
         if (!$mail) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'type' => 'danger',
                 'message' => 'Invalid mail number'
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             /** @var MailMessage $mail */
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Mail #%s has been deleted</pre>'),
@@ -236,12 +237,12 @@ class MailMessageService extends BaseService
             );
             $this->entityManager->remove($mail);
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => $message
             );
         }
-        return $response;
+        return $this->response;
     }
 
 }

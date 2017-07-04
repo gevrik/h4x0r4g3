@@ -292,7 +292,12 @@ class LoopService extends BaseService
         $this->entityManager->flush();
     }
 
-    protected function addProfileIdToItems($items, $profileId)
+    /**
+     * @param $items
+     * @param $profileId
+     * @return mixed
+     */
+    private function addProfileIdToItems($items, $profileId)
     {
         // check if the owning profile of this node is already in our item list, if not, add the profile
         if (!isset($items[$profileId])) $items[$profileId] = [
@@ -302,7 +307,15 @@ class LoopService extends BaseService
         return $items;
     }
 
-    protected function checkForModifyingFiles(Node $node, $profileId, $fileTypeId, $items, $resource)
+    /**
+     * @param Node $node
+     * @param $profileId
+     * @param $fileTypeId
+     * @param $items
+     * @param $resource
+     * @return mixed
+     */
+    private function checkForModifyingFiles(Node $node, $profileId, $fileTypeId, $items, $resource)
     {
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */
@@ -334,7 +347,7 @@ class LoopService extends BaseService
      * @param $jobId
      * @return array|bool
      */
-    protected function resolveCoding($jobId)
+    private function resolveCoding($jobId)
     {
         $jobData = (isset($this->jobs[$jobId])) ? $this->jobs[$jobId] : false;
         if (!$jobData) return false;
@@ -397,11 +410,13 @@ class LoopService extends BaseService
                 $add = $this->translate('<br />The file could not be stored in storage - it has been added to the node that it was coded in');
             }
             $this->learnFromSuccess($profile, $jobData);
+            $completionDate = $jobData['completionDate'];
+            /** @var \DateTime $completionDate */
             $response = [
                 'severity' => 'success',
                 'message' => sprintf(
                     $this->translate('[%s] Coding project complete: %s [level: %s]%s'),
-                    $jobData['completionDate']->format('Y/m/d H:i:s'),
+                    $completionDate->format('Y/m/d H:i:s'),
                     $basePart->getName(),
                     $difficulty,
                     $add
@@ -430,11 +445,13 @@ class LoopService extends BaseService
                 }
                 if (!empty($message)) $message .= 'were recovered)]';
             }
+            $completionDate = $jobData['completionDate'];
+            /** @var \DateTime $completionDate */
             $response = [
                 'severity' => 'warning',
                 'message' => sprintf(
                     $this->translate("[%s] Coding project failed: %s [level: %s] %s"),
-                    $jobData['completionDate']->format('Y/m/d H:i:s'),
+                    $completionDate->format('Y/m/d H:i:s'),
                     $basePart->getName(),
                     $difficulty,
                     $message

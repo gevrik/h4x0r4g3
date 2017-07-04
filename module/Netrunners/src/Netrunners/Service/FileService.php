@@ -21,7 +21,6 @@ use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
-use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -69,34 +68,25 @@ class FileService extends BaseService
      */
     public function statFile($resourceId, $contentArray)
     {
-        // init response
-        $response = $this->isActionBlocked($resourceId, true);
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        // get profile
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        // get parameter
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        $profile = $this->user->getProfile();
         $parameter = $this->getNextParameter($contentArray, false);
-        // get file repo
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findByNodeOrProfileAndName(
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
             $profile->getCurrentNode(),
             $profile,
             $parameter
         );
-        if (!$response && count($targetFiles) < 1) {
-            $response = array(
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => '<pre style="white-space: pre-wrap;" class="text-sysmsg">No such file</pre>'
             );
         }
         /* start logic if we do not have a response already */
-        if (!$response) {
+        if (!$this->response) {
             $targetFile = array_shift($targetFiles);
             /** @var File $targetFile */
             $returnMessage = array();
@@ -145,13 +135,12 @@ class FileService extends BaseService
                 $this->translate("Modified"),
                 ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : $this->translate("---")
             );
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
-            return $response;
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -161,28 +150,21 @@ class FileService extends BaseService
      */
     public function touchFile($resourceId, $contentArray)
     {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         // init response
-        $response = $this->isActionBlocked($resourceId);
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        // get profile
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->response = $this->isActionBlocked($resourceId);
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
-        // get file repo
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findFileInNodeByName(
+        $targetFiles = $this->fileRepo->findFileInNodeByName(
             $profile->getCurrentNode(),
             $parameter
         );
-        if (!$response && $profile->getSnippets() < 1) {
-            $response = array(
+        if (!$this->response && $profile->getSnippets() < 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -190,8 +172,8 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response && count($targetFiles) >= 1) {
-            $response = array(
+        if (!$this->response && count($targetFiles) >= 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -201,8 +183,8 @@ class FileService extends BaseService
         }
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$response && !$validator->isValid($parameter)) {
-            $response = array(
+        if (!$this->response && !$validator->isValid($parameter)) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -212,7 +194,7 @@ class FileService extends BaseService
         }
         // check if max of 32 characters
         if (mb_strlen($parameter) > 32) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -222,7 +204,7 @@ class FileService extends BaseService
         }
         $parameter = str_replace(' ', '_', $parameter);
         /* start logic if we do not have a response already */
-        if (!$response) {
+        if (!$this->response) {
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - 1);
             $newCode = new File();
@@ -245,16 +227,16 @@ class FileService extends BaseService
             $newCode->setVersion(1);
             $this->entityManager->persist($newCode);
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been created</pre>'),
                     $parameter
                 )
             );
-            return $response;
+            return $this->response;
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -264,26 +246,20 @@ class FileService extends BaseService
      */
     public function changeFileName($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId, true);
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
-        // get file repo
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findByNodeOrProfileAndName(
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
             $profile->getCurrentNode(),
             $profile,
             $parameter
         );
-        if (!$response && count($targetFiles) < 1) {
-            $response = array(
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s</pre>",
@@ -292,8 +268,8 @@ class FileService extends BaseService
             );
         }
         $file = array_shift($targetFiles);
-        if (!$response && !$file) {
-            $response = array(
+        if (!$this->response && !$file) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -303,8 +279,8 @@ class FileService extends BaseService
         }
         // now get the new name
         $newName = $this->getNextParameter($contentArray, false, false, true, true);
-        if (!$response && !$newName) {
-            $response = array(
+        if (!$this->response && !$newName) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -313,8 +289,8 @@ class FileService extends BaseService
             );
         }
         // check if they can change the type
-        if (!$response && $profile != $file->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $file->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -324,30 +300,30 @@ class FileService extends BaseService
         }
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$response && !$validator->isValid($newName)) {
-            $response = array(
+        if (!$this->response && !$validator->isValid($newName)) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (alpha-numeric only)</pre>')
             );
         }
         // check if max of 32 characters
         if (mb_strlen($newName) > 32) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (32-characters-max)</pre>')
             );
         }
-        //
-        if (!$response) {
+        /* all checks passed, we can rename the file now */
+        if (!$this->response) {
             $newName = str_replace(' ', '_', $newName);
             $file->setName($newName);
             $this->entityManager->flush($file);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-sysmsg">File name changed to %s</pre>', $newName)
+                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-success">File name changed to %s</pre>', $newName)
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -357,28 +333,19 @@ class FileService extends BaseService
      */
     public function executeFile($resourceId, $contentArray)
     {
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        // get profile
-        $profile = $user->getProfile();
-        // init response
-        $response = $this->isActionBlocked($resourceId);
-        // get parameter
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
-        // get file repo
-        $fileRepository = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepository */
         // try to get target file via repo method
-        $targetFiles = $fileRepository->findByNodeOrProfileAndName(
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
             $profile->getCurrentNode(),
             $profile,
             $parameter
         );
-        if (!$response && count($targetFiles) < 1) {
-            $response = array(
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -388,8 +355,8 @@ class FileService extends BaseService
         }
         $file = array_shift($targetFiles);
         // check if file belongs to user TODO should be able to bypass this via bh program
-        if (!$response && $file->getProfile() != $profile) {
-            $response = array(
+        if (!$this->response && $file->getProfile() != $profile) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You are not allowed to execute %s</pre>'),
@@ -398,8 +365,8 @@ class FileService extends BaseService
             );
         }
         // check if already running
-        if (!$response && $file->getRunning()) {
-            $response = array(
+        if (!$this->response && $file->getRunning()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s is already running</pre>'),
@@ -408,8 +375,8 @@ class FileService extends BaseService
             );
         }
         // check if there is enough memory to execute this
-        if (!$response && !$this->canExecuteFile($profile, $file)) {
-            $response = array(
+        if (!$this->response && !$this->canExecuteFile($profile, $file)) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You do not have enough memory to execute %s - build more memory nodes</pre>'),
@@ -417,11 +384,11 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             // determine what to do depending on file type
             switch ($file->getFileType()->getId()) {
                 default:
-                    $response = array(
+                    $this->response = array(
                         'command' => 'showmessage',
                         'message' => sprintf(
                             $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s is not executable, yet</pre>'),
@@ -430,27 +397,27 @@ class FileService extends BaseService
                     );
                     break;
                 case FileType::ID_CHATCLIENT:
-                    $response = $this->executeChatClient($file);
+                    $this->response = $this->executeChatClient($file);
                     break;
                 case FileType::ID_DATAMINER:
-                    $response = $this->executeDataminer($file, $profile->getCurrentNode());
+                    $this->response = $this->executeDataminer($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_COINMINER:
-                    $response = $this->executeCoinminer($file, $profile->getCurrentNode());
+                    $this->response = $this->executeCoinminer($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_ICMP_BLOCKER:
-                    $response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
+                    $this->response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_PORTSCANNER:
                 case FileType::ID_JACKHAMMER:
-                    $response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
+                    $this->response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
                     break;
                 case FileType::ID_CODEBREAKER:
-                    $response = $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
+                    $this->response = $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
                     break;
             }
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -921,17 +888,15 @@ class FileService extends BaseService
      */
     public function killProcess($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, true);
         // init response
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response && !$parameter) {
-            $response = array(
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response && !$parameter) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -939,9 +904,9 @@ class FileService extends BaseService
                 )
             );
         }
-        $runningFile = (!$response) ? $this->entityManager->find('Netrunners\Entity\File', $parameter) : NULL;
-        if (!$response && !$runningFile) {
-            $response = array(
+        $runningFile = (!$this->response) ? $this->entityManager->find('Netrunners\Entity\File', $parameter) : NULL;
+        if (!$this->response && !$runningFile) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -949,8 +914,8 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response && $runningFile->getProfile() != $profile) {
-            $response = array(
+        if (!$this->response && $runningFile->getProfile() != $profile) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -958,8 +923,8 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response && !$runningFile->getRunning()) {
-            $response = array(
+        if (!$this->response && !$runningFile->getRunning()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -967,8 +932,8 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
-            $response = array(
+        if (!$this->response && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -976,8 +941,8 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response && $runningFile->getNode() != $profile->getCurrentNode()) {
-            $response = array(
+        if (!$this->response && $runningFile->getNode() != $profile->getCurrentNode()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -985,12 +950,12 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $runningFile->setRunning(false);
             $runningFile->setSystem(NULL);
             $runningFile->setNode(NULL);
             $this->entityManager->flush($runningFile);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Process with id %s has been killed</pre>'),
@@ -998,7 +963,7 @@ class FileService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
