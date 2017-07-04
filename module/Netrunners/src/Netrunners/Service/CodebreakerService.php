@@ -10,13 +10,39 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
+use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\WordRepository;
-use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class CodebreakerService extends BaseService
 {
+
+    /**
+     * @var WordRepository
+     */
+    protected $wordRepo;
+
+    /**
+     * @var ConnectionRepository
+     */
+    protected $connectionRepo;
+
+    /**
+     * CodebreakerService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
+    }
 
     /**
      * @param $resourceId
@@ -27,17 +53,14 @@ class CodebreakerService extends BaseService
     public function startCodebreaker($resourceId, File $file, $contentArray)
     {
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         if (!$file) return true;
-        $profile = $user->getProfile();
-        $response = false;
+        $profile = $this->user->getProfile();
         $connection = false;
         list($contentArray, $connectionParameter) = $this->getNextParameter($contentArray);
         if (!$connectionParameter) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -45,10 +68,10 @@ class CodebreakerService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $connection = $this->findConnectionByNameOrNumber($connectionParameter, $profile->getCurrentNode());
             if (!$connection) {
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -57,22 +80,20 @@ class CodebreakerService extends BaseService
                 );
             }
         }
-        if (!$response) {
+        if (!$this->response) {
             $guess = $this->getNextParameter($contentArray, false);
-            if ($guess && !empty($clientData->codebreaker)) {
+            if ($guess && !empty($this->clientData->codebreaker)) {
                 /* mini game logic solve attempt */
-                $response = $this->solveCodebreaker($resourceId, $guess);
+                $this->response = $this->solveCodebreaker($resourceId, $guess);
             }
-            if (!$response) {
-                $response = $this->isActionBlocked($resourceId);
+            if (!$this->response) {
+                $this->response = $this->isActionBlocked($resourceId);
             }
-            if (!$response) {
+            if (!$this->response) {
                 /* mini game logic start */
-                $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
-                /** @var WordRepository $wordRepo */
                 $wordLength = 4 + $connection->getLevel();
                 $hashLength = 8 * $connection->getLevel();
-                $words = $wordRepo->getRandomWordsByLength(1, $wordLength);
+                $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
                 $word = array_shift($words);
                 $thePassword = $word->getContent();
                 $randomString = $this->getRandomString($hashLength);
@@ -94,7 +115,7 @@ class CodebreakerService extends BaseService
                     'fileId' => $file->getId(),
                     'connectionId' => $connection->getId()
                 ]);
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'deadline' => 30,
                     'message' => sprintf(
@@ -104,7 +125,7 @@ class CodebreakerService extends BaseService
                 );
             }
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -115,19 +136,21 @@ class CodebreakerService extends BaseService
     private function solveCodebreaker($resourceId, $guess)
     {
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return false;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        $codebreakerData = $clientData->codebreaker;
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $codebreakerData = $this->clientData->codebreaker;
         $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
         /** @var Connection $connection */
         if ($guess == $codebreakerData['thePassword']) {
             $this->movePlayerToTargetNode($resourceId, $profile, $connection);
             $connection->setIsOpen(true);
             $this->entityManager->flush($connection);
-            $response = array(
+            $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
+            /** @var Connection $otherConnection */
+            $otherConnection->setIsOpen(true);
+            $this->entityManager->flush($otherConnection);
+            $this->response = array(
                 'command' => 'showmessage',
                 'cleardeadline' => true,
                 'message' => sprintf(
@@ -137,7 +160,7 @@ class CodebreakerService extends BaseService
             );
         }
         else {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'cleardeadline' => true,
                 'message' => sprintf(
@@ -158,7 +181,7 @@ class CodebreakerService extends BaseService
             );
         }
         $ws->setClientData($resourceId, 'codebreaker', []);
-        return $response;
+        return $this->response;
     }
 
 }

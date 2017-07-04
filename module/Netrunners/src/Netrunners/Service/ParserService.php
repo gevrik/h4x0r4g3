@@ -324,7 +324,7 @@ class ParserService
                 $response = $this->profileService->showFilePartInstances($resourceId);
                 break;
             case 'ps':
-                $response = $this->fileService->listProcesses($resourceId);
+                $response = $this->fileService->listProcesses($resourceId, $contentArray);
                 break;
             case self::CMD_REQUESTMILKRUN:
             case 'milkrun':

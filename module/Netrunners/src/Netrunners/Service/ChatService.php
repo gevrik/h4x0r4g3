@@ -10,10 +10,13 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class ChatService extends BaseService
 {
@@ -34,27 +37,40 @@ class ChatService extends BaseService
     const CHANNEL_NEWBIE = 'NEWBIE';
 
     /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
+
+    /**
+     * ChatService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+    }
+
+    /**
      * @param $resourceId
      * @param $contentArray
      * @return array|bool
      */
     public function globalChat($resourceId, $contentArray)
     {
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        // get user
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         // get profile
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId, true);
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
         // check if the have a running chat client
-        if (!$response) {
-            if (!$fileRepo->findChatClientForProfile($profile)) {
-                $response = [
+        if (!$this->response) {
+            if (!$this->fileRepo->findChatClientForProfile($profile)) {
+                $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -63,7 +79,7 @@ class ChatService extends BaseService
                 ];
             }
         }
-        if (!$response) {
+        if (!$this->response) {
             $messageContent = implode(' ', $contentArray);
             if (!$messageContent || $messageContent == '') return true;
             $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
@@ -77,15 +93,15 @@ class ChatService extends BaseService
                 $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
                 if (!$clientUser) continue;
                 /** @var User $clientUser */
-                if ($clientUser == $user) {
-                    $response = array(
+                if ($clientUser === $this->user) {
+                    $this->response = array(
                         'command' => 'showmessage',
                         'type' => ChatService::CHANNEL_GLOBAL,
                         'message' => $messageContent
                     );
                 }
                 else {
-                    if (!$fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+                    if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
                     $xresponse = array(
                         'command' => 'showmessageprepend',
                         'type' => ChatService::CHANNEL_GLOBAL,
@@ -95,7 +111,7 @@ class ChatService extends BaseService
                 }
             }
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -105,16 +121,12 @@ class ChatService extends BaseService
      */
     public function sayChat($resourceId, $contentArray)
     {
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            // get user
+        $this->initService($resourceId);
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
             $ws = $this->getWebsocketServer();
-            $clientData = $ws->getClientData($resourceId);
-            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            if (!$user) return true;
-            // get profile
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+            if (!$this->user) return true;
+            $profile = $this->user->getProfile();
             $messageContent = implode(' ', $contentArray);
             if (!$messageContent || $messageContent == '') return true;
             $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_SAY);
@@ -130,8 +142,8 @@ class ChatService extends BaseService
                 /** @var User $clientUser */
                 // skip if they are not in the same node
                 if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
-                if ($clientUser == $user) {
-                    $response = array(
+                if ($clientUser === $this->user) {
+                    $this->response = array(
                         'command' => 'showmessage',
                         'type' => ChatService::CHANNEL_SAY,
                         'message' => $messageContent
@@ -147,25 +159,27 @@ class ChatService extends BaseService
                 }
             }
         }
-        return $response;
+        return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
     public function newbieChat($resourceId, $contentArray)
     {
         // get user
         $ws = $this->getWebsocketServer();
-        $clientData = $ws->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         // get profile
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $profile = $this->user->getProfile();
         $messageContent = implode(' ', $contentArray);
         if (!$messageContent || $messageContent == '') return true;
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_NEWBIE);
         $wsClients = $ws->getClients();
         $wsClientsData = $ws->getClientsData();
-        $response = false;
         foreach ($wsClients as $wsClient) {
             /** @var ConnectionInterface $wsClient */
             /** @noinspection PhpUndefinedFieldInspection */
@@ -174,8 +188,8 @@ class ChatService extends BaseService
             $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
             if (!$clientUser) continue;
             /** @var User $clientUser */
-            if ($clientUser == $user) {
-                $response = array(
+            if ($clientUser === $this->user) {
+                $this->response = array(
                     'command' => 'showmessage',
                     'type' => ChatService::CHANNEL_NEWBIE,
                     'message' => $messageContent
@@ -190,7 +204,7 @@ class ChatService extends BaseService
                 $wsClient->send(json_encode($xresponse));
             }
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -201,7 +215,7 @@ class ChatService extends BaseService
      * @param bool|true $removeHtmlEntities
      * @return string
      */
-    protected function prepareMessage(Profile $profile, $messageContent, $channel, $removeHtmlEntities = true)
+    private function prepareMessage(Profile $profile, $messageContent, $channel, $removeHtmlEntities = true)
     {
         $messageContent = ($removeHtmlEntities) ? htmLawed($messageContent, array('safe'=>1, 'elements'=>'strong, em, strike, u')) : $messageContent;
         $messageContent = sprintf('<pre style="white-space: pre-wrap;" class="text-%s">[%s] %s : %s</pre>', strtolower($channel), strtoupper($channel), $profile->getUser()->getDisplayName(), wordwrap($messageContent, 120));

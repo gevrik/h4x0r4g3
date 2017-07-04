@@ -42,19 +42,12 @@ class AdminService extends BaseService
     }
 
     /**
-     *
-     * @param int $resourceId
      * @return bool
      */
-    private function isSuperAdmin($resourceId)
+    private function isSuperAdmin()
     {
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
         $isAdmin = false;
-        foreach ($user->getRoles() as $role) {
+        foreach ($this->user->getRoles() as $role) {
             /** @var Role $role */
             if ($role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
                 $isAdmin = true;
@@ -65,19 +58,13 @@ class AdminService extends BaseService
     }
 
     /**
-     *
-     * @param int $resourceId
      * @return bool
      */
-    private function isAdmin($resourceId)
+    private function isAdmin()
     {
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+
         $isAdmin = false;
-        foreach ($user->getRoles() as $role) {
+        foreach ($this->user->getRoles() as $role) {
             /** @var Role $role */
             if ($role->getRoleId() === Role::ROLE_ID_ADMIN || $role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
                 $isAdmin = true;
@@ -95,7 +82,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin($resourceId)) {
+        if (!$this->isAdmin()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -142,20 +129,21 @@ class AdminService extends BaseService
      */
     public function adminSetSnippets($resourceId, $contentArray)
     {
-        $response = false;
-        if (!$this->isAdmin($resourceId)) {
-            $response = [
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin()) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
                     $this->translate('Unknown command')
                 )
             ];
-            return $response;
+            return $this->response;
         }
         list($contentArray, $targetUserId) = $this->getNextParameter($contentArray, true, true);
         if (!$targetUserId) {
-            $response = [
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -164,11 +152,11 @@ class AdminService extends BaseService
             ];
         }
         $targetUser = false;
-        if (!$response) {
+        if (!$this->response) {
             $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
         }
-        if (!$response && !$targetUser) {
-            $response = [
+        if (!$this->response && !$targetUser) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -177,8 +165,8 @@ class AdminService extends BaseService
             ];
         }
         $amount = $this->getNextParameter($contentArray, false, true);
-        if (!$response && !$amount) {
-            $response = [
+        if (!$this->response && !$amount) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -186,18 +174,18 @@ class AdminService extends BaseService
                 )
             ];
         }
-        if (!$response) {
+        if (!$this->response) {
             $profile = $targetUser->getProfile();
             /** @var Profile $profile */
             $profile->setSnippets($profile->getSnippets() + $amount);
             $this->entityManager->flush($profile);
             $message = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">DONE</pre>');
-            $response = [
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => $message
             ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -207,20 +195,21 @@ class AdminService extends BaseService
      */
     public function adminSetCredits($resourceId, $contentArray)
     {
-        $response = false;
-        if (!$this->isAdmin($resourceId)) {
-            $response = [
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin()) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
                     $this->translate('Unknown command')
                 )
             ];
-            return $response;
+            return $this->response;
         }
         list($contentArray, $targetUserId) = $this->getNextParameter($contentArray, true, true);
         if (!$targetUserId) {
-            $response = [
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -229,11 +218,11 @@ class AdminService extends BaseService
             ];
         }
         $targetUser = false;
-        if (!$response) {
+        if (!$this->response) {
             $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
         }
-        if (!$response && !$targetUser) {
-            $response = [
+        if (!$this->response && !$targetUser) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -241,8 +230,8 @@ class AdminService extends BaseService
             ];
         }
         $amount = $this->getNextParameter($contentArray, false, true);
-        if (!$response && !$amount) {
-            $response = [
+        if (!$this->response && !$amount) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -250,18 +239,18 @@ class AdminService extends BaseService
                 )
             ];
         }
-        if (!$response) {
+        if (!$this->response) {
             $profile = $targetUser->getProfile();
             /** @var Profile $profile */
             $profile->setCredits($profile->getCredits() + $amount);
             $this->entityManager->flush($profile);
             $message = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">DONE</pre>');
-            $response = [
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => $message
             ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -273,7 +262,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin($resourceId)) {
+        if (!$this->isAdmin()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -322,7 +311,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin($resourceId)) {
+        if (!$this->isAdmin()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -383,7 +372,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin($resourceId)) {
+        if (!$this->isAdmin()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -428,7 +417,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin($resourceId)) {
+        if (!$this->isAdmin()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -473,7 +462,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin($resourceId)) {
+        if (!$this->isAdmin()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -502,7 +491,7 @@ class AdminService extends BaseService
                     )
                 ];
             }
-            if (!$this->response && ($this->isAdmin($targetResourceId) || $this->isSuperAdmin($targetResourceId))) {
+            if (!$this->response && ($this->isAdmin() || $this->isSuperAdmin())) {
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(

@@ -16,12 +16,10 @@ use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\NodeType;
-use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
 use Netrunners\Repository\FileTypeRepository;
-use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 
 class CodingService extends BaseService
@@ -46,6 +44,21 @@ class CodingService extends BaseService
      */
     protected $loopService;
 
+    /**
+     * @var FilePartInstanceRepository
+     */
+    protected $filePartInstanceRepo;
+
+    /**
+     * @var FilePartRepository
+     */
+    protected $filePartRepo;
+
+    /**
+     * @var FileTypeRepository
+     */
+    protected $fileTypeRepo;
+
 
     /**
      * CodingService constructor.
@@ -63,6 +76,9 @@ class CodingService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->loopService = $loopService;
+        $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
+        $this->filePartRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePart');
+        $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
     }
 
     /**
@@ -71,15 +87,12 @@ class CodingService extends BaseService
      */
     public function enterCodeMode($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId);
-        if (!$response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_CODING) {
-            $response = array(
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_CODING) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -87,17 +100,17 @@ class CodingService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $message = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
                 $this->translate('NeoCode - version 0.1 - "?" for help, "q" to quit')
             );
-            $response = array(
+            $this->response = array(
                 'command' => 'entercodemode',
                 'message' => $message
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -107,10 +120,8 @@ class CodingService extends BaseService
      */
     public function switchCodeMode($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         // init message
@@ -128,11 +139,11 @@ class CodingService extends BaseService
             $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">mode set to [%s]</pre>'),
             $value
         );
-        $response = array(
+        $this->response = array(
             'command' => 'showmessage',
             'message' => $message
         );
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -142,15 +153,13 @@ class CodingService extends BaseService
      */
     public function commandLevel($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, true, false, true);
         // init message
         if (!$parameter) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -174,13 +183,13 @@ class CodingService extends BaseService
                 );
                 $this->getWebsocketServer()->setCodingOption($resourceId, 'fileLevel', $parameter);
             }
-            $response = array(
+            $this->response = array(
                 'command' => $command,
                 'message' => $message
             );
         }
         // init response
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -190,12 +199,9 @@ class CodingService extends BaseService
      */
     public function commandOptions($resourceId, $codeOptions)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $message = '';
         $message .= sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
@@ -223,12 +229,10 @@ class CodingService extends BaseService
                 ($codeOptions->fileLevel) ? $codeOptions->fileLevel : $this->translate('unknown')
             );
             $partsString = '';
-            $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
-            /** @var FilePartInstanceRepository $filePartInstanceRepo */
             if ($fileType) {
                 foreach ($fileType->getFileParts() as $filePart) {
                     /** @var FilePart $filePart */
-                    $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
                     $name = $filePart->getName();
                     $shortName = explode(' ', $name);
                     if (empty($filePartInstances)) {
@@ -289,12 +293,12 @@ class CodingService extends BaseService
             );
         }
         // build response
-        $response = array(
+        $this->response = array(
             'command' => 'showmessage',
             'message' => $message
         );
         // init response
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -305,10 +309,8 @@ class CodingService extends BaseService
      */
     public function commandType($resourceId, $contentArray, $codeOptions)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         // init message
@@ -318,17 +320,15 @@ class CodingService extends BaseService
             switch ($codeMode) {
                 default:
                 case 'resource':
-                    $typeRepository = $this->entityManager->getRepository('Netrunners\Entity\FilePart');
-                    /** @var FilePartRepository $typeRepository */
+                    $typeRepository = $this->filePartRepo;
                     break;
                 case 'program':
-                    $typeRepository = $this->entityManager->getRepository('Netrunners\Entity\FileType');
-                    /** @var FileTypeRepository $typeRepository */
+                    $typeRepository = $this->fileTypeRepo;
                     break;
             }
             $fileTypes = $typeRepository->findForCoding();
             foreach ($fileTypes as $fileType) {
-                /** @var FileType $fileType */
+                /** @var FileType|FilePart $fileType */
                 $name = $fileType->getName();
                 $shortName = explode(' ', $name);
                 $message .= $shortName[0] . ' ';
@@ -337,7 +337,7 @@ class CodingService extends BaseService
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
                 wordwrap($message, 120)
             );
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => $returnMessage
             );
@@ -414,13 +414,13 @@ class CodingService extends BaseService
             );
             // set coding options on client data
             $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => $message
             );
         }
         // init response
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -430,11 +430,12 @@ class CodingService extends BaseService
      */
     public function commandCode($resourceId, $codeOptions)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $this->initService($resourceId);
+        if (!$this->user) return false;
         $mode = $codeOptions->mode;
         switch ($mode) {
             default:
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -443,31 +444,25 @@ class CodingService extends BaseService
                 );
                 break;
             case 'program':
-                $response = $this->codeProgram($clientData, $codeOptions);
+                $this->response = $this->codeProgram($codeOptions);
                 break;
             case 'resource':
-                $response = $this->codeResource($clientData, $codeOptions);
+                $this->response = $this->codeResource($codeOptions);
                 break;
         }
-        return $response;
+        return $this->response;
     }
 
     /**
-     * @param $clientData
      * @param $codeOptions
      * @return array|bool
      */
-    protected function codeResource($clientData, $codeOptions)
+    private function codeResource($codeOptions)
     {
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = false;
+        $profile = $this->user->getProfile();
         $type = (int)$codeOptions->fileType;
         if ($type === 0) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -476,8 +471,8 @@ class CodingService extends BaseService
             );
         }
         $level = $codeOptions->fileLevel;
-        if (!$response && $level === 0) {
-            $response = array(
+        if (!$this->response && $level === 0) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -486,10 +481,10 @@ class CodingService extends BaseService
             );
         }
         $filePart = NULL;
-        if (!$response) {
+        if (!$this->response) {
             $filePart = $this->entityManager->find('Netrunners\Entity\FilePart', $type);
             if (!$filePart) {
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file part: %s</pre>'),
@@ -497,8 +492,8 @@ class CodingService extends BaseService
                     )
                 );
             }
-            if (!$response && $level > $profile->getSnippets()) {
-                $response = array(
+            if (!$this->response && $level > $profile->getSnippets()) {
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code the %s</pre>'),
@@ -509,7 +504,7 @@ class CodingService extends BaseService
             }
         }
         /* checks passed, we can now create the file part */
-        if (!$response) {
+        if (!$this->response) {
             /** @var FilePart $filePart */
             $difficulty = $level;
             $skillCoding = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
@@ -531,42 +526,36 @@ class CodingService extends BaseService
                 'mode' => 'resource',
                 'skills' => $skillList,
                 'profileId' => $profile->getId(),
-                'socketId' => $clientData->socketId,
+                'socketId' => $this->clientData->socketId,
                 'nodeId' => $profile->getCurrentNode()->getId()
             ]);
-            $response = array(
+            $this->response = array(
                 'command' => 'updateClientData',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>'),
                     $filePart->getName(),
                     $level
                 ),
-                'clientData' => $clientData
+                'clientData' => $this->clientData
             );
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - $level);
             $this->entityManager->flush($profile);
 
         }
-        return $response;
+        return $this->response;
     }
 
     /**
-     * @param $clientData
      * @param $codeOptions
      * @return array|bool
      */
-    protected function codeProgram($clientData, $codeOptions)
+    private function codeProgram($codeOptions)
     {
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = false;
+        $profile = $this->user->getProfile();
         $type = $codeOptions->fileType;
         if ($type === 0) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -575,8 +564,8 @@ class CodingService extends BaseService
             );
         }
         $level = (int)$codeOptions->fileLevel;
-        if (!$response && $level === 0) {
-            $response = array(
+        if (!$this->response && $level === 0) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -585,10 +574,10 @@ class CodingService extends BaseService
             );
         }
         $fileType = NULL;
-        if (!$response) {
+        if (!$this->response) {
             $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $type);
             if (!$fileType) {
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Unknown file type: %s</pre>'),
@@ -596,8 +585,8 @@ class CodingService extends BaseService
                     )
                 );
             }
-            if (!$response && $level > $profile->getSnippets()) {
-                $response = array(
+            if (!$this->response && $level > $profile->getSnippets()) {
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code: %s</pre>'),
@@ -607,17 +596,14 @@ class CodingService extends BaseService
                 );
             }
         }
-        // get the fpi-repo, we'll need it from now on
-        $filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
-        /** @var FilePartInstanceRepository $filePartInstanceRepo */
         // now we check if the player has all the needed resources
-        if (!$response) {
+        if (!$this->response) {
             /** @var FileType $fileType */
             $neededResources = $fileType->getFileParts();
             $missingResources = [];
             foreach ($neededResources as $neededResource) {
                 /** @var FilePart $neededResource */
-                $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
+                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
                 if (empty($filePartInstances)) {
                     $missingResources[] = sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>'),
@@ -628,15 +614,15 @@ class CodingService extends BaseService
                 }
             }
             if (!empty($missingResources)) {
-                $response = array(
+                $this->response = array(
                     'command' => 'showoutput',
                     'message' => $missingResources
                 );
             }
         }
         // check if the player can store the file in his total storage
-        if (!$response && !$this->canStoreFileOfSize($profile, $fileType->getSize())) {
-            $response = array(
+        if (!$this->response && !$this->canStoreFileOfSize($profile, $fileType->getSize())) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>'),
@@ -646,7 +632,7 @@ class CodingService extends BaseService
             );
         }
         /* checks passed, we can now create the file */
-        if (!$response) {
+        if (!$this->response) {
             $difficulty = $level;
             $skillCoding = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
             /** @var Skill $skillCoding */
@@ -668,23 +654,23 @@ class CodingService extends BaseService
                 'mode' => 'program',
                 'skills' => $skillList,
                 'profileId' => $profile->getId(),
-                'socketId' => $clientData->socketId,
+                'socketId' => $this->clientData->socketId,
                 'nodeId' => $profile->getCurrentNode()->getId()
             ]);
 
-            $response = array(
+            $this->response = array(
                 'command' => 'updateClientData',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>'),
                     $fileType->getName(),
                     $level
                 ),
-                'clientData' => $clientData
+                'clientData' => $this->clientData
             );
             $neededResources = $fileType->getFileParts();
             foreach ($neededResources as $neededResource) {
                 /** @var FilePart $neededResource */
-                $filePartInstances = $filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
+                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
                 $filePartInstance = array_shift($filePartInstances);
                 $this->entityManager->remove($filePartInstance);
             }
@@ -693,28 +679,29 @@ class CodingService extends BaseService
             $this->entityManager->flush();
 
         }
-        return $response;
+        return $this->response;
     }
 
     /**
      * @param $resourceId
-     * @return array
+     * @return array|bool
      */
     public function exitCodeMode($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $response = array(
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = array(
             'command' => 'exitcodemode',
-            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData)
+            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData)
         );
-        return $response;
+        return $this->response;
     }
 
     /**
      * @param $codeOptions
      * @return array
      */
-    protected function getSkillListForType($codeOptions)
+    private function getSkillListForType($codeOptions)
     {
         $skillList = [];
         switch ($codeOptions->mode) {

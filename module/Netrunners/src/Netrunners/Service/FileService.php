@@ -37,6 +37,12 @@ class FileService extends BaseService
     protected $codebreakerService;
 
     /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
+
+    /**
      * FileService constructor.
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
@@ -52,6 +58,7 @@ class FileService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->codebreakerService = $codebreakerService;
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
     }
 
     /**
@@ -997,35 +1004,57 @@ class FileService extends BaseService
     /**
      * Shows all running processes of the current system.
      * @param int $resourceId
+     * @param $contentArray
      * @return array|bool
      */
-    public function listProcesses($resourceId)
+    public function listProcesses($resourceId, $contentArray)
     {
         // TODO add more info to output
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $runningFiles = $this->entityManager->getRepository('Netrunners\Entity\File')->findBy(array(
-            'system' => $profile->getCurrentNode()->getSystem(),
-            'running' => true
-        ));
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $showAll = $this->getNextParameter($contentArray, false);
+        if ($showAll) {
+            $runningFiles = $this->fileRepo->findBy(array(
+                'profile' => $profile,
+                'running' => true
+            ));
+        }
+        else {
+            $runningFiles = $this->fileRepo->findBy(array(
+                'system' => $profile->getCurrentNode()->getSystem(),
+                'running' => true
+            ));
+        }
         $returnMessage = array();
-        foreach ($runningFiles as $runningFile) {
-            /** @var File $runningFile */
+        if (count($runningFiles) < 1) {
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s|%-20s|%s</pre>',
-                $runningFile->getId(),
-                $runningFile->getFileType()->getName(),
-                $runningFile->getName()
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                $this->translate('No running processes')
             );
         }
-        $response = array(
+        else {
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-12s|%-20s|%s</pre>',
+                $this->translate('process-id'),
+                $this->translate('file-type'),
+                $this->translate('file-name')
+            );
+            foreach ($runningFiles as $runningFile) {
+                /** @var File $runningFile */
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-12s|%-20s|%s</pre>',
+                    $runningFile->getId(),
+                    $runningFile->getFileType()->getName(),
+                    $runningFile->getName()
+                );
+            }
+        }
+        $this->response = array(
             'command' => 'showoutput',
             'message' => $returnMessage
         );
-        return $response;
+        return $this->response;
     }
 
     /**
