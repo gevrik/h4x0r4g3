@@ -406,7 +406,9 @@ class WebsocketService implements MessageComponentInterface {
                 break;
             case 'saveNodeDescription':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                return $this->nodeService->saveNodeDescription($from, (object)$this->clientsData[$resourceId], $content);
+                $response = $this->nodeService->saveNodeDescription($resourceId, $content);
+                $from->send(json_encode($response));
+                return true;
             case 'showprompt':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->utilityService->showPrompt($this->getClientData($resourceId));

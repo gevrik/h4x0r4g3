@@ -10,18 +10,20 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Milkrun;
 use Netrunners\Entity\MilkrunIce;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\NodeType;
-use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Repository\FactionRepository;
 use Netrunners\Repository\MilkrunInstanceRepository;
-use TmoAuth\Entity\User;
+use Netrunners\Repository\MilkrunRepository;
+use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
+use Zend\View\Renderer\PhpRenderer;
 
 class MilkrunService extends BaseService
 {
@@ -37,34 +39,53 @@ class MilkrunService extends BaseService
     const TILE_SUBTYPE_SPECIAL_SNIPPETS = 2;
 
     /**
+     * @var MilkrunRepository
+     */
+    protected $milkrunRepo;
+
+    /**
+     * @var MilkrunInstanceRepository
+     */
+    protected $milkrunInstanceRepo;
+
+
+    /**
+     * MilkrunService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->milkrunRepo = $this->entityManager->getRepository('Netrunners\Entity\Milkrun');
+        $this->milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
+    }
+
+    /**
      * @param $resourceId
      * @return array|bool
      */
     public function requestMilkrun($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $response = $this->isActionBlocked($resourceId);
-        if (!$response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
             $returnMessage = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
                 $this->translate('You need to be in an agent node to request a milkrun')
             );
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => $returnMessage
             );
         }
-        if (!$response) {
-            $milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
-            /** @var MilkrunInstanceRepository $milkrunInstanceRepo */
-            $currentMilkrun = $milkrunInstanceRepo->findCurrentMilkrun($profile);
+        if (!$this->response) {
+            $currentMilkrun = $this->milkrunInstanceRepo->findCurrentMilkrun($profile);
             if (!$currentMilkrun) {
-                $milkruns = $this->entityManager->getRepository('Netrunners\Entity\Milkrun')->findAll();
+                $milkruns = $this->milkrunRepo->findAll();
                 $amount = count($milkruns) - 1;
                 $targetMilkrun = $milkruns[mt_rand(0, $amount)];
                 /** @var Milkrun $targetMilkrun */
@@ -73,9 +94,7 @@ class MilkrunService extends BaseService
                 $expires = new \DateTime();
                 $expires->add(new \DateInterval('PT' . $timer . 'S'));
                 $sourceFaction = $this->getRandomFaction();
-                /** @var Faction $sourceFaction */
                 $targetFaction = $this->getRandomFaction();
-                /** @var Faction $targetFaction */
                 while ($sourceFaction === $targetFaction) {
                     $sourceFaction = $this->getRandomFaction();
                 }
@@ -96,8 +115,8 @@ class MilkrunService extends BaseService
             }
             else {
                 /** @var MilkrunInstance $currentMilkrun */
-                if (!empty($clientData->milkrun)) {
-                    $milkrunData = $clientData->milkrun;
+                if (!empty($this->clientData->milkrun)) {
+                    $milkrunData = $this->clientData->milkrun;
                 }
                 else {
                     $milkrunData = $this->prepareMilkrunData($resourceId, $currentMilkrun);
@@ -106,7 +125,7 @@ class MilkrunService extends BaseService
             $view = new ViewModel();
             $view->setTemplate('netrunners/milkrun/game.phtml');
             $view->setVariable('mapData', $milkrunData['mapData']);
-            $response = [
+            $this->response = [
                 'command' => 'startmilkrun',
                 'content' => $this->viewRenderer->render($view),
                 'level' => (int)$milkrunData['currentLevel'],
@@ -115,7 +134,7 @@ class MilkrunService extends BaseService
                 'armor' => (int)$milkrunData['armor']
             ];
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -158,7 +177,6 @@ class MilkrunService extends BaseService
         $factions = $factionRepo->findAllForMilkrun();
         $factionCount = count($factions) - 1;
         $targetFaction = $factions[mt_rand(0, $factionCount)];
-        /** @var Faction $targetFaction */
         return $targetFaction;
     }
 
@@ -166,7 +184,7 @@ class MilkrunService extends BaseService
      * @param $milkrunData
      * @return mixed
      */
-    public function generateMapData($milkrunData)
+    private function generateMapData($milkrunData)
     {
         $levelAdd = 4;
         $realSize = $levelAdd + $milkrunData['currentLevel'];
@@ -286,24 +304,21 @@ class MilkrunService extends BaseService
      */
     public function clickTile($resourceId, $contentArray)
     {
-        // get user
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         // stop if the player is not on a milkrun
-        if (empty($clientData->milkrun)) return true;
+        if (empty($this->clientData->milkrun)) return true;
         // init response
-        $response = $this->isActionBlocked($resourceId);
-        if (!$response) {
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
             // get x click
             list($contentArray, $targetX) = $this->getNextParameter($contentArray, true, true);
             // get y click
             $targetY = $this->getNextParameter($contentArray, false);
             if ($targetX < 0 || $targetY < 0) return true;
             // get map tile
-            $milkrunData = $clientData->milkrun;
+            $milkrunData = $this->clientData->milkrun;
             $mapData = $milkrunData['mapData'];
             $mapTile = $mapData['map'][$targetY][$targetX];
             if (!$mapTile) return true;
@@ -453,7 +468,7 @@ class MilkrunService extends BaseService
                     $mri->getSourceFaction(),
                     $mri->getTargetFaction()
                 );
-                $response = [
+                $this->response = [
                     'command' => 'completemilkrun',
                     'content' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -478,7 +493,7 @@ class MilkrunService extends BaseService
                     $mri->getSourceFaction(),
                     $mri->getTargetFaction()
                 );
-                $response = [
+                $this->response = [
                     'command' => 'completemilkrun',
                     'content' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -501,7 +516,7 @@ class MilkrunService extends BaseService
                 $view = new ViewModel();
                 $view->setTemplate('netrunners/milkrun/partial-map.phtml');
                 $view->setVariable('mapData', $milkrunData['mapData']);
-                $response = [
+                $this->response = [
                     'command' => 'updatedivhtml',
                     'content' => $this->viewRenderer->render($view),
                     'element' => '#milkrun-game-container',
@@ -510,7 +525,7 @@ class MilkrunService extends BaseService
                 if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
             }
         }
-        return $response;
+        return $this->response;
     }
 
 }

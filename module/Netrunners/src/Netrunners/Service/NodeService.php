@@ -10,22 +10,23 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
-use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
-use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
+use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
+use Zend\View\Renderer\PhpRenderer;
 
 class NodeService extends BaseService
 {
@@ -40,30 +41,63 @@ class NodeService extends BaseService
     const RAW_NODE_COST = 50;
 
     /**
+     * @var ConnectionRepository
+     */
+    protected $connectionRepo;
+
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
+    /**
+     * @var ProfileRepository
+     */
+    protected $profileRepo;
+
+    /**
+     * @var NodeRepository
+     */
+    protected $nodeRepo;
+
+    /**
+     * @var SystemRepository
+     */
+    protected $systemRepo;
+
+
+    /**
+     * NodeService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+    }
+
+    /**
      * Shows important information about a node.
      * @param int $resourceId
      * @return array|bool
      */
     public function showNodeInfo($resourceId)
     {
-        // grab everything we need
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $returnMessage = array();
         // add survey text if option is turned on
         if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) $returnMessage[] = $this->getSurveyText($currentNode);
         // get connections and show them if there are any
-        $connections = $connectionRepo->findBySourceNode($currentNode);
+        $connections = $this->connectionRepo->findBySourceNode($currentNode);
         if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', self::CONNECTIONS_STRING);
         $counter = 0;
         foreach ($connections as $connection) {
@@ -72,7 +106,7 @@ class NodeService extends BaseService
             $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getTargetNode()->getName());
         }
         // get files and show them if there are any
-        $files = $fileRepo->findByNode($currentNode);
+        $files = $this->fileRepo->findByNode($currentNode);
         if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', $this->translate(self::FILES_STRING));
         $counter = 0;
         foreach ($files as $file) {
@@ -94,11 +128,11 @@ class NodeService extends BaseService
             $returnMessage[] = sprintf('<pre class="text-users">%-12s: %s</pre>', $counter, $pprofile->getUser()->getUsername());
         }
         // prepare and return response
-        $response = array(
+        $this->response = array(
             'command' => 'showoutput',
             'message' => $returnMessage
         );
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -108,19 +142,15 @@ class NodeService extends BaseService
      */
     public function addNode($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         // check if they are busy
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         // only allow owner of system to add nodes
-        if (!$response && $profile != $currentNode->getSystem()->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentNode->getSystem()->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -129,8 +159,8 @@ class NodeService extends BaseService
             );
         }
         // check if they have enough credits
-        if (!$response && $profile->getCredits() < self::RAW_NODE_COST) {
-            $response = array(
+        if (!$this->response && $profile->getCredits() < self::RAW_NODE_COST) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>'),
@@ -139,8 +169,8 @@ class NodeService extends BaseService
             );
         }
         // check if we are in a home node, you can't add nodes to a home node
-        if (!$response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
-            $response = array(
+        if (!$this->response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -149,7 +179,7 @@ class NodeService extends BaseService
             );
         }
         /* checks passed, we can now add the node */
-        if (!$response) {
+        if (!$this->response) {
             // take creds from user
             $newCredits = $profile->getCredits() - self::RAW_NODE_COST;
             $profile->setCredits($newCredits);
@@ -180,7 +210,7 @@ class NodeService extends BaseService
             $targetConnection->setIsOpen(false);
             $this->entityManager->persist($targetConnection);
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have added a new node to the system for %s credits</pre>'),
@@ -188,7 +218,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -198,23 +228,18 @@ class NodeService extends BaseService
      */
     public function changeNodeName($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
-        if (!$response && !$parameter) {
-            $response = array(
+        if (!$this->response && !$parameter) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -223,8 +248,8 @@ class NodeService extends BaseService
             );
         }
         // check if they can change the type
-        if (!$response && $profile != $currentSystem->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -234,8 +259,8 @@ class NodeService extends BaseService
         }
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$response && !$validator->isValid($parameter)) {
-            $response = array(
+        if (!$this->response && !$validator->isValid($parameter)) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -245,7 +270,7 @@ class NodeService extends BaseService
         }
         // check if max of 32 characters
         if (mb_strlen($parameter) > 32) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -253,12 +278,12 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             // turn spaces in name to underscores
             $name = str_replace(' ', '_', $parameter);
             $currentNode->setName($name);
             $this->entityManager->flush($currentNode);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node name changed to %s</pre>'),
@@ -266,7 +291,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -276,21 +301,16 @@ class NodeService extends BaseService
      */
     public function changeNodeType($resourceId, $contentArray)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
-        if (!$response && !$parameter) {
+        if (!$this->response && !$parameter) {
             $returnMessage = array();
             $nodeTypes = $this->entityManager->getRepository('Netrunners\Entity\NodeType')->findAll();
             $returnMessage[] = sprintf(
@@ -307,14 +327,14 @@ class NodeService extends BaseService
                     $nodeType->getCost()
                 );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
         // check if they can change the type
-        if (!$response && $profile != $currentSystem->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -326,7 +346,6 @@ class NodeService extends BaseService
         if (is_numeric($parameter)) {
             $searchByNumber = true;
         }
-        $type = false;
         if ($searchByNumber) {
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', $parameter);
         }
@@ -335,8 +354,8 @@ class NodeService extends BaseService
                 'name' => $parameter
             ]);
         }
-        if (!$response && !$nodeType) {
-            $response = array(
+        if (!$this->response && !$nodeType) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -345,9 +364,9 @@ class NodeService extends BaseService
             );
         }
         // check a few combinations that are not valid
-        if (!$response && $nodeType->getId() == NodeType::ID_HOME) {
+        if (!$this->response && $nodeType->getId() == NodeType::ID_HOME) {
             if ($this->countTargetNodesOfType($currentNode, NodeType::ID_HOME) > 0) {
-                $response = array(
+                $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -357,8 +376,8 @@ class NodeService extends BaseService
             }
         }
         // check if they have enough credits
-        if (!$response && $profile->getCredits() < $nodeType->getCost()) {
-            $response = array(
+        if (!$this->response && $profile->getCredits() < $nodeType->getCost()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>'),
@@ -366,13 +385,13 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $currentCredits = $profile->getCredits();
             $profile->setCredits($currentCredits - $nodeType->getCost());
             $currentNode->setNodeType($nodeType);
             $currentNode->setName($nodeType->getShortName());
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node type changed to %s</pre>'),
@@ -380,7 +399,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -389,18 +408,14 @@ class NodeService extends BaseService
      */
     public function editNodeDescription($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $response = $this->isActionBlocked($resourceId, true);
+        $this->response = $this->isActionBlocked($resourceId, true);
         // only allow owner of system to add nodes
-        if (!$response && $profile != $currentNode->getSystem()->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentNode->getSystem()->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -409,7 +424,7 @@ class NodeService extends BaseService
             );
         }
         /* checks passed, we can now edit the node */
-        if (!$response) {
+        if (!$this->response) {
             $view = new ViewModel();
             $view->setTemplate('netrunners/node/edit-description.phtml');
             $description = $currentNode->getDescription();
@@ -418,34 +433,29 @@ class NodeService extends BaseService
                 $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
             }
             $view->setVariable('description', $processedDescription);
-            $response = array(
+            $this->response = array(
                 'command' => 'showpanel',
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
-     * @param ConnectionInterface $conn
-     * @param $clientData
+     * @param $resourceId
      * @param $content
      * @return bool|ConnectionInterface
      */
-    public function saveNodeDescription(ConnectionInterface $conn, $clientData, $content)
+    public function saveNodeDescription($resourceId, $content)
     {
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $response = false;
         // only allow owner of system to add nodes
         if ($profile != $currentNode->getSystem()->getProfile()) {
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -454,10 +464,10 @@ class NodeService extends BaseService
             );
         }
         /* checks passed, we can now edit the node */
-        if (!$response) {
+        if (!$this->response) {
             $currentNode->setDescription($content);
             $this->entityManager->flush($currentNode);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -465,7 +475,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        return $conn->send(json_encode($response));
+        return $this->response;
     }
 
     /**
@@ -473,7 +483,7 @@ class NodeService extends BaseService
      * @param $type
      * @return int
      */
-    public function countTargetNodesOfType(Node $node, $type)
+    private function countTargetNodesOfType(Node $node, $type)
     {
         $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
         /** @var ConnectionRepository $connectionRepo */
@@ -492,26 +502,15 @@ class NodeService extends BaseService
      */
     public function removeNode($resourceId)
     {
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
-        /** @var ProfileRepository $profileRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         // check if they can change the type
-        if (!$response && $profile != $currentSystem->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -520,9 +519,9 @@ class NodeService extends BaseService
             );
         }
         // check if there are still connections to this node
-        $connections = $connectionRepo->findBySourceNode($currentNode);
-        if (!$response && count($connections) > 1) {
-            $response = array(
+        $connections = $this->connectionRepo->findBySourceNode($currentNode);
+        if (!$this->response && count($connections) > 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -531,9 +530,9 @@ class NodeService extends BaseService
             );
         }
         // check if there are still files in this node
-        $files = $fileRepo->findByNode($currentNode);
-        if (!$response && count($files) > 0) {
-            $response = array(
+        $files = $this->fileRepo->findByNode($currentNode);
+        if (!$this->response && count($files) > 0) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -542,9 +541,9 @@ class NodeService extends BaseService
             );
         }
         // check if there are still other profiles in this node
-        $profiles = $profileRepo->findByCurrentNode($currentNode);
-        if (!$response && count($profiles) > 1) {
-            $response = array(
+        $profiles = $this->profileRepo->findByCurrentNode($currentNode);
+        if (!$this->response && count($profiles) > 1) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -554,11 +553,11 @@ class NodeService extends BaseService
         }
         // TODO sanity checks for storage/memory/etc
         /* all checks passed, we can now remove the node */
-        if (!$response) {
+        if (!$this->response) {
             foreach ($connections as $connection) {
                 /** @var Connection $connection */
                 $newCurrentNode = $connection->getTargetNode();
-                $targetConnection = $connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
+                $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
                 $targetConnection = array_shift($targetConnection);
                 $sourceConnection = $connection;
             }
@@ -567,7 +566,7 @@ class NodeService extends BaseService
             $profile->setCurrentNode($newCurrentNode);
             $this->entityManager->remove($currentNode);
             $this->entityManager->flush();
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -575,7 +574,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -584,24 +583,20 @@ class NodeService extends BaseService
      */
     public function surveyNode($resourceId)
     {
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            if (!$user) return true;
-            /** @var User $user */
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+        $this->initService($resourceId);
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            if (!$this->user) return true;
+            $profile = $this->user->getProfile();
             $currentNode = $profile->getCurrentNode();
-            /** @var Node $currentNode */
             $returnMessage = array();
             $returnMessage[] = $this->getSurveyText($currentNode);
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -631,22 +626,15 @@ class NodeService extends BaseService
      */
     public function listNodes($resourceId)
     {
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
         $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
-        $response = $this->isActionBlocked($resourceId, true);
+        $this->response = $this->isActionBlocked($resourceId, true);
         // check if they can change the type
-        if (!$response && $profile != $currentSystem->getProfile()) {
-            $response = array(
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -654,7 +642,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $returnMessage = array();
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>',
@@ -663,7 +651,7 @@ class NodeService extends BaseService
                 $this->translate('LVL'),
                 $this->translate('NAME')
             );
-            $nodes = $nodeRepo->findBySystem($currentSystem);
+            $nodes = $this->nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $returnMessage[] = sprintf(
@@ -674,12 +662,12 @@ class NodeService extends BaseService
                     $node->getName()
                 );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -689,22 +677,14 @@ class NodeService extends BaseService
      */
     public function systemConnect($resourceId, $contentArray)
     {
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
-        /** @var SystemRepository $systemRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         // check if they are in an io-node
-        if (!$response && $currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $currentNode->getNodeType()->getId() != NodeType::ID_IO) {
-            $response = array(
+        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $currentNode->getNodeType()->getId() != NodeType::ID_IO) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -714,9 +694,9 @@ class NodeService extends BaseService
         }
         // get parameter
         $parameter = $this->getNextParameter($contentArray);
-        if (!$response && !$parameter) {
+        if (!$this->response && !$parameter) {
             $returnMessage = array();
-            $publicIoNodes = $nodeRepo->findByType(NodeType::ID_PUBLICIO);
+            $publicIoNodes = $this->nodeRepo->findByType(NodeType::ID_PUBLICIO);
             $returnMessage[] = sprintf(
                 '<pre>%-40s|%-12s|%-20s</pre>',
                 $this->translate('ADDRESS'),
@@ -732,16 +712,16 @@ class NodeService extends BaseService
                     $publicIoNode->getName()
                 );
             }
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
         $addy = $parameter;
         // check if the target system exists
-        $targetSystem = $systemRepo->findByAddy($addy);
-        if (!$response && !$targetSystem) {
-            $response = array(
+        $targetSystem = $this->systemRepo->findByAddy($addy);
+        if (!$this->response && !$targetSystem) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -753,8 +733,8 @@ class NodeService extends BaseService
         $targetNodeId = $this->getNextParameter($contentArray, false, true);
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
         /** @var Node $targetNode */
-        if (!$response && !$targetNode) {
-            $response = array(
+        if (!$this->response && !$targetNode) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -762,8 +742,8 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$response && ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)) {
-            $response = array(
+        if (!$this->response && ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -771,8 +751,8 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$response && ($targetNode->getNodeType()->getId() == NodeType::ID_IO && $targetSystem->getProfile() != $profile)) {
-            $response = array(
+        if (!$this->response && ($targetNode->getNodeType()->getId() == NodeType::ID_IO && $targetSystem->getProfile() != $profile)) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -780,10 +760,10 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$response) {
+        if (!$this->response) {
             $profile->setCurrentNode($targetNode);
             $this->entityManager->flush($profile);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -791,7 +771,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
 }
