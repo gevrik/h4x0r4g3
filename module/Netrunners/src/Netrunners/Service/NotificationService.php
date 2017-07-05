@@ -10,14 +10,26 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Notification;
-use Netrunners\Entity\Profile;
 use Netrunners\Repository\NotificationRepository;
-use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
+use Zend\View\Renderer\PhpRenderer;
 
 class NotificationService extends BaseService
 {
+
+    /**
+     * @var NotificationRepository
+     */
+    protected $notificationRepo;
+
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
+    }
 
     /**
      * @param int $resourceId
@@ -25,25 +37,20 @@ class NotificationService extends BaseService
      */
     public function showNotifications($resourceId)
     {
-        $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
-        /** @var NotificationRepository $notificationRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $unreadNotifications = $notificationRepo->findUnreadByProfile($profile);
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $unreadNotifications = $this->notificationRepo->findUnreadByProfile($profile);
         $view = new ViewModel();
         $view->setTemplate('netrunners/notification/list.phtml');
         $view->setVariable('notifications', $unreadNotifications);
-        $response = array(
+        $this->response = array(
             'command' => 'showpanel',
             'type' => 'default',
             'content' => $this->viewRenderer->render($view),
             'silent' => true
         );
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -54,16 +61,11 @@ class NotificationService extends BaseService
      */
     public function dismissNotification($resourceId, $entityId, $all = false)
     {
-        $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
-        /** @var NotificationRepository $notificationRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         if ($all) {
-            $notifications = $notificationRepo->findUnreadByProfile($profile);
+            $notifications = $this->notificationRepo->findUnreadByProfile($profile);
             foreach ($notifications as $notification) {
                 /** @var Notification $notification */
                 $this->entityManager->remove($notification);

@@ -10,14 +10,14 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
-use Netrunners\Entity\Profile;
-use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
-use TmoAuth\Entity\User;
+use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
+use Zend\View\Renderer\PhpRenderer;
 
 class SystemService extends BaseService
 {
@@ -31,33 +31,53 @@ class SystemService extends BaseService
     const STORAGE_STRING = 'storage';
 
     /**
+     * @var NodeRepository
+     */
+    protected $nodeRepo;
+
+    /**
+     * @var ConnectionRepository
+     */
+    protected $connectionRepo;
+
+
+    /**
+     * SystemService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
+    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+    }
+
+    /**
      * Shows important stats of the current system.
      * @param int $resourceId
      * @return array|bool
      */
     public function showSystemStats($resourceId)
     {
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            if (!$user) return true;
-            /** @var User $user */
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+        $this->initService($resourceId);
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            if (!$this->user) return true;
+            $profile = $this->user->getProfile();
             $currentSystem = $profile->getCurrentNode()->getSystem();
-            /** @var System $currentSystem */
             $returnMessage = array();
             $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::SYSTEM_STRING), $currentSystem->getName());
             $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::ADDY_STRING), $currentSystem->getAddy());
             $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::MEMORY_STRING), $this->getSystemMemory($currentSystem));
             $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::STORAGE_STRING), $this->getSystemStorage($currentSystem));
-            $response = array(
+            $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -66,25 +86,17 @@ class SystemService extends BaseService
      */
     public function showSystemMap($resourceId)
     {
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
             $currentSystem = $profile->getCurrentNode()->getSystem();
-            /** @var System $currentSystem */
             $mapArray = [
                 'nodes' => [],
                 'links' => []
             ];
-            $nodes = $nodeRepo->findBySystem($currentSystem);
+            $nodes = $this->nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
@@ -92,7 +104,7 @@ class SystemService extends BaseService
                     'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
                     'type' => $group
                 ];
-                $connections = $connectionRepo->findBySourceNode($node);
+                $connections = $this->connectionRepo->findBySourceNode($node);
                 foreach ($connections as $connection) {
                     /** @var Connection $connection */
                     $mapArray['links'][] = [
@@ -106,13 +118,13 @@ class SystemService extends BaseService
             $view = new ViewModel();
             $view->setTemplate('netrunners/partials/map.phtml');
             $view->setVariable('json', json_encode($mapArray));
-            $response = array(
+            $this->response = array(
                 'command' => 'showpanel',
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -121,25 +133,19 @@ class SystemService extends BaseService
      */
     public function showAreaMap($resourceId)
     {
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $response = $this->isActionBlocked($resourceId, true);
-        if (!$response) {
-            $profile = $user->getProfile();
-            /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
             $currentNode = $profile->getCurrentNode();
-            /** @var Node $currentNode */
             $mapArray = [
                 'nodes' => [],
                 'links' => []
             ];
             $nodes = [];
             $nodes[] = $currentNode;
-            $connections = $connectionRepo->findBySourceNode($currentNode);
+            $connections = $this->connectionRepo->findBySourceNode($currentNode);
             foreach ($connections as $xconnection) {
                 /** @var Connection $xconnection */
                 $nodes[] = $xconnection->getTargetNode();
@@ -153,7 +159,7 @@ class SystemService extends BaseService
                     'type' => $group
                 ];
                 if ($counter) {
-                    $connections = $connectionRepo->findBySourceNode($node);
+                    $connections = $this->connectionRepo->findBySourceNode($node);
                     foreach ($connections as $connection) {
                         /** @var Connection $connection */
                         $mapArray['links'][] = [
@@ -169,13 +175,13 @@ class SystemService extends BaseService
             $view = new ViewModel();
             $view->setTemplate('netrunners/partials/map.phtml');
             $view->setVariable('json', json_encode($mapArray));
-            $response = array(
+            $this->response = array(
                 'command' => 'showpanel',
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
         }
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -186,18 +192,14 @@ class SystemService extends BaseService
      */
     public function homeRecall($resourceId)
     {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $response = $this->isActionBlocked($resourceId);
+        $this->response = $this->isActionBlocked($resourceId);
         // check if they are not already there
-        if (!$response && $profile->getHomeNode() == $currentNode) {
-            $response = array(
+        if (!$this->response && $profile->getHomeNode() == $currentNode) {
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -206,10 +208,10 @@ class SystemService extends BaseService
             );
         }
         /* checks passed, we can now move the player to their home node */
-        if (!$response) {
+        if (!$this->response) {
             $profile->setCurrentNode($profile->getHomeNode());
             $this->entityManager->flush($profile);
-            $response = array(
+            $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -217,7 +219,7 @@ class SystemService extends BaseService
                 )
             );
         }
-        return $response;
+        return $this->response;
     }
 
 }
