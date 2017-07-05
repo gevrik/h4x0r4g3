@@ -300,7 +300,7 @@ class ProfileService extends BaseService
         $returnMessage = array();
         $files = $this->fileRepo->findByProfile($profile);
         $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|<span data-toggle="tooltip" data-placement="top" data-original-title="integrity">%-3s</span>|%-3s|%-3s|<span data-toggle="tooltip" data-placement="top" data-original-title="running">%s</span>|<span data-toggle="tooltip" data-placement="top" data-original-title="slots">%s</span>|%-32s|%-32s</pre>',
             $this->translate('ID'),
             $this->translate('TYPE'),
             $this->translate('NAME'),

@@ -154,7 +154,6 @@
                     showprompt();
                     $('.notification-box').show();
                     $('.actiontime-box').show();
-                    $('[data-toggle="tooltip"]').tooltip();
                     playSoundById(4);
                     break;
                 case 'ticker':
@@ -358,6 +357,7 @@
                     });
                     return true;
             }
+            $('[data-toggle="tooltip"]').tooltip();
             if (
                 command !== 'echocommand' &&
                 command !== 'updateprompt' &&
