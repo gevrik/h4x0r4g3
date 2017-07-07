@@ -39,6 +39,7 @@ class NodeService extends BaseService
     const USERS_STRING = "users";
 
     const RAW_NODE_COST = 50;
+    const MAX_NODES_MULTIPLIER = 10;
 
     /**
      * @var ConnectionRepository
@@ -177,6 +178,22 @@ class NodeService extends BaseService
                     $this->translate('You can not add nodes to a home node')
                 )
             );
+        }
+        // check if there are enough cpus to support the new node
+        if (!$this->response) {
+            $currentSystem = $currentNode->getSystem();
+            $amountCpus = $this->nodeRepo->countBySystemAndType($currentSystem, NodeType::ID_CPU);
+            $maxNodes = $amountCpus * self::MAX_NODES_MULTIPLIER;
+            $amountNodes = $this->nodeRepo->countBySystem($currentSystem) - $amountCpus;
+            if ($amountNodes >= $maxNodes) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You do not have enough CPU nodes to add another node to this system')
+                    )
+                );
+            }
         }
         /* checks passed, we can now add the node */
         if (!$this->response) {

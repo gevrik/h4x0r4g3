@@ -42,39 +42,6 @@ class AdminService extends BaseService
     }
 
     /**
-     * @return bool
-     */
-    private function isSuperAdmin()
-    {
-        $isAdmin = false;
-        foreach ($this->user->getRoles() as $role) {
-            /** @var Role $role */
-            if ($role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
-                $isAdmin = true;
-                break;
-            }
-        }
-        return $isAdmin;
-    }
-
-    /**
-     * @return bool
-     */
-    private function isAdmin()
-    {
-
-        $isAdmin = false;
-        foreach ($this->user->getRoles() as $role) {
-            /** @var Role $role */
-            if ($role->getRoleId() === Role::ROLE_ID_ADMIN || $role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
-                $isAdmin = true;
-                break;
-            }
-        }
-        return $isAdmin;
-    }
-
-    /**
      * @param $resourceId
      * @return array|bool|false
      */
@@ -525,6 +492,38 @@ class AdminService extends BaseService
                     )
                 ];
             }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function adminToggleAdminMode($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isSuperAdmin()) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        /* user is superadmin, can change server mode */
+        if (!$this->response) {
+            $ws = $this->getWebsocketServer();
+            $ws->setAdminMode(($ws->isAdminMode()) ? false : true);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-info">DONE - admin mode is now %s</pre>',
+                    ($ws->isAdminMode()) ? 'ON' : 'OFF'
+                )
+            ];
         }
         return $this->response;
     }

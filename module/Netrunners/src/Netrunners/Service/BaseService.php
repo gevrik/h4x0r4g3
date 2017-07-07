@@ -41,6 +41,7 @@ use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
+use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -140,10 +141,11 @@ class BaseService
 
     /**
      * Sets the user from the client data.
+     * @param User|NULL $user
      */
-    private function setUser()
+    protected function setUser(User $user = NULL)
     {
-        $this->user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientData->userId);
+        $this->user = ($user) ? $user : $this->entityManager->find('TmoAuth\Entity\User', $this->clientData->userId);
     }
 
     private function setProfileLocale()
@@ -969,6 +971,39 @@ class BaseService
             }
             $this->entityManager->flush($gameOptionInstance);
         }
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isSuperAdmin()
+    {
+        $isAdmin = false;
+        foreach ($this->user->getRoles() as $role) {
+            /** @var Role $role */
+            if ($role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
+                $isAdmin = true;
+                break;
+            }
+        }
+        return $isAdmin;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isAdmin()
+    {
+
+        $isAdmin = false;
+        foreach ($this->user->getRoles() as $role) {
+            /** @var Role $role */
+            if ($role->getRoleId() === Role::ROLE_ID_ADMIN || $role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
+                $isAdmin = true;
+                break;
+            }
+        }
+        return $isAdmin;
     }
 
 }

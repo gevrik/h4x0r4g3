@@ -402,6 +402,9 @@ class ParserService
             case 'setcredits':
                 $response = $this->adminService->adminSetCredits($resourceId, $contentArray);
                 break;
+            case 'toggleadminmode':
+                $response = $this->adminService->adminToggleAdminMode($resourceId);
+                break;
         }
         if (!is_array($response)) return true;
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);

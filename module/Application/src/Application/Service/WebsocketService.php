@@ -17,9 +17,24 @@ use Zend\Validator\Ip;
 
 class WebsocketService implements MessageComponentInterface {
 
+    /**
+     * @const LOOP_TIME_JOBS the amount of seconds between coding job checks
+     */
     const LOOP_TIME_JOBS = 1;
+
+    /**
+     * @const LOOP_TIME_RESOURCES the amount of seconds between resource gain checks
+     */
     const LOOP_TIME_RESOURCES = 300;
 
+    /**
+     * @const MAX_CLIENTS the maximum amount of clients that can be connected at the same time
+     */
+    const MAX_CLIENTS = 5;
+
+    /**
+     * @var WebsocketService
+     */
     public static $instance;
 
     /**
@@ -31,6 +46,11 @@ class WebsocketService implements MessageComponentInterface {
      * @var array
      */
     protected $clientsData = array();
+
+    /**
+     * @var bool
+     */
+    protected $adminMode = false;
 
     /**
      * @var LoopInterface
@@ -73,11 +93,13 @@ class WebsocketService implements MessageComponentInterface {
     protected $logger;
 
     /**
-     * @var
+     * @var string
      */
     protected $hash;
 
+
     /**
+     * WebsocketService constructor.
      * @param EntityManager $entityManager
      * @param UtilityService $utilityService
      * @param ParserService $parserService
@@ -86,6 +108,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param LoginService $loginService
      * @param LoopInterface $loop
      * @param $hash
+     * @param $adminMode
      */
     public function __construct(
         EntityManager $entityManager,
@@ -95,7 +118,8 @@ class WebsocketService implements MessageComponentInterface {
         NodeService $nodeService,
         LoginService $loginService,
         LoopInterface $loop,
-        $hash
+        $hash,
+        $adminMode
     ) {
         $this->clients = new \SplObjectStorage;
         $this->entityManager = $entityManager;
@@ -106,6 +130,7 @@ class WebsocketService implements MessageComponentInterface {
         $this->loginService = $loginService;
         $this->loop = $loop;
         $this->hash = $hash;
+        $this->setAdminMode($adminMode);
 
         $this->logger = new Logger();
         $this->logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
@@ -171,6 +196,24 @@ class WebsocketService implements MessageComponentInterface {
     public function setClientData($resourceId, $key, $value)
     {
         $this->clientsData[$resourceId][$key] = $value;
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAdminMode()
+    {
+        return $this->adminMode;
+    }
+
+    /**
+     * @param bool $adminMode
+     * @return WebsocketService
+     */
+    public function setAdminMode($adminMode)
+    {
+        $this->adminMode = $adminMode;
         return $this;
     }
 
@@ -364,17 +407,9 @@ class WebsocketService implements MessageComponentInterface {
                 }
                 break;
             case 'login':
-                $response = $this->loginService->login($resourceId, $content);
-                if (!$response) {
-                    $response = [
-                        'command' => 'showmessage',
-                        'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-danger">DISCONNECTED - REASON: BANNED</pre>')
-                    ];
-                    $from->send(json_encode($response));
-                    $from->close();
-                    return true;
-                }
+                list($response, $disconnect) = $this->loginService->login($resourceId, $content);
                 $from->send(json_encode($response));
+                if ($disconnect) $from->close();
                 break;
             case 'confirmusercreate':
                 list($disconnect, $response) = $this->loginService->confirmUserCreate($resourceId, $content);
@@ -429,6 +464,9 @@ class WebsocketService implements MessageComponentInterface {
         return true;
     }
 
+    /**
+     * @param ConnectionInterface $conn
+     */
     public function onClose(ConnectionInterface $conn)
     {
         /** @noinspection PhpUndefinedFieldInspection */
@@ -439,6 +477,10 @@ class WebsocketService implements MessageComponentInterface {
         echo "Connection {$resourceId} has disconnected\n";
     }
 
+    /**
+     * @param ConnectionInterface $conn
+     * @param \Exception $e
+     */
     public function onError(ConnectionInterface $conn, \Exception $e)
     {
         /** @noinspection PhpUndefinedFieldInspection */

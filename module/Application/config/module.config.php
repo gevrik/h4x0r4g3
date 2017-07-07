@@ -113,7 +113,7 @@ return array(
             'routes' => array(
                 'start-websocket' => array(
                     'options' => array(
-                        'route'    => 'start-websocket',
+                        'route'    => 'start-websocket [--adminmode|-am]',
                         'defaults' => array(
                             'controller' => 'Application\Controller\Index',
                             'action'     => 'cli-start-websocket'
@@ -138,7 +138,7 @@ return array(
                         )
                     )
                 ),
-                'resset-skills' => array(
+                'reset-skills' => array(
                     'options' => array(
                         'route'    => 'reset-skills',
                         'defaults' => array(

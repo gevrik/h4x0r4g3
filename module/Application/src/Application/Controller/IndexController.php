@@ -20,6 +20,7 @@ use Ratchet\WebSocket\WsServer;
 use React\EventLoop\Factory;
 use React\Socket\Server;
 use Zend\Console\ColorInterface;
+use Zend\Console\Request;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
 
@@ -105,6 +106,12 @@ class IndexController extends AbstractActionController
      */
     public function cliStartWebsocketAction()
     {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        $adminMode = $request->getParam('adminmode') || $request->getParam('am');
         $console = $this->getServiceLocator()->get('console');
         $config = $this->getServiceLocator()->get('config');
         $console->writeLine("=== STARTING WEBSOCKET SERVICE ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
@@ -123,7 +130,8 @@ class IndexController extends AbstractActionController
                         $this->nodeService,
                         $this->loginService,
                         $loop,
-                        $config['hashmod']
+                        $config['hashmod'],
+                        $adminMode
                     )
                 )
             ),

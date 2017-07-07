@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Application\Service\WebsocketService;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
@@ -31,6 +32,7 @@ class LoginService extends BaseService
      */
     public function login($resourceId, $content)
     {
+        $disconnect = false;
         $ws = $this->getWebsocketServer();
         $username = strtolower($content);
         $user = $this->entityManager->getRepository('TmoAuth\Entity\User')->findOneBy(array(
@@ -43,9 +45,39 @@ class LoginService extends BaseService
             );
         }
         else {
+            $this->setUser($user);
+            $isAdmin = $this->isAdmin();
+            $isSuperAdmin = $this->isSuperAdmin();
             // check if they are banned
             if ($user->getBanned()) {
-                $response = false;
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
+                        $this->translate('This account is banned from playing this game')
+                    )
+                ];
+                $disconnect = true;
+            }
+            // check if admin mode is active
+            else if ($ws->isAdminMode() && !$isAdmin && !$isSuperAdmin) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
+                        $this->translate('The game is currently in admin mode - please try again later')
+                    )
+                ];
+                $disconnect = true;
+            }
+            else if (count($ws->getClients()) >= WebsocketService::MAX_CLIENTS && !$isAdmin && !$isSuperAdmin) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-danger">MAXIMUM AMOUNT OF CLIENTS REACHED - PLEASE TRY AGAIN LATER</pre>'
+                    )
+                );
+                $disconnect = true;
             }
             else {
                 // not banned, populate ws client data
@@ -57,7 +89,7 @@ class LoginService extends BaseService
                 );
             }
         }
-        return $response;
+        return [$response, $disconnect];
     }
 
     /**

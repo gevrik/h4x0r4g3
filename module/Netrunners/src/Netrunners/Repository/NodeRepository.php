@@ -16,6 +16,10 @@ use Netrunners\Entity\System;
 class NodeRepository extends EntityRepository
 {
 
+    /**
+     * @param System $system
+     * @return array
+     */
     public function findBySystem(System $system)
     {
         $qb = $this->createQueryBuilder('n');
@@ -24,6 +28,23 @@ class NodeRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @param System $system
+     * @return mixed
+     */
+    public function countBySystem(System $system)
+    {
+        $qb = $this->createQueryBuilder('n');
+        $qb->select($qb->expr()->count('n.id'));
+        $qb->where('n.system = :system');
+        $qb->setParameter('system', $system);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param $type
+     * @return array
+     */
     public function findByType($type)
     {
         $qb = $this->createQueryBuilder('n');
@@ -33,6 +54,11 @@ class NodeRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @param System $system
+     * @param $type
+     * @return array
+     */
     public function findBySystemAndType(System $system, $type)
     {
         $qb = $this->createQueryBuilder('n');
@@ -43,6 +69,24 @@ class NodeRepository extends EntityRepository
             'system' => $system
         ]);
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param System $system
+     * @param $type
+     * @return mixed
+     */
+    public function countBySystemAndType(System $system, $type)
+    {
+        $qb = $this->createQueryBuilder('n');
+        $qb->select($qb->expr()->count('n.id'));
+        $qb->where('n.nodeType = :type and n.system = :system');
+        $nodeType = $this->getEntityManager()->find('Netrunners\Entity\NodeType', $type);
+        $qb->setParameters([
+            'type' => $nodeType,
+            'system' => $system
+        ]);
+        return $qb->getQuery()->getSingleScalarResult();
     }
 
 }
