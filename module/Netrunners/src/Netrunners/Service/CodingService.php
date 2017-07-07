@@ -16,6 +16,7 @@ use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
@@ -24,6 +25,7 @@ use Zend\Mvc\I18n\Translator;
 
 class CodingService extends BaseService
 {
+    const MIN_ADV_SKILL_RATING = 80;
 
     /**
      * @const MIN_LEVEL
@@ -391,6 +393,15 @@ class CodingService extends BaseService
                 case FilePart::STRING_SOCIAL:
                     $value = FilePart::ID_SOCIAL;
                     break;
+                case FilePart::STRING_BLADE:
+                    $value = FilePart::ID_BLADE;
+                    break;
+                case FilePart::STRING_BLASTER:
+                    $value = FilePart::ID_BLASTER;
+                    break;
+                case FilePart::STRING_SHIELD:
+                    $value = FilePart::ID_SHIELD;
+                    break;
                 case FileType::STRING_COINMINER:
                     $value = FileType::ID_COINMINER;
                     break;
@@ -503,15 +514,20 @@ class CodingService extends BaseService
                 );
             }
         }
+        /* now check if advanced coding is involved and check skill rating requirements */
+        $skillList = $this->getSkillListForType($codeOptions);
+        if (!$this->response && in_array('advanced-coding', $skillList)) {
+            $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+        }
+        if (!$this->response && in_array('advanced-networking', $skillList)) {
+            $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+        }
         /* checks passed, we can now create the file part */
         if (!$this->response) {
             /** @var FilePart $filePart */
             $difficulty = $level;
-            $skillCoding = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
-            /** @var Skill $skillCoding */
-            $skillRating = $this->getSkillRating($profile, $skillCoding);
+            $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
             $skillModifier = $this->getSkillModifierForFilePart($filePart, $profile);
-            $skillList = $this->getSkillListForType($codeOptions);
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
@@ -529,14 +545,14 @@ class CodingService extends BaseService
                 'socketId' => $this->clientData->socketId,
                 'nodeId' => $profile->getCurrentNode()->getId()
             ]);
+
             $this->response = array(
-                'command' => 'updateClientData',
+                'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>'),
                     $filePart->getName(),
                     $level
-                ),
-                'clientData' => $this->clientData
+                )
             );
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - $level);
@@ -573,6 +589,7 @@ class CodingService extends BaseService
                 )
             );
         }
+        /* check if the given type is valid and if they have enough snippets */
         $fileType = NULL;
         if (!$this->response) {
             $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $type);
@@ -606,10 +623,10 @@ class CodingService extends BaseService
                 $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
                 if (empty($filePartInstances)) {
                     $missingResources[] = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need this resource with at least level %s to code the %s : [%s]</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need [%s] with at least level %s to code the [%s]</pre>'),
+                        $neededResource->getName(),
                         $level,
-                        $fileType->getName(),
-                        $neededResource->getName()
+                        $fileType->getName()
                     );
                 }
             }
@@ -625,26 +642,31 @@ class CodingService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have storage to code the %s - you need %s more storage units - build more storage nodes</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough storage space to code the %s - you need %s more storage units - build more storage nodes</pre>'),
                     $fileType->getName(),
                     $fileType->getSize()
                 )
             );
         }
+        // check if advanced coding is involved and check for skill rating requirements
+        $skillList = $this->getSkillListForType($codeOptions);
+        if (!$this->response && in_array('advanced-coding', $skillList)) {
+            $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+        }
+        if (!$this->response && in_array('advanced-networking', $skillList)) {
+            $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+        }
         /* checks passed, we can now create the file */
         if (!$this->response) {
             $difficulty = $level;
-            $skillCoding = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
-            /** @var Skill $skillCoding */
-            $skillRating = $this->getSkillRating($profile, $skillCoding);
+            $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
             $skillModifier = $this->getSkillModifierForFileType($fileType, $profile);
-            $skillList = $this->getSkillListForType($codeOptions);
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
             $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM) . 'S'));
             $fileTypeId = $fileType->getId();
-
+            // add the coding job to the loop service
             $this->loopService->addJob([
                 'difficulty' => $difficulty,
                 'modifier' => $modifier,
@@ -657,15 +679,14 @@ class CodingService extends BaseService
                 'socketId' => $this->clientData->socketId,
                 'nodeId' => $profile->getCurrentNode()->getId()
             ]);
-
+            // prepare response message and add clientdata
             $this->response = array(
-                'command' => 'updateClientData',
+                'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>'),
                     $fileType->getName(),
                     $level
-                ),
-                'clientData' => $this->clientData
+                )
             );
             $neededResources = $fileType->getFileParts();
             foreach ($neededResources as $neededResource) {
@@ -725,6 +746,28 @@ class CodingService extends BaseService
             $skillList[] = $this->getNameWithoutSpaces($result->getSkill()->getName(), '-');
         }
         return $skillList;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $skillId
+     */
+    private function checkAdvancedCoding(Profile $profile, $skillId)
+    {
+        $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+        /** @var Skill $skill */
+        $skillRating = $this->getSkillRating($profile, $skill->getId());
+        if ($skillRating < self::MIN_ADV_SKILL_RATING) {
+            $message = '<pre style="white-space: pre-wrap;" class="text-warning">Your rating in [%s] is not high enough (need %s skill rating)</pre>';
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate($message),
+                    $skill->getName(),
+                    self::MIN_ADV_SKILL_RATING
+                )
+            );
+        }
     }
 
 }

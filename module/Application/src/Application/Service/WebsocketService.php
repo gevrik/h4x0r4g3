@@ -408,7 +408,7 @@ class WebsocketService implements MessageComponentInterface {
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 $response = $this->nodeService->saveNodeDescription($resourceId, $content);
                 $from->send(json_encode($response));
-                return true;
+                break;
             case 'showprompt':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 return $this->utilityService->showPrompt($this->getClientData($resourceId));
@@ -423,18 +423,7 @@ class WebsocketService implements MessageComponentInterface {
                 return $this->parserService->parseMailInput($from, $content, $msgData->mailOptions);
             case 'parseCodeInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                $codeResponse = $this->parserService->parseCodeInput($from, $content, $this->loopService->getJobs());
-                if (is_array($codeResponse) && $codeResponse['command'] == 'updateClientData') {
-                    $this->clientsData[$resourceId] = (array)$codeResponse['clientData'];
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => $codeResponse['message']
-                    );
-                    $from->send(json_encode($response));
-                }
-                else {
-                    $from->send(json_encode($codeResponse));
-                }
+                $from->send(json_encode($this->parserService->parseCodeInput($from, $content, $this->loopService->getJobs())));
                 break;
         }
         return true;

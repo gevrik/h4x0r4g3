@@ -775,9 +775,7 @@ class FileService extends BaseService
         if (!$response) {
             $fileLevel = $file->getLevel();
             $fileIntegrity = $file->getIntegrity();
-            $computingSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_COMPUTING);
-            /** @var Skill $computingSkill */
-            $skillRating = $this->getSkillRating($file->getProfile(), $computingSkill);
+            $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
             $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
             $nodes = $nodeRepo->findBySystem($system);
             $messages = [];
@@ -840,9 +838,7 @@ class FileService extends BaseService
         $response = false;
         $fileLevel = $file->getLevel();
         $fileIntegrity = $file->getIntegrity();
-        $computingSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_COMPUTING);
-        /** @var Skill $computingSkill */
-        $skillRating = $this->getSkillRating($file->getProfile(), $computingSkill);
+        $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
         $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
         $difficulty = $node->getLevel() * self::DEFAULT_DIFFICULTY_MOD;
         $messages = [];

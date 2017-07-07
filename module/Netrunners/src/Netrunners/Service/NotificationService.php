@@ -25,6 +25,13 @@ class NotificationService extends BaseService
      */
     protected $notificationRepo;
 
+
+    /**
+     * NotificationService constructor.
+     * @param EntityManager $entityManager
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     */
     public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
     {
         parent::__construct($entityManager, $viewRenderer, $translator);

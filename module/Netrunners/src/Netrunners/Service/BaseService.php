@@ -333,7 +333,7 @@ class BaseService
                 'name' => $this->reverseSkillNameModification($skillName)
             ]);
             /** @var Skill $skill */
-            $skillRating = $this->getSkillRating($profile, $skill);
+            $skillRating = $this->getSkillRating($profile, $skill->getId());
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
             if (mt_rand(1, 100) <= $chance) {
@@ -358,7 +358,7 @@ class BaseService
                 'name' => $this->reverseSkillNameModification($skillName)
             ]);
             /** @var Skill $skill */
-            $skillRating = $this->getSkillRating($profile, $skill);
+            $skillRating = $this->getSkillRating($profile, $skill->getId());
             if ($skillRating >= SkillRating::MAX_SKILL_RATING_FAIL_LEARN) continue;
             $chance = 100 - $skillRating;
             if ($chance < 1) return true;
@@ -413,11 +413,13 @@ class BaseService
 
     /**
      * @param Profile $profile
-     * @param Skill $skill
+     * @param int $skillId
      * @return int
      */
-    protected function getSkillRating(Profile $profile, Skill $skill)
+    protected function getSkillRating(Profile $profile, $skillId)
     {
+        $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
+        /** @var Skill $skill */
         $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
         /** @var SkillRatingRepository $skillRatingRepo */
         $skillRatingObject = $skillRatingRepo->findByProfileAndSkill($profile, $skill);
@@ -551,8 +553,6 @@ class BaseService
     protected function calculateCodingSuccessChance(Profile $profile, $codeOptions)
     {
         $difficulty = $codeOptions->fileLevel;
-        $testSkill = $this->entityManager->find('Netrunners\Entity\Skill', Skill::ID_CODING);
-        /** @var Skill $testSkill */
         $skillModifier = 0;
         if ($codeOptions->mode == 'program') {
             $targetType = $this->entityManager->find('Netrunners\Entity\FileType', $codeOptions->fileType);
@@ -564,7 +564,7 @@ class BaseService
             /** @var FilePart $targetType */
             $skillModifier = $this->getSkillModifierForFilePart($targetType, $profile);
         }
-        $skillCoding = $this->getSkillRating($profile, $testSkill);
+        $skillCoding = $this->getSkillRating($profile, Skill::ID_CODING);
         $skillRating = floor(($skillCoding + $skillModifier)/2);
         $chance = $skillRating - $difficulty;
         return (int)$chance;

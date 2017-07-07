@@ -441,6 +441,12 @@ class ParserService
         return $from->send(json_encode($response));
     }
 
+    /**
+     * @param ConnectionInterface $from
+     * @param string $content
+     * @param bool $jobs
+     * @return array|bool
+     */
     public function parseCodeInput(ConnectionInterface $from, $content = '', $jobs = false)
     {
         /** @noinspection PhpUndefinedFieldInspection */

@@ -27,6 +27,9 @@ class FilePart
     const ID_NETWORK = 9;
     const ID_REVERSE = 10;
     const ID_SOCIAL = 11;
+    const ID_BLADE = 12;
+    const ID_BLASTER = 13;
+    const ID_SHIELD = 14;
 
     const STRING_CONTROLLER = 'controller';
     const STRING_FRONTEND = 'frontend';
@@ -39,7 +42,13 @@ class FilePart
     const STRING_NETWORK = 'network';
     const STRING_REVERSE = 'reverse';
     const STRING_SOCIAL = 'social';
+    const STRING_BLADE = 'blade';
+    const STRING_BLASTER = 'blaster';
+    const STRING_SHIELD = 'shield';
 
+    /**
+     * @var array
+     */
     static $revLookup = [
         self::STRING_CONTROLLER => self::ID_CONTROLLER,
         self::STRING_BLACKHAT => self::ID_BLACKHAT,
@@ -52,6 +61,9 @@ class FilePart
         self::STRING_NETWORK => self::ID_NETWORK,
         self::STRING_REVERSE => self::ID_REVERSE,
         self::STRING_SOCIAL => self::ID_SOCIAL,
+        self::STRING_BLADE => self::ID_BLADE,
+        self::STRING_BLASTER => self::ID_BLASTER,
+        self::STRING_SHIELD => self::ID_SHIELD
     ];
 
     /**
