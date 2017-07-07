@@ -107,6 +107,11 @@ class ParserService
     protected $gameOptionService;
 
     /**
+     * @var ManpageService
+     */
+    protected $manpageService;
+
+    /**
      * @param EntityManager $entityManager
      * @param Translator $translator
      * @param FileService $fileService
@@ -123,6 +128,7 @@ class ParserService
      * @param HangmanService $hangmanService
      * @param CodebreakerService $codebreakerService
      * @param GameOptionService $gameOptionService
+     * @param ManpageService $manpageService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -140,7 +146,8 @@ class ParserService
         MilkrunService $milkrunService,
         HangmanService $hangmanService,
         CodebreakerService $codebreakerService,
-        GameOptionService $gameOptionService
+        GameOptionService $gameOptionService,
+        ManpageService $manpageService
     )
     {
         $this->entityManager = $entityManager;
@@ -159,6 +166,7 @@ class ParserService
         $this->hangmanService = $hangmanService;
         $this->codebreakerService = $codebreakerService;
         $this->gameOptionService = $gameOptionService;
+        $this->manpageService = $manpageService;
     }
 
     /**
@@ -266,6 +274,10 @@ class ParserService
                 break;
             case 'hangmansolution':
                 $response = $this->hangmanService->solutionAttempt($resourceId, $contentArray);
+                break;
+            case 'help':
+            case 'man':
+                $response = $this->manpageService->helpCommand($resourceId, $contentArray);
                 break;
             case 'say':
                 $response = $this->chatService->sayChat($resourceId, $contentArray);

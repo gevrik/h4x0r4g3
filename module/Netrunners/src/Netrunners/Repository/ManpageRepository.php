@@ -15,4 +15,11 @@ use Doctrine\ORM\EntityRepository;
 class ManpageRepository extends EntityRepository
 {
 
+    public function findByKeyword($keyword)
+    {
+        $qb = $this->createQueryBuilder('m');
+        $qb->where($qb->expr()->like('m.subject', $keyword));
+        return $qb->getQuery()->getResult();
+    }
+
 }

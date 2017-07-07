@@ -291,6 +291,9 @@
                     });
                     if (!data.silent) showprompt();
                     break;
+                case 'openmanpagemenu':
+                    
+                    break;
                 case 'updatedivhtml':
                     var targetElement = $(data.element);
                     targetElement.html('').append(data.content);

@@ -121,6 +121,13 @@ pre {
     right: 2em;
 }
 
+.manpage-container {
+    position: fixed;
+    width: 40%;
+    top: 2em;
+    right: 2em;
+}
+
 .map-panel .panel-body{
     height: 500px;
 }

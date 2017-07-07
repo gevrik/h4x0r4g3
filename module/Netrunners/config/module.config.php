@@ -40,6 +40,7 @@ return array(
             'Netrunners\Service\HangmanService' => 'Netrunners\Factory\HangmanServiceFactory',
             'Netrunners\Service\LoginService' => 'Netrunners\Factory\LoginServiceFactory',
             'Netrunners\Service\LoopService' => 'Netrunners\Factory\LoopServiceFactory',
+            'Netrunners\Service\ManpageService' => 'Netrunners\Factory\ManpageServiceFactory',
             'Netrunners\Service\NodeService' => 'Netrunners\Factory\NodeServiceFactory',
             'Netrunners\Service\NotificationService' => 'Netrunners\Factory\NotificationServiceFactory',
             'Netrunners\Service\MailMessageService' => 'Netrunners\Factory\MailMessageServiceFactory',
