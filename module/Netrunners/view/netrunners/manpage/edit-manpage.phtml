@@ -1,0 +1,45 @@
+<div class="panel panel-default draggable edit-manpage-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manpage-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button id="save-manpage" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
+        <h3 class="panel-title"><?php echo sprintf('%s: %s', $this->translate("EDITING"), $this->manpage->getSubject()); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <label for="manpage-subject">
+            <input type="text" id="manpage-subject" name="manpage-subject" class="manpage-subject" style="border: 0;" value="<?php echo $this->manpage->getSubject(); ?>" />
+        </label>
+        <label for="manpage-content">
+            <textarea id="manpage-content" name="manpage-content" class="manpage-content" rows="10" style="border: 0;"><?php echo $this->manpage->getContent(); ?></textarea>
+        </label>
+    </div>
+</div>
+<script>
+
+    var editorWidth = $('.panel-body').innerWidth();
+    $('#manpage-content').css('width', editorWidth);
+    $('#manpage-subject').css('width', editorWidth);
+
+    $('#save-manpage').on('click', function(){
+        var jsonData = {
+            command: 'saveManpage',
+            hash: hash,
+            content: editor1.getData(),
+            title: $('#manpage-subject').val(),
+            entityId: <?php echo $this->manpage->getId(); ?>,
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+    });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace( 'manpage-content', {width: editorWidth, uiColor: '#3c3c3c', contentsCss: '../../../css/ckeditor.css'} );
+        editor1.editorConfig = function( config ) {
+            config.toolbar = [
+                { name: 'basicstyles', items: [ 'Bold', 'Italic' ] },
+                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent' ] },
+                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] }
+            ];
+        };
+    }
+
+</script>

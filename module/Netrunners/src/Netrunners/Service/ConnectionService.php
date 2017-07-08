@@ -165,15 +165,17 @@ class ConnectionService extends BaseService
             );
         }
         // check if the target node exists
-        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
-        if (!$this->response && !$targetNode) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid target node')
-                )
-            );
+        if (!$this->response) {
+            $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
+            if (!$this->response && !$targetNode) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid target node')
+                    )
+                );
+            }
         }
         /** @var Node $targetNode */
         // check if the target node is the current ndoe

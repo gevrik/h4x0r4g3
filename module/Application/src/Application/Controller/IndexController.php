@@ -10,6 +10,7 @@ use Netrunners\Entity\Word;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
+use Netrunners\Service\ManpageService;
 use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Application\Service\WebsocketService;
@@ -57,6 +58,11 @@ class IndexController extends AbstractActionController
      */
     protected $loginService;
 
+    /**
+     * @var ManpageService
+     */
+    protected $manpageService;
+
 
     /**
      * IndexController constructor.
@@ -66,6 +72,7 @@ class IndexController extends AbstractActionController
      * @param LoopService $loopService
      * @param NodeService $nodeService
      * @param LoginService $loginService
+     * @param ManpageService $manpageService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -73,7 +80,8 @@ class IndexController extends AbstractActionController
         ParserService $parserService,
         LoopService $loopService,
         NodeService $nodeService,
-        LoginService $loginService
+        LoginService $loginService,
+        ManpageService $manpageService
     )
     {
         $this->entityManager = $entityManager;
@@ -82,6 +90,7 @@ class IndexController extends AbstractActionController
         $this->loopService = $loopService;
         $this->nodeService = $nodeService;
         $this->loginService = $loginService;
+        $this->manpageService = $manpageService;
     }
 
     /**
@@ -129,6 +138,7 @@ class IndexController extends AbstractActionController
                         $this->loopService,
                         $this->nodeService,
                         $this->loginService,
+                        $this->manpageService,
                         $loop,
                         $config['hashmod'],
                         $adminMode

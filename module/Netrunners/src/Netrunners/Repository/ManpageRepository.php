@@ -18,7 +18,7 @@ class ManpageRepository extends EntityRepository
     public function findByKeyword($keyword)
     {
         $qb = $this->createQueryBuilder('m');
-        $qb->where($qb->expr()->like('m.subject', $keyword));
+        $qb->where($qb->expr()->like('m.subject', $qb->expr()->literal('%' . $keyword . '%')));
         return $qb->getQuery()->getResult();
     }
 

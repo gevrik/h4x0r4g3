@@ -182,15 +182,21 @@ class NodeService extends BaseService
         // check if there are enough cpus to support the new node
         if (!$this->response) {
             $currentSystem = $currentNode->getSystem();
-            $amountCpus = $this->nodeRepo->countBySystemAndType($currentSystem, NodeType::ID_CPU);
-            $maxNodes = $amountCpus * self::MAX_NODES_MULTIPLIER;
+            $cpus = $this->nodeRepo->findBySystemAndType($currentSystem, NodeType::ID_CPU);
+            $amountCpus = count($cpus);
+            $cpuRating = 0;
+            foreach ($cpus as $cpu) {
+                /** @var Node $cpu */
+                $cpuRating += $cpu->getLevel();
+            }
+            $maxNodes = $cpuRating * self::MAX_NODES_MULTIPLIER;
             $amountNodes = $this->nodeRepo->countBySystem($currentSystem) - $amountCpus;
             if ($amountNodes >= $maxNodes) {
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You do not have enough CPU nodes to add another node to this system')
+                        $this->translate('You do not have enough CPU rating to add another node to this system')
                     )
                 );
             }
@@ -710,12 +716,12 @@ class NodeService extends BaseService
             );
         }
         // get parameter
-        $parameter = $this->getNextParameter($contentArray);
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         if (!$this->response && !$parameter) {
             $returnMessage = array();
             $publicIoNodes = $this->nodeRepo->findByType(NodeType::ID_PUBLICIO);
             $returnMessage[] = sprintf(
-                '<pre>%-40s|%-12s|%-20s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-40s|%-12s|%-20s</pre>',
                 $this->translate('ADDRESS'),
                 $this->translate('ID'),
                 $this->translate('NAME')
@@ -723,7 +729,7 @@ class NodeService extends BaseService
             foreach ($publicIoNodes as $publicIoNode) {
                 /** @var Node $publicIoNode */
                 $returnMessage[] = sprintf(
-                    '<pre>%-40s|%-12s|%-20s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-40s|%-12s|%-20s</pre>',
                     $publicIoNode->getSystem()->getAddy(),
                     $publicIoNode->getId(),
                     $publicIoNode->getName()
@@ -734,59 +740,61 @@ class NodeService extends BaseService
                 'message' => $returnMessage
             );
         }
-        $addy = $parameter;
-        // check if the target system exists
-        $targetSystem = $this->systemRepo->findByAddy($addy);
-        if (!$this->response && !$targetSystem) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid system address')
-                )
-            );
-        }
-        // now check if the node id exists
-        $targetNodeId = $this->getNextParameter($contentArray, false, true);
-        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
-        /** @var Node $targetNode */
-        if (!$this->response && !$targetNode) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid node id')
-                )
-            );
-        }
-        if (!$this->response && ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid node id')
-                )
-            );
-        }
-        if (!$this->response && ($targetNode->getNodeType()->getId() == NodeType::ID_IO && $targetSystem->getProfile() != $profile)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid node id')
-                )
-            );
-        }
         if (!$this->response) {
-            $profile->setCurrentNode($targetNode);
-            $this->entityManager->flush($profile);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                    $this->translate('You have connected to the target system')
-                )
-            );
+            $addy = $parameter;
+            // check if the target system exists
+            $targetSystem = $this->systemRepo->findByAddy($addy);
+            if (!$this->response && !$targetSystem) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid system address')
+                    )
+                );
+            }
+            // now check if the node id exists
+            $targetNodeId = $this->getNextParameter($contentArray, false, true);
+            $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+            /** @var Node $targetNode */
+            if (!$this->response && !$targetNode) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid node id')
+                    )
+                );
+            }
+            if (!$this->response && ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid node id')
+                    )
+                );
+            }
+            if (!$this->response && ($targetNode->getNodeType()->getId() == NodeType::ID_IO && $targetSystem->getProfile() != $profile)) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid node id')
+                    )
+                );
+            }
+            if (!$this->response) {
+                $profile->setCurrentNode($targetNode);
+                $this->entityManager->flush($profile);
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('You have connected to the target system')
+                    )
+                );
+            }
         }
         return $this->response;
     }

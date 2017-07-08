@@ -128,6 +128,17 @@ pre {
     right: 2em;
 }
 
+.manpage-content-container {
+    padding: .5em;
+    overflow-y: scroll;
+}
+
+.manpage-subject {
+    color: #888888;
+    background-color: #3c3c3c;
+    border-color: #282828;
+}
+
 .map-panel .panel-body{
     height: 500px;
 }

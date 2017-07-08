@@ -85,11 +85,14 @@
             var textClass = 'muted';
             var data = JSON.parse(e.data);
             var command = data.command;
+            var silent = (data.silent) ? data.silent : false;
+            console.log(silent);
             if (command !== 'getipaddy' &&
                 command !== 'showmessageprepend' &&
                 command !== 'showoutputprepend' &&
                 command !== 'updateprompt' &&
                 command !== 'updatedivhtml' &&
+                !silent &&
                 command !== 'ticker'
             ) commandInput.attr('type', 'text').detach();
             prompt = (data.prompt) ? data.prompt : prompt;
@@ -292,7 +295,24 @@
                     if (!data.silent) showprompt();
                     break;
                 case 'openmanpagemenu':
-                    
+                    $('#manpage-container').html('').append(data.message);
+                    $('.draggable').draggable({
+                        handle: '.panel-heading'
+                    });
+                    $('#btn-close-manpage-editor').on('click', function(){
+                        if (editor1) {
+                            editor1.destroy();
+                            editor1 = null;
+                        }
+                        $('#manpage-container').html('');
+                        commandInput.focus();
+                    });
+                    if (!silent) {
+                        showprompt();
+                    }
+                    else {
+                        commandInput.focus();
+                    }
                     break;
                 case 'updatedivhtml':
                     var targetElement = $(data.element);
@@ -361,11 +381,35 @@
                     return true;
             }
             $('[data-toggle="tooltip"]').tooltip();
+            $('#manpage-content-container ul a').map(function() {
+                $(this).unbind().on('click', function(e) {
+                    e.preventDefault();
+                    console.log($(this).attr('id'));
+                    command = {
+                        command: 'parseInput',
+                        hash: hash,
+                        content: 'man ' + $(this).attr('id'),
+                        silent: true
+                    };
+                    conn.send(JSON.stringify(command));
+                });
+            });
+            // var links = Array.prototype.slice.call(
+            //     document.getElementsByTagName('a')
+            // );
+            // var count = links.length;
+            // for(var i = 0; i < count; i++) {
+            //     $(links[i]).unbind().on('click', function(e) {
+            //         console.log(e.target.href);
+            //         e.preventDefault();
+            //     });
+            // }
             if (
                 command !== 'echocommand' &&
                 command !== 'updateprompt' &&
                 command !== 'ticker' &&
-                command !== 'updatedivhtml'
+                command !== 'updatedivhtml' &&
+                !silent
             ) {
                 var lastOutput = $('#messages div.output-line:last');
                 commandInput.appendTo(lastOutput).focus();

@@ -1,0 +1,21 @@
+body
+{
+    color: #888888;
+    background-color: #3c3c3c;
+}
+
+html
+{
+    _overflow-y: scroll
+}
+
+img:-moz-broken
+{
+    -moz-force-broken-image-icon : 1;
+    width : 24px;
+    height : 24px;
+}
+img, input, textarea
+{
+    cursor: default;
+}

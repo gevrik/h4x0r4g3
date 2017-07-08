@@ -1,0 +1,13 @@
+<div id="manpage-panel" class="panel panel-default draggable manpage-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manpage-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title">
+            <?php echo strtoupper($this->title); ?>
+        </h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div id="manpage-content-container" class="manpage-content-container">
+            <?php echo $this->message; ?>
+        </div>
+    </div>
+</div>

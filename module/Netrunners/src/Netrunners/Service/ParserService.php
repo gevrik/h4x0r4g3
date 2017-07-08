@@ -181,11 +181,12 @@ class ParserService
      * Main method that takes care of delegating commands to their corresponding service.
      * @param ConnectionInterface $from
      * @param string $content
-     * @param int|bool $entityId
+     * @param bool $entityId
      * @param bool $jobs
-     * @return bool|ConnectionInterface
+     * @param bool $silent
+     * @return bool
      */
-    public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false)
+    public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false, $silent = false)
     {
         /** @noinspection PhpUndefinedFieldInspection */
         $resourceId = $from->resourceId;
@@ -220,6 +221,9 @@ class ParserService
             case self::CMD_ADDCONNECTION:
                 $response = $this->connectionService->addConnection($resourceId, $contentArray);
                 break;
+            case 'addmanpage':
+                $response = $this->manpageService->addManpage($resourceId, $contentArray);
+                break;
             case 'cd':
                 $response = $this->connectionService->useConnection($resourceId, $contentArray);
                 break;
@@ -242,6 +246,9 @@ class ParserService
             case 'dismissallnotifications':
             case 'dan':
                 $this->notificationService->dismissNotification($resourceId, $entityId, true);
+                break;
+            case 'editmanpage':
+                $response = $this->manpageService->editManpage($resourceId, $contentArray);
                 break;
             case 'editnode':
                 $response = $this->nodeService->editNodeDescription($resourceId);
@@ -296,6 +303,9 @@ class ParserService
                 break;
             case 'jobs':
                 $response = $this->profileService->showJobs($resourceId, $jobs);
+                break;
+            case 'listmanpages':
+                $response = $this->manpageService->listManpages($resourceId);
                 break;
             case 'ls':
                 $response = $this->nodeService->showNodeInfo($resourceId);
@@ -420,6 +430,7 @@ class ParserService
         }
         if (!is_array($response)) return true;
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
+        $response['silent'] = $silent;
         if ($response) $from->send(json_encode($response));
         return true;
     }
@@ -514,19 +525,11 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $returnMessage[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br />%-20s%-20s%-20s%-20s<br /></pre>',
-            'clear',
-            'code',
-            'commands',
-            'gc',
-            'kill',
-            'mail',
-            'ps',
-            self::CMD_SCORE,
-            'skills',
-            'showunreadmails',
-            'stat',
-            'system');
+        $message = $this->translator->translate('addconnection addnode cd clear code commands connect editnode execute factionratings filemods gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $returnMessage = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+            wordwrap($message, 120)
+        );
         $response = array(
             'command' => self::CMD_SHOWMESSAGE,
             'message' => $returnMessage
