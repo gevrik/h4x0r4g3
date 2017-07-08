@@ -102,6 +102,21 @@ class Profile
      */
     protected $group;
 
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $blade;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $blaster;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $shield;
+
 
     /**
      * Constructor for Profile.
@@ -360,6 +375,60 @@ class Profile
     public function setGroup($group)
     {
         $this->group = $group;
+        return $this;
+    }
+
+    /**
+     * @return File|NULL
+     */
+    public function getBlade()
+    {
+        return $this->blade;
+    }
+
+    /**
+     * @param mixed $blade
+     * @return Profile
+     */
+    public function setBlade($blade)
+    {
+        $this->blade = $blade;
+        return $this;
+    }
+
+    /**
+     * @return File|NULL
+     */
+    public function getBlaster()
+    {
+        return $this->blaster;
+    }
+
+    /**
+     * @param mixed $blaster
+     * @return Profile
+     */
+    public function setBlaster($blaster)
+    {
+        $this->blaster = $blaster;
+        return $this;
+    }
+
+    /**
+     * @return File|NULL
+     */
+    public function getShield()
+    {
+        return $this->shield;
+    }
+
+    /**
+     * @param mixed $shield
+     * @return Profile
+     */
+    public function setShield($shield)
+    {
+        $this->shield = $shield;
         return $this;
     }
 

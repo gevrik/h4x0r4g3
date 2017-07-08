@@ -243,6 +243,7 @@ class LoginService extends BaseService
                 /** @var Skill $skill */
                 $skillRating = new SkillRating();
                 $skillRating->setProfile($profile);
+                $skillRating->setNpc(NULL);
                 $skillRating->setRating($skill->getLevel());
                 $skillRating->setSkill($skill);
                 $this->entityManager->persist($skillRating);

@@ -342,7 +342,7 @@ class File
     // ORM
 
     /**
-     * @return mixed
+     * @return FileType|NULL
      */
     public function getFileType()
     {
@@ -360,7 +360,7 @@ class File
     }
 
     /**
-     * @return mixed
+     * @return Profile|NULL
      */
     public function getCoder()
     {
@@ -378,7 +378,7 @@ class File
     }
 
     /**
-     * @return mixed
+     * @return Profile|NULL
      */
     public function getProfile()
     {
@@ -396,7 +396,7 @@ class File
     }
 
     /**
-     * @return mixed
+     * @return System|NULL
      */
     public function getSystem()
     {
@@ -414,7 +414,7 @@ class File
     }
 
     /**
-     * @return mixed
+     * @return MailMessage|NULL
      */
     public function getMailMessage()
     {
@@ -432,7 +432,7 @@ class File
     }
 
     /**
-     * @return mixed
+     * @return Node|NULL
      */
     public function getNode()
     {

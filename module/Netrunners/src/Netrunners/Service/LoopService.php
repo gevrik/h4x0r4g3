@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartInstance;
@@ -18,12 +19,17 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Npc;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\MilkrunInstanceRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NotificationRepository;
+use Netrunners\Repository\NpcInstanceRepository;
+use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
@@ -42,6 +48,21 @@ class LoopService extends BaseService
      */
     protected $fileService;
 
+    /**
+     * @var NodeRepository
+     */
+    protected $nodeRepo;
+
+    /**
+     * @var SystemRepository
+     */
+    protected $systemRepo;
+
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
 
     /**
      * LoopService constructor.
@@ -59,6 +80,9 @@ class LoopService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileService = $fileService;
+        $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
     }
 
     /**
@@ -251,17 +275,84 @@ class LoopService extends BaseService
         return true;
     }
 
+    public function loopNpcSpawn()
+    {
+        $systems = $this->systemRepo->findAll();
+        foreach ($systems as $system) {
+            /** @var System $system */
+            if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) continue;
+            $databaseNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_DATABASE);
+            foreach ($databaseNodes as $databaseNode) {
+                /** @var Node $databaseNode */
+                if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) break;
+                $nodeLevel = $databaseNode->getLevel();
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_MURPHY_VIRUS);
+                /** @var Npc $npc */
+                $npcInstance = new NpcInstance();
+                $npcInstance->setNpc($npc);
+                $npcInstance->setAdded(new \DateTime());
+                $npcInstance->setProfile(NULL);
+                $npcInstance->setNode($databaseNode);
+                $credits = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                $npcInstance->setCredits($npc->getBaseCredits() + $credits);
+                $snippets = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                $npcInstance->setSnippets($npc->getBaseSnippets() + $snippets);
+                $npcInstance->setAggressive($npc->getAggressive());
+                $maxEeg = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                $npcInstance->setMaxEeg($npc->getBaseEeg() + $maxEeg);
+                $npcInstance->setCurrentEeg($npc->getBaseEeg() + $maxEeg);
+                $npcInstance->setDescription($npc->getDescription());
+                $npcInstance->setName($npc->getName());
+                $npcInstance->setFaction(NULL);
+                $npcInstance->setHomeNode($databaseNode);
+                $npcInstance->setRoaming($npc->getRoaming());
+                $npcInstance->setGroup(NULL);
+                $npcInstance->setLevel($databaseNode->getLevel());
+                $detection = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                $npcInstance->setDetection($detection);
+                $npcInstance->setSlots($npc->getBaseSlots());
+                $stealth = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                $npcInstance->setStealth($npc->getBaseStealth() + $stealth);
+                $npcInstance->setSystem($databaseNode->getSystem());
+                $npcInstance->setHomeSystem($databaseNode->getSystem());
+                $this->entityManager->persist($npcInstance);
+            }
+        }
+        $this->entityManager->flush();
+    }
+
+    /**
+     *
+     */
+    public function loopNpcRoam()
+    {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $roamingNpcs = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance')->findBy([
+            'roaming' => true
+        ]);
+        foreach ($roamingNpcs as $roamingNpc) {
+            /** @var NpcInstance $roamingNpc */
+            if (mt_rand(1, 100) > 50) continue;
+            $connections = $connectionRepo->findBySourceNode($roamingNpc->getNode());
+            $connectionsCount = count($connections);
+            $randConnectionIndex = mt_rand(0, $connectionsCount - 1);
+            $connection = $connections[$randConnectionIndex];
+            /** @var Connection $connection */
+            if ($connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()) continue;
+            $this->moveNpcToTargetNode($roamingNpc, $connection);
+        }
+    }
+
     /**
      * This runs every 15m to determine snippet and credit gains based on node types.
      */
     public function loopResources()
     {
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        /** @var NodeRepository $nodeRepo */
         // init var to keep track of who receives what
         $items = [];
         // get all the db nodes (for snippet generation)
-        $databaseNodes = $nodeRepo->findByType(NodeType::ID_DATABASE);
+        $databaseNodes = $this->nodeRepo->findByType(NodeType::ID_DATABASE);
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
             $currentNodeProfileId = $databaseNode->getSystem()->getProfile()->getId();
@@ -273,7 +364,7 @@ class LoopService extends BaseService
             // now check if there are running files in the same node that could affect the resource amount
             $items = $this->checkForModifyingFiles($databaseNode, $currentNodeProfileId, FileType::ID_DATAMINER, $items, 'snippets');
         }
-        $terminalNodes = $nodeRepo->findByType(NodeType::ID_TERMINAL);
+        $terminalNodes = $this->nodeRepo->findByType(NodeType::ID_TERMINAL);
         foreach ($terminalNodes as $terminalNode) {
             /** @var Node $terminalNode */
             $currentNodeProfileId = $terminalNode->getSystem()->getProfile()->getId();

@@ -16,10 +16,12 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
@@ -37,6 +39,7 @@ class NodeService extends BaseService
     const CONNECTIONS_STRING = "connections";
     const FILES_STRING = "files";
     const USERS_STRING = "users";
+    const NPCS_STRING = "entities";
 
     const RAW_NODE_COST = 50;
     const MAX_NODES_MULTIPLIER = 10;
@@ -127,6 +130,17 @@ class NodeService extends BaseService
             /** @var Profile $pprofile */
             $counter++;
             $returnMessage[] = sprintf('<pre class="text-users">%-12s: %s</pre>', $counter, $pprofile->getUser()->getUsername());
+        }
+        // get npcs and show them if there are any
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $npcInstances = $npcInstanceRepo->findByNode($currentNode);
+        if (count($npcInstances) > 0)  $returnMessage[] = sprintf('<pre class="text-npcs">%s:</pre>', $this->translate(self::NPCS_STRING));
+        $counter = 0;
+        foreach ($npcInstances as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
+            $counter++;
+            $returnMessage[] = sprintf('<pre class="text-npcs">%-12s: %s</pre>', $counter, $npcInstance->getName());
         }
         // prepare and return response
         $this->response = array(

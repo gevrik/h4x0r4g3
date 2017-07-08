@@ -86,7 +86,6 @@
             var data = JSON.parse(e.data);
             var command = data.command;
             var silent = (data.silent) ? data.silent : false;
-            console.log(silent);
             if (command !== 'getipaddy' &&
                 command !== 'showmessageprepend' &&
                 command !== 'showoutputprepend' &&
@@ -371,6 +370,7 @@
                 case 'showmessageprepend':
                     var lastPrompt = $('.output-line').last();
                     $(data.message).insertBefore(lastPrompt);
+                    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
                     return true;
                 case 'showoutputprepend':
                     var lastPrompt = $('.output-line').last();
@@ -378,6 +378,7 @@
                     $.each(messageArray, function(i, messageData){
                         $(messageData).insertBefore(lastPrompt);
                     });
+                    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
                     return true;
             }
             $('[data-toggle="tooltip"]').tooltip();

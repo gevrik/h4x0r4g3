@@ -25,6 +25,7 @@ use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\Skill;
@@ -486,9 +487,9 @@ class BaseService
     /**
      * @param Node $node
      * @param $message
-     * @param $profile
+     * @param Profile|NULL $profile
      */
-    public function messageEveryoneInNode(Node $node, $message, $profile)
+    public function messageEveryoneInNode(Node $node, $message, Profile $profile = NULL)
     {
         $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         /** @var ProfileRepository $profileRepo */
@@ -497,7 +498,7 @@ class BaseService
         $profiles = $profileRepo->findByCurrentNode($node, $profile);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */
-            if ($xprofile == $profile) continue;
+            if ($xprofile === $profile) continue;
             foreach ($wsClients as $wsClient) {
                 if (
                     isset($wsClientsData[$wsClient->resourceId]) &&
@@ -684,6 +685,50 @@ class BaseService
         $this->messageEveryoneInNode($targetNode, $message, $profile);
         $this->entityManager->flush($profile);
         return $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId);
+    }
+
+    /**
+     * @param NpcInstance $npc
+     * @param Connection|NULL $connection
+     * @param Node|NULL $sourceNode
+     * @param Node|NULL $targetNode
+     * @return bool
+     */
+    protected function moveNpcToTargetNode(
+        NpcInstance $npc,
+        Connection $connection = NULL,
+        Node $sourceNode = NULL,
+        Node $targetNode = NULL
+    )
+    {
+        if ($connection) {
+            $sourceNode = $connection->getSourceNode();
+            $targetNode = $connection->getTargetNode();
+        }
+        // message everyone in source node
+        $messageText = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>'),
+            $npc->getName(),
+            $targetNode->getName()
+        );
+        $message = array(
+            'command' => 'showmessageprepend',
+            'message' => $messageText
+        );
+        $this->messageEveryoneInNode($sourceNode, $message);
+        $npc->setNode($targetNode);
+        $messageText = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>'),
+            $npc->getName(),
+            $sourceNode->getName()
+        );
+        $message = array(
+            'command' => 'showmessageprepend',
+            'message' => $messageText
+        );
+        $this->messageEveryoneInNode($targetNode, $message);
+        $this->entityManager->flush($npc);
+        return true;
     }
 
     /**

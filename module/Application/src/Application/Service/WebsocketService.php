@@ -26,7 +26,17 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @const LOOP_TIME_RESOURCES the amount of seconds between resource gain checks
      */
-    const LOOP_TIME_RESOURCES = 300;
+    const LOOP_TIME_RESOURCES = 900;
+
+    /**
+     * @const LOOP_NPC_SPAWN the amount of seconds between npc spawn checks
+     */
+    const LOOP_NPC_SPAWN = 300;
+
+    /**
+     * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
+     */
+    const LOOP_NPC_ROAM = 30;
 
     /**
      * @const MAX_CLIENTS the maximum amount of clients that can be connected at the same time
@@ -150,6 +160,14 @@ class WebsocketService implements MessageComponentInterface {
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_RESOURCES, function(){
             $this->loopService->loopResources();
+        });
+
+        $this->loop->addPeriodicTimer(self::LOOP_NPC_SPAWN, function(){
+            $this->loopService->loopNpcSpawn();
+        });
+
+        $this->loop->addPeriodicTimer(self::LOOP_NPC_ROAM, function(){
+            $this->loopService->loopNpcRoam();
         });
 
         self::$instance = $this;

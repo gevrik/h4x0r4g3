@@ -48,6 +48,12 @@ class SkillRating
     protected $skill;
 
     /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Npc")
+     */
+    protected $npc;
+
+
+    /**
      * @return int
      */
     public function getId()
@@ -116,6 +122,24 @@ class SkillRating
     public function setSkill($skill)
     {
         $this->skill = $skill;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getNpc()
+    {
+        return $this->npc;
+    }
+
+    /**
+     * @param mixed $npc
+     * @return SkillRating
+     */
+    public function setNpc($npc)
+    {
+        $this->npc = $npc;
         return $this;
     }
 

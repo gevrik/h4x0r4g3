@@ -99,6 +99,10 @@ pre {
     color: #0099cc;
 }
 
+.text-npcs {
+    color: #cc6d00;
+}
+
 .panel-container {
     position: fixed;
     width: 40%;

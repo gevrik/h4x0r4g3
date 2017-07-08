@@ -417,6 +417,12 @@ class CodingService extends BaseService
                 case FileType::STRING_CODEBREAKER:
                     $value = FileType::ID_CODEBREAKER;
                     break;
+                case FileType::STRING_CODEBLADE:
+                    $value = FileType::ID_CODEBLADE;
+                    break;
+                case FileType::STRING_CODEBLASTER:
+                    $value = FileType::ID_CODEBLASTER;
+                    break;
             }
             // add message if not already set
             if (!$message) $message = sprintf(

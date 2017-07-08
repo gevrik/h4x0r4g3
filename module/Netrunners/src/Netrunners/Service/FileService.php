@@ -218,7 +218,7 @@ class FileService extends BaseService
             $newCode->setMaxIntegrity(100);
             $newCode->setMailMessage(NULL);
             $newCode->setModified(NULL);
-            $newCode->setName($parameter);
+            $newCode->setName($parameter . '.txt');
             $newCode->setRunning(NULL);
             $newCode->setSize(0);
             $newCode->setSlots(0);
@@ -375,7 +375,7 @@ class FileService extends BaseService
             );
         }
         // check if there is enough memory to execute this
-        if (!$this->response && !$this->canExecuteFile($profile, $file)) {
+        if (!$this->response && !$this->canExecuteFile($profile, $file) && !in_array($file->getFileType()->getId(), [FileType::ID_CODEBLADE])) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -415,8 +415,116 @@ class FileService extends BaseService
                 case FileType::ID_CODEBREAKER:
                     $this->response = $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
                     break;
+                case FileType::ID_CODEBLADE:
+                case FileType::ID_CODEBLASTER:
+                case FileType::ID_CODESHIELD:
+                    $this->response = $this->equipFile($file);
+                    break;
             }
         }
+        return $this->response;
+    }
+
+    /**
+     * @param File $file
+     * @return array|false
+     */
+    private function equipFile(File $file)
+    {
+        $profile = $file->getProfile();
+        $messages = [];
+        switch ($file->getFileType()->getId()) {
+            default:
+                break;
+            case FileType::ID_CODEBLADE:
+                $currentBlade = $profile->getBlade();
+                if ($currentBlade) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                        $currentBlade->getName()
+                    );
+                    $currentBlade->setRunning(false);
+                    $profile->setBlade(NULL);
+                    $this->entityManager->flush($currentBlade);
+                }
+                if (!$this->canExecuteFile($profile, $file)) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                        $file->getName()
+                    );
+                }
+                else {
+                    $profile->setBlade($file);
+                    $file->setRunning(true);
+                    $this->entityManager->flush($file);
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your blade module</pre>'),
+                        $file->getName()
+                    );
+                }
+                $this->entityManager->flush($profile);
+                break;
+            case FileType::ID_CODEBLASTER:
+                $currentBlaster = $profile->getBlaster();
+                if ($currentBlaster) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                        $currentBlaster->getName()
+                    );
+                    $currentBlaster->setRunning(false);
+                    $profile->setBlaster(NULL);
+                    $this->entityManager->flush($currentBlaster);
+                }
+                if (!$this->canExecuteFile($profile, $file)) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                        $file->getName()
+                    );
+                }
+                else {
+                    $profile->setBlaster($file);
+                    $file->setRunning(true);
+                    $this->entityManager->flush($file);
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your blaster module</pre>'),
+                        $file->getName()
+                    );
+                }
+                $this->entityManager->flush($profile);
+                break;
+            case FileType::ID_CODESHIELD:
+                $currentShield = $profile->getBlaster();
+                if ($currentShield) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                        $currentShield->getName()
+                    );
+                    $currentShield->setRunning(false);
+                    $profile->setShield(NULL);
+                    $this->entityManager->flush($currentShield);
+                }
+                if (!$this->canExecuteFile($profile, $file)) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                        $file->getName()
+                    );
+                }
+                else {
+                    $profile->setShield($file);
+                    $file->setRunning(true);
+                    $this->entityManager->flush($file);
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your shield module</pre>'),
+                        $file->getName()
+                    );
+                }
+                $this->entityManager->flush($profile);
+                break;
+        }
+        $this->response = [
+            'command' => 'showoutput',
+            'message' => $messages
+        ];
         return $this->response;
     }
 
