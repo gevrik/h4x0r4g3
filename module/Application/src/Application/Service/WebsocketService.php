@@ -3,6 +3,8 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\NpcInstance;
+use Netrunners\Entity\Profile;
 use Netrunners\Repository\BannedIpRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
@@ -22,6 +24,11 @@ class WebsocketService implements MessageComponentInterface {
      * @const LOOP_TIME_JOBS the amount of seconds between coding job checks
      */
     const LOOP_TIME_JOBS = 1;
+
+    /**
+     * @const LOOP_TIME_COMBAT the amount of seconds between combat rounds
+     */
+    const LOOP_TIME_COMBAT = 2;
 
     /**
      * @const LOOP_TIME_RESOURCES the amount of seconds between resource gain checks
@@ -113,6 +120,13 @@ class WebsocketService implements MessageComponentInterface {
      */
     protected $hash;
 
+    /**
+     * @var array
+     */
+    protected $combatants = [
+        'npcs' => [],
+        'profiles' => []
+    ];
 
     /**
      * WebsocketService constructor.
@@ -156,6 +170,10 @@ class WebsocketService implements MessageComponentInterface {
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_JOBS, function(){
             $this->loopService->loopJobs();
+        });
+
+        $this->loop->addPeriodicTimer(self::LOOP_TIME_COMBAT, function(){
+            $this->loopService->loopCombatRound();
         });
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_RESOURCES, function(){
@@ -270,6 +288,68 @@ class WebsocketService implements MessageComponentInterface {
         if (isset($this->clientsData[$resourceId])) {
             $this->clientsData[$resourceId]['codingOptions'][$optionName] = $optionValue;
         }
+    }
+
+
+    public function addCombatant($attacker, $defender, $attackerResourceId = NULL, $defenderResourceId = NULL)
+    {
+        if ($attacker instanceof Profile) {
+            if ($defender instanceof Profile) {
+                $this->combatants['profiles'][$attacker->getId()] = [
+                    'profileTarget' => $defender->getId(),
+                    'npcTarget' => NULL,
+                    'attackerResourceId' => $attackerResourceId,
+                    'defenderResourceId' => $defenderResourceId
+                ];
+            }
+            else if ($defender instanceof NpcInstance) {
+                $this->combatants['profiles'][$attacker->getId()] = [
+                    'profileTarget' => NULL,
+                    'npcTarget' => $defender->getId(),
+                    'attackerResourceId' => $attackerResourceId,
+                    'defenderResourceId' => $defenderResourceId
+                ];
+            }
+        }
+        if ($attacker instanceof NpcInstance) {
+            if ($defender instanceof Profile) {
+                $this->combatants['npcs'][$attacker->getId()] = [
+                    'profileTarget' => $defender->getId(),
+                    'npcTarget' => NULL,
+                    'attackerResourceId' => $attackerResourceId,
+                    'defenderResourceId' => $defenderResourceId
+                ];
+            }
+            else if ($defender instanceof NpcInstance) {
+                $this->combatants['npcs'][$attacker->getId()] = [
+                    'profileTarget' => NULL,
+                    'npcTarget' => $defender->getId(),
+                    'attackerResourceId' => $attackerResourceId,
+                    'defenderResourceId' => $defenderResourceId
+                ];
+            }
+        }
+    }
+
+    /**
+     * @param $combatant
+     */
+    public function removeCombatant($combatant)
+    {
+        if ($combatant instanceof NpcInstance) {
+            unset($this->combatants['npcs'][$combatant->getId()]);
+        }
+        if ($combatant instanceof Profile) {
+            unset($this->combatants['profiles'][$combatant->getId()]);
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function getCombatants()
+    {
+        return $this->combatants;
     }
 
     /**
@@ -476,8 +556,6 @@ class WebsocketService implements MessageComponentInterface {
             case 'saveManpage':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 $mpTitle = (isset($msgData->title)) ? $msgData->title : false;
-                var_dump($mpTitle);
-                var_dump($content);
                 $response = $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId);
                 $from->send(json_encode($response));
                 break;

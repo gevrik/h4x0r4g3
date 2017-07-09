@@ -49,6 +49,11 @@ class LoopService extends BaseService
     protected $fileService;
 
     /**
+     * @var CombatService
+     */
+    protected $combatService;
+
+    /**
      * @var NodeRepository
      */
     protected $nodeRepo;
@@ -69,17 +74,20 @@ class LoopService extends BaseService
      * @param EntityManager $entityManager
      * @param \Zend\View\Renderer\PhpRenderer $viewRenderer
      * @param FileService $fileService
+     * @param CombatService $combatService
      * @param Translator $translator
      */
     public function __construct(
         EntityManager $entityManager,
         $viewRenderer,
         FileService $fileService,
+        CombatService $combatService,
         Translator $translator
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileService = $fileService;
+        $this->combatService = $combatService;
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
@@ -102,7 +110,7 @@ class LoopService extends BaseService
     }
 
     /**
-     * This runs every 5s to check if coding jobs are finished.
+     * This runs to check if coding jobs are finished.
      */
     public function loopJobs()
     {
@@ -247,6 +255,74 @@ class LoopService extends BaseService
     }
 
     /**
+     *
+     */
+    public function loopCombatRound()
+    {
+        $ws = $this->getWebsocketServer();
+        $combatants = $ws->getCombatants();
+        // first we loop through profile attackers
+        foreach ($combatants['profiles'] as $profileId => $combatData) {
+            $profile = $this->entityManager->find('Netrunners\Entity\Profile', $profileId);
+            /** @var Profile $profile */
+            $combatData = (object)$combatData;
+            $wsClient = NULL;
+            $targetWsClient = NULL;
+            foreach ($ws->getClients() as $wsClientId => $xClient) {
+                if ($xClient->resourceId == $combatData->attackerResourceId) {
+                    $wsClient = $xClient;
+                    break;
+                }
+            }
+            $target = NULL;
+            if ($combatData->npcTarget) {
+                $target = $this->entityManager->find('Netrunners\Entity\NpcInstance', $combatData->npcTarget);
+            }
+            if ($combatData->profileTarget) {
+                $target = $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget);
+                foreach ($ws->getClients() as $wsClientId => $xClient) {
+                    if ($xClient->resourceId == $combatData->defenderResourceId) {
+                        $targetWsClient = $xClient;
+                        break;
+                    }
+                }
+            }
+            /** @var Profile|NpcInstance $target */
+            list($attackerMessage, $defenderMessage) = $this->combatService->resolveCombatRound($profile, $target);
+            if ($wsClient && $attackerMessage) {
+                $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$attackerMessage]));
+            }
+            if ($targetWsClient && $defenderMessage) {
+                $targetWsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
+            }
+        }
+        foreach ($combatants['npcs'] as $npcId => $combatData) {
+            $npc = $this->entityManager->find('Netrunners\Entity\NpcInstance', $npcId);
+            /** @var NpcInstance $npc */
+            $combatData = (object)$combatData;
+            $wsClient = NULL;
+            foreach ($ws->getClients() as $wsClientId => $xClient) {
+                if ($xClient->resourceId == $combatData->defenderResourceId) {
+                    $wsClient = $xClient;
+                    break;
+                }
+            }
+            $target = NULL;
+            if ($combatData->npcTarget) {
+                $target = $this->entityManager->find('Netrunners\Entity\NpcInstance', $combatData->npcTarget);
+            }
+            if ($combatData->profileTarget) {
+                $target = $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget);
+            }
+            list($attackerMessage, $defenderMessage) = $this->combatService->resolveCombatRound($npc, $target);
+            /** @var Profile|NpcInstance $target */
+            if ($wsClient && $defenderMessage) {
+                $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
+            }
+        }
+    }
+
+    /**
      * @param ConnectionInterface $wsClient
      * @return bool
      */
@@ -333,6 +409,7 @@ class LoopService extends BaseService
         ]);
         foreach ($roamingNpcs as $roamingNpc) {
             /** @var NpcInstance $roamingNpc */
+            if ($this->isInCombat($roamingNpc)) continue;
             if (mt_rand(1, 100) > 50) continue;
             $connections = $connectionRepo->findBySourceNode($roamingNpc->getNode());
             $connectionsCount = count($connections);

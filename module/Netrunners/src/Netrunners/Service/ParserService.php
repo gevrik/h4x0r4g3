@@ -112,6 +112,12 @@ class ParserService
     protected $manpageService;
 
     /**
+     * @var CombatService
+     */
+    protected $combatService;
+
+
+    /**
      * @param EntityManager $entityManager
      * @param Translator $translator
      * @param FileService $fileService
@@ -129,6 +135,7 @@ class ParserService
      * @param CodebreakerService $codebreakerService
      * @param GameOptionService $gameOptionService
      * @param ManpageService $manpageService
+     * @param CombatService $combatService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -147,7 +154,8 @@ class ParserService
         HangmanService $hangmanService,
         CodebreakerService $codebreakerService,
         GameOptionService $gameOptionService,
-        ManpageService $manpageService
+        ManpageService $manpageService,
+        CombatService $combatService
     )
     {
         $this->entityManager = $entityManager;
@@ -167,6 +175,7 @@ class ParserService
         $this->codebreakerService = $codebreakerService;
         $this->gameOptionService = $gameOptionService;
         $this->manpageService = $manpageService;
+        $this->combatService = $combatService;
     }
 
     /**
@@ -208,6 +217,9 @@ class ParserService
                         $this->translator->translate('Unknown command')
                     )
                 );
+                break;
+            case 'attack':
+                $response = $this->combatService->attackCommand($resourceId, $contentArray);
                 break;
             case 'clear':
                 $response = array(
@@ -525,7 +537,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode cd clear code commands connect editnode execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say secureconnection setemail setlocale skillpoints skills stat survey system time touch');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

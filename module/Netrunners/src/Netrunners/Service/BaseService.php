@@ -742,22 +742,37 @@ class BaseService
     {
         $ws = $this->getWebsocketServer();
         $clientData = $ws->getClientData($resourceId);
-        if (empty($clientData->action)) return false;
-        $actionData = (object)$clientData->action;
         $isBlocked = false;
-        if ($checkForFullBlock) {
-            if ($actionData->fullblock) $isBlocked = true;
+        $message = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+            $this->translate('You are currently busy with something else')
+        );
+        /* combat block check follows - combat never fully blocks */
+        if (!$checkForFullBlock) {
+            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+            $isBlocked = $this->isInCombat($user->getProfile());
+            if ($isBlocked) {
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are currently busy fighting')
+                );
+            }
         }
-        if (!$isBlocked) {
-            if ($actionData->blocking) $isBlocked = true;
+        /* action block check follows */
+        if (!empty($clientData->action) && !$isBlocked) {
+            $actionData = (object)$clientData->action;
+            $isBlocked = false;
+            if ($checkForFullBlock) {
+                if ($actionData->fullblock) $isBlocked = true;
+            }
+            if (!$isBlocked) {
+                if ($actionData->blocking) $isBlocked = true;
+            }
         }
         if ($isBlocked) {
             $isBlocked = [
                 'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                    $this->translate('You are curently busy with something else')
-                )
+                'message' => $message
             ];
         }
         return $isBlocked;
@@ -1049,6 +1064,23 @@ class BaseService
             }
         }
         return $isAdmin;
+    }
+
+    /**
+     * @param NpcInstance|Profile $combatant
+     * @return bool
+     */
+    protected function isInCombat($combatant)
+    {
+        $inCombat = false;
+        $combatantData = (object)$this->getWebsocketServer()->getCombatants();
+        if ($combatant instanceof Profile) {
+            if (array_key_exists($combatant->getId(), $combatantData->profiles)) $inCombat = true;
+        }
+        if ($combatant instanceof NpcInstance) {
+            if (array_key_exists($combatant->getId(), $combatantData->npcs)) $inCombat = true;
+        }
+        return $inCombat;
     }
 
 }

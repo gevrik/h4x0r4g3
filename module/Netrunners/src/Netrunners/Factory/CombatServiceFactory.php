@@ -1,8 +1,8 @@
 <?php
 
 /**
- * LoopService Factory.
- * Factory for the LoopService.
+ * CombatService Factory.
+ * Factory for the CombatService.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,25 +10,23 @@
 
 namespace Netrunners\Factory;
 
-use Netrunners\Service\LoopService;
+use Netrunners\Service\CombatService;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
-class LoopServiceFactory implements FactoryInterface
+class CombatServiceFactory implements FactoryInterface
 {
 
     /**
-     * Create service.
+     * Create service
      * @param ServiceLocatorInterface $serviceLocator
      * @return mixed
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new LoopService(
+        return new CombatService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('Netrunners\Service\FileService'),
-            $serviceLocator->get('Netrunners\Service\CombatService'),
             $serviceLocator->get('translator')
         );
     }
