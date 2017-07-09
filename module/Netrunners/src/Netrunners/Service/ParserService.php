@@ -367,6 +367,9 @@ class ParserService
             case 'milkrunclick':
                 $response = $this->milkrunService->clickTile($resourceId, $contentArray);
                 break;
+            case 'scan':
+                $response = $this->connectionService->scanConnection($resourceId, $contentArray);
+                break;
             case self::CMD_SCORE:
                 $response = $this->profileService->showScore($resourceId);
                 break;
@@ -537,7 +540,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

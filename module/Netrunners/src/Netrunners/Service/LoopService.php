@@ -294,6 +294,7 @@ class LoopService extends BaseService
             }
             if ($targetWsClient && $defenderMessage) {
                 $targetWsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
+                $this->updateInterfaceElement($targetWsClient->resourceId, '#current-eeg', $target->getEeg());
             }
         }
         foreach ($combatants['npcs'] as $npcId => $combatData) {

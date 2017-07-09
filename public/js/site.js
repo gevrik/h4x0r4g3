@@ -91,6 +91,7 @@
                 command !== 'showoutputprepend' &&
                 command !== 'updateprompt' &&
                 command !== 'updatedivhtml' &&
+                command !== 'updateinterfaceelement' &&
                 !silent &&
                 command !== 'ticker'
             ) commandInput.attr('type', 'text').detach();
@@ -334,6 +335,10 @@
                         });
                     }
                     break;
+                case 'updateinterfaceelement':
+                    console.log(data);
+                    $(data.message.element).html(data.message.value);
+                    break;
                 case 'showmessage':
                     md.append(data.message);
                     showprompt();
@@ -395,32 +400,27 @@
                     conn.send(JSON.stringify(command));
                 });
             });
-            // var links = Array.prototype.slice.call(
-            //     document.getElementsByTagName('a')
-            // );
-            // var count = links.length;
-            // for(var i = 0; i < count; i++) {
-            //     $(links[i]).unbind().on('click', function(e) {
-            //         console.log(e.target.href);
-            //         e.preventDefault();
-            //     });
-            // }
+            // reattach input
             if (
                 command !== 'echocommand' &&
                 command !== 'updateprompt' &&
                 command !== 'ticker' &&
                 command !== 'updatedivhtml' &&
+                command !== 'updateinterfaceelement' &&
                 !silent
             ) {
                 var lastOutput = $('#messages div.output-line:last');
                 commandInput.appendTo(lastOutput).focus();
             }
         };
+
+        // on connection close
         conn.onclose = function() {
             md.append('<br /><span class="text-danger">Connection to NeoCortex network lost</span>');
             $('#command-input').remove();
             clearInterval(ticker);
         };
+
         // sending input
         $('#main-content').on('keydown', '#command-input', function(event){
             var keycode = (event.keyCode ? event.keyCode : event.which);

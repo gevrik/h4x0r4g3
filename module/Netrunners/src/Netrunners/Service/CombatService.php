@@ -151,11 +151,41 @@ class CombatService extends BaseService
                 $this->learnFromSuccess($attacker, ['skills' => ['blades']]);
             }
             if ($defender instanceof Profile) {
-                $defenderMessage = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for [%s] damage</pre>'),
-                    $attackerName,
-                    $damage
-                );
+                $health = $defender->getEeg();
+                $newHealth = $health - $damage;
+                if ($newHealth <= 0) {
+                    // profile flatlined - remove combatants
+                    if ($attacker instanceof Profile) {
+                        $attackerMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage</pre>'),
+                            $defenderName,
+                            $damage
+                        );
+                    }
+                    $this->getWebsocketServer()->removeCombatant($defender);
+                    $this->getWebsocketServer()->removeCombatant($attacker);
+                    $this->flatlineProfile($defender);
+                    $defenderMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You  have been flatlined by [%s] with [%s] damage</pre>'),
+                        $attackerName,
+                        $damage
+                    );
+                }
+                else {
+                    if ($attacker instanceof Profile) {
+                        $attackerMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage</pre>'),
+                            $defenderName,
+                            $damage
+                        );
+                    }
+                    $defenderMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for [%s] damage</pre>'),
+                        $attackerName,
+                        $damage
+                    );
+                    $defender->setEeg($newHealth);
+                }
             }
             if ($defender instanceof NpcInstance) {
                 $health = $defender->getCurrentEeg();
@@ -199,6 +229,13 @@ class CombatService extends BaseService
         }
         $this->entityManager->flush();
         return [$attackerMessage, $defenderMessage];
+    }
+
+    private function flatlineProfile(Profile $profile)
+    {
+        $profile->setEeg(10);
+        $this->entityManager->flush($profile);
+        $this->movePlayerToTargetNode(NULL, NULL , $profile, $profile->getCurrentNode(), $profile->getHomeNode());
     }
 
 }

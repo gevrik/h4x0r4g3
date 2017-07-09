@@ -88,16 +88,23 @@ class NodeService extends BaseService
 
     /**
      * Shows important information about a node.
-     * @param int $resourceId
-     * @return array|bool
+     * If no node is given, it will use the profile's current node.
+     * @param $resourceId
+     * @param Node|NULL $node
+     * @return array|bool|false
      */
-    public function showNodeInfo($resourceId)
+    public function showNodeInfo($resourceId, Node $node = NULL)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $currentNode = $profile->getCurrentNode();
+        $currentNode = ($node) ? $node : $profile->getCurrentNode();
         $returnMessage = array();
+        // add a note if the node was given (most prolly a scan command)
+        if ($node) $returnMessage[] = sprintf(
+            '<pre class="text-info">You scan into the node [%s]:</pre>',
+            $node->getName()
+        );
         // add survey text if option is turned on
         if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) $returnMessage[] = $this->getSurveyText($currentNode);
         // get connections and show them if there are any

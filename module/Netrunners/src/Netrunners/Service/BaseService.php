@@ -642,7 +642,7 @@ class BaseService
     }
 
     /**
-     * @param $resourceId
+     * @param int|NULL $resourceId
      * @param Profile $profile
      * @param Connection|NULL $connection
      * @param Node|NULL $sourceNode
@@ -650,7 +650,7 @@ class BaseService
      * @return array|bool
      */
     protected function movePlayerToTargetNode(
-        $resourceId,
+        $resourceId = NULL,
         Profile $profile,
         Connection $connection = NULL,
         Node $sourceNode = NULL,
@@ -684,7 +684,7 @@ class BaseService
         );
         $this->messageEveryoneInNode($targetNode, $message, $profile);
         $this->entityManager->flush($profile);
-        return $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId);
+        return ($resourceId) ? $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId) : false;
     }
 
     /**
@@ -796,6 +796,34 @@ class BaseService
             }
         }
         return $result;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $element
+     * @param $value
+     * @return bool
+     */
+    protected function updateInterfaceElement($resourceId, $element, $value)
+    {
+        $wsClient = NULL;
+        foreach ($this->getWebsocketServer()->getClients() as $xClientId => $xClient) {
+            if ($xClient->resourceId == $resourceId) {
+                $wsClient = $xClient;
+                break;
+            }
+        }
+        if ($wsClient) {
+            $response = [
+                'command' => 'updateinterfaceelement',
+                'message' => [
+                    'element' => $element,
+                    'value' => $value
+                ]
+            ];
+            $wsClient->send(json_encode($response));
+        }
+        return true;
     }
 
     /**

@@ -94,6 +94,45 @@ class ConnectionService extends BaseService
         return $this->response;
     }
 
+    public function scanConnection($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $this->response = $this->isActionBlocked($resourceId);
+        /* connections can be given by name or number, so we need to handle both */
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false);
+        $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
+        if (!$connection) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such connection')
+                )
+            );
+        }
+        // check if they can access the connection
+        if (!$this->response &&
+            ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen())
+        ) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Access denied')
+                )
+            );
+        }
+        if (!$this->response) {
+            $this->response = $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId, $connection->getTargetNode());
+        }
+        return $this->response;
+    }
+
     /**
      * @param int $resourceId
      * @param $contentArray
