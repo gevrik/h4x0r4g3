@@ -183,6 +183,60 @@ class ProfileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showEquipment($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            $messages = [];
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                $this->translate('You are currently using these equipment module files:')
+            );
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('blade'),
+                ($profile->getBlade()) ? $profile->getBlade()->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($profile->getBlade()) ? $profile->getBlade()->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($profile->getBlade()) ? $profile->getBlade()->getIntegrity() : $this->translate('---'),
+                ($profile->getBlade()) ? $profile->getBlade()->getMaxIntegrity() : $this->translate('---')
+            );
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('blaster'),
+                ($profile->getBlaster()) ? $profile->getBlaster()->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($profile->getBlaster()) ? $profile->getBlaster()->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($profile->getBlaster()) ? $profile->getBlaster()->getIntegrity() : $this->translate('---'),
+                ($profile->getBlaster()) ? $profile->getBlaster()->getMaxIntegrity() : $this->translate('---')
+            );
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('shield'),
+                ($profile->getShield()) ? $profile->getShield()->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($profile->getShield()) ? $profile->getShield()->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($profile->getShield()) ? $profile->getShield()->getIntegrity() : $this->translate('---'),
+                ($profile->getShield()) ? $profile->getShield()->getMaxIntegrity() : $this->translate('---')
+            );
+            $this->response = [
+                'command' => 'showoutput',
+                'message' => $messages
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
      * @param int $resourceId
      * @param $jobs
      * @return array|bool

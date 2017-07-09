@@ -265,6 +265,10 @@ class ParserService
             case 'editnode':
                 $response = $this->nodeService->editNodeDescription($resourceId);
                 break;
+            case 'equipment':
+            case 'eq':
+                $response = $this->profileService->showEquipment($resourceId);
+                break;
             case 'exe':
             case 'execute':
                 $response = $this->fileService->executeFile($resourceId, $contentArray);
@@ -540,7 +544,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode equipment execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)
