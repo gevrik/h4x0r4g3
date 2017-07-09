@@ -158,6 +158,125 @@ class NodeService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @param $command
+     * @param array $contentArray
+     * @return array|bool|false
+     */
+    public function enterUpgradeMode($resourceId, $command, $contentArray = [])
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $message = false;
+            $responseCommand = 'enterconfirmmode';
+            $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
+            switch ($command) {
+                default:
+                    break;
+                case 'upgradenode':
+                    $node = $profile->getCurrentNode();
+                    if ($node->getSystem()->getProfile() != $profile) {
+                        $message = sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Permission denied')
+                        );
+                        $responseCommand = 'showmessage';
+                    }
+                    if (!$message && $node->getLevel() > 3) {
+                        $message = sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('This node is already at max level')
+                        );
+                        $responseCommand = 'showmessage';
+                    }
+                    if (!$message) {
+                        $nodeType = $node->getNodeType();
+                        $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
+                        if ($upgradeCost > $profile->getCredits()) {
+                            $message = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to upgrade this node</pre>'),
+                                $upgradeCost
+                            );
+                            $responseCommand = 'showmessage';
+                        }
+                        if (!$message) {
+                            $message = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need %s credits to upgrade this node - Please confirm this action:</pre>'),
+                                $upgradeCost
+                            );
+                        }
+                    }
+                    break;
+            }
+            $this->response = [
+                'command' => $responseCommand,
+                'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function upgradeNode($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        $responseCommand = 'showmessage';
+        $message = false;
+        if (!$this->response) {
+            $node = $profile->getCurrentNode();
+            if ($node->getSystem()->getProfile() != $profile) {
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                );
+            }
+            if (!$message && $node->getLevel() > 3) {
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('This node is already at max level')
+                );
+                $responseCommand = 'showmessage';
+            }
+            if (!$message) {
+                $nodeType = $node->getNodeType();
+                $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
+                if ($upgradeCost > $profile->getCredits()) {
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to upgrade this node</pre>'),
+                        $upgradeCost
+                    );
+                }
+                if (!$message) {
+                    $profile->setCredits($profile->getCredits() - $upgradeCost);
+                    $node->setLevel($node->getLevel()+1);
+                    $this->entityManager->flush();
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have upgraded [%s] to level [%s]</pre>'),
+                        $node->getName(),
+                        $node->getLevel()
+                    );
+                }
+            }
+            $this->response = [
+                'command' => $responseCommand,
+                'message' => $message,
+                'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData),
+                'exitconfirmmode' => true
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
      * Adds a new node to the current system.
      * @param int $resourceId
      * @return array|bool

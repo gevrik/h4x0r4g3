@@ -237,6 +237,17 @@ class LoginService extends BaseService
             $profile->setSnippets(ProfileService::DEFAULT_STARTING_SNIPPETS);
             $profile->setEeg(100);
             $profile->setWillpower(100);
+            $profile->setBlade(NULL);
+            $profile->setBlaster(NULL);
+            $profile->setShield(NULL);
+            $profile->setHandArmor(NULL);
+            $profile->setHeadArmor(NULL);
+            $profile->setLegArmor(NULL);
+            $profile->setLowerArmArmor(NULL);
+            $profile->setShoesArmor(NULL);
+            $profile->setShoulderArmor(NULL);
+            $profile->setTorsoArmor(NULL);
+            $profile->setUpperArmArmor(NULL);
             // add skills
             $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
             foreach ($skills as $skill) {

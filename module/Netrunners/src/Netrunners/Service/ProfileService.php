@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
@@ -354,7 +355,7 @@ class ProfileService extends BaseService
         $returnMessage = array();
         $files = $this->fileRepo->findByProfile($profile);
         $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%-3s</span>|%-3s|%-3s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|%-32s|%-32s</pre>',
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-20s|%-33s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%-3s</span>|%-3s|%-3s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|%-12s|%-32s|%-32s</pre>',
             $this->translate('ID'),
             $this->translate('TYPE'),
             $this->translate('NAME'),
@@ -366,13 +367,25 @@ class ProfileService extends BaseService
             $this->translate('R'),
             $this->translate('slots'),
             $this->translate('S'),
+            $this->translate('SUBTYPE'),
             $this->translate('SYSTEM'),
             $this->translate('NODE')
         );
         foreach ($files as $file) {
             /** @var File $file */
+            $subtypeString = $this->translate('---');
+            $fileData = json_decode($file->getData());
+            if ($fileData && $fileData->subtype) {
+                switch ($file->getFileType()->getId()) {
+                    default:
+                        break;
+                    case FileType::ID_CODEARMOR:
+                        $subtypeString = FileType::$armorSubtypeLookup[$fileData->subtype];
+                        break;
+                }
+            }
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-32s|%-32s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-20s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-12s|%-32s|%-32s</pre>',
                 $file->getId(),
                 $file->getFileType()->getName(),
                 $file->getName(),
@@ -381,6 +394,7 @@ class ProfileService extends BaseService
                 $file->getSize(),
                 ($file->getRunning()) ? '<span class="text-success">*</span>' : ' ',
                 $file->getSlots(),
+                $subtypeString,
                 ($file->getSystem()) ? $file->getSystem()->getName() : '',
                 ($file->getNode()) ? $file->getNode()->getName() : ''
             );

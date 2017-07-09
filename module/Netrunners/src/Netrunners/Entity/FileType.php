@@ -17,6 +17,24 @@ use Doctrine\ORM\Mapping as ORM;
 class FileType
 {
 
+    const SUBTYPE_ARMOR_HEAD = 1;
+    const SUBTYPE_ARMOR_UPPER_ARM = 2;
+    const SUBTYPE_ARMOR_LOWER_ARM = 3;
+    const SUBTYPE_ARMOR_HANDS = 4;
+    const SUBTYPE_ARMOR_TORSO = 5;
+    const SUBTYPE_ARMOR_LEGS = 6;
+    const SUBTYPE_ARMOR_SHOES = 7;
+    const SUBTYPE_ARMOR_SHOULDERS = 8;
+
+    const SUBTYPE_ARMOR_HEAD_STRING = 'head';
+    const SUBTYPE_ARMOR_UPPER_ARM_STRING = 'upper-arms';
+    const SUBTYPE_ARMOR_LOWER_ARM_STRING = 'lower-arms';
+    const SUBTYPE_ARMOR_HANDS_STRING = 'hands';
+    const SUBTYPE_ARMOR_TORSO_STRING = 'torso';
+    const SUBTYPE_ARMOR_LEGS_STRING = 'legs';
+    const SUBTYPE_ARMOR_SHOES_STRING = 'shoes';
+    const SUBTYPE_ARMOR_SHOULDERS_STRING = 'shoulders';
+
     const ID_DIRECTORY = 1;
     const ID_CHATCLIENT = 2;
     const ID_DATAMINER = 3;
@@ -65,6 +83,17 @@ class FileType
         self::STRING_JACKHAMMER => self::ID_JACKHAMMER,
         self::STRING_WORMER => self::ID_WORMER,
         self::STRING_CODEBREAKER => self::ID_CODEBREAKER,
+    ];
+
+    static $armorSubtypeLookup = [
+        self::SUBTYPE_ARMOR_HEAD => self::SUBTYPE_ARMOR_HEAD_STRING,
+        self::SUBTYPE_ARMOR_UPPER_ARM => self::SUBTYPE_ARMOR_UPPER_ARM_STRING,
+        self::SUBTYPE_ARMOR_LOWER_ARM => self::SUBTYPE_ARMOR_LOWER_ARM_STRING,
+        self::SUBTYPE_ARMOR_HANDS => self::SUBTYPE_ARMOR_HANDS_STRING,
+        self::SUBTYPE_ARMOR_TORSO => self::SUBTYPE_ARMOR_TORSO_STRING,
+        self::SUBTYPE_ARMOR_LEGS => self::SUBTYPE_ARMOR_LEGS_STRING,
+        self::SUBTYPE_ARMOR_SHOES => self::SUBTYPE_ARMOR_SHOES_STRING,
+        self::SUBTYPE_ARMOR_SHOULDERS => self::SUBTYPE_ARMOR_SHOULDERS_STRING
     ];
 
     /**

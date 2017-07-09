@@ -402,6 +402,9 @@ class CodingService extends BaseService
                 case FilePart::STRING_SHIELD:
                     $value = FilePart::ID_SHIELD;
                     break;
+                case FilePart::STRING_ARMOR:
+                    $value = FilePart::ID_ARMOR;
+                    break;
                 case FileType::STRING_COINMINER:
                     $value = FileType::ID_COINMINER;
                     break;
@@ -422,6 +425,9 @@ class CodingService extends BaseService
                     break;
                 case FileType::STRING_CODEBLASTER:
                     $value = FileType::ID_CODEBLASTER;
+                    break;
+                case FileType::STRING_CODEARMOR:
+                    $value = FileType::ID_CODEARMOR;
                     break;
             }
             // add message if not already set

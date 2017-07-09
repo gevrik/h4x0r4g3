@@ -90,6 +90,13 @@ class File
      */
     protected $slots;
 
+    /**
+     * Field for other data, like sub-types, etc, will be a json string.
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $data;
+
     // ORM
 
     /**
@@ -336,6 +343,24 @@ class File
     public function setSlots($slots)
     {
         $this->slots = $slots;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getData()
+    {
+        return $this->data;
+    }
+
+    /**
+     * @param mixed $data
+     * @return File
+     */
+    public function setData($data)
+    {
+        $this->data = $data;
         return $this;
     }
 

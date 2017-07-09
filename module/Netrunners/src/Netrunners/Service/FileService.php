@@ -225,6 +225,7 @@ class FileService extends BaseService
             $newCode->setSystem(NULL);
             $newCode->setNode(NULL);
             $newCode->setVersion(1);
+            $newCode->setData(NULL);
             $this->entityManager->persist($newCode);
             $this->entityManager->flush();
             $this->response = array(
@@ -235,6 +236,143 @@ class FileService extends BaseService
                 )
             );
             return $this->response;
+        }
+        return $this->response;
+    }
+
+    public function initArmorCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        // get parameter
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
+        // try to get target file via repo method
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s</pre>",
+                    $this->translate('No such file')
+                )
+            );
+        }
+        $file = array_shift($targetFiles);
+        if (!$this->response && !$file) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('File not found')
+                )
+            );
+        }
+        if (!$this->response && $file && $file->getFileType()->getId() != FileType::ID_CODEARMOR) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You can only initialize codearmor files')
+                )
+            );
+        }
+        // now get the subtype
+        $subtype = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$this->response && !$subtype) {
+            $message = [];
+            $message[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                $this->translate('Please choose from the following options:')
+            );
+            $message[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+                wordwrap(implode(',', FileType::$armorSubtypeLookup), 120)
+            );
+            $this->response = array(
+                'command' => 'showoutput',
+                'message' => $message
+            );
+        }
+        // check if they can change the type
+        if (!$this->response && $profile != $file->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        // all seems fine - init
+        if (!$this->response && $file && $subtype) {
+            $fileData = json_decode($file->getData());
+            if ($fileData && $fileData->subtype) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('This codearmor has already been initialized')
+                    )
+                );
+            }
+            if (!$this->response) {
+                switch ($subtype) {
+                    default:
+                        $realType = false;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_HEAD_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_HEAD;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_SHOULDERS_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_SHOULDERS;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_UPPER_ARM_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_UPPER_ARM;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_LOWER_ARM_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_LOWER_ARM;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_HANDS_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_HANDS;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_TORSO_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_TORSO;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_LEGS_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_LEGS;
+                        break;
+                    case FileType::SUBTYPE_ARMOR_SHOES_STRING:
+                        $realType = FileType::SUBTYPE_ARMOR_SHOES;
+                        break;
+                }
+                if (!$realType) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid subtype')
+                        )
+                    );
+                }
+                else {
+                    $file->setData(json_encode(['subtype'=>$realType]));
+                    $this->entityManager->flush($file);
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have initialized [%s] to subtype [%s]</pre>'),
+                            $file->getName(),
+                            FileType::$armorSubtypeLookup[$realType]
+                        )
+                    );
+                }
+            }
         }
         return $this->response;
     }
@@ -418,6 +556,7 @@ class FileService extends BaseService
                 case FileType::ID_CODEBLADE:
                 case FileType::ID_CODEBLASTER:
                 case FileType::ID_CODESHIELD:
+                case FileType::ID_CODEARMOR:
                     $this->response = $this->equipFile($file);
                     break;
             }
@@ -519,6 +658,245 @@ class FileService extends BaseService
                     );
                 }
                 $this->entityManager->flush($profile);
+                break;
+            case FileType::ID_CODEARMOR:
+                $fileData = json_decode($file->getData());
+                if (!$fileData) {
+                    $messages[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] has not been initialized yet</pre>'),
+                        $file->getName()
+                    );
+                }
+                else {
+                    switch ($fileData->subtype) {
+                        default:
+                            break;
+                        case FileType::SUBTYPE_ARMOR_HEAD:
+                            $currentArmor = $profile->getHeadArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setHeadArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setHeadArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your head armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_SHOULDERS:
+                            $currentArmor = $profile->getShoulderArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setShoulderArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setShoulderArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your shoulder armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_UPPER_ARM:
+                            $currentArmor = $profile->getUpperArmArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setUpperArmArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setUpperArmArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your upper-arm armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_LOWER_ARM:
+                            $currentArmor = $profile->getLowerArmArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setLowerArmArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setLowerArmArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your lower-arm armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_HANDS:
+                            $currentArmor = $profile->getHandArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setHandArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setHandArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your hands armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_TORSO:
+                            $currentArmor = $profile->getTorsoArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setTorsoArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setTorsoArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your torso armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_LEGS:
+                            $currentArmor = $profile->getLegArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setLegArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setLegArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your leg armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                        case FileType::SUBTYPE_ARMOR_SHOES:
+                            $currentArmor = $profile->getShoesArmor();
+                            if ($currentArmor) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $currentArmor->getName()
+                                );
+                                $currentArmor->setRunning(false);
+                                $profile->setShoesArmor(NULL);
+                                $this->entityManager->flush($currentArmor);
+                            }
+                            if (!$this->canExecuteFile($profile, $file)) {
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute [%s]</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            else {
+                                $profile->setShoesArmor($file);
+                                $file->setRunning(true);
+                                $this->entityManager->flush($file);
+                                $messages[] = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You now use [%s] as your shoes armor module</pre>'),
+                                    $file->getName()
+                                );
+                            }
+                            $this->entityManager->flush($profile);
+                            break;
+                    }
+                }
                 break;
         }
         $this->response = [

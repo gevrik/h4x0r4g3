@@ -30,6 +30,7 @@ class FilePart
     const ID_BLADE = 12;
     const ID_BLASTER = 13;
     const ID_SHIELD = 14;
+    const ID_ARMOR = 15;
 
     const STRING_CONTROLLER = 'controller';
     const STRING_FRONTEND = 'frontend';
@@ -45,6 +46,7 @@ class FilePart
     const STRING_BLADE = 'blade';
     const STRING_BLASTER = 'blaster';
     const STRING_SHIELD = 'shield';
+    const STRING_ARMOR = 'armor';
 
     /**
      * @var array
@@ -63,7 +65,8 @@ class FilePart
         self::STRING_SOCIAL => self::ID_SOCIAL,
         self::STRING_BLADE => self::ID_BLADE,
         self::STRING_BLASTER => self::ID_BLASTER,
-        self::STRING_SHIELD => self::ID_SHIELD
+        self::STRING_SHIELD => self::ID_SHIELD,
+        self::STRING_ARMOR => self::ID_ARMOR
     ];
 
     /**

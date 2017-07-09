@@ -96,6 +96,9 @@
                 command !== 'ticker'
             ) commandInput.attr('type', 'text').detach();
             prompt = (data.prompt) ? data.prompt : prompt;
+            if (data.exitconfirmmode) {
+                consoleMode = 'default';
+            }
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
@@ -210,6 +213,11 @@
                     break;
                 case 'entercodemode':
                     consoleMode = 'code';
+                    md.append(data.message);
+                    showprompt();
+                    break;
+                case 'enterconfirmmode':
+                    consoleMode = 'confirm';
                     md.append(data.message);
                     showprompt();
                     break;
@@ -493,6 +501,13 @@
                     case 'code':
                         jsonData = {
                             command: 'parseCodeInput',
+                            hash: hash,
+                            content: message
+                        };
+                        break;
+                    case 'confirm':
+                        jsonData = {
+                            command: 'parseConfirmInput',
                             hash: hash,
                             content: message
                         };

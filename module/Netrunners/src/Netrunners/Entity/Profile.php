@@ -117,6 +117,45 @@ class Profile
      */
     protected $shield;
 
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $headArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $shoulderArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $upperArmArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $lowerArmArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $handArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $torsoArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $legArmor;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $shoesArmor;
 
     /**
      * Constructor for Profile.
@@ -429,6 +468,150 @@ class Profile
     public function setShield($shield)
     {
         $this->shield = $shield;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getHeadArmor()
+    {
+        return $this->headArmor;
+    }
+
+    /**
+     * @param mixed $headArmor
+     * @return Profile
+     */
+    public function setHeadArmor($headArmor)
+    {
+        $this->headArmor = $headArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getShoulderArmor()
+    {
+        return $this->shoulderArmor;
+    }
+
+    /**
+     * @param mixed $shoulderArmor
+     * @return Profile
+     */
+    public function setShoulderArmor($shoulderArmor)
+    {
+        $this->shoulderArmor = $shoulderArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUpperArmArmor()
+    {
+        return $this->upperArmArmor;
+    }
+
+    /**
+     * @param mixed $upperArmArmor
+     * @return Profile
+     */
+    public function setUpperArmArmor($upperArmArmor)
+    {
+        $this->upperArmArmor = $upperArmArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLowerArmArmor()
+    {
+        return $this->lowerArmArmor;
+    }
+
+    /**
+     * @param mixed $lowerArmArmor
+     * @return Profile
+     */
+    public function setLowerArmArmor($lowerArmArmor)
+    {
+        $this->lowerArmArmor = $lowerArmArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getHandArmor()
+    {
+        return $this->handArmor;
+    }
+
+    /**
+     * @param mixed $handArmor
+     * @return Profile
+     */
+    public function setHandArmor($handArmor)
+    {
+        $this->handArmor = $handArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getTorsoArmor()
+    {
+        return $this->torsoArmor;
+    }
+
+    /**
+     * @param mixed $torsoArmor
+     * @return Profile
+     */
+    public function setTorsoArmor($torsoArmor)
+    {
+        $this->torsoArmor = $torsoArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLegArmor()
+    {
+        return $this->legArmor;
+    }
+
+    /**
+     * @param mixed $legArmor
+     * @return Profile
+     */
+    public function setLegArmor($legArmor)
+    {
+        $this->legArmor = $legArmor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getShoesArmor()
+    {
+        return $this->shoesArmor;
+    }
+
+    /**
+     * @param mixed $shoesArmor
+     * @return Profile
+     */
+    public function setShoesArmor($shoesArmor)
+    {
+        $this->shoesArmor = $shoesArmor;
         return $this;
     }
 

@@ -309,6 +309,9 @@ class ParserService
             case 'homerecall':
                 $response = $this->systemService->homeRecall($resourceId);
                 break;
+            case 'initarmor':
+                $response = $this->fileService->initArmorCommand($resourceId, $contentArray);
+                break;
             case 'i':
             case 'inv':
             case 'inventory':
@@ -416,6 +419,9 @@ class ParserService
                 break;
             case 'touch':
                 $response = $this->fileService->touchFile($resourceId, $contentArray);
+                break;
+            case 'upgradenode':
+                $response = $this->nodeService->enterUpgradeMode($resourceId, $userCommand);
                 break;
             /** ADMIN STUFF */
             case 'banip':
@@ -535,6 +541,48 @@ class ParserService
     }
 
     /**
+     * @param ConnectionInterface $from
+     * @param string $content
+     * @return array|bool|false
+     */
+    public function parseConfirmInput(ConnectionInterface $from, $content = '')
+    {
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $from->resourceId;
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        $confirmData = (object)$clientData->confirm;
+        if (!isset($confirmData->command)) return true;
+        $response = false;
+        if ($content == 'yes') {
+            switch ($confirmData->command) {
+                default:
+                    break;
+                case 'upgradenode':
+                    $response = $this->nodeService->upgradeNode($resourceId);
+                    break;
+            }
+        }
+        $this->getWebsocketServer()->setConfirm($resourceId, '');
+        if (!is_array($response)) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+                    $this->translator->translate('You cancel your action')
+                ),
+                'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData),
+                'exitconfirmmode' => true
+            ];
+        }
+        else {
+            $response['exitconfirmmode'] = true;
+        }
+        return $response;
+    }
+
+    /**
      * @param int $resourceId
      * @return array|bool
      */
@@ -544,7 +592,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode equipment execute factionratings filemods filename gc help home inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $message = $this->translator->translate('addconnection addnode attack cd clear code commands connect editnode equipment execute factionratings filemods filename gc help home initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

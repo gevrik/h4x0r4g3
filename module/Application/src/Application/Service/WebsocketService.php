@@ -290,7 +290,12 @@ class WebsocketService implements MessageComponentInterface {
         }
     }
 
-
+    /**
+     * @param $attacker
+     * @param $defender
+     * @param null $attackerResourceId
+     * @param null $defenderResourceId
+     */
     public function addCombatant($attacker, $defender, $attackerResourceId = NULL, $defenderResourceId = NULL)
     {
         if ($attacker instanceof Profile) {
@@ -353,6 +358,21 @@ class WebsocketService implements MessageComponentInterface {
     }
 
     /**
+     * @param $resourceId
+     * @param $command
+     * @param array $contentArray
+     * @return $this
+     */
+    public function setConfirm($resourceId, $command, $contentArray = [])
+    {
+        $this->clientsData[$resourceId]['confirm'] = [
+            'command' => $command,
+            'contentArray' => $contentArray
+        ];
+        return $this;
+    }
+
+    /**
      * @param ConnectionInterface $conn
      */
     public function onOpen(ConnectionInterface $conn)
@@ -378,7 +398,11 @@ class WebsocketService implements MessageComponentInterface {
             'action' => [],
             'milkrun' => [],
             'hangman' => [],
-            'codebreaker' => []
+            'codebreaker' => [],
+            'confirm' => [
+                'command' => '',
+                'contentArray' => []
+            ]
         );
         $response = array(
             'command' => 'getipaddy',
@@ -574,6 +598,10 @@ class WebsocketService implements MessageComponentInterface {
             case 'parseCodeInput':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 $from->send(json_encode($this->parserService->parseCodeInput($from, $content, $this->loopService->getJobs())));
+                break;
+            case 'parseConfirmInput':
+                if ($hash != $this->clientsData[$resourceId]['hash']) return true;
+                $from->send(json_encode($this->parserService->parseConfirmInput($from, $content)));
                 break;
         }
         return true;

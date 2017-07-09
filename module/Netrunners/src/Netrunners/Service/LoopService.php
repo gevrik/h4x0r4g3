@@ -565,6 +565,7 @@ class LoopService extends BaseService
                 $newCode->setSystem(NULL);
                 $newCode->setNode(NULL);
                 $newCode->setVersion(1);
+                $newCode->setData(NULL);
                 $this->entityManager->persist($newCode);
                 $canStore = $this->canStoreFile($profile, $newCode);
                 if (!$canStore) {
