@@ -148,7 +148,7 @@ class CombatService extends BaseService
         if ($roll <= ($skillRating - $defenseRating)) {
             // hit
             if ($attacker instanceof Profile) {
-                $this->learnFromSuccess($attacker, ['skills' => ['blades']]);
+                $this->learnFromSuccess($attacker, ['skills' => ['blades']], -50);
             }
             if ($defender instanceof Profile) {
                 $health = $defender->getEeg();
@@ -214,7 +214,7 @@ class CombatService extends BaseService
         else {
             // missed
             if ($attacker instanceof Profile) {
-                $this->learnFromFailure($attacker, ['skills' => ['blades']]);
+                $this->learnFromFailure($attacker, ['skills' => ['blades']], -50);
                 $attackerMessage = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">You miss [%s]</pre>'),
                     $defenderName

@@ -388,7 +388,7 @@ class LoopService extends BaseService
                 $npcInstance->setGroup(NULL);
                 $npcInstance->setLevel($databaseNode->getLevel());
                 $npcInstance->setSlots($npc->getBaseSlots());
-
+                $npcInstance->setStealthing($npc->getStealthing());
                 $npcInstance->setSystem($databaseNode->getSystem());
                 $npcInstance->setHomeSystem($databaseNode->getSystem());
                 $this->entityManager->persist($npcInstance);

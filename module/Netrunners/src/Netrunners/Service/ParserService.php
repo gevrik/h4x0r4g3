@@ -398,6 +398,10 @@ class ParserService
             case 'showunreadmails':
                 $response = $this->mailMessageService->displayAmountUnreadMails($resourceId);
                 break;
+            case 'sneak':
+            case 'stealth':
+                $response = $this->profileService->startStealthing($resourceId);
+                break;
             case 'stat':
                 $response = $this->fileService->statFile($resourceId, $contentArray);
                 break;
@@ -451,6 +455,10 @@ class ParserService
                 break;
             case 'toggleadminmode':
                 $response = $this->adminService->adminToggleAdminMode($resourceId);
+                break;
+            case 'visible':
+            case 'vis':
+                $response = $this->profileService->stopStealthing($resourceId);
                 break;
         }
         if (!is_array($response)) return true;

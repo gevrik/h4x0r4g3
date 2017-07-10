@@ -85,6 +85,12 @@ class NpcInstance
     protected $roaming;
 
     /**
+     * @ORM\Column(type="integer", nullable=true)
+     * @var int
+     */
+    protected $stealthing;
+
+    /**
      * @ORM\Column(type="datetime")
      * @var \DateTime
      */
@@ -328,6 +334,24 @@ class NpcInstance
     public function setRoaming($roaming)
     {
         $this->roaming = $roaming;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStealthing()
+    {
+        return $this->stealthing;
+    }
+
+    /**
+     * @param int $stealthing
+     * @return NpcInstance
+     */
+    public function setStealthing($stealthing)
+    {
+        $this->stealthing = $stealthing;
         return $this;
     }
 

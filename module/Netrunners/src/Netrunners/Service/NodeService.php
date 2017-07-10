@@ -130,25 +130,57 @@ class NodeService extends BaseService
         foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
             $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
             /** @var Profile $requestedProfile */
-            if($requestedProfile && $requestedProfile !== $profile && $requestedProfile->getCurrentNode() == $currentNode && $this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
+            if(
+                $requestedProfile &&
+                $requestedProfile !== $profile &&
+                $requestedProfile->getCurrentNode() == $currentNode
+            )
+            {
+                if (!$requestedProfile->getStealthing()) {
+                    $profiles[] = $requestedProfile;
+                }
+                else {
+                    if ($this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
+                }
+            }
         }
         if (count($profiles) > 0) $returnMessage[] = sprintf('<pre class="text-users">%s:</pre>', $this->translate(self::USERS_STRING));
         $counter = 0;
         foreach ($profiles as $pprofile) {
             /** @var Profile $pprofile */
             $counter++;
-            $returnMessage[] = sprintf('<pre class="text-users">%-12s: %s</pre>', $counter, $pprofile->getUser()->getUsername());
+            $returnMessage[] = sprintf(
+                '<pre class="text-users">%-12s: %s <span class="text-info">%s</span></pre>',
+                $counter,
+                $pprofile->getUser()->getUsername(),
+                ($pprofile->getStealthing()) ? $this->translate('[stealthing]') : ''
+            );
         }
         // get npcs and show them if there are any
         $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
         /** @var NpcInstanceRepository $npcInstanceRepo */
         $npcInstances = $npcInstanceRepo->findByNode($currentNode);
-        if (count($npcInstances) > 0)  $returnMessage[] = sprintf('<pre class="text-npcs">%s:</pre>', $this->translate(self::NPCS_STRING));
-        $counter = 0;
+        $npcs = [];
         foreach ($npcInstances as $npcInstance) {
             /** @var NpcInstance $npcInstance */
+            if (!$npcInstance->getStealthing()) {
+                $npcs[] = $npcInstance;
+            }
+            else {
+                if ($this->canSee($profile, $npcInstance)) $npcs[] = $npcInstance;
+            }
+        }
+        if (count($npcs) > 0)  $returnMessage[] = sprintf('<pre class="text-npcs">%s:</pre>', $this->translate(self::NPCS_STRING));
+        $counter = 0;
+        foreach ($npcs as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
             $counter++;
-            $returnMessage[] = sprintf('<pre class="text-npcs">%-12s: %s</pre>', $counter, $npcInstance->getName());
+            $returnMessage[] = sprintf(
+                '<pre class="text-npcs">%-12s: %s %s</pre>',
+                $counter,
+                $npcInstance->getName(),
+                ($npcInstance->getStealthing()) ? $this->translate('[stealthing]') : ''
+            );
         }
         // prepare and return response
         $this->response = array(

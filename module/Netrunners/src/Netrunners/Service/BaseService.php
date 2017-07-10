@@ -301,6 +301,13 @@ class BaseService
             $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
             $chance = 50 + $detectorSkillRating - $stealtherSkillRating;
             if (mt_rand(1, 100) > $chance) $canSee = false;
+            // check for skill gain
+            if ($canSee) {
+                $this->learnFromSuccess($detector, ['skills' => ['detection']], -50);
+            }
+            else {
+                $this->learnFromSuccess($stealther, ['skills' => ['stealth']], -50);
+            }
         }
         return $canSee;
     }
@@ -344,9 +351,10 @@ class BaseService
     /**
      * @param Profile $profile
      * @param $jobData
+     * @param int $modifier
      * @return bool
      */
-    protected function learnFromSuccess(Profile $profile, $jobData)
+    protected function learnFromSuccess(Profile $profile, $jobData, $modifier = 0)
     {
         foreach ($jobData['skills'] as $skillName) {
             $skill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findOneBy([
@@ -354,7 +362,7 @@ class BaseService
             ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill->getId());
-            $chance = 100 - $skillRating;
+            $chance = 100 - $skillRating + $modifier;
             if ($chance < 1) return true;
             if (mt_rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;
@@ -369,9 +377,10 @@ class BaseService
      * Players can learn from failure, but not a lot.
      * @param Profile $profile
      * @param $jobData
+     * @param int $modifier
      * @return bool
      */
-    protected function learnFromFailure(Profile $profile, $jobData)
+    protected function learnFromFailure(Profile $profile, $jobData, $modifier = 0)
     {
         foreach ($jobData['skills'] as $skillName) {
             $skill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findOneBy([
@@ -380,7 +389,7 @@ class BaseService
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill->getId());
             if ($skillRating >= SkillRating::MAX_SKILL_RATING_FAIL_LEARN) continue;
-            $chance = 100 - $skillRating;
+            $chance = 100 - $skillRating + $modifier;
             if ($chance < 1) return true;
             if (mt_rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;

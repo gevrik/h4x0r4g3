@@ -373,6 +373,51 @@ class ProfileService extends BaseService
                         $this->translate('You start stealthing...')
                     )
                 ];
+                $xmessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">[%s] starts stealthing</pre>'),
+                    $profile->getUser()->getDisplayName()
+                );
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile);
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function stopStealthing($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            if (!$profile->getStealthing()) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You are not stealthing...')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $profile->setStealthing(false);
+                $this->entityManager->flush($profile);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate('You stop stealthing...')
+                    )
+                ];
+                $xmessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">[%s] stops stealthing</pre>'),
+                    $profile->getUser()->getDisplayName()
+                );
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile);
             }
         }
         return $this->response;
