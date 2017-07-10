@@ -75,7 +75,7 @@ class LoginService extends BaseService
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-danger">MAXIMUM AMOUNT OF CLIENTS REACHED - PLEASE TRY AGAIN LATER</pre>'
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">MAXIMUM AMOUNT OF CLIENTS REACHED - PLEASE TRY AGAIN LATER</pre>')
                     )
                 );
                 $disconnect = true;
@@ -110,14 +110,14 @@ class LoginService extends BaseService
                 if (strlen($clientData->username) > 30) {
                     $response = array(
                         'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Username must be between 3 and 30 characters, please try again</pre>'
+                        'message' => $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Username must be between 3 and 30 characters, please try again</pre>')
                     );
                     $disconnect = true;
                 }
                 else if (strlen($clientData->username) < 3) {
                     $response = array(
                         'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Username must be between 3 and 30 characters, please try again</pre>'
+                        'message' => $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Username must be between 3 and 30 characters, please try again</pre>')
                     );
                     $disconnect = true;
                 }
@@ -139,7 +139,6 @@ class LoginService extends BaseService
                             $solution = $x * $y;
                             break;
                     }
-                    var_dump($solution);
                     $clientData->captchasolution = $solution;
                     $ws->setClientData($resourceId, 'captchasolution', $solution);
                     $captchaImage = new TextToImage();
@@ -153,7 +152,7 @@ class LoginService extends BaseService
             else {
                 $response = array(
                     'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Username can only contain alphanumeric characters, please try again</pre>'
+                    'message' => $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Username can only contain alphanumeric characters, please try again</pre>')
                 );
                 $disconnect = true;
             }

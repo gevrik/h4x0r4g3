@@ -35,6 +35,8 @@ class Skill
     const ID_BLADECODING = 17;
     const ID_BLASTERCODING = 18;
     const ID_SHIELDCODING = 19;
+    const ID_STEALTH = 20;
+    const ID_DETECTION = 21;
 
     /**
      * @ORM\Id

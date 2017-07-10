@@ -151,8 +151,16 @@ class IndexController extends AbstractActionController
         $loop->run();
     }
 
+    /**
+     * Used to add skill ratings for new skills to existing users.
+     */
     public function cliResetSkillsAction()
     {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
         // add skills
         $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
         $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
@@ -167,14 +175,23 @@ class IndexController extends AbstractActionController
                 $skillRating->setProfile($profile);
                 $skillRating->setRating($skill->getLevel());
                 $skillRating->setSkill($skill);
+                $skillRating->setNpc(NULL);
                 $this->entityManager->persist($skillRating);
             }
         }
         $this->entityManager->flush();
     }
 
+    /**
+     * TODO for mini-game
+     */
     public function cliParseStackOverflowForPostsAction()
     {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
         $html = new \simple_html_dom();
         $html->load_file('http://www.stackoverflow.com');
         $links = $html->find('a');
@@ -189,8 +206,17 @@ class IndexController extends AbstractActionController
         }
     }
 
+    /**
+     * To populate the word table after a new server installation.
+     * @return bool
+     */
     public function cliPopulateWordTableAction()
     {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
         set_time_limit(0);
         $console = $this->getServiceLocator()->get('console');
         $console->writeLine('Reading in CSV', ColorInterface::GREEN);
@@ -213,8 +239,17 @@ class IndexController extends AbstractActionController
 
     }
 
+    /**
+     * To populate the company name table after a new server installation.
+     * @return bool
+     */
     public function cliPopulateCompanyNamesTableAction()
     {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
         set_time_limit(0);
         $console = $this->getServiceLocator()->get('console');
         $console->writeLine('Reading in CSV', ColorInterface::GREEN);
