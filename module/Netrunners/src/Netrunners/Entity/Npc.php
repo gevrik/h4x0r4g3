@@ -42,76 +42,82 @@ class Npc
     protected $description;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseEeg;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseSnippets;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseCredits;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $level;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseBlade;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseBlaster;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseShield;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseDetection;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseStealth;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $baseSlots;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $aggressive;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
     protected $roaming;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $stealthing;
 
     /**
      * @ORM\Column(type="integer", nullable=true)
@@ -387,6 +393,24 @@ class Npc
     public function setRoaming($roaming)
     {
         $this->roaming = $roaming;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStealthing()
+    {
+        return $this->stealthing;
+    }
+
+    /**
+     * @param int $stealthing
+     * @return Npc
+     */
+    public function setStealthing($stealthing)
+    {
+        $this->stealthing = $stealthing;
         return $this;
     }
 

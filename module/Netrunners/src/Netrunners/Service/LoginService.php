@@ -293,6 +293,7 @@ class LoginService extends BaseService
             $profile->setShoulderArmor(NULL);
             $profile->setTorsoArmor(NULL);
             $profile->setUpperArmArmor(NULL);
+            $profile->setStealthing(false);
             // add skills
             $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
             foreach ($skills as $skill) {

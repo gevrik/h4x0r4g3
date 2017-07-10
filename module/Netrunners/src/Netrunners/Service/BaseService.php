@@ -289,6 +289,23 @@ class BaseService
     }
 
     /**
+     * @param Profile|NpcInstance $detector
+     * @param Profile|NpcInstance $stealther
+     * @return bool
+     */
+    protected function canSee($detector, $stealther)
+    {
+        $canSee = true;
+        if ($stealther->getStealthing()) {
+            $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+            $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
+            $chance = 50 + $detectorSkillRating - $stealtherSkillRating;
+            if (mt_rand(1, 100) > $chance) $canSee = false;
+        }
+        return $canSee;
+    }
+
+    /**
      * Get the amount of used memory for the given profile.
      * @param Profile $profile
      * @return int
@@ -415,7 +432,7 @@ class BaseService
     }
 
     /**
-     * @param Profile $profile
+     * @param Profile|NpcInstance $profile
      * @param int $skillId
      * @return int
      */

@@ -48,7 +48,7 @@ class SkillRating
     protected $skill;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Npc")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance")
      */
     protected $npc;
 

@@ -136,13 +136,13 @@ class CombatService extends BaseService
         }
         // modifier for npc attacker
         if ($attacker instanceof NpcInstance) {
-            $skillRating += $attacker->getLevel() * 20;
+            $skillRating += $this->getSkillRating($attacker, Skill::ID_BLADES);
         }
         if ($defender instanceof Profile) {
             $defenseRating += ($defender->getBlade()) ? $defender->getBlade()->getLevel() : 0;
         }
         if ($defender instanceof NpcInstance) {
-            $defenseRating = $defender->getLevel() * 20; // TODO add skills to npcs and then use multiplier 10 + skill rating
+            $defenseRating = $this->getSkillRating($defender, Skill::ID_BLADES);
         }
         $roll = mt_rand(1, 100);
         if ($roll <= ($skillRating - $defenseRating)) {

@@ -129,7 +129,8 @@ class NodeService extends BaseService
         $profiles = [];
         foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
             $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
-            if($requestedProfile && $requestedProfile != $profile && $requestedProfile->getCurrentNode() == $currentNode) $profiles[] = $requestedProfile;
+            /** @var Profile $requestedProfile */
+            if($requestedProfile && $requestedProfile !== $profile && $requestedProfile->getCurrentNode() == $currentNode && $this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
         }
         if (count($profiles) > 0) $returnMessage[] = sprintf('<pre class="text-users">%s:</pre>', $this->translate(self::USERS_STRING));
         $counter = 0;

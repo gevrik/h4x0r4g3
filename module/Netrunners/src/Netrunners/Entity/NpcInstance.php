@@ -70,18 +70,6 @@ class NpcInstance
      * @ORM\Column(type="integer", nullable=true)
      * @var int
      */
-    protected $detection;
-
-    /**
-     * @ORM\Column(type="integer", nullable=true)
-     * @var int
-     */
-    protected $stealth;
-
-    /**
-     * @ORM\Column(type="integer", nullable=true)
-     * @var int
-     */
     protected $slots;
 
     /**
@@ -286,42 +274,6 @@ class NpcInstance
     public function setLevel($level)
     {
         $this->level = $level;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getDetection()
-    {
-        return $this->detection;
-    }
-
-    /**
-     * @param int $detection
-     * @return NpcInstance
-     */
-    public function setDetection($detection)
-    {
-        $this->detection = $detection;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getStealth()
-    {
-        return $this->stealth;
-    }
-
-    /**
-     * @param int $stealth
-     * @return NpcInstance
-     */
-    public function setStealth($stealth)
-    {
-        $this->stealth = $stealth;
         return $this;
     }
 

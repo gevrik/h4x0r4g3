@@ -75,6 +75,12 @@ class Profile
      */
     protected $locale;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $stealthing;
+
     // ORM
 
     /**
@@ -322,6 +328,24 @@ class Profile
     public function setLocale($locale)
     {
         $this->locale = $locale;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStealthing()
+    {
+        return $this->stealthing;
+    }
+
+    /**
+     * @param int $stealthing
+     * @return Profile
+     */
+    public function setStealthing($stealthing)
+    {
+        $this->stealthing = $stealthing;
         return $this;
     }
 

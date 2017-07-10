@@ -344,6 +344,41 @@ class ProfileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function startStealthing($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            if ($profile->getStealthing()) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You are already stealthing...')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $profile->setStealthing(true);
+                $this->entityManager->flush($profile);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate('You start stealthing...')
+                    )
+                ];
+            }
+        }
+        return $this->response;
+    }
+
+    /**
      * @param int $resourceId
      * @return array|bool
      */
