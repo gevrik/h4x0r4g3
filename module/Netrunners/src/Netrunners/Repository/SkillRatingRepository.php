@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 
@@ -19,16 +20,25 @@ class SkillRatingRepository extends EntityRepository
 
     /**
      * Find the skill rating for the given profile and skill.
-     * @param Profile $profile
+     * @param Profile|NpcInstance $profile
      * @param Skill $skill
      * @return null|object
      */
-    public function findByProfileAndSkill(Profile $profile, Skill $skill)
+    public function findByProfileAndSkill($profile, Skill $skill)
     {
-        return $this->findOneBy([
-            'profile' => $profile,
-            'skill' => $skill
-        ]);
+        if ($profile instanceof Profile) {
+            $result = $this->findOneBy([
+                'profile' => $profile,
+                'skill' => $skill
+            ]);
+        }
+        else {
+            $result = $this->findOneBy([
+                'npc' => $profile,
+                'skill' => $skill
+            ]);
+        }
+        return $result;
     }
 
 }

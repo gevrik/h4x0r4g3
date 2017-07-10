@@ -351,7 +351,8 @@ class ParserService
                 $response = $this->nodeService->listNodes($resourceId);
                 break;
             case 'nodetype':
-                $response = $this->nodeService->changeNodeType($resourceId, $contentArray);
+                //$response = $this->nodeService->changeNodeType($resourceId, $contentArray);
+                $response = $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
                 break;
             case 'options':
                 $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
@@ -425,7 +426,7 @@ class ParserService
                 $response = $this->fileService->touchFile($resourceId, $contentArray);
                 break;
             case 'upgradenode':
-                $response = $this->nodeService->enterUpgradeMode($resourceId, $userCommand);
+                $response = $this->nodeService->enterMode($resourceId, $userCommand);
                 break;
             /** ADMIN STUFF */
             case 'banip':
@@ -563,12 +564,15 @@ class ParserService
         $confirmData = (object)$clientData->confirm;
         if (!isset($confirmData->command)) return true;
         $response = false;
-        if ($content == 'yes') {
+        if ($content == 'yes' || $content == 'y' || $content == 'confirm') {
             switch ($confirmData->command) {
                 default:
                     break;
                 case 'upgradenode':
                     $response = $this->nodeService->upgradeNode($resourceId);
+                    break;
+                case 'nodetype':
+                    $response = $this->nodeService->changeNodeType($resourceId, $confirmData->contentArray);
                     break;
             }
         }
@@ -586,6 +590,7 @@ class ParserService
         }
         else {
             $response['exitconfirmmode'] = true;
+            $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         }
         return $response;
     }

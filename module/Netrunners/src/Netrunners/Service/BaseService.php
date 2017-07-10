@@ -445,7 +445,7 @@ class BaseService
      * @param int $skillId
      * @return int
      */
-    protected function getSkillRating(Profile $profile, $skillId)
+    protected function getSkillRating($profile, $skillId)
     {
         $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
         /** @var Skill $skill */

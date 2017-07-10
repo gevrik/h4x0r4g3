@@ -12,10 +12,12 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
+use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\Group;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
@@ -364,68 +366,102 @@ class LoopService extends BaseService
             foreach ($databaseNodes as $databaseNode) {
                 /** @var Node $databaseNode */
                 if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) break;
-                $nodeLevel = $databaseNode->getLevel();
-                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_MURPHY_VIRUS);
+                $possibleSpawns = [Npc::ID_MURPHY_VIRUS, Npc::ID_KILLER_VIRUS];
+                $spawn = mt_rand(0, count($possibleSpawns)-1);
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', $possibleSpawns[$spawn]);
                 /** @var Npc $npc */
-                $npcInstance = new NpcInstance();
-                $npcInstance->setNpc($npc);
-                $npcInstance->setAdded(new \DateTime());
-                $npcInstance->setProfile(NULL);
-                $npcInstance->setNode($databaseNode);
-                $credits = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                $npcInstance->setCredits($npc->getBaseCredits() + $credits);
-                $snippets = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                $npcInstance->setSnippets($npc->getBaseSnippets() + $snippets);
-                $npcInstance->setAggressive($npc->getAggressive());
-                $maxEeg = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                $npcInstance->setMaxEeg($npc->getBaseEeg() + $maxEeg);
-                $npcInstance->setCurrentEeg($npc->getBaseEeg() + $maxEeg);
-                $npcInstance->setDescription($npc->getDescription());
-                $npcInstance->setName($npc->getName());
-                $npcInstance->setFaction(NULL);
-                $npcInstance->setHomeNode($databaseNode);
-                $npcInstance->setRoaming($npc->getRoaming());
-                $npcInstance->setGroup(NULL);
-                $npcInstance->setLevel($databaseNode->getLevel());
-                $npcInstance->setSlots($npc->getBaseSlots());
-                $npcInstance->setStealthing($npc->getStealthing());
-                $npcInstance->setSystem($databaseNode->getSystem());
-                $npcInstance->setHomeSystem($databaseNode->getSystem());
-                $this->entityManager->persist($npcInstance);
-                // TODO skillratings
-                $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
-                foreach ($skills as $skill) {
-                    /** @var Skill $skill */
-                    $rating = 0;
-                    switch ($skill->getId()) {
-                        default:
-                            continue;
-                        case Skill::ID_STEALTH:
-                            $rating = $npc->getBaseStealth() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                            break;
-                        case Skill::ID_DETECTION:
-                            $rating = $npc->getBaseDetection() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                            break;
-                        case Skill::ID_BLADES:
-                            $rating = $npc->getBaseBlade() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                            break;
-                        case Skill::ID_BLASTERS:
-                            $rating = $npc->getBaseBlaster() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                            break;
-                        case Skill::ID_SHIELDS:
-                            $rating = $npc->getBaseShield() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                            break;
-                    }
-                    $skillRating = new SkillRating();
-                    $skillRating->setNpc($npcInstance);
-                    $skillRating->setProfile(NULL);
-                    $skillRating->setSkill($skill);
-                    $skillRating->setRating($rating);
-                    $this->entityManager->persist($skillRating);
-                }
+                $this->spawnNpcInstance($npc, $databaseNode);
+            }
+            $firewallNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_FIREWALL);
+            foreach ($firewallNodes as $firewallNode) {
+                /** @var Node $firewallNode */
+                /* check if this node has already spawned a bouncer */
+                $existing = $this->npcInstanceRepo->findOneByHomeNode($firewallNode);
+                if ($existing) continue;
+                /* looks like we can spawn it */
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_BOUNCER_HELPER);
+                /** @var Npc $npc */
+                $profile = $system->getProfile();
+                $faction = $system->getFaction();
+                $group = $system->getGroup();
+                $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group);
             }
         }
         $this->entityManager->flush();
+    }
+
+    /**
+     * @param Npc $npc
+     * @param Node $node
+     * @param Profile|NULL $profile
+     * @param Faction|NULL $faction
+     * @param Group|NULL $group
+     */
+    private function spawnNpcInstance(
+        Npc $npc,
+        Node $node,
+        Profile $profile = NULL,
+        Faction $faction = NULL,
+        Group $group = NULL
+    )
+    {
+        $nodeLevel = $node->getLevel();
+        $npcInstance = new NpcInstance();
+        $npcInstance->setNpc($npc);
+        $npcInstance->setAdded(new \DateTime());
+        $npcInstance->setProfile($profile);
+        $npcInstance->setNode($node);
+        $credits = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+        $npcInstance->setCredits($npc->getBaseCredits() + $credits);
+        $snippets = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+        $npcInstance->setSnippets($npc->getBaseSnippets() + $snippets);
+        $npcInstance->setAggressive($npc->getAggressive());
+        $maxEeg = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+        $npcInstance->setMaxEeg($npc->getBaseEeg() + $maxEeg);
+        $npcInstance->setCurrentEeg($npc->getBaseEeg() + $maxEeg);
+        $npcInstance->setDescription($npc->getDescription());
+        $npcInstance->setName($npc->getName());
+        $npcInstance->setFaction($faction);
+        $npcInstance->setHomeNode($node);
+        $npcInstance->setRoaming($npc->getRoaming());
+        $npcInstance->setGroup($group);
+        $npcInstance->setLevel($node->getLevel());
+        $npcInstance->setSlots($npc->getBaseSlots());
+        $npcInstance->setStealthing($npc->getStealthing());
+        $npcInstance->setSystem($node->getSystem());
+        $npcInstance->setHomeSystem($node->getSystem());
+        $this->entityManager->persist($npcInstance);
+        /* add skills */
+        $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
+        foreach ($skills as $skill) {
+            /** @var Skill $skill */
+            $rating = 0;
+            switch ($skill->getId()) {
+                default:
+                    continue;
+                case Skill::ID_STEALTH:
+                    $rating = $npc->getBaseStealth() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                    break;
+                case Skill::ID_DETECTION:
+                    $rating = $npc->getBaseDetection() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                    break;
+                case Skill::ID_BLADES:
+                    $rating = $npc->getBaseBlade() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                    break;
+                case Skill::ID_BLASTERS:
+                    $rating = $npc->getBaseBlaster() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                    break;
+                case Skill::ID_SHIELDS:
+                    $rating = $npc->getBaseShield() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
+                    break;
+            }
+            $skillRating = new SkillRating();
+            $skillRating->setNpc($npcInstance);
+            $skillRating->setProfile(NULL);
+            $skillRating->setSkill($skill);
+            $skillRating->setRating($rating);
+            $this->entityManager->persist($skillRating);
+        }
     }
 
     /**

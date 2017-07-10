@@ -15,8 +15,10 @@ use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
+use Netrunners\Repository\SkillRatingRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -199,7 +201,7 @@ class CombatService extends BaseService
                     );
                     $this->getWebsocketServer()->removeCombatant($defender);
                     $this->getWebsocketServer()->removeCombatant($attacker);
-                    $this->entityManager->remove($defender);
+                    $this->flatlineNpcInstance($defender);
                 }
                 else {
                     $attackerMessage = sprintf(
@@ -231,11 +233,31 @@ class CombatService extends BaseService
         return [$attackerMessage, $defenderMessage];
     }
 
+    /**
+     * @param Profile $profile
+     */
     private function flatlineProfile(Profile $profile)
     {
         $profile->setEeg(10);
         $this->entityManager->flush($profile);
         $this->movePlayerToTargetNode(NULL, NULL , $profile, $profile->getCurrentNode(), $profile->getHomeNode());
+    }
+
+    /**
+     * @param NpcInstance $npcInstance
+     */
+    private function flatlineNpcInstance(NpcInstance $npcInstance)
+    {
+        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
+        /** @var SkillRatingRepository $skillRatingRepo */
+        $skillRatings = $skillRatingRepo->findBy([
+            'npc' => $npcInstance
+        ]);
+        foreach ($skillRatings as $skillRating) {
+            /** @var SkillRating $skillRating */
+            $this->entityManager->remove($skillRating);
+        }
+        $this->entityManager->remove($npcInstance);
     }
 
 }

@@ -34,4 +34,12 @@ class NpcInstanceRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    public function findOneByHomeNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('ni');
+        $qb->where('ni.homeNode = :node');
+        $qb->setParameter('node', $node);
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
 }

@@ -196,58 +196,58 @@ class NodeService extends BaseService
      * @param array $contentArray
      * @return array|bool|false
      */
-    public function enterUpgradeMode($resourceId, $command, $contentArray = [])
+    public function enterMode($resourceId, $command, $contentArray = [])
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $this->response = $this->isActionBlocked($resourceId);
         if (!$this->response) {
-            $message = false;
-            $responseCommand = 'enterconfirmmode';
             $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
             switch ($command) {
                 default:
                     break;
                 case 'upgradenode':
-                    $node = $profile->getCurrentNode();
-                    if ($node->getSystem()->getProfile() != $profile) {
-                        $message = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Permission denied')
-                        );
-                        $responseCommand = 'showmessage';
-                    }
-                    if (!$message && $node->getLevel() > 3) {
-                        $message = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('This node is already at max level')
-                        );
-                        $responseCommand = 'showmessage';
-                    }
-                    if (!$message) {
-                        $nodeType = $node->getNodeType();
-                        $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
-                        if ($upgradeCost > $profile->getCredits()) {
-                            $message = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to upgrade this node</pre>'),
-                                $upgradeCost
-                            );
-                            $responseCommand = 'showmessage';
-                        }
-                        if (!$message) {
-                            $message = sprintf(
+                    $node = $this->upgradeNodeChecks();
+                    $nodeType = $node->getNodeType();
+                    $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
+                    if (!$this->response) {
+                        $this->response = [
+                            'command' => 'enterconfirmmode',
+                            'message' => sprintf(
                                 $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need %s credits to upgrade this node - Please confirm this action:</pre>'),
                                 $upgradeCost
-                            );
+                            )
+                        ];
+                    }
+                    break;
+                case 'nodetype':
+                    $nodeType = $this->changeNodeTypeChecks($contentArray);
+                    if (!$this->response) {
+                        $currentNode = $profile->getCurrentNode();
+                        if ($currentNode->getLevel() > 1) {
+                            $this->response = [
+                                'command' => 'enterconfirmmode',
+                                'message' => sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need [%s] credits to change the node type - <span class="text-danger">the current node [%s] will be reset to level 1</span></pre>'),
+                                    $nodeType->getCost(),
+                                    $currentNode->getNodeType()->getName()
+                                )
+                            ];
+                        }
+                        else {
+                            $this->response = [
+                                'command' => 'enterconfirmmode',
+                                'message' => sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need [%s] credits to change the node type - the current node type is [%s]</span></pre>'),
+                                    $nodeType->getCost(),
+                                    $currentNode->getNodeType()->getName()
+                                )
+                            ];
                         }
                     }
                     break;
             }
-            $this->response = [
-                'command' => $responseCommand,
-                'message' => $message
-            ];
         }
         return $this->response;
     }
@@ -262,51 +262,70 @@ class NodeService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $this->response = $this->isActionBlocked($resourceId);
-        $responseCommand = 'showmessage';
-        $message = false;
+        $node = false;
         if (!$this->response) {
-            $node = $profile->getCurrentNode();
-            if ($node->getSystem()->getProfile() != $profile) {
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                );
-            }
-            if (!$message && $node->getLevel() > 3) {
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This node is already at max level')
-                );
-                $responseCommand = 'showmessage';
-            }
-            if (!$message) {
-                $nodeType = $node->getNodeType();
-                $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
-                if ($upgradeCost > $profile->getCredits()) {
-                    $message = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to upgrade this node</pre>'),
-                        $upgradeCost
-                    );
-                }
-                if (!$message) {
-                    $profile->setCredits($profile->getCredits() - $upgradeCost);
-                    $node->setLevel($node->getLevel()+1);
-                    $this->entityManager->flush();
-                    $message = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have upgraded [%s] to level [%s]</pre>'),
-                        $node->getName(),
-                        $node->getLevel()
-                    );
-                }
-            }
+            $node = $this->upgradeNodeChecks();
+        }
+        if (!$this->response && $node) {
+            $nodeType = $node->getNodeType();
+            $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
+            $profile->setCredits($profile->getCredits() - $upgradeCost);
+            $node->setLevel($node->getLevel()+1);
+            $this->entityManager->flush();
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have upgraded [%s] to level [%s]</pre>'),
+                $node->getName(),
+                $node->getLevel()
+            );
             $this->response = [
-                'command' => $responseCommand,
+                'command' => 'showmessage',
                 'message' => $message,
                 'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData),
                 'exitconfirmmode' => true
             ];
         }
         return $this->response;
+    }
+
+    /**
+     * @return Node|NULL
+     */
+    private function upgradeNodeChecks()
+    {
+        $profile = $this->user->getProfile();
+        $node = $profile->getCurrentNode();
+        if (!$this->response && $node->getSystem()->getProfile() != $profile) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            ];
+        }
+        if (!$this->response && $node->getLevel() > 3) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('This node is already at max level')
+                )
+            ];
+        }
+        $nodeType = $node->getNodeType();
+        $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
+        if (!$this->response) {
+            if ($upgradeCost > $profile->getCredits()) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to upgrade this node</pre>'),
+                        $upgradeCost
+                    )
+                ];
+            }
+        }
+        return $node;
     }
 
     /**
@@ -342,6 +361,18 @@ class NodeService extends BaseService
                 )
             );
         }
+        // check if the system has reached its max size
+        $currentSystem = $currentNode->getSystem();
+        $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
+        if (!$this->response && $nodeamount >= $currentSystem->getMaxSize()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('System has reached its maximum size')
+                )
+            );
+        }
         // check if we are in a home node, you can't add nodes to a home node
         if (!$this->response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
             $this->response = array(
@@ -354,7 +385,6 @@ class NodeService extends BaseService
         }
         // check if there are enough cpus to support the new node
         if (!$this->response) {
-            $currentSystem = $currentNode->getSystem();
             $cpus = $this->nodeRepo->findBySystemAndType($currentSystem, NodeType::ID_CPU);
             $amountCpus = count($cpus);
             $cpuRating = 0;
@@ -501,9 +531,37 @@ class NodeService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
         /* node types can be given by name or number, so we need to handle both */
+        $nodeType = $this->changeNodeTypeChecks($contentArray);
+        if (!$this->response) {
+            // TODO a lot more stuff needs to be done depending on the existing node-type
+            $currentCredits = $profile->getCredits();
+            $profile->setCredits($currentCredits - $nodeType->getCost());
+            $currentNode->setNodeType($nodeType);
+            $currentNode->setLevel(1);
+            $currentNode->setName($nodeType->getShortName());
+            $this->entityManager->flush();
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Node type changed to %s</pre>'),
+                    $nodeType->getName()
+                )
+            );
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $contentArray
+     * @return NodeType
+     */
+    private function changeNodeTypeChecks($contentArray)
+    {
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         if (!$this->response && !$parameter) {
@@ -581,21 +639,7 @@ class NodeService extends BaseService
                 )
             );
         }
-        if (!$this->response) {
-            $currentCredits = $profile->getCredits();
-            $profile->setCredits($currentCredits - $nodeType->getCost());
-            $currentNode->setNodeType($nodeType);
-            $currentNode->setName($nodeType->getShortName());
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node type changed to %s</pre>'),
-                    $nodeType->getName()
-                )
-            );
-        }
-        return $this->response;
+        return $nodeType;
     }
 
     /**

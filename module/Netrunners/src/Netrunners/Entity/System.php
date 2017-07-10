@@ -42,12 +42,28 @@ class System
      */
     protected $alertLevel;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":64}, nullable=true)
+     * @var int
+     */
+    protected $maxSize;
+
     // ORM
 
     /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
      **/
     protected $profile;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Faction")
+     **/
+    protected $faction;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Group")
+     **/
+    protected $group;
 
 
     /**
@@ -122,6 +138,24 @@ class System
         return $this;
     }
 
+    /**
+     * @return int
+     */
+    public function getMaxSize()
+    {
+        return $this->maxSize;
+    }
+
+    /**
+     * @param int $maxSize
+     * @return System
+     */
+    public function setMaxSize($maxSize)
+    {
+        $this->maxSize = $maxSize;
+        return $this;
+    }
+
     // ORM
 
     /**
@@ -139,6 +173,42 @@ class System
     public function setProfile($profile)
     {
         $this->profile = $profile;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getFaction()
+    {
+        return $this->faction;
+    }
+
+    /**
+     * @param mixed $faction
+     * @return System
+     */
+    public function setFaction($faction)
+    {
+        $this->faction = $faction;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getGroup()
+    {
+        return $this->group;
+    }
+
+    /**
+     * @param mixed $group
+     * @return System
+     */
+    public function setGroup($group)
+    {
+        $this->group = $group;
         return $this;
     }
 
