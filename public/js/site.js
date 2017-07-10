@@ -128,6 +128,10 @@
                     loginStage = 'confirmusercreate';
                     md.append('<div class="text-muted output-line">Unknown user, do you want to create an account for this username? (y/n) </div>');
                     break;
+                case 'solvecaptcha':
+                    loginStage = 'solvecaptcha';
+                    md.append('<div class="text-muted output-line">Please solve this: <img src="../temp/captcha.png" alt="captcha" /></div>');
+                    break;
                 case 'createpassword':
                     loginStage = 'createpassword';
                     //commandInput.attr('type', 'password');
@@ -470,6 +474,13 @@
                             case 'createpasswordconfirm':
                                 jsonData = {
                                     command: 'createpasswordconfirm',
+                                    hash: hash,
+                                    content: message
+                                };
+                                break;
+                            case 'solvecaptcha':
+                                jsonData = {
+                                    command: 'solvecaptcha',
                                     hash: hash,
                                     content: message
                                 };

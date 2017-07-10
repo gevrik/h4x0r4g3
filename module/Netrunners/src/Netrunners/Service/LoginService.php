@@ -17,6 +17,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Model\TextToImage;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Crypt\Password\Bcrypt;
@@ -121,8 +122,31 @@ class LoginService extends BaseService
                     $disconnect = true;
                 }
                 else {
+                    // ok, they want to create a new user, have them solve a captcha
+                    $operators = ['+', '-', '*'];
+                    $x = mt_rand(1, 20);
+                    $y = mt_rand(1, 20);
+                    $operatorRand = mt_rand(0, 2);
+                    $operator = $operators[$operatorRand];
+                    switch ($operator) {
+                        default:
+                            $solution = $x + $y;
+                            break;
+                        case '-':
+                            $solution = $x - $y;
+                            break;
+                        case '*':
+                            $solution = $x * $y;
+                            break;
+                    }
+                    var_dump($solution);
+                    $clientData->captchasolution = $solution;
+                    $ws->setClientData($resourceId, 'captchasolution', $solution);
+                    $captchaImage = new TextToImage();
+                    $captchaImage->createImage($x . ' ' . $operator . ' ' . $y);
+                    $captchaImage->saveAsPng('captcha', getcwd() . '/public/temp/');
                     $response = array(
-                        'command' => 'createpassword',
+                        'command' => 'solvecaptcha'
                     );
                 }
             }
@@ -133,6 +157,28 @@ class LoginService extends BaseService
                 );
                 $disconnect = true;
             }
+        }
+        else {
+            $disconnect = true;
+        }
+        return [$disconnect, $response];
+    }
+
+    /**
+     * @param $resourceId
+     * @param $content
+     * @return array
+     */
+    public function solveCaptcha($resourceId, $content)
+    {
+        $ws = $this->getWebsocketServer();
+        $clientData = $ws->getClientData($resourceId);
+        $disconnect = false;
+        $response = false;
+        if ($content == $clientData->captchasolution) {
+            $response = array(
+                'command' => 'createpassword'
+            );
         }
         else {
             $disconnect = true;
