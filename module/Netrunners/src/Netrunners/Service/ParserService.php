@@ -121,6 +121,10 @@ class ParserService
      */
     protected $npcInstanceService;
 
+    /**
+     * @var FactionService
+     */
+    protected $factionService;
 
     /**
      * @param EntityManager $entityManager
@@ -142,6 +146,7 @@ class ParserService
      * @param ManpageService $manpageService
      * @param CombatService $combatService
      * @param NpcInstanceService $npcInstanceService
+     * @param FactionService $factionService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -162,7 +167,8 @@ class ParserService
         GameOptionService $gameOptionService,
         ManpageService $manpageService,
         CombatService $combatService,
-        NpcInstanceService $npcInstanceService
+        NpcInstanceService $npcInstanceService,
+        FactionService $factionService
     )
     {
         $this->entityManager = $entityManager;
@@ -184,6 +190,7 @@ class ParserService
         $this->manpageService = $manpageService;
         $this->combatService = $combatService;
         $this->npcInstanceService = $npcInstanceService;
+        $this->factionService = $factionService;
     }
 
     /**
@@ -288,8 +295,15 @@ class ParserService
             case 'execute':
                 $response = $this->fileService->executeFile($resourceId, $contentArray);
                 break;
+            case 'factionchat':
+            case 'fc':
+                $response = $this->chatService->factionChat($resourceId, $contentArray);
+                break;
             case 'factionratings':
                 $response = $this->profileService->showFactionRatings($resourceId);
+                break;
+            case 'factions':
+                $response = $this->factionService->listFactions($resourceId);
                 break;
             case 'filemods':
                 $response = $this->fileService->showFileMods();
@@ -332,6 +346,9 @@ class ParserService
             case 'inventory':
                 $response = $this->profileService->showInventory($resourceId);
                 break;
+            case 'joinfaction':
+                $response = $this->factionService->joinFaction($resourceId);
+                break;
             case 'kill':
                 $response = $this->fileService->killProcess($resourceId, $contentArray);
                 break;
@@ -371,9 +388,9 @@ class ParserService
             case 'options':
                 $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
                 break;
-            case 'removenode':
-                $response = $this->nodeService->removeNode($resourceId);
-                break;
+//            case 'removenode':
+//                $response = $this->nodeService->removeNode($resourceId);
+//                break;
             case 'parts':
             case 'resources':
             case 'res':
@@ -623,7 +640,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack cd changepassword clear code commands connect editnode entityname equipment execute factionratings filemods filename gc help home initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $message = $this->translator->translate('addconnection addnode attack cd changepassword clear code commands connect editnode entityname equipment execute factionratings factions filemods filename gc help home initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

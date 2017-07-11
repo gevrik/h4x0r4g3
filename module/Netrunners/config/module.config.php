@@ -35,6 +35,7 @@ return array(
             'Netrunners\Service\CodingService' => 'Netrunners\Factory\CodingServiceFactory',
             'Netrunners\Service\CodebreakerService' => 'Netrunners\Factory\CodebreakerServiceFactory',
             'Netrunners\Service\CombatService' => 'Netrunners\Factory\CombatServiceFactory',
+            'Netrunners\Service\FactionService' => 'Netrunners\Factory\FactionServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
             'Netrunners\Service\ConnectionService' => 'Netrunners\Factory\ConnectionServiceFactory',
             'Netrunners\Service\GameOptionService' => 'Netrunners\Factory\GameOptionServiceFactory',

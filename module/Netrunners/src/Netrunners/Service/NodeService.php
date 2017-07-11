@@ -759,6 +759,7 @@ class NodeService extends BaseService
      */
     public function removeNode($resourceId)
     {
+        // TODO needs a full rework - as a lot of stuff needs to happen on node removal
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
@@ -805,6 +806,35 @@ class NodeService extends BaseService
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Unable to remove node which still contains other users')
+                )
+            );
+        }
+        $homeProfiles = $this->profileRepo->findBy([
+            'homeNode' => $currentNode
+        ]);
+        // check if this is the home node of someone
+        if (!$this->response && count($homeProfiles) > 0) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to remove a node which is another user\'s home node')
+                )
+            );
+        }
+        // check if this is a cpu node and the last one...
+        $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
+        if (
+            !$this->response &&
+            $currentNode->getNodeType()->getId() == NodeType::ID_CPU &&
+            (int)$cpuCount < 2
+        )
+        {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to remove the last CPU node of this system')
                 )
             );
         }

@@ -379,12 +379,36 @@ class LoopService extends BaseService
                 $existing = $this->npcInstanceRepo->findOneByHomeNode($firewallNode);
                 if ($existing) continue;
                 /* looks like we can spawn it */
-                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_BOUNCER_HELPER);
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_BOUNCER_ICE);
                 /** @var Npc $npc */
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
                 $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group);
+            }
+            $terminalNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_TERMINAL);
+            foreach ($terminalNodes as $terminalNode) {
+                /** @var Node $terminalNode */
+                if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) break;
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WORKER_PROGRAM);
+                /** @var Npc $npc */
+                $profile = $system->getProfile();
+                $faction = $system->getFaction();
+                $group = $system->getGroup();
+                $this->spawnNpcInstance($npc, $terminalNode, $profile, $faction, $group);
+            }
+            $recruitmentNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_RECRUITMENT);
+            foreach ($recruitmentNodes as $recruitmentNode) {
+                /** @var Node $recruitmentNode */
+                /* check if this node has already spawned a sentinel */
+                $existing = $this->npcInstanceRepo->findOneByHomeNode($recruitmentNode);
+                if ($existing) continue;
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_SENTINEL_ICE);
+                /** @var Npc $npc */
+                $profile = $system->getProfile();
+                $faction = $system->getFaction();
+                $group = $system->getGroup();
+                $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group);
             }
         }
         $this->entityManager->flush();

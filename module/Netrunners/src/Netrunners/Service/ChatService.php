@@ -37,6 +37,11 @@ class ChatService extends BaseService
     const CHANNEL_NEWBIE = 'NEWBIE';
 
     /**
+     * @const CHANNEL_FACTION
+     */
+    const CHANNEL_FACTION = 'FACTION';
+
+    /**
      * @var FileRepository
      */
     protected $fileRepo;
@@ -96,7 +101,6 @@ class ChatService extends BaseService
                 if ($clientUser === $this->user) {
                     $this->response = array(
                         'command' => 'showmessage',
-                        'type' => ChatService::CHANNEL_GLOBAL,
                         'message' => $messageContent
                     );
                 }
@@ -104,7 +108,74 @@ class ChatService extends BaseService
                     if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
                     $xresponse = array(
                         'command' => 'showmessageprepend',
-                        'type' => ChatService::CHANNEL_GLOBAL,
+                        'message' => $messageContent
+                    );
+                    $wsClient->send(json_encode($xresponse));
+                }
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function factionChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        // get profile
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
+        // check if the have a running chat client
+        if (!$this->response) {
+            if (!$this->fileRepo->findChatClientForProfile($profile)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You need a running chatclient to use faction chat')
+                    )
+                ];
+            }
+            if (!$this->response && !$profile->getFaction()) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You need to be a member of a faction to use faction chat')
+                    )
+                ];
+            }
+        }
+        if (!$this->response) {
+            $messageContent = implode(' ', $contentArray);
+            if (!$messageContent || $messageContent == '') return true;
+            $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_FACTION);
+            $wsClients = $ws->getClients();
+            $wsClientsData = $ws->getClientsData();
+            foreach ($wsClients as $wsClient) {
+                /** @var ConnectionInterface $wsClient */
+                /** @noinspection PhpUndefinedFieldInspection */
+                if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+                /** @noinspection PhpUndefinedFieldInspection */
+                $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+                if (!$clientUser) continue;
+                /** @var User $clientUser */
+                if ($clientUser === $this->user) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => $messageContent
+                    );
+                }
+                else {
+                    if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+                    if ($clientUser->getProfile()->getFaction() != $profile->getFaction()) continue;
+                    $xresponse = array(
+                        'command' => 'showmessageprepend',
                         'message' => $messageContent
                     );
                     $wsClient->send(json_encode($xresponse));
@@ -145,14 +216,12 @@ class ChatService extends BaseService
                 if ($clientUser === $this->user) {
                     $this->response = array(
                         'command' => 'showmessage',
-                        'type' => ChatService::CHANNEL_SAY,
                         'message' => $messageContent
                     );
                 }
                 else {
                     $xresponse = array(
                         'command' => 'showmessageprepend',
-                        'type' => ChatService::CHANNEL_SAY,
                         'message' => $messageContent
                     );
                     $wsClient->send(json_encode($xresponse));
@@ -191,14 +260,12 @@ class ChatService extends BaseService
             if ($clientUser === $this->user) {
                 $this->response = array(
                     'command' => 'showmessage',
-                    'type' => ChatService::CHANNEL_NEWBIE,
                     'message' => $messageContent
                 );
             }
             else {
                 $xresponse = array(
                     'command' => 'showmessageprepend',
-                    'type' => ChatService::CHANNEL_NEWBIE,
                     'message' => $messageContent
                 );
                 $wsClient->send(json_encode($xresponse));

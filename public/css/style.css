@@ -103,6 +103,10 @@ pre {
     color: #cc6d00;
 }
 
+.text-faction {
+    color: #66ccff;
+}
+
 .panel-container {
     position: fixed;
     width: 40%;

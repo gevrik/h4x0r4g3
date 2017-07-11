@@ -81,6 +81,12 @@ class Profile
      */
     protected $stealthing;
 
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $factionJoinBlockDate;
+
     // ORM
 
     /**
@@ -162,6 +168,7 @@ class Profile
      * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
      */
     protected $shoesArmor;
+
 
     /**
      * Constructor for Profile.
@@ -346,6 +353,24 @@ class Profile
     public function setStealthing($stealthing)
     {
         $this->stealthing = $stealthing;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getFactionJoinBlockDate()
+    {
+        return $this->factionJoinBlockDate;
+    }
+
+    /**
+     * @param \DateTime $factionJoinBlockDate
+     * @return Profile
+     */
+    public function setFactionJoinBlockDate($factionJoinBlockDate)
+    {
+        $this->factionJoinBlockDate = $factionJoinBlockDate;
         return $this;
     }
 

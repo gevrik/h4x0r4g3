@@ -431,6 +431,34 @@ class IndexController extends AbstractActionController
             $node_pio->setNodeType($nodeType);
             $node_pio->setCreated(new \DateTime());
             $this->entityManager->persist($node_pio);
+            // recruitment node
+            $node_rec = new Node();
+            $node_rec->setName('faction_recruitment');
+            $node_rec->setLevel(10);
+            $node_rec->setSystem($system);
+            $node_rec->setDescription('faction headquarter recruitment node');
+            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RECRUITMENT);
+            /** @var NodeType $nodeType */
+            $node_rec->setNodeType($nodeType);
+            $node_rec->setCreated(new \DateTime());
+            $this->entityManager->persist($node_rec);
+            // connection between recruitment and public io
+            $connection = new Connection();
+            $connection->setCreated(new \DateTime());
+            $connection->setLevel(10);
+            $connection->setIsOpen(NULL);
+            $connection->setSourceNode($node_rec);
+            $connection->setTargetNode($node_pio);
+            $connection->setType(Connection::TYPE_NORMAL);
+            $this->entityManager->persist($connection);
+            $connection = new Connection();
+            $connection->setCreated(new \DateTime());
+            $connection->setLevel(10);
+            $connection->setIsOpen(NULL);
+            $connection->setTargetNode($node_rec);
+            $connection->setSourceNode($node_pio);
+            $connection->setType(Connection::TYPE_NORMAL);
+            $this->entityManager->persist($connection);
             // pub market node
             $node_pm = new Node();
             $node_pm->setName('public_faction_market');

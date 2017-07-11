@@ -11,6 +11,8 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Faction;
+use Netrunners\Entity\Group;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
@@ -48,6 +50,32 @@ class ProfileRepository extends EntityRepository
             $qb->setParameter('profileId', $profile->getId());
         }
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Faction $faction
+     * @return mixed
+     */
+    public function countByFaction(Faction $faction)
+    {
+        $qb = $this->createQueryBuilder('p');
+        $qb->select($qb->expr()->count('p.id'));
+        $qb->where('p.faction = :faction');
+        $qb->setParameter('faction', $faction);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param Group $group
+     * @return mixed
+     */
+    public function countByGroup(Group $group)
+    {
+        $qb = $this->createQueryBuilder('p');
+        $qb->select($qb->expr()->count('p.id'));
+        $qb->where('p.grgoup = :group');
+        $qb->setParameter('group', $group);
+        return $qb->getQuery()->getSingleScalarResult();
     }
 
 }

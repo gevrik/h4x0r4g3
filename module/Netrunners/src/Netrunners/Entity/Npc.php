@@ -18,7 +18,9 @@ class Npc
 
     const ID_MURPHY_VIRUS = 1;
     const ID_KILLER_VIRUS = 2;
-    const ID_BOUNCER_HELPER = 3;
+    const ID_BOUNCER_ICE = 3;
+    const ID_WORKER_PROGRAM = 4;
+    const ID_SENTINEL_ICE = 5;
 
     const TYPE_VIRUS = 1;
     const TYPE_HELPER = 2;

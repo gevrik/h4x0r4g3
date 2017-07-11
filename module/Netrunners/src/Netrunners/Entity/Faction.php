@@ -67,6 +67,13 @@ class Faction
     protected $added;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $openRecruitment;
+
+
+    /**
      * @return int
      */
     public function getId()
@@ -189,6 +196,42 @@ class Faction
     public function setAdded($added)
     {
         $this->added = $added;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getJoinable()
+    {
+        return $this->joinable;
+    }
+
+    /**
+     * @param int $joinable
+     * @return Faction
+     */
+    public function setJoinable($joinable)
+    {
+        $this->joinable = $joinable;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getOpenRecruitment()
+    {
+        return $this->openRecruitment;
+    }
+
+    /**
+     * @param int $openRecruitment
+     * @return Faction
+     */
+    public function setOpenRecruitment($openRecruitment)
+    {
+        $this->openRecruitment = $openRecruitment;
         return $this;
     }
 
