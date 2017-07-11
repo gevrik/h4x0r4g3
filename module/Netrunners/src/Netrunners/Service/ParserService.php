@@ -277,6 +277,9 @@ class ParserService
             case 'editnode':
                 $response = $this->nodeService->editNodeDescription($resourceId);
                 break;
+            case 'entityname':
+                $response = $this->npcInstanceService->changeNpcName($resourceId, $contentArray);
+                break;
             case 'equipment':
             case 'eq':
                 $response = $this->profileService->showEquipment($resourceId);
@@ -363,7 +366,6 @@ class ParserService
                 $response = $this->nodeService->listNodes($resourceId);
                 break;
             case 'nodetype':
-                //$response = $this->nodeService->changeNodeType($resourceId, $contentArray);
                 $response = $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
                 break;
             case 'options':

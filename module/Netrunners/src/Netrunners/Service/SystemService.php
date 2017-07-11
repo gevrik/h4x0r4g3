@@ -135,6 +135,9 @@ class SystemService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
+        if ($this->isSuperAdmin()) {
+            return $this->showSystemMap($resourceId);
+        }
         $this->response = $this->isActionBlocked($resourceId, true);
         if (!$this->response) {
             $profile = $this->user->getProfile();

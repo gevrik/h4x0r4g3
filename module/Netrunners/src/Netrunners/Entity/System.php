@@ -16,6 +16,12 @@ use Doctrine\ORM\Mapping as ORM;
 class System
 {
 
+    const DEFAULT_MAX_SYSTEM_SIZE = 64;
+
+    const GROUP_MAX_SYSTEM_SIZE = 128;
+
+    const FACTION_MAX_SYSTEM_SIZE = 256;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

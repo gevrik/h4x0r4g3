@@ -489,26 +489,7 @@ class NodeService extends BaseService
             );
         }
         // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$this->response && !$validator->isValid($parameter)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid node name (alpha-numeric only)')
-                )
-            );
-        }
-        // check if max of 32 characters
-        if (mb_strlen($parameter) > 32) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid node name (32-characters-max)')
-                )
-            );
-        }
+        $this->stringChecker($parameter);
         if (!$this->response) {
             // turn spaces in name to underscores
             $name = str_replace(' ', '_', $parameter);

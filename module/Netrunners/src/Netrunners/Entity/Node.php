@@ -43,6 +43,18 @@ class Node
     protected $level;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $nomob;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $nopvp;
+
+    /**
      * @ORM\Column(type="datetime", nullable=true)
      * @var \DateTime
      */
@@ -130,6 +142,42 @@ class Node
     public function setLevel($level)
     {
         $this->level = $level;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNomob()
+    {
+        return $this->nomob;
+    }
+
+    /**
+     * @param int $nomob
+     * @return Node
+     */
+    public function setNomob($nomob)
+    {
+        $this->nomob = $nomob;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNopvp()
+    {
+        return $this->nopvp;
+    }
+
+    /**
+     * @param int $nopvp
+     * @return Node
+     */
+    public function setNopvp($nopvp)
+    {
+        $this->nopvp = $nopvp;
         return $this;
     }
 

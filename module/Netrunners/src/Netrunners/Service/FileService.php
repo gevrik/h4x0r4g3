@@ -181,27 +181,8 @@ class FileService extends BaseService
                 )
             );
         }
-        // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$this->response && !$validator->isValid($parameter)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                    $this->translate('The file name contains non-alphanumeric characters')
-                )
-            );
-        }
-        // check if max of 32 characters
-        if (mb_strlen($parameter) > 32) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid file name (32-characters-max)')
-                )
-            );
-        }
+        // check string val and length
+        $this->stringChecker($parameter);
         $parameter = str_replace(' ', '_', $parameter);
         /* start logic if we do not have a response already */
         if (!$this->response) {
@@ -436,21 +417,8 @@ class FileService extends BaseService
                 )
             );
         }
-        // check if only alphanumeric
-        $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$this->response && !$validator->isValid($newName)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (alpha-numeric only)</pre>')
-            );
-        }
-        // check if max of 32 characters
-        if (mb_strlen($newName) > 32) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file name (32-characters-max)</pre>')
-            );
-        }
+        // string check
+        $this->stringChecker($newName);
         /* all checks passed, we can rename the file now */
         if (!$this->response) {
             $newName = str_replace(' ', '_', $newName);

@@ -45,6 +45,7 @@ use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
+use Zend\I18n\Validator\Alnum;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -1169,6 +1170,35 @@ class BaseService
             if (array_key_exists($combatant->getId(), $combatantData->npcs)) $inCombat = true;
         }
         return $inCombat;
+    }
+
+    /**
+     * @param string $string
+     * @param int $maxLength
+     */
+    protected function stringChecker($string = '', $maxLength = 32)
+    {
+        // check if only alphanumeric
+        $validator = new Alnum(array('allowWhiteSpace' => true));
+        if (!$this->response && !$validator->isValid($string)) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Invalid string (alpha-numeric only)')
+                )
+            );
+        }
+        // check for max characters
+        if (mb_strlen($string) > $maxLength) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid string (%s-characters-max)</pre>'),
+                    $maxLength
+                )
+            );
+        }
     }
 
 }

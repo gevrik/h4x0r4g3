@@ -25,7 +25,6 @@ use Zend\I18n\Validator\Alnum;
 
 class LoginService extends BaseService
 {
-    const DEFAULT_MAX_SYSTEM_SIZE = 64;
 
     /**
      * @param $resourceId
@@ -319,7 +318,7 @@ class LoginService extends BaseService
             $system->setAddy($addy);
             $system->setGroup(NULL);
             $system->setFaction(NULL);
-            $system->setMaxSize(self::DEFAULT_MAX_SYSTEM_SIZE);
+            $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
             $system->setAlertLevel(0);
             $this->entityManager->persist($system);
             // default io node

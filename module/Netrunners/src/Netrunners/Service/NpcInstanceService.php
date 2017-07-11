@@ -137,4 +137,79 @@ class NpcInstanceService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function changeNpcName($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        /* npc param can be given as name or number, so we need to handle both */
+        // get parameter
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray, true);
+        // check if they have specified the npc instance to change
+        if (!$this->response && !$parameter) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify the name or number of the entity that you want to rename')
+                )
+            );
+        }
+        // now check if we can find that npc instance
+        $npc = NULL;
+        if (!$this->response && $parameter) {
+            $npc = $this->findNpcByNameOrNumberInCurrentNode($parameter);
+            if (!$this->response && !$npc) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('No such entity')
+                    )
+                );
+            }
+        }
+        // check if they can change the name
+        if (!$this->response && $npc && $profile != $npc->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        $newName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$this->response && !$newName) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a name for the entity (32-chars max, alpha-numeric only)')
+                )
+            );
+        }
+        $this->stringChecker($newName);
+        if (!$this->response) {
+            // turn spaces in name to underscores
+            $name = str_replace(' ', '_', $newName);
+            $npc->setName($name);
+            $this->entityManager->flush($npc);
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Entity name changed to [%s]</pre>'),
+                    $name
+                )
+            );
+        }
+        return $this->response;
+    }
+
 }

@@ -78,7 +78,7 @@ class ConnectionService extends BaseService
         }
         // check if they can access the connection
         if (!$this->response &&
-            ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen())
+            ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen() && !$this->isSuperAdmin())
         ) {
             $this->response = array(
                 'command' => 'showmessage',

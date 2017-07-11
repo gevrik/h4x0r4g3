@@ -165,6 +165,24 @@ return array(
                         )
                     )
                 ),
+                'create-faction-systems' => array(
+                    'options' => array(
+                        'route'    => 'create-faction-systems',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-create-faction-systems'
+                        )
+                    )
+                ),
+                'create-admin-account' => array(
+                    'options' => array(
+                        'route'    => 'create-admin-account',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-create-admin-account'
+                        )
+                    )
+                ),
             ),
         ),
     ),
