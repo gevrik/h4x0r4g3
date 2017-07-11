@@ -21,6 +21,7 @@ use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SkillRepository;
+use Zend\Crypt\Password\Bcrypt;
 use Zend\Mvc\I18n\Translator;
 use Zend\Validator\EmailAddress;
 use Zend\View\Renderer\PhpRenderer;
@@ -684,6 +685,41 @@ class ProfileService extends BaseService
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
                         $this->translate('E-mail address set')
+                    )
+                ];
+            }
+        }
+        return $this->response;
+    }
+
+    public function changePassword($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $newPassword = $this->getNextParameter($contentArray, false);
+        // ask them to supply a new password
+        if (!$newPassword) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a new password (8-char-min, 30-char-max, alpha-numeric only)')
+                )
+            ];
+        }
+        else {
+            $this->stringChecker($newPassword, 30, 8);
+            if (!$this->response) {
+                $bcrypt = new Bcrypt();
+                $bcrypt->setCost(10);
+                $pass = $bcrypt->create($newPassword);
+                $this->user->setPassword($pass);
+                $this->entityManager->flush($this->user);
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Password set to: %s</pre>'),
+                        $newPassword
                     )
                 ];
             }

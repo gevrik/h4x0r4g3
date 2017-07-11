@@ -183,6 +183,15 @@ return array(
                         )
                     )
                 ),
+                'create-chatsubo' => array(
+                    'options' => array(
+                        'route'    => 'create-chatsubo',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-create-chatsubo'
+                        )
+                    )
+                ),
             ),
         ),
     ),

@@ -662,4 +662,45 @@ class IndexController extends AbstractActionController
         return true;
     }
 
+    /**
+     * @return bool
+     */
+    public function cliCreateChatsuboAction()
+    {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
+        $system = new System();
+        $system->setProfile(NULL);
+        $system->setName('the_chatsubo');
+        $system->setAddy('l33t:l33t:l33t:l33t:l33t:l33t:l33t:l33t');
+        $system->setGroup(NULL);
+        $system->setFaction(NULL);
+        $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
+        $system->setAlertLevel(0);
+        $this->entityManager->persist($system);
+        // default io node
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_PUBLICIO);
+        /** @var NodeType $nodeType */
+        $ioNode = new Node();
+        $ioNode->setCreated(new \DateTime());
+        $ioNode->setLevel(10);
+        $ioNode->setName('the_chatsubo');
+        $ioNode->setSystem($system);
+        $ioNode->setNodeType($nodeType);
+        $ioNode->setNomob(true);
+        $ioNode->setNopvp(true);
+        $ioNode->setDescription('The Chatsubo is a bar for professional expatriates; located somewhere in Japan, but you could drink virtual cocktails there for a week and never hear two words in Japanese. Ratz is tending bar, his prosthetic arm jerking monotonously as he fills a tray of glasses with draft Kirin. He sees you and smiles, his teeth a webwork of East European steel and brown decay. You are still not quite sure if Ratz is the owner of the system or just a very sophisticated Aivatar.');
+        $this->entityManager->persist($ioNode);
+        // flush to db
+        $this->entityManager->flush();
+        $console->writeLine('DONE CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
+        return true;
+    }
+
 }

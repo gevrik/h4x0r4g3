@@ -625,6 +625,37 @@ class NodeService extends BaseService
                 )
             );
         }
+        // check if it is a recruitment node but not a faction or group system
+        if (
+            !$this->response &&
+            $nodeType->getId() == NodeType::ID_RECRUITMENT &&
+            (!$currentSystem->getGroup() || !$currentSystem->getFaction())
+        )
+        {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Recruitment nodes can only be created in group or faction systems')
+                )
+            );
+        }
+        // check if this is a cpu node and the last one...
+        $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
+        if (
+            !$this->response &&
+            $currentNode->getNodeType()->getId() == NodeType::ID_CPU &&
+            (int)$cpuCount < 2
+        )
+        {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to remove the last CPU node of this system')
+                )
+            );
+        }
         return $nodeType;
     }
 
@@ -924,7 +955,8 @@ class NodeService extends BaseService
             $returnMessage = array();
             $publicIoNodes = $this->nodeRepo->findByType(NodeType::ID_PUBLICIO);
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-40s|%-12s|%-20s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-40s|%-12s|%-20s</pre>',
+                $this->translate('SYSTEM'),
                 $this->translate('ADDRESS'),
                 $this->translate('ID'),
                 $this->translate('NAME')
@@ -932,7 +964,8 @@ class NodeService extends BaseService
             foreach ($publicIoNodes as $publicIoNode) {
                 /** @var Node $publicIoNode */
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-40s|%-12s|%-20s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-40s|%-12s|%-20s</pre>',
+                    $publicIoNode->getSystem()->getName(),
                     $publicIoNode->getSystem()->getAddy(),
                     $publicIoNode->getId(),
                     $publicIoNode->getName()

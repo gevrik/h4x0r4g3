@@ -1175,8 +1175,9 @@ class BaseService
     /**
      * @param string $string
      * @param int $maxLength
+     * @param int $minLength
      */
-    protected function stringChecker($string = '', $maxLength = 32)
+    protected function stringChecker($string = '', $maxLength = 32, $minLength = 1)
     {
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
@@ -1190,12 +1191,22 @@ class BaseService
             );
         }
         // check for max characters
-        if (mb_strlen($string) > $maxLength) {
+        if (!$this->response && mb_strlen($string) > $maxLength) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid string (%s-characters-max)</pre>'),
                     $maxLength
+                )
+            );
+        }
+        // check for min characters
+        if (!$this->response && mb_strlen($string) < $minLength) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid string (%s-characters-min)</pre>'),
+                    $minLength
                 )
             );
         }
