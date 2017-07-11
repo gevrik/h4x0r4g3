@@ -11,7 +11,6 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
@@ -59,33 +58,11 @@ class CombatService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $currentNode = $profile->getCurrentNode();
         $this->response = $this->isActionBlocked($resourceId);
         if (!$this->response) {
             // get parameter
             $parameter = $this->getNextParameter($contentArray, false);
-            $searchByNumber = false;
-            if (is_numeric($parameter)) {
-                $searchByNumber = true;
-            }
-            $npcs = $this->npcInstanceRepo->findBy([
-                'node' => $currentNode
-            ]);
-            $npc = false;
-            if ($searchByNumber) {
-                if (isset($npcs[$parameter - 1])) {
-                    $npc = $npcs[$parameter - 1];
-                }
-            }
-            else {
-                foreach ($npcs as $xnpc) {
-                    /** @var Npc $xnpc */
-                    if ($xnpc->getName() == $parameter) {
-                        $npc = $xnpc;
-                        break;
-                    }
-                }
-            }
+            $npc = $this->findNpcByNameOrNumberInCurrentNode($parameter);
             if (!$this->response && !$npc) {
                 $this->response = array(
                     'command' => 'showmessage',

@@ -44,6 +44,7 @@ return array(
             'Netrunners\Service\ManpageService' => 'Netrunners\Factory\ManpageServiceFactory',
             'Netrunners\Service\NodeService' => 'Netrunners\Factory\NodeServiceFactory',
             'Netrunners\Service\NotificationService' => 'Netrunners\Factory\NotificationServiceFactory',
+            'Netrunners\Service\NpcInstanceService' => 'Netrunners\Factory\NpcInstanceServiceFactory',
             'Netrunners\Service\MailMessageService' => 'Netrunners\Factory\MailMessageServiceFactory',
             'Netrunners\Service\MilkrunService' => 'Netrunners\Factory\MilkrunServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',

@@ -38,6 +38,7 @@ use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
 use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
@@ -429,6 +430,39 @@ class BaseService
             }
         }
         return $connection;
+    }
+
+    /**
+     * @param int|string $parameter
+     * @return NpcInstance|null
+     */
+    protected function findNpcByNameOrNumberInCurrentNode($parameter)
+    {
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $npcs = $npcInstanceRepo->findBy([
+            'node' => $this->user->getProfile()->getCurrentNode()
+        ]);
+        $npc = NULL;
+        if ($searchByNumber) {
+            if (isset($npcs[$parameter - 1])) {
+                $npc = $npcs[$parameter - 1];
+            }
+        }
+        else {
+            foreach ($npcs as $xnpc) {
+                /** @var NpcInstance $xnpc */
+                if ($xnpc->getName() == $parameter) {
+                    $npc = $xnpc;
+                    break;
+                }
+            }
+        }
+        return $npc;
     }
 
     /**

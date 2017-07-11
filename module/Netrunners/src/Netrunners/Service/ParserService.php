@@ -116,6 +116,11 @@ class ParserService
      */
     protected $combatService;
 
+    /**
+     * @var NpcInstanceService
+     */
+    protected $npcInstanceService;
+
 
     /**
      * @param EntityManager $entityManager
@@ -136,6 +141,7 @@ class ParserService
      * @param GameOptionService $gameOptionService
      * @param ManpageService $manpageService
      * @param CombatService $combatService
+     * @param NpcInstanceService $npcInstanceService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -155,7 +161,8 @@ class ParserService
         CodebreakerService $codebreakerService,
         GameOptionService $gameOptionService,
         ManpageService $manpageService,
-        CombatService $combatService
+        CombatService $combatService,
+        NpcInstanceService $npcInstanceService
     )
     {
         $this->entityManager = $entityManager;
@@ -176,6 +183,7 @@ class ParserService
         $this->gameOptionService = $gameOptionService;
         $this->manpageService = $manpageService;
         $this->combatService = $combatService;
+        $this->npcInstanceService = $npcInstanceService;
     }
 
     /**
@@ -247,6 +255,10 @@ class ParserService
                 break;
             case 'connect':
                 $response = $this->nodeService->systemConnect($resourceId, $contentArray);
+                break;
+            case 'consider':
+            case 'con':
+                $response = $this->npcInstanceService->considerNpc($resourceId, $contentArray);
                 break;
             case 'shownotifications':
                 $response = $this->notificationService->showNotifications($resourceId);

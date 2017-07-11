@@ -150,10 +150,12 @@ class NodeService extends BaseService
             /** @var Profile $pprofile */
             $counter++;
             $returnMessage[] = sprintf(
-                '<pre class="text-users">%-12s: %s <span class="text-info">%s</span></pre>',
+                '<pre class="text-users">%-12s: %s %s %s %s</pre>',
                 $counter,
                 $pprofile->getUser()->getUsername(),
-                ($pprofile->getStealthing()) ? $this->translate('[stealthing]') : ''
+                ($pprofile->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
+                ($profile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getFaction()->getName()) : '',
+                ($profile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getGroup()->getName()) : ''
             );
         }
         // get npcs and show them if there are any
@@ -176,10 +178,13 @@ class NodeService extends BaseService
             /** @var NpcInstance $npcInstance */
             $counter++;
             $returnMessage[] = sprintf(
-                '<pre class="text-npcs">%-12s: %s %s</pre>',
+                '<pre class="text-npcs">%-12s: %s %s %s %s %s</pre>',
                 $counter,
                 $npcInstance->getName(),
-                ($npcInstance->getStealthing()) ? $this->translate('[stealthing]') : ''
+                ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
+                ($npcInstance->getProfile()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getProfile()->getUser()->getUsername()) : '',
+                ($npcInstance->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getFaction()->getName()) : '',
+                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : ''
             );
         }
         // prepare and return response
