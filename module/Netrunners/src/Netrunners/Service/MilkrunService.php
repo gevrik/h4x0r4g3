@@ -342,7 +342,7 @@ class MilkrunService extends BaseService
                     $milkrunIceEeg = $mapTile['iceEeg'];
                     $milkrunIceAttack = $mapTile['iceAttack'];
                     $milkrunIceArmor = $mapTile['iceArmor'];
-                    $milkrunIceSpecials = ($milkrunIce->getSpecials()) ? explode(',', $milkrunIce->getSpecials()): false;
+                    $milkrunIceSpecials = ($milkrunIce->getSpecials()) ? explode(',', $milkrunIce->getSpecials()): false; // TODO for special abilities
                     // player hurts ice
                     $newMilkrunIceEeg = (int)$milkrunIceEeg - (int)$milkrunData['attack'];
                     if ($newMilkrunIceEeg < 1) {
@@ -456,6 +456,7 @@ class MilkrunService extends BaseService
                 $mri->setCompleted(new \DateTime());
                 $this->entityManager->flush($mri);
                 $profile->setCredits($profile->getCredits() + ($mri->getMilkrun()->getCredits() * $mri->getLevel()));
+                $profile->setCompletedMilkruns($profile->getCompletedMilkruns() + 1);
                 $this->entityManager->flush($profile);
                 $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', []);
                 $this->createProfileFactionRating(
@@ -475,13 +476,14 @@ class MilkrunService extends BaseService
                         $this->translate('You have completed your current milkrun')
                     )
                 ];
-                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
+                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $this->response['playsound'] = $playSound;
             }
             else if ($failed) {
                 $mri = $this->entityManager->find('Netrunners\Entity\MilkrunInstance', $milkrunData['id']);
                 /** @var MilkrunInstance $mri */
                 $mri->setExpired(true);
-                $this->entityManager->flush($mri);
+                $profile->setFaileddMilkruns($profile->getFaileddMilkruns() + 1);
+                $this->entityManager->flush();
                 $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', []);
                 $this->createProfileFactionRating(
                     $profile,
@@ -500,7 +502,7 @@ class MilkrunService extends BaseService
                         $this->translate('You have failed your current milkrun')
                     )
                 ];
-                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
+                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $this->response['playsound'] = $playSound;
             }
             else {
                 if (!$newLevel) {
@@ -522,7 +524,7 @@ class MilkrunService extends BaseService
                     'element' => '#milkrun-game-container',
                     'level' => $milkrunData['currentLevel']
                 ];
-                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $response['playsound'] = $playSound;
+                if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $this->response['playsound'] = $playSound;
             }
         }
         return $this->response;

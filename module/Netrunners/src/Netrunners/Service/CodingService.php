@@ -317,23 +317,24 @@ class CodingService extends BaseService
         $parameter = $this->getNextParameter($contentArray, false);
         // init message
         $message = '';
+        $codeMode = $codeOptions->mode;
+        switch ($codeMode) {
+            default:
+            case 'resource':
+                $typeRepository = $this->filePartRepo;
+                /** @var FilePartRepository $typeRepository */
+                break;
+            case 'program':
+                $typeRepository = $this->fileTypeRepo;
+                /** @var FileTypeRepository $typeRepository */
+                break;
+        }
         if (!$parameter) {
-            $codeMode = $codeOptions->mode;
-            switch ($codeMode) {
-                default:
-                case 'resource':
-                    $typeRepository = $this->filePartRepo;
-                    break;
-                case 'program':
-                    $typeRepository = $this->fileTypeRepo;
-                    break;
-            }
+            /* if no param was given we return a list of possible options */
             $fileTypes = $typeRepository->findForCoding();
             foreach ($fileTypes as $fileType) {
                 /** @var FileType|FilePart $fileType */
-                $name = $fileType->getName();
-                $shortName = explode(' ', $name);
-                $message .= $shortName[0] . ' ';
+                $message .= $fileType->getName() . ' ';
             }
             $returnMessage = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
@@ -345,91 +346,17 @@ class CodingService extends BaseService
             );
         }
         else {
+            /* param was given - we need to check if this is a valid filetype or filepart */
             $message = false;
-            $value = false;
-            switch ($parameter) {
-                default:
-                    $message = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid type given')
-                    );
-                    break;
-                case FileType::STRING_CHATCLIENT:
-                    $value = FileType::ID_CHATCLIENT;
-                    break;
-                case FileType::STRING_DATAMINER:
-                    $value = FileType::ID_DATAMINER;
-                    break;
-                case FilePart::STRING_CONTROLLER:
-                    $value = FilePart::ID_CONTROLLER;
-                    break;
-                case FilePart::STRING_FRONTEND:
-                    $value = FilePart::ID_FRONTEND;
-                    break;
-                case FilePart::STRING_WHITEHAT:
-                    $value = FilePart::ID_WHITEHAT;
-                    break;
-                case FilePart::STRING_BLACKHAT:
-                    $value = FilePart::ID_BLACKHAT;
-                    break;
-                case FilePart::STRING_CRYPTO:
-                    $value = FilePart::ID_CRYPTO;
-                    break;
-                case FilePart::STRING_DATABASE:
-                    $value = FilePart::ID_DATABASE;
-                    break;
-                case FilePart::STRING_ELECTRONICS:
-                    $value = FilePart::ID_ELECTRONICS;
-                    break;
-                case FilePart::STRING_FORENSICS:
-                    $value = FilePart::ID_FORENSICS;
-                    break;
-                case FilePart::STRING_NETWORK:
-                    $value = FilePart::ID_NETWORK;
-                    break;
-                case FilePart::STRING_REVERSE:
-                    $value = FilePart::ID_REVERSE;
-                    break;
-                case FilePart::STRING_SOCIAL:
-                    $value = FilePart::ID_SOCIAL;
-                    break;
-                case FilePart::STRING_BLADE:
-                    $value = FilePart::ID_BLADE;
-                    break;
-                case FilePart::STRING_BLASTER:
-                    $value = FilePart::ID_BLASTER;
-                    break;
-                case FilePart::STRING_SHIELD:
-                    $value = FilePart::ID_SHIELD;
-                    break;
-                case FilePart::STRING_ARMOR:
-                    $value = FilePart::ID_ARMOR;
-                    break;
-                case FileType::STRING_COINMINER:
-                    $value = FileType::ID_COINMINER;
-                    break;
-                case FileType::STRING_PORTSCANNER:
-                    $value = FileType::ID_PORTSCANNER;
-                    break;
-                case FileType::STRING_JACKHAMMER:
-                    $value = FileType::ID_JACKHAMMER;
-                    break;
-                case FileType::STRING_WORMER:
-                    $value = FileType::ID_WORMER;
-                    break;
-                case FileType::STRING_CODEBREAKER:
-                    $value = FileType::ID_CODEBREAKER;
-                    break;
-                case FileType::STRING_CODEBLADE:
-                    $value = FileType::ID_CODEBLADE;
-                    break;
-                case FileType::STRING_CODEBLASTER:
-                    $value = FileType::ID_CODEBLASTER;
-                    break;
-                case FileType::STRING_CODEARMOR:
-                    $value = FileType::ID_CODEARMOR;
-                    break;
+            $entity = $typeRepository->findLikeName($parameter);
+            /** @var FilePart|FileType $entity */
+            if (!$entity) {
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Invalid type given')
+                );
             }
+            $value = $entity->getId();
             // add message if not already set
             if (!$message) $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>'),

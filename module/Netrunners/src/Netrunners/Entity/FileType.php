@@ -50,12 +50,13 @@ class FileType
     const ID_JACKHAMMER = 13;
     const ID_WORMER = 14;
     const ID_CODEBREAKER = 15;
+    const ID_CUSTOM_IDE = 16;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
     const STRING_DATAMINER = 'dataminer';
     const STRING_TEXT = 'text';
-    const STRING_ICMP_BLOCKER = 'icmpblocker';
+    const STRING_ICMP_BLOCKER = 'icmp-blocker';
     const STRING_COINMINER = 'coinminer';
     const STRING_CODEBLADE = 'codeblade';
     const STRING_CODEBLASTER = 'codeblaster';
@@ -66,6 +67,7 @@ class FileType
     const STRING_JACKHAMMER = 'jackhammer';
     const STRING_WORMER = 'wormer';
     const STRING_CODEBREAKER = 'codebreaker';
+    const STRING_CUSTOM_IDE = 'custom-ide';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -83,6 +85,7 @@ class FileType
         self::STRING_JACKHAMMER => self::ID_JACKHAMMER,
         self::STRING_WORMER => self::ID_WORMER,
         self::STRING_CODEBREAKER => self::ID_CODEBREAKER,
+        self::STRING_CUSTOM_IDE => self::ID_CUSTOM_IDE,
     ];
 
     static $armorSubtypeLookup = [

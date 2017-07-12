@@ -87,6 +87,18 @@ class Profile
      */
     protected $factionJoinBlockDate;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $completedMilkruns;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $faileddMilkruns;
+
     // ORM
 
     /**
@@ -371,6 +383,42 @@ class Profile
     public function setFactionJoinBlockDate($factionJoinBlockDate)
     {
         $this->factionJoinBlockDate = $factionJoinBlockDate;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCompletedMilkruns()
+    {
+        return $this->completedMilkruns;
+    }
+
+    /**
+     * @param int $completedMilkruns
+     * @return Profile
+     */
+    public function setCompletedMilkruns($completedMilkruns)
+    {
+        $this->completedMilkruns = $completedMilkruns;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getFaileddMilkruns()
+    {
+        return $this->faileddMilkruns;
+    }
+
+    /**
+     * @param int $faileddMilkruns
+     * @return Profile
+     */
+    public function setFaileddMilkruns($faileddMilkruns)
+    {
+        $this->faileddMilkruns = $faileddMilkruns;
         return $this;
     }
 

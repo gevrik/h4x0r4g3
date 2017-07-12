@@ -64,7 +64,7 @@ class ConnectionService extends BaseService
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
         /* connections can be given by name or number, so we need to handle both */
-        // get parameter
+        // get parameter (connection name or number)
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
         if (!$connection) {
@@ -77,8 +77,14 @@ class ConnectionService extends BaseService
             );
         }
         // check if they can access the connection
-        if (!$this->response &&
-            ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen() && !$this->isSuperAdmin())
+        if (
+            !$this->response &&
+            (
+                $connection->getType() == Connection::TYPE_CODEGATE &&
+                $profile != $currentSystem->getProfile() &&
+                !$connection->getisOpen() &&
+                !$this->isSuperAdmin()
+            )
         ) {
             $this->response = array(
                 'command' => 'showmessage',
@@ -90,6 +96,10 @@ class ConnectionService extends BaseService
         }
         if (!$this->response) {
             $this->response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
+            $this->response['additionalCommands'][] = [
+                'command' => 'map',
+                'content' => false
+            ];
         }
         return $this->response;
     }

@@ -15,10 +15,24 @@ use Doctrine\ORM\EntityRepository;
 class FilePartRepository extends EntityRepository
 {
 
+    /**
+     * @return array
+     */
     public function findForCoding()
     {
         $qb = $this->createQueryBuilder('ft');
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param $keyword
+     * @return array
+     */
+    public function findLikeName($keyword)
+    {
+        $qb = $this->createQueryBuilder('fp');
+        $qb->where($qb->expr()->like('fp.name', $qb->expr()->literal($keyword . '%')));
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
 }

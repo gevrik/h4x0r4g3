@@ -217,7 +217,7 @@ class CombatService extends BaseService
     {
         $profile->setEeg(10);
         $this->entityManager->flush($profile);
-        $this->movePlayerToTargetNode(NULL, NULL , $profile, $profile->getCurrentNode(), $profile->getHomeNode());
+        $this->movePlayerToTargetNode(NULL, $profile , NULL, $profile->getCurrentNode(), $profile->getHomeNode());
     }
 
     /**

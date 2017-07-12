@@ -501,6 +501,22 @@ class ParserService
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         $response['silent'] = $silent;
         if ($response) $from->send(json_encode($response));
+        // check if we have to work on more commands
+        if (array_key_exists('additionalCommands', $response)) {
+            foreach ($response['additionalCommands'] as $additionalCommandId => $additionalCommandData) {
+                $additionalResponse = false;
+                switch ($additionalCommandData['command']) {
+                    default:
+                        break;
+                    case 'map':
+                        $additionalResponse = $this->systemService->showAreaMap($resourceId);
+                        break;
+                }
+                if ($additionalResponse) {
+                    $from->send(json_encode($additionalResponse));
+                }
+            }
+        }
         return true;
     }
 

@@ -88,8 +88,10 @@ function playSoundByClick(target) {
 }
 
 function playSoundById(soundId) {
+    console.log(soundId);
     var instance = createjs.Sound.play(soundId);
     if (instance == null || instance.playState == createjs.Sound.PLAY_FAILED) {
+        console.log('error');
         return;
     }
     instance.addEventListener("complete", function (instance) {

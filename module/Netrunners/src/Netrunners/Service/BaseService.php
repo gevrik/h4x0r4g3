@@ -47,6 +47,7 @@ use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
 use Zend\Mvc\I18n\Translator;
+use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
 class BaseService
@@ -703,6 +704,10 @@ class BaseService
     }
 
     /**
+     * Moves the profile to the node specified by the connection or the target-node.
+     * If no connection is given then source- and target-node must be given. This also messages all profiles
+     * in the source- and target-node. If no resourceId is given, this will move the profile but not
+     * message the moved profile.
      * @param int|NULL $resourceId
      * @param Profile $profile
      * @param Connection|NULL $connection
@@ -712,7 +717,7 @@ class BaseService
      */
     protected function movePlayerToTargetNode(
         $resourceId = NULL,
-        Profile $profile,
+        Profile $profile = NULL,
         Connection $connection = NULL,
         Node $sourceNode = NULL,
         Node $targetNode = NULL
@@ -1210,6 +1215,132 @@ class BaseService
                 )
             );
         }
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showSystemMap($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            $currentSystem = $profile->getCurrentNode()->getSystem();
+            $mapArray = [
+                'nodes' => [],
+                'links' => []
+            ];
+            $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+            /** @var NodeRepository $nodeRepo */
+            $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+            /** @var ConnectionRepository $connectionRepo */
+            $nodes = $nodeRepo->findBySystem($currentSystem);
+            foreach ($nodes as $node) {
+                /** @var Node $node */
+                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
+                $mapArray['nodes'][] = [
+                    'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
+                    'type' => $group
+                ];
+                $connections = $connectionRepo->findBySourceNode($node);
+                foreach ($connections as $connection) {
+                    /** @var Connection $connection */
+                    $mapArray['links'][] = [
+                        'source' => (string)$connection->getSourceNode()->getId() . '_' .
+                            $connection->getSourceNode()->getNodeType()->getShortName() . '_' .
+                            $connection->getSourceNode()->getName(),
+                        'target' => (string)$connection->getTargetNode()->getId() . '_' .
+                            $connection->getTargetNode()->getNodeType()->getShortName() . '_' .
+                            $connection->getTargetNode()->getName(),
+                        'value' => 2,
+                        'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                    ];
+                }
+            }
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/partials/map.phtml');
+            $view->setVariable('json', json_encode($mapArray));
+            $this->response = array(
+                'command' => 'showpanel',
+                'type' => 'default',
+                'content' => $this->viewRenderer->render($view)
+            );
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function showAreaMap($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if ($this->isSuperAdmin()) {
+            return $this->showSystemMap($resourceId);
+        }
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+            /** @var ConnectionRepository $connectionRepo */
+            $profile = $this->user->getProfile();
+            $currentNode = $profile->getCurrentNode();
+            // if the profile or its faction or group owns this system, show them the full map
+            $currentSystem = $currentNode->getSystem();
+            if (
+                $profile == $currentSystem->getProfile() ||
+                $profile->getFaction() == $currentSystem->getFaction() ||
+                $profile->getGroup() == $currentSystem->getGroup()
+            ) {
+                return $this->showSystemMap($resourceId);
+            }
+            $mapArray = [
+                'nodes' => [],
+                'links' => []
+            ];
+            $nodes = [];
+            $nodes[] = $currentNode;
+            $connections = $connectionRepo->findBySourceNode($currentNode);
+            foreach ($connections as $xconnection) {
+                /** @var Connection $xconnection */
+                $nodes[] = $xconnection->getTargetNode();
+            }
+            $counter = true;
+            foreach ($nodes as $node) {
+                /** @var Node $node */
+                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
+                $mapArray['nodes'][] = [
+                    'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
+                    'type' => $group
+                ];
+                if ($counter) {
+                    $connections = $connectionRepo->findBySourceNode($node);
+                    foreach ($connections as $connection) {
+                        /** @var Connection $connection */
+                        $mapArray['links'][] = [
+                            'source' => (string)$connection->getSourceNode()->getId() . '_' . $connection->getSourceNode()->getNodeType()->getShortName() . '_' . $connection->getSourceNode()->getName(),
+                            'target' => (string)$connection->getTargetNode()->getId() . '_' . $connection->getTargetNode()->getNodeType()->getShortName() . '_' . $connection->getTargetNode()->getName(),
+                            'value' => 2,
+                            'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                        ];
+                    }
+                    $counter = false;
+                }
+            }
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/partials/map.phtml');
+            $view->setVariable('json', json_encode($mapArray));
+            $this->response = array(
+                'command' => 'showpanel',
+                'type' => 'default',
+                'content' => $this->viewRenderer->render($view)
+            );
+        }
+        return $this->response;
     }
 
 }

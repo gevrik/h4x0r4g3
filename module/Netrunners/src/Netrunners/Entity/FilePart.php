@@ -33,20 +33,20 @@ class FilePart
     const ID_ARMOR = 15;
 
     const STRING_CONTROLLER = 'controller';
-    const STRING_FRONTEND = 'frontend';
-    const STRING_WHITEHAT = 'whitehat';
-    const STRING_BLACKHAT = 'blackhat';
-    const STRING_CRYPTO = 'crypto';
-    const STRING_DATABASE = 'database';
-    const STRING_ELECTRONICS = 'electronics';
-    const STRING_FORENSICS = 'forensics';
-    const STRING_NETWORK = 'network';
-    const STRING_REVERSE = 'reverse';
-    const STRING_SOCIAL = 'social';
-    const STRING_BLADE = 'blade';
-    const STRING_BLASTER = 'blaster';
-    const STRING_SHIELD = 'shield';
-    const STRING_ARMOR = 'armor';
+    const STRING_FRONTEND = 'frontend-code';
+    const STRING_WHITEHAT = 'whitehat-code';
+    const STRING_BLACKHAT = 'blackhat-code';
+    const STRING_CRYPTO = 'crypto-code';
+    const STRING_DATABASE = 'database-code';
+    const STRING_ELECTRONICS = 'electronics-code';
+    const STRING_FORENSICS = 'forensics-code';
+    const STRING_NETWORK = 'network-code';
+    const STRING_REVERSE = 'reverse-engineering-code';
+    const STRING_SOCIAL = 'social-engineering-code';
+    const STRING_BLADE = 'blade-code';
+    const STRING_BLASTER = 'blaster-code';
+    const STRING_SHIELD = 'shield-code';
+    const STRING_ARMOR = 'armor-code';
 
     /**
      * @var array
