@@ -521,6 +521,9 @@ class FileService extends BaseService
                 case FileType::ID_CODEBREAKER:
                     $this->response = $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
                     break;
+                case FileType::ID_CUSTOM_IDE:
+                    $this->response = $this->executeCustomIde($file, $profile->getCurrentNode());
+                    break;
                 case FileType::ID_CODEBLADE:
                 case FileType::ID_CODEBLASTER:
                 case FileType::ID_CODESHIELD:
@@ -1007,6 +1010,40 @@ class FileService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeCustomIde(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a coding node</pre>'),
                     $file->getName()
                 )
             );

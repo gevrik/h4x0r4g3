@@ -205,7 +205,7 @@ class LoopService extends BaseService
             }
             $ws->setClientData($resourceId, 'action', []);
         }
-        /* now we check for milkruns that should expire */
+        /** now we check for milkruns that should expire */
         $milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
         /** @var MilkrunInstanceRepository $milkrunInstanceRepo */
         $expiringMilkruns = $milkrunInstanceRepo->findForExpiredLoop();
@@ -356,6 +356,9 @@ class LoopService extends BaseService
         return true;
     }
 
+    /**
+     *
+     */
     public function loopNpcSpawn()
     {
         $systems = $this->systemRepo->findAll();
@@ -618,6 +621,7 @@ class LoopService extends BaseService
         $roll = mt_rand(1, 100);
         $chance = $modifier - $difficulty;
         $typeId = $jobData['typeId'];
+        // TODO add bonus from "custom ide" program
         if ($jobData['mode'] == 'resource') {
             $basePart = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
         }

@@ -915,6 +915,9 @@ class BaseService
             case FileType::ID_ICMP_BLOCKER:
                 $validNodeTypes[] = NodeType::ID_IO;
                 break;
+            case FileType::ID_CUSTOM_IDE:
+                $validNodeTypes[] = NodeType::ID_CODING;
+                break;
             case FileType::ID_JACKHAMMER:
             case FileType::ID_PORTSCANNER:
             case FileType::ID_WORMER:
