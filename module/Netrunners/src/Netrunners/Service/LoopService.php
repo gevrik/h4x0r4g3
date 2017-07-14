@@ -723,6 +723,7 @@ class LoopService extends BaseService
             ];
             $this->entityManager->flush();
         }
+        // TODO lower integrity of "custom ide"
         return $response;
     }
 

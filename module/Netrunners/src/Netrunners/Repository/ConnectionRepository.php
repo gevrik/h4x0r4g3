@@ -30,6 +30,19 @@ class ConnectionRepository extends EntityRepository
     }
 
     /**
+     * @param Node $node
+     * @return mixed
+     */
+    public function countBySourceNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('c');
+        $qb->select($qb->expr()->count('c.id'));
+        $qb->where('c.sourceNode = :node');
+        $qb->setParameter('node', $node);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * Finds the connection for the given source and target node combination.
      * @param Node $sourceNode
      * @param Node $targetNode

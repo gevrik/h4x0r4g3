@@ -717,7 +717,7 @@ class BaseService
      */
     protected function movePlayerToTargetNode(
         $resourceId = NULL,
-        Profile $profile = NULL,
+        Profile $profile,
         Connection $connection = NULL,
         Node $sourceNode = NULL,
         Node $targetNode = NULL

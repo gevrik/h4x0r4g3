@@ -47,6 +47,20 @@ class FileRepository extends EntityRepository
     }
 
     /**
+     * Counts all files for the given node.
+     * @param Node $node
+     * @return array
+     */
+    public function countByNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->select($qb->expr()->count('f.id'));
+        $qb->where('f.node = :node');
+        $qb->setParameter('node', $node);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * @param Node $node
      * @param Profile $profile
      * @return array

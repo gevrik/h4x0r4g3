@@ -25,7 +25,6 @@ use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
-use Zend\I18n\Validator\Alnum;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -69,6 +68,15 @@ class NodeService extends BaseService
      */
     protected $systemRepo;
 
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
+    /**
+     * @var array
+     */
+    public $connectionsChecked = [];
 
     /**
      * NodeService constructor.
@@ -84,6 +92,7 @@ class NodeService extends BaseService
         $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
     }
 
     /**
@@ -159,9 +168,7 @@ class NodeService extends BaseService
             );
         }
         // get npcs and show them if there are any
-        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
-        /** @var NpcInstanceRepository $npcInstanceRepo */
-        $npcInstances = $npcInstanceRepo->findByNode($currentNode);
+        $npcInstances = $this->npcInstanceRepo->findByNode($currentNode);
         $npcs = [];
         foreach ($npcInstances as $npcInstance) {
             /** @var NpcInstance $npcInstance */
@@ -766,7 +773,7 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
-        // check if they can change the type
+        // check if they are allowed to remove nodes
         if (!$this->response && $profile != $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
@@ -788,13 +795,24 @@ class NodeService extends BaseService
             );
         }
         // check if there are still files in this node
-        $files = $this->fileRepo->findByNode($currentNode);
-        if (!$this->response && count($files) > 0) {
+        $fileCount = $this->fileRepo->countByNode($currentNode);
+        if (!$this->response && $fileCount > 0) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Unable to remove node which still contains files')
+                )
+            );
+        }
+        // check if there are still npcs in this node
+        $npcCount = $this->npcInstanceRepo->countByNode($currentNode);
+        if (!$this->response && $npcCount > 0) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to remove node which still contains entities')
                 )
             );
         }
@@ -809,16 +827,29 @@ class NodeService extends BaseService
                 )
             );
         }
+        // check if this is the home node of someone
         $homeProfiles = $this->profileRepo->findBy([
             'homeNode' => $currentNode
         ]);
-        // check if this is the home node of someone
         if (!$this->response && count($homeProfiles) > 0) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Unable to remove a node which is another user\'s home node')
+                )
+            );
+        }
+        // check if this is the home node of some npc
+        $homeNpcs = $this->npcInstanceRepo->findBy([
+            'homeNode' => $currentNode
+        ]);
+        if (!$this->response && count($homeNpcs) > 0) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to remove a node which is still an entity\'s home node')
                 )
             );
         }
@@ -838,19 +869,18 @@ class NodeService extends BaseService
                 )
             );
         }
-        // TODO sanity checks for storage/memory/etc
+        // TODO sanity checks for storage/memory/etc - lots of things
         /* all checks passed, we can now remove the node */
         if (!$this->response) {
-            foreach ($connections as $connection) {
-                /** @var Connection $connection */
-                $newCurrentNode = $connection->getTargetNode();
-                $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
-                $targetConnection = array_shift($targetConnection);
-                $sourceConnection = $connection;
-            }
+            $newCurrentNode = NULL;
+            $connection = array_shift($connections);
+            /** @var Connection $connection */
+            $newCurrentNode = $connection->getTargetNode();
+            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
+            $targetConnection = array_shift($targetConnection);
             $this->entityManager->remove($targetConnection);
-            $this->entityManager->remove($sourceConnection);
-            $profile->setCurrentNode($newCurrentNode);
+            $this->entityManager->remove($connection);
+            $this->movePlayerToTargetNode(NULL, $profile, NULL, $currentNode, $newCurrentNode);
             $this->entityManager->remove($currentNode);
             $this->entityManager->flush();
             $this->response = array(
@@ -860,6 +890,10 @@ class NodeService extends BaseService
                     $this->translate('The node has been removed')
                 )
             );
+            $this->response['additionalCommands'][] = [
+                'command' => 'ls',
+                'content' => false
+            ];
         }
         return $this->response;
     }
@@ -884,6 +918,44 @@ class NodeService extends BaseService
             );
         }
         return $this->response;
+    }
+
+    /**
+     * Recursive function that checks if the given node is still connected to a node of the given node type.
+     * @param Node $node
+     * @param Connection|NULL $ignoredConnection
+     * @param array $nodeTypeIds
+     * @return bool
+     */
+    public function nodeStillConnectedToNodeType(
+        Node $node,
+        Connection $ignoredConnection = NULL,
+        $nodeTypeIds = []
+    )
+    {
+        var_dump($this->connectionsChecked);
+        $nodeTypeFound = false;
+        foreach ($this->connectionRepo->findBySourceNode($node) as $connection) {
+            /** @var Connection $connection */
+            if ($connection == $ignoredConnection) continue;
+            if (in_array($connection->getId(), $this->connectionsChecked)) continue;
+            $this->connectionsChecked[] = $connection->getId();
+            $targetNode = $connection->getTargetNode();
+            if (in_array($targetNode->getNodeType()->getId(), $nodeTypeIds)) {
+                $nodeTypeFound = true;
+            }
+            if ($nodeTypeFound) {
+                break;
+            }
+            else {
+                $targetConnection = $this->connectionRepo->findOneBy([
+                    'sourceNode' => $targetNode,
+                    'targetNode' => $node
+                ]);
+                $this->nodeStillConnectedToNodeType($targetNode, $targetConnection, $nodeTypeIds);
+            }
+        }
+        return $nodeTypeFound;
     }
 
     /**

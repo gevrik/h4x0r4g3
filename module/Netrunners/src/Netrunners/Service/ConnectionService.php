@@ -98,12 +98,94 @@ class ConnectionService extends BaseService
             $this->response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
             $this->response['additionalCommands'][] = [
                 'command' => 'map',
-                'content' => false
+                'content' => false,
+                'silent' => true
             ];
         }
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function removeConnection($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $this->response = $this->isActionBlocked($resourceId);
+        /* connections can be given by name or number, so we need to handle both */
+        // get parameter and check if this is a valid connection
+        $parameter = $this->getNextParameter($contentArray, false);
+        $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
+        if (!$this->response && !$connection) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such connection')
+                )
+            );
+        }
+        // check if they can add connections
+        if (!$this->response && $profile != $currentSystem->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        // check if this is the last connection of this node
+//        if (!$this->response && $this->connectionRepo->countBySourceNode($currentNode) < 2) {
+//            $this->response = array(
+//                'command' => 'showmessage',
+//                'message' => sprintf(
+//                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+//                    $this->translate('Unable to remove the last connection of a node')
+//                )
+//            );
+//        }
+        // check if there is still a connection to an io node
+        if (!$this->response && $connection) {
+            $stillConnectedToIo = $this->getWebsocketServer()->getNodeService()->nodeStillConnectedToNodeType(
+                $currentNode,
+                $connection,
+                [NodeType::ID_PUBLICIO, NodeType::ID_IO]
+            );
+            if (!$stillConnectedToIo) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('This node would no longer be connected to an io-node after removing this connection')
+                    )
+                );
+            }
+        }
+        /* all seems good, we can remove the connection */
+        if (!$this->response) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                    $this->translate('=== CAN REMOVE CONN ===')
+                )
+            );
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function scanConnection($resourceId, $contentArray)
     {
         $this->initService($resourceId);

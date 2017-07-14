@@ -81,6 +81,7 @@
         };
         // event listener for server message
         conn.onmessage = function(e) {
+            //console.log(e.data);
             var messageArray;
             var textClass = 'muted';
             var data = JSON.parse(e.data);

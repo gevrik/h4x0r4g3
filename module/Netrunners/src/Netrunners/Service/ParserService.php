@@ -388,9 +388,12 @@ class ParserService
             case 'options':
                 $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
                 break;
-//            case 'removenode':
-//                $response = $this->nodeService->removeNode($resourceId);
-//                break;
+            case 'removeconnection':
+                $response = $this->connectionService->removeConnection($resourceId, $contentArray);
+                break;
+            case 'removenode':
+                $response = $this->nodeService->removeNode($resourceId);
+                break;
             case 'parts':
             case 'resources':
             case 'res':
@@ -510,6 +513,7 @@ class ParserService
                         break;
                     case 'map':
                         $additionalResponse = $this->systemService->showAreaMap($resourceId);
+                        $additionalResponse['silent'] = true;
                         break;
                 }
                 if ($additionalResponse) {

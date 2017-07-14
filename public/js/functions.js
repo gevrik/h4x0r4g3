@@ -71,7 +71,7 @@ function soundLoaded(event) {
 }
 
 function stopSound() {
-    if (preload != null) {
+    if (preload !== null) {
         preload.close();
     }
     createjs.Sound.stop();
@@ -79,7 +79,8 @@ function stopSound() {
 
 function playSoundByClick(target) {
     var instance = createjs.Sound.play(target.id);
-    if (instance == null || instance.playState == createjs.Sound.PLAY_FAILED) {
+    if (instance === null || instance.playState === createjs.Sound.PLAY_FAILED) {
+        console.log('play-sound-by-click-error');
         return;
     }
     instance.addEventListener("complete", function (instance) {
@@ -88,10 +89,9 @@ function playSoundByClick(target) {
 }
 
 function playSoundById(soundId) {
-    console.log(soundId);
     var instance = createjs.Sound.play(soundId);
-    if (instance == null || instance.playState == createjs.Sound.PLAY_FAILED) {
-        console.log('error');
+    if (instance === null || instance.playState === createjs.Sound.PLAY_FAILED) {
+        console.log('play-sound-by-id-error');
         return;
     }
     instance.addEventListener("complete", function (instance) {
