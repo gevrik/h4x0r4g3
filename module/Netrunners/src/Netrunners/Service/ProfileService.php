@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
@@ -727,6 +728,146 @@ class ProfileService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showBankBalance($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = [
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Your current bank balance in credits: %s</pre>'),
+                $profile->getBankBalance()
+            )
+        ];
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function depositCredits($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        $profile = $this->user->getProfile();
+        // check if they are in a banking node
+        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_BANK) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You need to be in a banking node to deposit credits')
+                )
+            ];
+        }
+        $amount = $this->getNextParameter($contentArray, false, true);
+        // check if an amount was given
+        if (!$this->response && !$amount) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify how much you want to deposit')
+                )
+            ];
+        }
+        // check if they have that much
+        if (!$this->response && $amount && $profile->getCredits() < $amount) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You do not have that many credits')
+                )
+            ];
+        }
+        /* all seems good, deposit */
+        if (!$this->response && $amount) {
+            $profile->setCredits($profile->getCredits() - $amount);
+            $profile->setBankBalance($profile->getBankBalance() + $amount);
+            $this->entityManager->flush($profile);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have deposited %s credits into your bank account</pre>'),
+                    $amount
+                )
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function withdrawCredits($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        $profile = $this->user->getProfile();
+        // check if they are in a banking node
+        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_BANK) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You need to be in a banking node to deposit credits')
+                )
+            ];
+        }
+        $amount = $this->getNextParameter($contentArray, false, true);
+        // check if an amount was given
+        if (!$this->response && !$amount) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify how much you want to withdraw')
+                )
+            ];
+        }
+        // check if they have that much
+        if (!$this->response && $amount && $profile->getBankBalance() < $amount) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You do not have that many credits in your bank account')
+                )
+            ];
+        }
+        /* all seems good, withdraw */
+        if (!$this->response && $amount) {
+            $profile->setCredits($profile->getCredits() + $amount);
+            $profile->setBankBalance($profile->getBankBalance() - $amount);
+            $this->entityManager->flush($profile);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have withdrawn %s credits from your bank account</pre>'),
+                    $amount
+                )
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function setProfileLocale($resourceId, $contentArray)
     {
         $this->initService($resourceId);

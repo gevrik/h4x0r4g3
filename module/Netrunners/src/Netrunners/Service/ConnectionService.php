@@ -141,19 +141,11 @@ class ConnectionService extends BaseService
                 )
             );
         }
-        // check if this is the last connection of this node
-//        if (!$this->response && $this->connectionRepo->countBySourceNode($currentNode) < 2) {
-//            $this->response = array(
-//                'command' => 'showmessage',
-//                'message' => sprintf(
-//                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-//                    $this->translate('Unable to remove the last connection of a node')
-//                )
-//            );
-//        }
         // check if there is still a connection to an io node
         if (!$this->response && $connection) {
-            $stillConnectedToIo = $this->getWebsocketServer()->getNodeService()->nodeStillConnectedToNodeType(
+            $nodeService = $this->getWebsocketServer()->getNodeService();
+            $nodeService->initConnectionsChecked();
+            $stillConnectedToIo = $nodeService->nodeStillConnectedToNodeType(
                 $currentNode,
                 $connection,
                 [NodeType::ID_PUBLICIO, NodeType::ID_IO]
@@ -167,6 +159,7 @@ class ConnectionService extends BaseService
                     )
                 );
             }
+            $nodeService->initConnectionsChecked();
         }
         /* all seems good, we can remove the connection */
         if (!$this->response) {

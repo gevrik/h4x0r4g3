@@ -21,7 +21,6 @@ use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
-use Zend\I18n\Validator\Alnum;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -523,6 +522,9 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_CUSTOM_IDE:
                     $this->response = $this->executeCustomIde($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_SKIMMER:
+                    $this->response = $this->executeSkimmer($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_CODEBLADE:
                 case FileType::ID_CODEBLASTER:
@@ -1044,6 +1046,40 @@ class FileService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a coding node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeSkimmer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
                     $file->getName()
                 )
             );

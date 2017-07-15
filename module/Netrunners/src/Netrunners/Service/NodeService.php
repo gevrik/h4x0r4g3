@@ -96,6 +96,15 @@ class NodeService extends BaseService
     }
 
     /**
+     *
+     */
+    public function initConnectionsChecked()
+    {
+        $this->connectionsChecked = [];
+        return $this;
+    }
+
+    /**
      * Shows important information about a node.
      * If no node is given, it will use the profile's current node.
      * @param $resourceId
@@ -126,7 +135,16 @@ class NodeService extends BaseService
             $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getTargetNode()->getName());
         }
         // get files and show them if there are any
-        $files = $this->fileRepo->findByNode($currentNode);
+        $files = [];
+        foreach ($this->fileRepo->findByNode($currentNode) as $fileInstance) {
+            /** @var File $fileInstance */
+            if (!$fileInstance->getFileType()->getStealthing()) {
+                $files[] = $fileInstance;
+            }
+            else {
+                if ($this->canSee($profile, $fileInstance)) $files[] = $fileInstance;
+            }
+        }
         if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', $this->translate(self::FILES_STRING));
         $counter = 0;
         foreach ($files as $file) {
@@ -895,6 +913,7 @@ class NodeService extends BaseService
                 'content' => false
             ];
         }
+        $this->connectionsChecked = [];
         return $this->response;
     }
 

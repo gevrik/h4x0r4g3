@@ -17,24 +17,6 @@ use Doctrine\ORM\Mapping as ORM;
 class FileType
 {
 
-    const SUBTYPE_ARMOR_HEAD = 1;
-    const SUBTYPE_ARMOR_UPPER_ARM = 2;
-    const SUBTYPE_ARMOR_LOWER_ARM = 3;
-    const SUBTYPE_ARMOR_HANDS = 4;
-    const SUBTYPE_ARMOR_TORSO = 5;
-    const SUBTYPE_ARMOR_LEGS = 6;
-    const SUBTYPE_ARMOR_SHOES = 7;
-    const SUBTYPE_ARMOR_SHOULDERS = 8;
-
-    const SUBTYPE_ARMOR_HEAD_STRING = 'head';
-    const SUBTYPE_ARMOR_UPPER_ARM_STRING = 'upper-arms';
-    const SUBTYPE_ARMOR_LOWER_ARM_STRING = 'lower-arms';
-    const SUBTYPE_ARMOR_HANDS_STRING = 'hands';
-    const SUBTYPE_ARMOR_TORSO_STRING = 'torso';
-    const SUBTYPE_ARMOR_LEGS_STRING = 'legs';
-    const SUBTYPE_ARMOR_SHOES_STRING = 'shoes';
-    const SUBTYPE_ARMOR_SHOULDERS_STRING = 'shoulders';
-
     const ID_DIRECTORY = 1;
     const ID_CHATCLIENT = 2;
     const ID_DATAMINER = 3;
@@ -51,6 +33,7 @@ class FileType
     const ID_WORMER = 14;
     const ID_CODEBREAKER = 15;
     const ID_CUSTOM_IDE = 16;
+    const ID_SKIMMER = 17;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -68,6 +51,7 @@ class FileType
     const STRING_WORMER = 'wormer';
     const STRING_CODEBREAKER = 'codebreaker';
     const STRING_CUSTOM_IDE = 'custom-ide';
+    const STRING_SKIMMER = 'skimmer';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -86,7 +70,26 @@ class FileType
         self::STRING_WORMER => self::ID_WORMER,
         self::STRING_CODEBREAKER => self::ID_CODEBREAKER,
         self::STRING_CUSTOM_IDE => self::ID_CUSTOM_IDE,
+        self::STRING_SKIMMER => self::ID_SKIMMER,
     ];
+
+    const SUBTYPE_ARMOR_HEAD = 1;
+    const SUBTYPE_ARMOR_UPPER_ARM = 2;
+    const SUBTYPE_ARMOR_LOWER_ARM = 3;
+    const SUBTYPE_ARMOR_HANDS = 4;
+    const SUBTYPE_ARMOR_TORSO = 5;
+    const SUBTYPE_ARMOR_LEGS = 6;
+    const SUBTYPE_ARMOR_SHOES = 7;
+    const SUBTYPE_ARMOR_SHOULDERS = 8;
+
+    const SUBTYPE_ARMOR_HEAD_STRING = 'head';
+    const SUBTYPE_ARMOR_UPPER_ARM_STRING = 'upper-arms';
+    const SUBTYPE_ARMOR_LOWER_ARM_STRING = 'lower-arms';
+    const SUBTYPE_ARMOR_HANDS_STRING = 'hands';
+    const SUBTYPE_ARMOR_TORSO_STRING = 'torso';
+    const SUBTYPE_ARMOR_LEGS_STRING = 'legs';
+    const SUBTYPE_ARMOR_SHOES_STRING = 'shoes';
+    const SUBTYPE_ARMOR_SHOULDERS_STRING = 'shoulders';
 
     static $armorSubtypeLookup = [
         self::SUBTYPE_ARMOR_HEAD => self::SUBTYPE_ARMOR_HEAD_STRING,
@@ -154,6 +157,12 @@ class FileType
      * @var int
      */
     protected $blocking;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $stealthing;
 
     // ORM
 
@@ -337,6 +346,24 @@ class FileType
     public function setBlocking($blocking)
     {
         $this->blocking = $blocking;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStealthing()
+    {
+        return $this->stealthing;
+    }
+
+    /**
+     * @param int $stealthing
+     * @return FileType
+     */
+    public function setStealthing($stealthing)
+    {
+        $this->stealthing = $stealthing;
         return $this;
     }
 

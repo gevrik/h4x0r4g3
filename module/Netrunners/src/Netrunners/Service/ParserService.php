@@ -270,6 +270,9 @@ class ParserService
             case 'shownotifications':
                 $response = $this->notificationService->showNotifications($resourceId);
                 break;
+            case 'deposit':
+                $response = $this->profileService->depositCredits($resourceId, $contentArray);
+                break;
             case 'dismissnotification':
             case 'dn':
                 $this->notificationService->dismissNotification($resourceId, $entityId);
@@ -434,6 +437,9 @@ class ParserService
             case 'skills':
                 $response = $this->profileService->showSkills($resourceId);
                 break;
+            case 'showbalance':
+                $response = $this->profileService->showBankBalance($resourceId);
+                break;
             case 'showunreadmails':
                 $response = $this->mailMessageService->displayAmountUnreadMails($resourceId);
                 break;
@@ -465,6 +471,9 @@ class ParserService
                 break;
             case 'upgradenode':
                 $response = $this->nodeService->enterMode($resourceId, $userCommand);
+                break;
+            case 'withdraw':
+                $response = $this->profileService->withdrawCredits($resourceId, $contentArray);
                 break;
             /** ADMIN STUFF */
             case 'banip':
@@ -660,7 +669,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack cd changepassword clear code commands connect editnode entityname equipment execute factionratings factions filemods filename gc help home initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale skillpoints skills stat survey system time touch');
+        $message = $this->translator->translate('addconnection addnode attack cd changepassword clear code commands connect deposit editnode entityname equipment execute factionratings factions filemods filename gc help home initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale showbalaance skillpoints skills stat survey system time touch withdraw');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

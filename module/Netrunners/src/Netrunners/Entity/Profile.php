@@ -64,6 +64,12 @@ class Profile
     protected $securityRating;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $bankBalance;
+
+    /**
      * @ORM\Column(type="string", nullable=true)
      * @var string
      */
@@ -311,6 +317,24 @@ class Profile
     public function setSecurityRating($securityRating)
     {
         $this->securityRating = $securityRating;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getBankBalance()
+    {
+        return $this->bankBalance;
+    }
+
+    /**
+     * @param int $bankBalance
+     * @return Profile
+     */
+    public function setBankBalance($bankBalance)
+    {
+        $this->bankBalance = $bankBalance;
         return $this;
     }
 

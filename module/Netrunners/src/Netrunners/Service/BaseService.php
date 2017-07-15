@@ -292,16 +292,36 @@ class BaseService
     }
 
     /**
-     * @param Profile|NpcInstance $detector
-     * @param Profile|NpcInstance $stealther
+     * @param Profile|NpcInstance|File $detector
+     * @param Profile|NpcInstance|File $stealther
      * @return bool
      */
     protected function canSee($detector, $stealther)
     {
+        // init vars
         $canSee = true;
-        if ($stealther->getStealthing()) {
-            $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+        $detectorSkillRating = 0;
+        $stealtherSkillRating = 0;
+        $stealthing = false;
+        // get values depending on instance
+        if ($stealther instanceof Profile) {
+            $stealthing = $stealther->getStealthing();
             $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
+            $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+        }
+        if ($stealther instanceof NpcInstance) {
+            $stealthing = $stealther->getStealthing();
+            $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
+            $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+        }
+        if ($stealther instanceof File) {
+            $stealthing = $stealther->getFileType()->getStealthing();
+            $skillRating = ceil(($stealther->getIntegrity() + $stealther->getLevel()) / 2);
+            $stealtherSkillRating = $skillRating;
+            $detectorSkillRating = $skillRating;
+        }
+        // only check if they are actively stealthing
+        if ($stealthing) {
             $chance = 50 + $detectorSkillRating - $stealtherSkillRating;
             if (mt_rand(1, 100) > $chance) $canSee = false;
             // check for skill gain
@@ -312,6 +332,7 @@ class BaseService
                 $this->learnFromSuccess($stealther, ['skills' => ['stealth']], -50);
             }
         }
+        // return result
         return $canSee;
     }
 
@@ -917,6 +938,9 @@ class BaseService
                 break;
             case FileType::ID_CUSTOM_IDE:
                 $validNodeTypes[] = NodeType::ID_CODING;
+                break;
+            case FileType::ID_SKIMMER:
+                $validNodeTypes[] = NodeType::ID_BANK;
                 break;
             case FileType::ID_JACKHAMMER:
             case FileType::ID_PORTSCANNER:
