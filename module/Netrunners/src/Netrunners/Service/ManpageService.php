@@ -230,17 +230,23 @@ class ManpageService extends BaseService
         }
         if (!$this->response) {
             $manpageId = $this->getNextParameter($contentArray, false, true);
-            $manpage = $this->manpageRepo->find($manpageId);
-            if (!$this->response && !$manpage) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid manpage id')
-                    )
-                );
+            if (!$this->response && !$manpageId) {
+                $this->response = $this->listManpages($resourceId);
             }
-            if (!$this->response) {
+            $manpage = NULL;
+            if (!$this->response && $manpageId) {
+                $manpage = $this->manpageRepo->find($manpageId);
+                if (!$manpage) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid manpage id')
+                        )
+                    );
+                }
+            }
+            if (!$this->response && $manpage) {
                 $view = new ViewModel();
                 $view->setTemplate('netrunners/manpage/edit-manpage.phtml');
                 $view->setVariable('manpage', $manpage);
@@ -289,9 +295,9 @@ class ManpageService extends BaseService
                     )
                 ];
             }
-            if (!$this->response) {
+            if (!$this->response && $manpage) {
                 /** @var Manpage $manpage */
-                $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a']);
+                $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
                 $mpTitle = htmLawed($mpTitle, ['safe'=>1,'elements'=>'strong']);
                 $manpage->setSubject($mpTitle);
                 $manpage->setContent($content);

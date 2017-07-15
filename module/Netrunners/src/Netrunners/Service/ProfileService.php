@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
+use Netrunners\Entity\Feedback;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\NodeType;
@@ -25,6 +26,7 @@ use Netrunners\Repository\SkillRepository;
 use Zend\Crypt\Password\Bcrypt;
 use Zend\Mvc\I18n\Translator;
 use Zend\Validator\EmailAddress;
+use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
 class ProfileService extends BaseService
@@ -906,6 +908,29 @@ class ProfileService extends BaseService
                     )
                 ];
             }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param int $type
+     * @return array|bool|false
+     */
+    public function openSubmitFeedbackPanel($resourceId, $type = Feedback::TYPE_TYPO_ID)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/feedback/feedback-form.phtml');
+            $view->setVariable('typeid', $type);
+            $view->setVariable('typestring', Feedback::$lookup[$type]);
+            $this->response = array(
+                'command' => 'showpanel',
+                'content' => $this->viewRenderer->render($view)
+            );
         }
         return $this->response;
     }

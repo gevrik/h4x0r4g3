@@ -34,6 +34,10 @@ class FileType
     const ID_CODEBREAKER = 15;
     const ID_CUSTOM_IDE = 16;
     const ID_SKIMMER = 17;
+    const ID_BLOCKCHAINER = 18;
+    const ID_IO_TRACER = 19;
+    const ID_OBFUSCATOR = 20;
+    const ID_CLOAK = 21;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -52,6 +56,10 @@ class FileType
     const STRING_CODEBREAKER = 'codebreaker';
     const STRING_CUSTOM_IDE = 'custom-ide';
     const STRING_SKIMMER = 'skimmer';
+    const STRING_BLOCKCHAINER = 'blockchainer';
+    const STRING_IO_TRACER = 'io-tracer';
+    const STRING_OBFUSCATOR = 'obfuscator';
+    const STRING_CLOAK = 'cloak';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -71,6 +79,10 @@ class FileType
         self::STRING_CODEBREAKER => self::ID_CODEBREAKER,
         self::STRING_CUSTOM_IDE => self::ID_CUSTOM_IDE,
         self::STRING_SKIMMER => self::ID_SKIMMER,
+        self::STRING_BLOCKCHAINER => self::ID_BLOCKCHAINER,
+        self::STRING_IO_TRACER => self::ID_IO_TRACER,
+        self::STRING_OBFUSCATOR => self::ID_OBFUSCATOR,
+        self::STRING_CLOAK => self::ID_CLOAK,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;

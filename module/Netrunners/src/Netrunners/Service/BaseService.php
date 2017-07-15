@@ -313,12 +313,20 @@ class BaseService
             $stealthing = $stealther->getStealthing();
             $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
             $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+            // they can see their own instances
+            if ($detector instanceof Profile) {
+                if ($detector == $stealther->getProfile()) $stealthing = false;
+            }
         }
         if ($stealther instanceof File) {
             $stealthing = $stealther->getFileType()->getStealthing();
             $skillRating = ceil(($stealther->getIntegrity() + $stealther->getLevel()) / 2);
             $stealtherSkillRating = $skillRating;
             $detectorSkillRating = $skillRating;
+            // they can see their own files
+            if ($detector instanceof Profile) {
+                if ($detector == $stealther->getProfile()) $stealthing = false;
+            }
         }
         // only check if they are actively stealthing
         if ($stealthing) {
@@ -940,11 +948,13 @@ class BaseService
                 $validNodeTypes[] = NodeType::ID_CODING;
                 break;
             case FileType::ID_SKIMMER:
+            case FileType::ID_BLOCKCHAINER:
                 $validNodeTypes[] = NodeType::ID_BANK;
                 break;
             case FileType::ID_JACKHAMMER:
             case FileType::ID_PORTSCANNER:
             case FileType::ID_WORMER:
+            case FileType::ID_IO_TRACER:
                 $validNodeTypes[] = NodeType::ID_IO;
                 $validNodeTypes[] = NodeType::ID_PUBLICIO;
                 break;
@@ -1155,12 +1165,14 @@ class BaseService
     }
 
     /**
+     * @param User|NULL $user
      * @return bool
      */
-    protected function isSuperAdmin()
+    protected function isSuperAdmin(User $user = NULL)
     {
         $isAdmin = false;
-        foreach ($this->user->getRoles() as $role) {
+        $roles = ($user) ? $user->getRoles() : $this->user->getRoles();
+        foreach ($roles as $role) {
             /** @var Role $role */
             if ($role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
                 $isAdmin = true;
@@ -1171,13 +1183,15 @@ class BaseService
     }
 
     /**
+     * @param User|NULL $user
      * @return bool
      */
-    protected function isAdmin()
+    protected function isAdmin(User $user = NULL)
     {
 
         $isAdmin = false;
-        foreach ($this->user->getRoles() as $role) {
+        $roles = ($user) ? $user->getRoles() : $this->user->getRoles();
+        foreach ($roles as $role) {
             /** @var Role $role */
             if ($role->getRoleId() === Role::ROLE_ID_ADMIN || $role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
                 $isAdmin = true;
@@ -1292,7 +1306,6 @@ class BaseService
             $view->setVariable('json', json_encode($mapArray));
             $this->response = array(
                 'command' => 'showpanel',
-                'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
         }

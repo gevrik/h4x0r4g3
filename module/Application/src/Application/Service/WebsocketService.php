@@ -3,9 +3,11 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Feedback;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\BannedIpRepository;
+use Netrunners\Repository\PlaySessionRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\ManpageService;
@@ -187,6 +189,14 @@ class WebsocketService implements MessageComponentInterface {
         $this->loop->addPeriodicTimer(self::LOOP_NPC_ROAM, function(){
             $this->loopService->loopNpcRoam();
         });
+
+        // clear orphaned play-sessions
+        $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
+        /** @var PlaySessionRepository $playSessionRepo */
+        foreach ($playSessionRepo->findOrphaned() as $orphanedPlaySession) {
+            $this->entityManager->remove($orphanedPlaySession);
+        }
+        $this->entityManager->flush();
 
         self::$instance = $this;
 
@@ -580,6 +590,13 @@ class WebsocketService implements MessageComponentInterface {
                     $from->close();
                 }
                 break;
+            case 'saveFeedback':
+                if ($hash != $this->clientsData[$resourceId]['hash']) return true;
+                $fTitle = (isset($msgData->title)) ? $msgData->title : false;
+                $fType = (isset($msgData->type)) ? $msgData->type : false;
+                $response = $this->saveFeedback($resourceId, $content, $fTitle, $fType);
+                $from->send(json_encode($response));
+                break;
             case 'saveNodeDescription':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 $response = $this->nodeService->saveNodeDescription($resourceId, $content);
@@ -622,6 +639,16 @@ class WebsocketService implements MessageComponentInterface {
     {
         /** @noinspection PhpUndefinedFieldInspection */
         $resourceId = $conn->resourceId;
+        // end play-session
+        $profile = $this->entityManager->find('Netrunners\Entity\Profile', $this->clientsData[$resourceId]['profileId']);
+        /** @var Profile $profile */
+        $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
+        /** @var PlaySessionRepository $playSessionRepo */
+        $currentPlaySession = $playSessionRepo->findCurrentPlaySession($profile);
+        if ($currentPlaySession) {
+            $currentPlaySession->setEnd(new \DateTime());
+            $this->entityManager->flush($currentPlaySession);
+        }
         // The connection is closed, remove it, as we can no longer send it messages
         unset($this->clientsData[$resourceId]);
         $this->clients->detach($conn);
@@ -638,6 +665,48 @@ class WebsocketService implements MessageComponentInterface {
         unset($this->clientsData[$conn->resourceId]);
         echo "An error has occurred: {$e->getMessage()}\n";
         $conn->close();
+    }
+
+    /**
+     * @param $resourceId
+     * @param string $content
+     * @param string $fTitle
+     * @param $type
+     * @return array|bool|false
+     */
+    public function saveFeedback(
+        $resourceId,
+        $content = '===invalid content===',
+        $fTitle = '===invalid title===',
+        $type
+    )
+    {
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientsData[$resourceId]['userId']);
+        if (!$user) return true;
+        if (!array_key_exists($type, Feedback::$lookup)) return true;
+        $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
+        $fTitle = htmLawed($fTitle, ['safe'=>1,'elements'=>'strong']);
+        $feedback = new Feedback();
+        $feedback->setSubject($fTitle);
+        $feedback->setDescription($content);
+        $feedback->setProfile($user->getProfile());
+        $feedback->setAdded(new \DateTime());
+        $feedback->setType($type);
+        $feedback->setStatus(Feedback::STATUS_SUBMITTED_ID);
+        $internalData = [
+            'currentNode' => $user->getProfile()->getCurrentNode()->getId()
+        ];
+        $feedback->setInternalData(json_encode($internalData));
+        $this->entityManager->persist($feedback);
+        $this->entityManager->flush($feedback);
+        $response = [
+            'command' => 'showmessage',
+            'message' => sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                'Feedback saved'
+            )
+        ];
+        return $response;
     }
 
 }

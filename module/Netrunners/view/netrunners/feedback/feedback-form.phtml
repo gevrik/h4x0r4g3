@@ -1,0 +1,46 @@
+<div class="panel panel-default draggable edit-feedback-panel">
+    <div class="panel-heading">
+        <button id="btn-close-feedback-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button id="save-feedback" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
+        <h3 class="panel-title"><?php echo sprintf('%s: %s', $this->translate("EDITING"), strtoupper($this->typestring)); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <input id="feedback-type" type="hidden" name="feedback-type" value="<?php echo $this->typeid; ?>" />
+        <label for="feedback-subject">
+            <input type="text" id="feedback-subject" name="feedback-subject" class="feedback-subject" style="border: 0;" value="" placeholder="short description" />
+        </label>
+        <label for="feedback-content">
+            <textarea id="feedback-content" name="feedback-content" class="feedback-content" rows="10" style="border: 0;" placeholder="detailed description"></textarea>
+        </label>
+    </div>
+</div>
+<script>
+
+    var editorWidth = $('.panel-body').innerWidth();
+    $('#feedback-content').css('width', editorWidth);
+    $('#feedback-subject').css('width', editorWidth);
+
+    $('#save-feedback').on('click', function(){
+        var jsonData = {
+            command: 'saveFeedback',
+            hash: hash,
+            content: editor1.getData(),
+            title: $('#feedback-subject').val(),
+            type: $('#feedback-type').val(),
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+    });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace( 'feedback-content', {width: editorWidth, uiColor: '#3c3c3c', contentsCss: '../../../css/ckeditor.css'} );
+        editor1.editorConfig = function( config ) {
+            config.toolbar = [
+                { name: 'basicstyles', items: [ 'Bold', 'Italic' ] },
+                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent' ] },
+                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] }
+            ];
+        };
+    }
+
+</script>

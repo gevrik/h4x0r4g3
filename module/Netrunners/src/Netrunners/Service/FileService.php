@@ -480,7 +480,7 @@ class FileService extends BaseService
             );
         }
         // check if there is enough memory to execute this
-        if (!$this->response && !$this->canExecuteFile($profile, $file) && !in_array($file->getFileType()->getId(), [FileType::ID_CODEBLADE])) {
+        if (!$this->response && !$this->canExecuteFile($profile, $file) && !in_array($file->getFileType()->getId(), [])) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -525,6 +525,18 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_SKIMMER:
                     $this->response = $this->executeSkimmer($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_BLOCKCHAINER:
+                    $this->response = $this->executeBlockchainer($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_IO_TRACER:
+                    $this->response = $this->executeIoTracer($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_OBFUSCATOR:
+                    $this->response = $this->executeObfuscator($file);
+                    break;
+                case FileType::ID_CLOAK:
+                    $this->response = $this->executeCloak($file);
                     break;
                 case FileType::ID_CODEBLADE:
                 case FileType::ID_CODEBLASTER:
@@ -964,6 +976,46 @@ class FileService extends BaseService
     }
 
     /**
+     * Executes an obfuscator file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeObfuscator(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                $file->getName(),
+                $file->getId()
+            )
+        );
+        return $response;
+    }
+
+    /**
+     * Executes an obfuscator file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeCloak(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                $file->getName(),
+                $file->getId()
+            )
+        );
+        return $response;
+    }
+
+    /**
      * @param File $file
      * @param Node $node
      * @return array|bool
@@ -1080,6 +1132,74 @@ class FileService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeBlockchainer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeIoTracer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in io nodes</pre>'),
                     $file->getName()
                 )
             );
