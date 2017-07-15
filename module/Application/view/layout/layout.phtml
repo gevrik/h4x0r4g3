@@ -13,6 +13,7 @@
         <!-- Le styles -->
         <?php echo $this->headLink(array('rel' => 'shortcut icon', 'type' => 'image/vnd.microsoft.icon', 'href' => $this->basePath() . '/img/favicon.ico'))
                         ->prependStylesheet($this->basePath('css/style.css'))
+                        ->prependStylesheet($this->basePath('DataTables/datatables.min.css'))
                         ->prependStylesheet($this->basePath('css/jquery-ui.min.css'))
                         ->prependStylesheet($this->basePath('css/bootstrap.min.css')) ?>
 
@@ -21,6 +22,7 @@
             //->prependFile($this->basePath('js/site.js'))
             ->prependFile($this->basePath('js/functions.js'))
             ->prependFile($this->basePath('js/global.js'))
+            ->prependFile($this->basePath('DataTables/datatables.min.js'))
             ->prependFile($this->basePath('js/d3.min.js'))
             ->prependFile($this->basePath('js/easeljs-0.8.2.min.js'))
             ->prependFile($this->basePath('js/soundjs-0.6.2.min.js'))

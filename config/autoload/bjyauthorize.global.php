@@ -48,6 +48,7 @@ return [
                 ['controller' => 'TmoAuth\Controller\User', 'action' => ['logout', 'changepassword'], 'roles' => 'user'],
                 ['controller' => 'Application\Controller\Index', 'roles' => ['guest', 'user']],
                 ['controller' => 'Netrunners\Controller\Profile', 'roles' => ['user']],
+                ['controller' => 'Netrunners\Controller\Feedback', 'roles' => ['admin']],
                 ['controller' => 'DoctrineModule\Controller\Cli', 'roles' => ['guest', 'user']],
             ],
 

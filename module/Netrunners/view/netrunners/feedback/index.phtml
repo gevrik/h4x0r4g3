@@ -1,0 +1,26 @@
+<h1>Feedbacks</h1>
+
+<table id="feedback-table" class="table table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>TYPE</th>
+        <th>ADDED</th>
+        <th>SUBJECT</th>
+    </tr>
+    </thead>
+</table>
+
+<script>
+    $('#feedback-table').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "ajax": "<?php echo $this->url('feedback', array('action' => 'xhrData')); ?>",
+        "columns": [
+            { "data": "id" },
+            { "data": "type" },
+            { "data": "added" },
+            { "data": "subject" }
+        ]
+    });
+</script>

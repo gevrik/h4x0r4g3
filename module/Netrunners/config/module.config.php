@@ -17,13 +17,29 @@ return array(
                     ),
                 ),
             ),
+            'feedback' => array(
+                'type' => 'segment',
+                'options' => array(
+                    'route' => '/feedback[/:action][/:id]',
+                    'constraints' => array(
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id' => '[0-9]+',
+                    ),
+                    'defaults' => array(
+                        '__NAMESPACE__' => 'Netrunners\Controller',
+                        'controller'    => 'Netrunners\Controller\Feedback',
+                        'action'        => 'index',
+                    ),
+                ),
+            ),
         ),
     ),
     'controllers' => array(
         'invokables' => array(
         ),
         'factories' => array(
-            'Netrunners\Controller\Profile' => 'Netrunners\Factory\ProfileControllerFactory'
+            'Netrunners\Controller\Profile' => 'Netrunners\Factory\ProfileControllerFactory',
+            'Netrunners\Controller\Feedback' => 'Netrunners\Factory\FeedbackControllerFactory',
         ),
     ),
     'service_manager' => array(
