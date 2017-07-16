@@ -11,18 +11,36 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\FileType;
+use Netrunners\Entity\Profile;
 
 class FileTypeRepository extends EntityRepository
 {
 
     /**
+     * @param Profile $profile
      * @return array
      */
-    public function findForCoding()
+    public function findForCoding(Profile $profile)
     {
         $qb = $this->createQueryBuilder('ft');
         $qb->where('ft.codable > 0');
-        return $qb->getQuery()->getResult();
+        $fileTypes = $qb->getQuery()->getResult();
+        $availableFileTypes = [];
+        $profileFileTypeRecipeRepo = $this->getEntityManager()->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
+        /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+        foreach ($fileTypes as $fileType) {
+            /** @var FileType $fileType */
+            if ($fileType->getNeedRecipe()) {
+                if ($profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $fileType)) {
+                    $availableFileTypes[] = $fileType;
+                }
+            }
+            else {
+                $availableFileTypes[] = $fileType;
+            }
+        }
+        return $availableFileTypes;
     }
 
     /**

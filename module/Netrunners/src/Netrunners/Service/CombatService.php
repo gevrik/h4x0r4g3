@@ -11,10 +11,12 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\File;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
+use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
 use Netrunners\Repository\SkillRatingRepository;
@@ -225,6 +227,7 @@ class CombatService extends BaseService
      */
     private function flatlineNpcInstance(NpcInstance $npcInstance)
     {
+        // take care of all the skill ratings associated with that npc instance
         $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
         /** @var SkillRatingRepository $skillRatingRepo */
         $skillRatings = $skillRatingRepo->findBy([
@@ -234,6 +237,17 @@ class CombatService extends BaseService
             /** @var SkillRating $skillRating */
             $this->entityManager->remove($skillRating);
         }
+        // take care of all the files associated with that npc instance
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $files = $fileRepo->findByNpc($npcInstance);
+        foreach ($files as $file) {
+            /** @var File $file */
+            $file->setNpc(NULL);
+            $file->setNode($npcInstance->getNode());
+            $file->setSystem($npcInstance->getNode()->getSystem());
+        }
+        // remove the npc instance
         $this->entityManager->remove($npcInstance);
     }
 

@@ -11,14 +11,16 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Profile;
 
 class FilePartRepository extends EntityRepository
 {
 
     /**
+     * @param Profile|NULL $profile
      * @return array
      */
-    public function findForCoding()
+    public function findForCoding(Profile $profile = NULL)
     {
         $qb = $this->createQueryBuilder('ft');
         return $qb->getQuery()->getResult();

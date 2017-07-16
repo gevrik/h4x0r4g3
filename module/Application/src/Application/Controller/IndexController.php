@@ -9,6 +9,7 @@ use Netrunners\Entity\Faction;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
@@ -693,6 +694,61 @@ class IndexController extends AbstractActionController
     /**
      * @return bool
      */
+    public function cliInitServerSettingsAction()
+    {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('INITIALIZING SERVER SETTINGS', ColorInterface::GREEN);
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        if ($serverSetting) {
+            $console->writeLine('SERVER SETTINGS ALREADY INITIALIZED', ColorInterface::LIGHT_RED);
+            return true;
+        }
+        $serverSetting = new ServerSetting();
+        $serverSetting->setChatsuboSystemId(NULL);
+        $serverSetting->setChatsuboNodeId(NULL);
+        $serverSetting->setWildernessSystemId(NULL);
+        $serverSetting->setWildernessHubNodeId(NULL);
+        $this->entityManager->persist($serverSetting);
+        $system = new System();
+        $system->setProfile(NULL);
+        $system->setName('wilderspace');
+        $system->setAddy('0000:0000:0000:0000:0000:0000:0000:0000');
+        $system->setGroup(NULL);
+        $system->setFaction(NULL);
+        $system->setMaxSize(100000);
+        $system->setAlertLevel(0);
+        $this->entityManager->persist($system);
+        // default node
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
+        /** @var NodeType $nodeType */
+        $ioNode = new Node();
+        $ioNode->setCreated(new \DateTime());
+        $ioNode->setLevel(1);
+        $ioNode->setName('wilderspace_hub');
+        $ioNode->setSystem($system);
+        $ioNode->setNodeType($nodeType);
+        $ioNode->setNomob(true);
+        $ioNode->setNopvp(true);
+        $ioNode->setDescription('The gateway node to Wilderspace. A safe haven for all explorers of this system.');
+        $this->entityManager->persist($ioNode);
+        // flush to db
+        $this->entityManager->flush();
+        $serverSetting->setWildernessSystemId($system->getId());
+        $serverSetting->setWildernessHubNodeId($ioNode->getId());
+        $this->entityManager->flush($serverSetting);
+        $console->writeLine('DONE INITIALIZING SERVER SETTINGS', ColorInterface::GREEN);
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
     public function cliCreateChatsuboAction()
     {
         // get request and check if we received it from the console
@@ -702,6 +758,17 @@ class IndexController extends AbstractActionController
         }
         set_time_limit(0);
         $console = $this->getServiceLocator()->get('console');
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        if (!$serverSetting) {
+            $console->writeLine('SERVER SETTINGS NEED TO BE INITIALIZED FIRST', ColorInterface::LIGHT_RED);
+            return true;
+        }
+        /** @var ServerSetting $serverSetting */
+        $chatsuboSystemId = $serverSetting->getChatsuboSystemId();
+        if (!$chatsuboSystemId) {
+            $console->writeLine('CHATUSBO SYSTEM HAS ALREADY BEEN CREATED', ColorInterface::LIGHT_RED);
+            return true;
+        }
         $console->writeLine('CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
         $system = new System();
         $system->setProfile(NULL);
@@ -727,6 +794,9 @@ class IndexController extends AbstractActionController
         $this->entityManager->persist($ioNode);
         // flush to db
         $this->entityManager->flush();
+        $serverSetting->setChatsuboSystemId($system->getId());
+        $serverSetting->setChatsuboNodeId($ioNode->getId());
+        $this->entityManager->flush($serverSetting);
         $console->writeLine('DONE CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
         return true;
     }

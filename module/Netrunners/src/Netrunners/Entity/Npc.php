@@ -21,6 +21,7 @@ class Npc
     const ID_BOUNCER_ICE = 3;
     const ID_WORKER_PROGRAM = 4;
     const ID_SENTINEL_ICE = 5;
+    const ID_WILDERSPACE_INTRUDER = 6;
 
     const TYPE_VIRUS = 1;
     const TYPE_HELPER = 2;

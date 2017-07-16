@@ -386,8 +386,10 @@ class LoginService extends BaseService
         $disconnect = false;
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         $currentPassword = $user->getPassword();
+//        var_dump('before bcrypt');
         $bcrypt = new Bcrypt();
         if (!$bcrypt->verify($content, $currentPassword)) {
+//            var_dump('failed');
             $response = array(
                 'command' => 'showmessage',
                 'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>',
@@ -395,6 +397,7 @@ class LoginService extends BaseService
             $disconnect = true;
         }
         else {
+//            var_dump('pw ok');
             $wsClients = $ws->getClients();
             $wsClientsData = $ws->getClientsData();
             foreach ($wsClients as $client) {
@@ -407,6 +410,7 @@ class LoginService extends BaseService
                     return [$disconnect, $response];
                 }
             }
+//            var_dump('before hash');
             $hash = hash('sha256', $ws->getHash() . $user->getId());
             $ws->setClientData($resourceId, 'hash', $hash);
             $response = array(
@@ -424,12 +428,15 @@ class LoginService extends BaseService
                 'message' => $messageText
             );
             $this->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $message, $user->getProfile());
+//            var_dump('messaged everyone in node');
             // clear orphaned play-sessions and start a new one
+//            var_dump('before playsession cleaner');
             $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
             /** @var PlaySessionRepository $playSessionRepo */
             foreach ($playSessionRepo->findOrphaned($user->getProfile()) as $orphanedPlaySession) {
                 $this->entityManager->remove($orphanedPlaySession);
             }
+//            var_dump('after playsession cleaner');
             $playSession = new PlaySession();
             $playSession->setProfile($user->getProfile());
             $playSession->setEnd(NULL);
@@ -438,29 +445,33 @@ class LoginService extends BaseService
             $playSession->setSocketId($resourceId);
             $this->entityManager->persist($playSession);
             $this->entityManager->flush();
+//            var_dump('after playsession creater');
             // show feedback info if admin or superadmin
-            if ($this->isSuperAdmin($user) || $this->isAdmin($user)) {
-                $lastPlaySession = $playSessionRepo->findLastPlaySession($user->getProfile());
-                if ($lastPlaySession) {
-                    $feedbackRepo = $this->entityManager->getRepository('Netrunners\Entity\Feedback');
-                    /** @var FeedbackRepository $feedbackRepo */
-                    $feedbackCount = $feedbackRepo->countByNewForProfile($lastPlaySession->getEnd());
-                    $feedbackMessage = [
-                        'command' => 'showmessage',
-                        'silent' => true,
-                        'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">There are %s new feedback messages since your last login</pre>'),
-                            $feedbackCount
-                        )
-                    ];
-                    foreach ($wsClients as $xClientId => $xClient) {
-                        if ($xClient->resourceId == $resourceId) {
-                            $xClient->send(json_encode($feedbackMessage));
-                        }
-                    }
-                }
-            }
+//            if ($this->isSuperAdmin($user) || $this->isAdmin($user)) {
+//                var_dump('admin show feedback');
+//                $lastPlaySession = $playSessionRepo->findLastPlaySession($user->getProfile());
+//                if ($lastPlaySession) {
+//                    $feedbackRepo = $this->entityManager->getRepository('Netrunners\Entity\Feedback');
+//                    /** @var FeedbackRepository $feedbackRepo */
+//                    $feedbackCount = $feedbackRepo->countByNewForProfile($lastPlaySession->getEnd());
+//                    $feedbackMessage = [
+//                        'command' => 'showmessage',
+//                        'silent' => true,
+//                        'message' => sprintf(
+//                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">There are %s new feedback messages since your last login</pre>'),
+//                            $feedbackCount
+//                        )
+//                    ];
+//                    foreach ($wsClients as $xClientId => $xClient) {
+//                        if ($xClient->resourceId == $resourceId) {
+//                            $xClient->send(json_encode($feedbackMessage));
+//                        }
+//                    }
+//                }
+//                var_dump('after admin show feedback');
+//            }
         }
+//        var_dump('before return');
         return [$disconnect, $response];
     }
 

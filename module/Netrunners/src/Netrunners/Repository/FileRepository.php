@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
@@ -30,6 +31,19 @@ class FileRepository extends EntityRepository
         $qb = $this->createQueryBuilder('f');
         $qb->where('f.profile = :profile');
         $qb->setParameter('profile', $profile);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Finds all files for the given npc instance.
+     * @param NpcInstance $npc
+     * @return array
+     */
+    public function findByNpc(NpcInstance $npc)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.npc = :npc');
+        $qb->setParameter('npc', $npc);
         return $qb->getQuery()->getResult();
     }
 

@@ -129,6 +129,11 @@ class File
      */
     protected $mailMessage;
 
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance")
+     */
+    protected $npc;
+
 
     /**
      * @return int
@@ -465,12 +470,30 @@ class File
     }
 
     /**
-     * @param mixed $node
-     * @return File
+     * @param Node|NULL $node
+     * @return $this
      */
-    public function setNode($node)
+    public function setNode(Node $node = NULL)
     {
         $this->node = $node;
+        return $this;
+    }
+
+    /**
+     * @return NpcInstance|NULL
+     */
+    public function getNpc()
+    {
+        return $this->npc;
+    }
+
+    /**
+     * @param NpcInstance|NULL $npc
+     * @return File
+     */
+    public function setNpc(NpcInstance $npc = NULL)
+    {
+        $this->npc = $npc;
         return $this;
     }
 

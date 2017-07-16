@@ -42,6 +42,7 @@ class FileType
     const ID_LOG_DECRYPTOR = 23;
     const ID_PHISHER = 24;
     const ID_BEARTRAP = 25;
+    const ID_WILDERSPACE_HUB_PORTAL = 26;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -68,6 +69,7 @@ class FileType
     const STRING_LOG_DECRYPTOR = 'log-decryptor';
     const STRING_PHISHER = 'phisher';
     const STRING_BEARTRAP = 'beartrap';
+    const STRING_WILDERSPACE_HUB_PORTAL = 'wilderspace-hub-portal';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -95,6 +97,7 @@ class FileType
         self::STRING_LOG_DECRYPTOR => self::ID_LOG_DECRYPTOR,
         self::STRING_PHISHER => self::ID_PHISHER,
         self::STRING_BEARTRAP => self::ID_BEARTRAP,
+        self::STRING_WILDERSPACE_HUB_PORTAL => self::ID_WILDERSPACE_HUB_PORTAL,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;
@@ -187,6 +190,12 @@ class FileType
      * @var int
      */
     protected $stealthing;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $needRecipe;
 
     // ORM
 
@@ -388,6 +397,24 @@ class FileType
     public function setStealthing($stealthing)
     {
         $this->stealthing = $stealthing;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNeedRecipe()
+    {
+        return $this->needRecipe;
+    }
+
+    /**
+     * @param int $needRecipe
+     * @return FileType
+     */
+    public function setNeedRecipe($needRecipe)
+    {
+        $this->needRecipe = $needRecipe;
         return $this;
     }
 

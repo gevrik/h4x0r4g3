@@ -331,7 +331,7 @@ class CodingService extends BaseService
         }
         if (!$parameter) {
             /* if no param was given we return a list of possible options */
-            $fileTypes = $typeRepository->findForCoding();
+            $fileTypes = $typeRepository->findForCoding($this->user->getProfile());
             foreach ($fileTypes as $fileType) {
                 /** @var FileType|FilePart $fileType */
                 $message .= $fileType->getName() . ' ';
