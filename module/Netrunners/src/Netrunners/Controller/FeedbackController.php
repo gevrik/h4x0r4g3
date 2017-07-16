@@ -72,6 +72,7 @@ class FeedbackController extends AbstractActionController
                 'id' => $feedback->getId(),
                 'type' => Feedback::$lookup[$feedback->getType()],
                 'added' => $feedback->getAdded()->format('d/m/y H:i:s'),
+                'profile' => $feedback->getProfile()->getUser()->getUsername(),
                 'subject' => $feedback->getSubject()
             ];
         }

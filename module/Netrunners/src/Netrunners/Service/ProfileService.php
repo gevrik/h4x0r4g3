@@ -233,6 +233,94 @@ class ProfileService extends BaseService
                 ($profile->getShield()) ? $profile->getShield()->getIntegrity() : $this->translate('---'),
                 ($profile->getShield()) ? $profile->getShield()->getMaxIntegrity() : $this->translate('---')
             );
+            $armor = $profile->getHeadArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('head'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getShoulderArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('shoulders'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getUpperArmArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('upper-arms'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getLowerArmArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('lower-arms'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getHandArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('hands'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getTorsoArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('torso'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getLegArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('legs'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
+            $armor = $profile->getShoesArmor();
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
+                $this->translate('shoes'),
+                ($armor) ? $armor->getName() : $this->translate('---'),
+                $this->translate('level'),
+                ($armor) ? $armor->getLevel() : $this->translate('---'),
+                $this->translate('integrity'),
+                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+            );
             $this->response = [
                 'command' => 'showoutput',
                 'message' => $messages

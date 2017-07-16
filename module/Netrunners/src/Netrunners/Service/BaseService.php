@@ -951,6 +951,16 @@ class BaseService
             case FileType::ID_BLOCKCHAINER:
                 $validNodeTypes[] = NodeType::ID_BANK;
                 break;
+            case FileType::ID_LOG_ENCRYPTOR:
+            case FileType::ID_LOG_DECRYPTOR:
+                $validNodeTypes[] = NodeType::ID_MONITORING;
+                break;
+            case FileType::ID_PHISHER:
+                $validNodeTypes[] = NodeType::ID_INTRUSION;
+                break;
+            case FileType::ID_BEARTRAP:
+                $validNodeTypes[] = NodeType::ID_FIREWALL;
+                break;
             case FileType::ID_JACKHAMMER:
             case FileType::ID_PORTSCANNER:
             case FileType::ID_WORMER:

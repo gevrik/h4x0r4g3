@@ -38,6 +38,10 @@ class FileType
     const ID_IO_TRACER = 19;
     const ID_OBFUSCATOR = 20;
     const ID_CLOAK = 21;
+    const ID_LOG_ENCRYPTOR = 22;
+    const ID_LOG_DECRYPTOR = 23;
+    const ID_PHISHER = 24;
+    const ID_BEARTRAP = 25;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -60,6 +64,10 @@ class FileType
     const STRING_IO_TRACER = 'io-tracer';
     const STRING_OBFUSCATOR = 'obfuscator';
     const STRING_CLOAK = 'cloak';
+    const STRING_LOG_ENCRYPTOR = 'log-encryptor';
+    const STRING_LOG_DECRYPTOR = 'log-decryptor';
+    const STRING_PHISHER = 'phisher';
+    const STRING_BEARTRAP = 'beartrap';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -83,6 +91,10 @@ class FileType
         self::STRING_IO_TRACER => self::ID_IO_TRACER,
         self::STRING_OBFUSCATOR => self::ID_OBFUSCATOR,
         self::STRING_CLOAK => self::ID_CLOAK,
+        self::STRING_LOG_ENCRYPTOR => self::ID_LOG_ENCRYPTOR,
+        self::STRING_LOG_DECRYPTOR => self::ID_LOG_DECRYPTOR,
+        self::STRING_PHISHER => self::ID_PHISHER,
+        self::STRING_BEARTRAP => self::ID_BEARTRAP,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;
