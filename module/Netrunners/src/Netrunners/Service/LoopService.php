@@ -567,6 +567,7 @@ class LoopService extends BaseService
         $databaseNodes = $this->nodeRepo->findByType(NodeType::ID_DATABASE);
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
+            if (!$databaseNode->getProfile()) continue;
             $currentNodeProfileId = $databaseNode->getSystem()->getProfile()->getId();
             /** @var Profile $currentNodeProfile */
             // add the profile id to the items if it is not already set
@@ -579,6 +580,7 @@ class LoopService extends BaseService
         $terminalNodes = $this->nodeRepo->findByType(NodeType::ID_TERMINAL);
         foreach ($terminalNodes as $terminalNode) {
             /** @var Node $terminalNode */
+            if (!$terminalNode->getProfile()) continue;
             $currentNodeProfileId = $terminalNode->getSystem()->getProfile()->getId();
             /** @var Profile $currentNodeProfile */
             // add the profile id to the items if it is not already set

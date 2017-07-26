@@ -303,6 +303,9 @@ class ParserService
             case 'execute':
                 $response = $this->fileService->executeFile($resourceId, $contentArray);
                 break;
+            case 'explore':
+                $response = $this->nodeService->exploreCommand($resourceId);
+                break;
             case 'factionchat':
             case 'fc':
                 $response = $this->chatService->factionChat($resourceId, $contentArray);
@@ -489,6 +492,9 @@ class ParserService
                 break;
             case 'upgradenode':
                 $response = $this->nodeService->enterMode($resourceId, $userCommand);
+                break;
+            case 'use':
+                $response = $this->fileService->useCommand($resourceId, $contentArray);
                 break;
             case 'withdraw':
                 $response = $this->profileService->withdrawCredits($resourceId, $contentArray);
@@ -687,7 +693,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack bug cd changepassword clear code commands connect deposit dl download editnode entityname equipment execute factionratings factions filemods filename gc help home idea initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale showbalaance skillpoints skills stat survey system time touch typo ul unload withdraw');
+        $message = $this->translator->translate('addconnection addnode attack bug cd changepassword clear code commands connect deposit dl download editnode entityname equipment execute explore factionratings factions filemods filename gc help home idea initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale showbalaance skillpoints skills stat survey system time touch typo ul unload use withdraw');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

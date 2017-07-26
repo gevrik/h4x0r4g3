@@ -565,6 +565,68 @@ class FileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function useCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        // get parameter
+        $parameter = implode(' ', $contentArray);
+        $parameter = trim($parameter);
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        $file = NULL;
+        if (count($targetFiles) >= 1) {
+            $file = array_shift($targetFiles);
+        }
+        if (!$this->response && !$file) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such file')
+                )
+            );
+        }
+        if (!$this->response && $file && !$file->getRunning()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Files must be running to use them')
+                )
+            );
+        }
+        if (!$this->response && $file) {
+            $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+            switch ($file->getFileType()->getId()) {
+                default:
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                            $this->translate('Unable to use this type of file')
+                        )
+                    );
+                    break;
+                case FileType::ID_WILDERSPACE_HUB_PORTAL:
+                    $hubNode = $this->entityManager->find('Netrunners\Entity\Node', $serverSetting->getWildernessHubNodeId());
+                    $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $profile->getCurrentNode(), $hubNode);
+                    break;
+            }
+        }
+        return $this->response;
+    }
+
+    /**
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
@@ -582,7 +644,11 @@ class FileService extends BaseService
             $profile,
             $parameter
         );
-        if (!$this->response && count($targetFiles) < 1) {
+        $file = NULL;
+        if (count($targetFiles) >= 1) {
+            $file = array_shift($targetFiles);
+        }
+        if (!$this->response && !$file) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -591,9 +657,8 @@ class FileService extends BaseService
                 )
             );
         }
-        $file = array_shift($targetFiles);
         // check if file belongs to user TODO should be able to bypass this via bh program
-        if (!$this->response && $file->getProfile() != $profile) {
+        if (!$this->response && $file && $file->getProfile() != $profile) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -603,7 +668,7 @@ class FileService extends BaseService
             );
         }
         // check if already running
-        if (!$this->response && $file->getRunning()) {
+        if (!$this->response && $file && $file->getRunning()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -613,7 +678,7 @@ class FileService extends BaseService
             );
         }
         // check if there is enough memory to execute this
-        if (!$this->response && !$this->canExecuteFile($profile, $file) && !in_array($file->getFileType()->getId(), [])) {
+        if (!$this->response && $file && !$this->canExecuteFile($profile, $file)) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -622,7 +687,7 @@ class FileService extends BaseService
                 )
             );
         }
-        if (!$this->response) {
+        if (!$this->response && $file) {
             // determine what to do depending on file type
             switch ($file->getFileType()->getId()) {
                 default:

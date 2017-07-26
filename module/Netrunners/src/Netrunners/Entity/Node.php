@@ -68,6 +68,12 @@ class Node
     protected $system;
 
     /**
+     * Used for wilderspace claimage, normally profile is retrieved via system.
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
+     **/
+    protected $profile;
+
+    /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NodeType")
      **/
     protected $nodeType;
@@ -216,6 +222,24 @@ class Node
     public function setSystem($system)
     {
         $this->system = $system;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getProfile()
+    {
+        return $this->profile;
+    }
+
+    /**
+     * @param mixed $profile
+     * @return Node
+     */
+    public function setProfile($profile)
+    {
+        $this->profile = $profile;
         return $this;
     }
 

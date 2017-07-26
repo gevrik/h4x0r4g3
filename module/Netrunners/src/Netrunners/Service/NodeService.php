@@ -18,6 +18,8 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ServerSetting;
+use Netrunners\Entity\Skill;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
@@ -475,6 +477,120 @@ class NodeService extends BaseService
             );
         }
         return $this->response;
+    }
+
+    public function exploreCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $this->response = $this->isActionBlocked($resourceId);
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        /** @var ServerSetting $serverSetting */
+        if (!$this->response && $currentSystem->getId() != $serverSetting->getWildernessSystemId()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You must be in Wilderspace to explore')
+                )
+            );
+        }
+        // check if they can explore here - node might be claimed by another player
+        if (!$this->response && $currentNode->getProfile() && $currentNode->getProfile() != $profile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to explore in nodes that other users have claimed')
+                )
+            );
+        }
+        // check if they can explore - node might already be at max level (dead-end) - level 10 nodes in wilderspace are the homes of true AI
+        if (!$this->response && $currentNode->getLevel() >= 10) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to explore in max level nodes')
+                )
+            );
+        }
+        /* all checks passed, we can explore */
+        if (!$this->response) {
+            // exploration is difficult, uses advanced coding and advanced networking for its skill check
+            $advancedCoding = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+            $advancedNetworking = $this->getSkillRating($profile, Skill::ID_ADVANCED_NETWORKING);
+            $chance = floor(($advancedCoding + $advancedNetworking) / 2);
+            // node level makes it harder
+            $chance -= ($currentNode->getLevel() * 10);
+            if (mt_rand(1, 100) > $chance) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You fail to find any hidden connections')
+                    )
+                );
+            }
+            else {
+                // player has found a hidden connection
+                $excludedNodeTypes = [NodeType::ID_CPU, NodeType::ID_HOME, NodeType::ID_IO, NodeType::ID_PUBLICIO, NodeType::ID_RECRUITMENT];
+                $exploredNodeType = $this->getRandomNodeType($excludedNodeTypes);
+                $exploredNode =  new Node();
+                $exploredNode->setSystem($currentSystem);
+                $exploredNode->setProfile(NULL);
+                $exploredNode->setCreated(new \DateTime());
+                $exploredNode->setDescription($exploredNodeType->getDescription());
+                $newLevel = (mt_rand(1, 100) > 90) ? $currentNode->getLevel() + 1 : $currentNode->getLevel();
+                $exploredNode->setLevel($newLevel);
+                $exploredNode->setName($exploredNodeType->getName());
+                $exploredNode->setNodeType($exploredNodeType);
+                $exploredNode->setNomob(false);
+                $exploredNode->setNopvp(false);
+                $this->entityManager->persist($exploredNode);
+                $sourceConnection = new Connection();
+                $sourceConnection->setType(Connection::TYPE_NORMAL);
+                $sourceConnection->setLevel($newLevel);
+                $sourceConnection->setCreated(new \DateTime());
+                $sourceConnection->setSourceNode($currentNode);
+                $sourceConnection->setTargetNode($exploredNode);
+                $sourceConnection->setIsOpen(false);
+                $this->entityManager->persist($sourceConnection);
+                $targetConnection = new Connection();
+                $targetConnection->setType(Connection::TYPE_NORMAL);
+                $targetConnection->setLevel(1);
+                $targetConnection->setCreated(new \DateTime());
+                $targetConnection->setSourceNode($exploredNode);
+                $targetConnection->setTargetNode($currentNode);
+                $targetConnection->setIsOpen(false);
+                $this->entityManager->persist($targetConnection);
+                $this->entityManager->flush();
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate('You have found a hidden service')
+                    )
+                );
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param array $excludedNodeType
+     * @return null|NodeType
+     */
+    private function getRandomNodeType($excludedNodeType = [])
+    {
+        $nodeTypeId = mt_rand(1, 18);
+        while (in_array($nodeTypeId, $excludedNodeType)) {
+            $nodeTypeId = mt_rand(1, 18);
+        }
+        return $this->entityManager->find('Netrunners\Entity\NodeType', $nodeTypeId);
     }
 
     /**
