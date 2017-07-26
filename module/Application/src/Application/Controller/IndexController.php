@@ -21,7 +21,6 @@ use Netrunners\Service\ManpageService;
 use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Application\Service\WebsocketService;
-use Netrunners\Service\ProfileService;
 use Netrunners\Service\UtilityService;
 use Ratchet\Http\HttpServer;
 use Ratchet\Server\IoServer;

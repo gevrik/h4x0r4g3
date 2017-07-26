@@ -142,6 +142,139 @@ class FileService extends BaseService
         return $this->response;
     }
 
+    public function downloadFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // init response
+        $this->response = $this->isActionBlocked($resourceId);
+        // get parameter
+        $parameter = implode(' ', $contentArray);
+        $parameter = trim($parameter);
+        // try to get target file via repo method
+        $targetFile = $this->fileRepo->findOneBy([
+            'name' => $parameter,
+            'node' => $profile->getCurrentNode()
+        ]);
+        if (!$this->response && !$targetFile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such file')
+                )
+            );
+        }
+        /** @var File $targetFile */
+        // check if the file belongs to a profile or npc - can't download then
+        if (!$this->response && $targetFile && $targetFile->getProfile() != NULL) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('This file has already been downloaded by someone')
+                )
+            );
+        }
+        if (!$this->response && $targetFile && $targetFile->getNpc() != NULL) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('This file has already been downloaded by an entity')
+                )
+            );
+        }
+        // check if there is enough storage to store this
+        if (!$this->response && $targetFile && !$this->canStoreFile($profile, $targetFile)) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough storage to download %s - build or upgrade storage nodes</pre>'),
+                    $targetFile->getName()
+                )
+            );
+        }
+        /* all checks passed, download file */
+        if (!$this->response && $targetFile) {
+            $targetFile->setProfile($profile);
+            $targetFile->setNode(NULL);
+            $targetFile->setSystem(NULL);
+            $this->entityManager->flush($targetFile);
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You download %s to your storage</pre>'),
+                    $targetFile->getName()
+                )
+            );
+        }
+        return $this->response;
+    }
+
+    public function unloadFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // init response
+        $this->response = $this->isActionBlocked($resourceId);
+        // get parameter
+        $parameter = implode(' ', $contentArray);
+        $parameter = trim($parameter);
+        // try to get target file via repo method
+        $targetFile = $this->fileRepo->findOneBy([
+            'name' => $parameter,
+            'profile' => $profile
+        ]);
+        if (!$this->response && !$targetFile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such file')
+                )
+            );
+        }
+        /** @var File $targetFile */
+        // check if the file belongs to the profile
+        if (!$this->response && $targetFile && $targetFile->getProfile() != $profile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        // check if attempt to unload running file
+        if (!$this->response && $targetFile && $targetFile->getRunning()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to unload running file')
+                )
+            );
+        }
+        /* all checks passed, unload file */
+        if (!$this->response && $targetFile) {
+            $targetFile->setProfile(NULL);
+            $targetFile->setNode($profile->getCurrentNode());
+            $targetFile->setSystem($profile->getCurrentNode()->getSystem());
+            $this->entityManager->flush($targetFile);
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You unload %s to the node</pre>'),
+                    $targetFile->getName()
+                )
+            );
+        }
+        return $this->response;
+    }
+
     /**
      * @param int $resourceId
      * @param $contentArray
@@ -162,21 +295,21 @@ class FileService extends BaseService
             $profile->getCurrentNode(),
             $parameter
         );
-        if (!$this->response && $profile->getSnippets() < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need 1 snippet to create an empty text file')
-                )
-            );
-        }
         if (!$this->response && count($targetFiles) >= 1) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('A file with that name already exists in this node')
+                )
+            );
+        }
+        if (!$this->response && $profile->getSnippets() < 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You need 1 snippet to create an empty text file')
                 )
             );
         }
@@ -513,6 +646,9 @@ class FileService extends BaseService
                 case FileType::ID_ICMP_BLOCKER:
                     $this->response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
                     break;
+                case FileType::ID_BEARTRAP:
+                    $this->response = $this->executeBeartrap($file, $profile->getCurrentNode());
+                    break;
                 case FileType::ID_PORTSCANNER:
                 case FileType::ID_JACKHAMMER:
                     $this->response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
@@ -546,6 +682,9 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_PHISHER:
                     $this->response = $this->executePhisher($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_WILDERSPACE_HUB_PORTAL:
+                    $this->response = $this->executeWilderspaceHubPortal($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_CODEBLADE:
                 case FileType::ID_CODEBLASTER:
@@ -1341,6 +1480,42 @@ class FileService extends BaseService
      * @return array|bool
      */
     protected function executePhisher(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an intrusion node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeWilderspaceHubPortal(File $file, Node $node)
     {
         // init response
         $response = false;

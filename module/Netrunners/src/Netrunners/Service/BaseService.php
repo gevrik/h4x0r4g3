@@ -956,6 +956,7 @@ class BaseService
                 $validNodeTypes[] = NodeType::ID_MONITORING;
                 break;
             case FileType::ID_PHISHER:
+            case FileType::ID_WILDERSPACE_HUB_PORTAL:
                 $validNodeTypes[] = NodeType::ID_INTRUSION;
                 break;
             case FileType::ID_BEARTRAP:

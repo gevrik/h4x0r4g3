@@ -641,13 +641,15 @@ class WebsocketService implements MessageComponentInterface {
         $resourceId = $conn->resourceId;
         // end play-session
         $profile = $this->entityManager->find('Netrunners\Entity\Profile', $this->clientsData[$resourceId]['profileId']);
-        /** @var Profile $profile */
-        $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
-        /** @var PlaySessionRepository $playSessionRepo */
-        $currentPlaySession = $playSessionRepo->findCurrentPlaySession($profile);
-        if ($currentPlaySession) {
-            $currentPlaySession->setEnd(new \DateTime());
-            $this->entityManager->flush($currentPlaySession);
+        if ($profile) {
+            /** @var Profile $profile */
+            $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
+            /** @var PlaySessionRepository $playSessionRepo */
+            $currentPlaySession = $playSessionRepo->findCurrentPlaySession($profile);
+            if ($currentPlaySession) {
+                $currentPlaySession->setEnd(new \DateTime());
+                $this->entityManager->flush($currentPlaySession);
+            }
         }
         // The connection is closed, remove it, as we can no longer send it messages
         unset($this->clientsData[$resourceId]);
