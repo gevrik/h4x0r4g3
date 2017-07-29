@@ -55,6 +55,18 @@ class Node
     protected $nopvp;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $noclaim;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":100}, nullable=true)
+     * @var int
+     */
+    protected $integrity;
+
+    /**
      * @ORM\Column(type="datetime", nullable=true)
      * @var \DateTime
      */
@@ -184,6 +196,42 @@ class Node
     public function setNopvp($nopvp)
     {
         $this->nopvp = $nopvp;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNoclaim()
+    {
+        return $this->noclaim;
+    }
+
+    /**
+     * @param int $noclaim
+     * @return Node
+     */
+    public function setNoclaim($noclaim)
+    {
+        $this->noclaim = $noclaim;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getIntegrity()
+    {
+        return $this->integrity;
+    }
+
+    /**
+     * @param int $integrity
+     * @return Node
+     */
+    public function setIntegrity($integrity)
+    {
+        $this->integrity = $integrity;
         return $this;
     }
 

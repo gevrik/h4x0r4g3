@@ -360,6 +360,7 @@ class IndexController extends AbstractActionController
         $system->setFaction(NULL);
         $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
         $system->setAlertLevel(0);
+        $system->setNoclaim(true);
         $this->entityManager->persist($system);
         // default io node
         $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
@@ -404,6 +405,7 @@ class IndexController extends AbstractActionController
             $systemName = str_replace(' ', '-', $faction->getName()) . '-hq';
             $system->setName(strtolower($systemName));
             $system->setAlertLevel(0);
+            $system->setNoclaim(true);
             // create a new addy for the system
             $addy = $this->utilityService->getRandomAddress(32);
             $maxTries = 100;
@@ -734,6 +736,7 @@ class IndexController extends AbstractActionController
         $ioNode->setNodeType($nodeType);
         $ioNode->setNomob(true);
         $ioNode->setNopvp(true);
+        $ioNode->setNoclaim(true);
         $ioNode->setDescription('The gateway node to Wilderspace. A safe haven for all explorers of this system.');
         $this->entityManager->persist($ioNode);
         // flush to db
@@ -776,6 +779,7 @@ class IndexController extends AbstractActionController
         $system->setGroup(NULL);
         $system->setFaction(NULL);
         $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
+        $system->setNoclaim(true);
         $system->setAlertLevel(0);
         $this->entityManager->persist($system);
         // default io node

@@ -323,6 +323,7 @@ class LoginService extends BaseService
             $system->setFaction(NULL);
             $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
             $system->setAlertLevel(0);
+            $system->setNoclaim(true);
             $this->entityManager->persist($system);
             // default io node
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
@@ -386,10 +387,8 @@ class LoginService extends BaseService
         $disconnect = false;
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         $currentPassword = $user->getPassword();
-//        var_dump('before bcrypt');
         $bcrypt = new Bcrypt();
         if (!$bcrypt->verify($content, $currentPassword)) {
-//            var_dump('failed');
             $response = array(
                 'command' => 'showmessage',
                 'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>',
@@ -397,7 +396,6 @@ class LoginService extends BaseService
             $disconnect = true;
         }
         else {
-//            var_dump('pw ok');
             $wsClients = $ws->getClients();
             $wsClientsData = $ws->getClientsData();
             foreach ($wsClients as $client) {
@@ -428,15 +426,12 @@ class LoginService extends BaseService
                 'message' => $messageText
             );
             $this->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $message, $user->getProfile());
-//            var_dump('messaged everyone in node');
             // clear orphaned play-sessions and start a new one
-//            var_dump('before playsession cleaner');
             $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
             /** @var PlaySessionRepository $playSessionRepo */
             foreach ($playSessionRepo->findOrphaned($user->getProfile()) as $orphanedPlaySession) {
                 $this->entityManager->remove($orphanedPlaySession);
             }
-//            var_dump('after playsession cleaner');
             $playSession = new PlaySession();
             $playSession->setProfile($user->getProfile());
             $playSession->setEnd(NULL);

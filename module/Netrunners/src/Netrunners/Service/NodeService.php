@@ -479,6 +479,27 @@ class NodeService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function claimCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        $this->response = $this->isActionBlocked($resourceId);
+
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
     public function exploreCommand($resourceId)
     {
         $this->initService($resourceId);
@@ -581,16 +602,18 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param array $excludedNodeType
+     * @param array $excludedNodeTypes
      * @return null|NodeType
      */
-    private function getRandomNodeType($excludedNodeType = [])
+    private function getRandomNodeType($excludedNodeTypes = [])
     {
         $nodeTypeId = mt_rand(1, 18);
-        while (in_array($nodeTypeId, $excludedNodeType)) {
+        while (in_array($nodeTypeId, $excludedNodeTypes)) {
             $nodeTypeId = mt_rand(1, 18);
         }
-        return $this->entityManager->find('Netrunners\Entity\NodeType', $nodeTypeId);
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', $nodeTypeId);
+        /** @var NodeType $nodeType */
+        return $nodeType;
     }
 
     /**

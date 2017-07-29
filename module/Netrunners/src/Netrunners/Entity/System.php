@@ -54,6 +54,18 @@ class System
      */
     protected $maxSize;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $noclaim;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":100}, nullable=true)
+     * @var int
+     */
+    protected $integrity;
+
     // ORM
 
     /**
@@ -159,6 +171,42 @@ class System
     public function setMaxSize($maxSize)
     {
         $this->maxSize = $maxSize;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNoclaim()
+    {
+        return $this->noclaim;
+    }
+
+    /**
+     * @param int $noclaim
+     * @return System
+     */
+    public function setNoclaim($noclaim)
+    {
+        $this->noclaim = $noclaim;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getIntegrity()
+    {
+        return $this->integrity;
+    }
+
+    /**
+     * @param int $integrity
+     * @return System
+     */
+    public function setIntegrity($integrity)
+    {
+        $this->integrity = $integrity;
         return $this;
     }
 
