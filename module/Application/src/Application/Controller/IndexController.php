@@ -767,7 +767,7 @@ class IndexController extends AbstractActionController
         }
         /** @var ServerSetting $serverSetting */
         $chatsuboSystemId = $serverSetting->getChatsuboSystemId();
-        if (!$chatsuboSystemId) {
+        if ($chatsuboSystemId !== NULL) {
             $console->writeLine('CHATUSBO SYSTEM HAS ALREADY BEEN CREATED', ColorInterface::LIGHT_RED);
             return true;
         }

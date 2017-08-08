@@ -31,7 +31,7 @@ $settings = array(
      *
      * Accepted values: boolean true or false
      */
-    'enable_registration' => true,
+    'enable_registration' => false,
 
     /**
      * Enable Username

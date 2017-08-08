@@ -192,6 +192,15 @@ return array(
                         )
                     )
                 ),
+                'init-server' => array(
+                    'options' => array(
+                        'route'    => 'init-server',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-init-server-settings'
+                        )
+                    )
+                ),
             ),
         ),
     ),

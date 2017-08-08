@@ -367,7 +367,7 @@ class LoginService extends BaseService
             $playSession->setProfile($profile);
             $playSession->setEnd(NULL);
             $playSession->setStart(new \DateTime());
-            $playSession->setIpAddy($this->clientData->ipaddy);
+            $playSession->setIpAddy($clientData->ipaddy);
             $playSession->setSocketId($resourceId);
             $this->entityManager->persist($playSession);
             $this->entityManager->flush($playSession);
