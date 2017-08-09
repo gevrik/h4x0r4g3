@@ -376,7 +376,7 @@ class ParserService
                 $response = $this->mailMessageService->enterMailMode($resourceId);
                 break;
             case 'map':
-                if ($profile->getCurrentNode()->getSystem()->getProfile() != $profile) {
+                if ($profile->getCurrentNode()->getSystem()->getProfile() !== $profile) {
                     $response = $this->systemService->showAreaMap($resourceId);
                 }
                 else {
@@ -516,14 +516,23 @@ class ParserService
             case 'showclients':
                 $response = $this->adminService->adminShowClients($resourceId);
                 break;
+            case 'goto':
+                $response = $this->adminService->gotoNodeCommand($resourceId, $contentArray);
+                break;
             case 'kickclient':
                 $response = $this->adminService->kickClient($resourceId, $contentArray);
+                break;
+            case 'nlist':
+                $response = $this->adminService->nListCommand($resourceId, $contentArray);
                 break;
             case 'setsnippets':
                 $response = $this->adminService->adminSetSnippets($resourceId, $contentArray);
                 break;
             case 'setcredits':
                 $response = $this->adminService->adminSetCredits($resourceId, $contentArray);
+                break;
+            case 'syslist':
+                $response = $this->adminService->sysListCommand($resourceId);
                 break;
             case 'toggleadminmode':
                 $response = $this->adminService->adminToggleAdminMode($resourceId);
@@ -533,7 +542,15 @@ class ParserService
                 $response = $this->profileService->stopStealthing($resourceId);
                 break;
         }
-        if (!is_array($response)) return true;
+        if (!is_array($response)) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translator->translate('Your command could not be parsed properly... This could either be a bug or you using the command in a wrong way...')
+                )
+            ];
+        }
         $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         $response['silent'] = $silent;
         if ($response) $from->send(json_encode($response));
@@ -693,7 +710,7 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         /** @var User $user */
-        $message = $this->translator->translate('addconnection addnode attack bug cd changepassword clear code commands connect deposit dl download editnode entityname equipment execute explore factionratings factions filemods filename gc help home idea initarmor inventory jobs kill ls mail map newbie nodename nodes nodetype options passwd ps removenode resources say scan secureconnection setemail setlocale showbalaance skillpoints skills stat survey system time touch typo ul unload use withdraw');
+        $message = $this->translator->translate('addconnection  addnode  attack  bug  cd  changepassword  clear  code  commands  connect  deposit  dl  download  editnode  entityname  equipment  execute  explore  factionratings  factions  filemods  filename  gc  help  home  idea  initarmor  inventory  jobs  kill  ls  mail  map  newbie  nodename  nodes  nodetype  options  passwd  ps  removenode  resources  say  scan  secureconnection  setemail  setlocale  showbalance  skillpoints  skills  stat  survey  system  time  touch  typo  ul  unload  use  withdraw');
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

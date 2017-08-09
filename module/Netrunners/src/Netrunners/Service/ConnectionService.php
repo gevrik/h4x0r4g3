@@ -81,7 +81,7 @@ class ConnectionService extends BaseService
             !$this->response &&
             (
                 $connection->getType() == Connection::TYPE_CODEGATE &&
-                $profile != $currentSystem->getProfile() &&
+                $profile !== $currentSystem->getProfile() &&
                 !$connection->getisOpen() &&
                 !$this->isSuperAdmin()
             )
@@ -132,7 +132,7 @@ class ConnectionService extends BaseService
             );
         }
         // check if they can add connections
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -170,6 +170,7 @@ class ConnectionService extends BaseService
                     $this->translate('=== CAN REMOVE CONN ===')
                 )
             );
+            // TODO finish this
         }
         return $this->response;
     }
@@ -202,7 +203,7 @@ class ConnectionService extends BaseService
         }
         // check if they can access the connection
         if (!$this->response &&
-            ($connection->getType() == Connection::TYPE_CODEGATE && $profile != $currentSystem->getProfile() && !$connection->getisOpen())
+            ($connection->getType() == Connection::TYPE_CODEGATE && $profile !== $currentSystem->getProfile() && !$connection->getisOpen())
         ) {
             $this->response = array(
                 'command' => 'showmessage',
@@ -235,7 +236,7 @@ class ConnectionService extends BaseService
         if (!$this->response && !$parameter) {
             $returnMessage = array();
             $returnMessage[] = sprintf(
-                '<pre class="text-sysmsg">%s</pre>',
+                '<pre class="text-warning">%s</pre>',
                 $this->translate('Please choose the target node:')
             );
             $nodes = $this->nodeRepo->findBySystem($currentSystem);
@@ -259,7 +260,7 @@ class ConnectionService extends BaseService
             );
         }
         // check if they can add connections
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -283,7 +284,7 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You need %s credits to add a connection to the node</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a connection to the node</pre>'),
                     self::CONNECTION_COST
                 )
             );
@@ -302,12 +303,12 @@ class ConnectionService extends BaseService
             }
         }
         /** @var Node $targetNode */
-        // check if the target node is the current ndoe
+        // check if the target node is the current node
         if (!$this->response && $targetNode === $currentNode) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid target node')
                 )
             );
@@ -317,8 +318,18 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid target node')
+                )
+            );
+        }
+        // check if there already is a connection between the current node and the target node
+        if (!$this->response && count($this->connectionRepo->findBySourceNodeAndTargetNode($currentNode, $targetNode)) >= 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('There already exists a connection between those nodes')
                 )
             );
         }
@@ -368,7 +379,7 @@ class ConnectionService extends BaseService
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
         // check if they can add connections
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -413,8 +424,17 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('No such connection')
+                )
+            );
+        }
+        if (!$this->response && $connection->getType() == Connection::TYPE_CODEGATE) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('This connection is already secure')
                 )
             );
         }

@@ -213,7 +213,7 @@ class System
     // ORM
 
     /**
-     * @return mixed
+     * @return Profile|null
      */
     public function getProfile()
     {

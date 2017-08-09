@@ -13,9 +13,12 @@ namespace Netrunners\Service;
 use BjyAuthorize\Service\Authorize;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\BannedIp;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\System;
 use Netrunners\Repository\BannedIpRepository;
-use TmoAuth\Entity\Role;
+use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\Validator\Ip;
@@ -75,7 +78,13 @@ class AdminService extends BaseService
                     $amountVoid++;
                     continue;
                 }
-                $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-5s|%-32s|%s</pre>', $xClientData['socketId'], $currentUser->getId(), $currentUser->getUsername(), $xClientData['ipaddy']);
+                $message[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-5s|%-32s|%s</pre>',
+                    $xClientData['socketId'],
+                    $currentUser->getId(),
+                    $currentUser->getUsername(),
+                    $xClientData['ipaddy']
+                );
             }
             if ($amountVoid >= 1) $message[] = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">%s sockets do not have user data yet</pre>'),
@@ -523,6 +532,181 @@ class AdminService extends BaseService
                     '<pre style="white-space: pre-wrap;" class="text-info">DONE - admin mode is now %s</pre>',
                     ($ws->isAdminMode()) ? 'ON' : 'OFF'
                 )
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function gotoNodeCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin()) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $targetNodeId = $this->getNextParameter($contentArray, false, true);
+            if (!$targetNodeId) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('Please specify the node id ("nlist [systemid]" for list)')
+                    )
+                ];
+            }
+            $targetNode = NULL;
+            if (!$this->response) {
+                $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+                /** @var NodeRepository $nodeRepo */
+                $targetNode = $nodeRepo->find($targetNodeId);
+                if (!$targetNode) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid node id')
+                        )
+                    ];
+                }
+            }
+            if (!$this->response && $targetNode) {
+                $profile = $this->user->getProfile();
+                $currentNode = $profile->getCurrentNode();
+                $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $targetNode);
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function nListCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isAdmin()) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $targetSystemId = $this->getNextParameter($contentArray, false, true);
+            if (!$targetSystemId) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        $this->translate('Please specify the system id ("syslist" for list)')
+                    )
+                ];
+            }
+            $targetSystem = NULL;
+            if (!$this->response) {
+                $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+                /** @var SystemRepository $systemRepo */
+                $targetSystem = $systemRepo->find($targetSystemId);
+                /** @var System $targetSystem */
+                if (!$targetSystem) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid system id')
+                        )
+                    ];
+                }
+            }
+            if (!$this->response && $targetSystem) {
+                $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+                /** @var NodeRepository $nodeRepo */
+                $systemNodes = $nodeRepo->findBySystem($targetSystem);
+                $returnMessage = array();
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>',
+                    $this->translate('ID'),
+                    $this->translate('TYPE'),
+                    $this->translate('LVL'),
+                    $this->translate('NAME')
+                );
+                foreach ($systemNodes as $node) {
+                    /** @var Node $node */
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-20s|%-3s|%s</pre>',
+                        $node->getId(),
+                        $node->getNodeType()->getName(),
+                        $node->getLevel(),
+                        $node->getName()
+                    );
+                }
+                $this->response = [
+                    'command' => 'showoutput',
+                    'message' => $returnMessage
+                ];
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function sysListCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->isSuperAdmin()) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        /* user is superadmin, can see system list */
+        if (!$this->response) {
+            $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+            /** @var SystemRepository $systemRepo */
+            $systems = $systemRepo->findAll();
+            $returnMessage = array();
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%s</pre>',
+                $this->translate('ID'),
+                $this->translate('OWNER'),
+                $this->translate('NAME')
+            );
+            foreach ($systems as $system) {
+                /** @var System $system */
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-20s|%s</pre>',
+                    $system->getId(),
+                    ($system->getProfile()) ? $system->getProfile()->getUser()->getUsername() : '---',
+                    $system->getName()
+                );
+            }
+            $this->response = [
+                'command' => 'showoutput',
+                'message' => $returnMessage
             ];
         }
         return $this->response;

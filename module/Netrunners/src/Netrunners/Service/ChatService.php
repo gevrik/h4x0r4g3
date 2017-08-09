@@ -86,31 +86,41 @@ class ChatService extends BaseService
         }
         if (!$this->response) {
             $messageContent = implode(' ', $contentArray);
-            if (!$messageContent || $messageContent == '') return true;
-            $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
-            $wsClients = $ws->getClients();
-            $wsClientsData = $ws->getClientsData();
-            foreach ($wsClients as $wsClient) {
-                /** @var ConnectionInterface $wsClient */
-                /** @noinspection PhpUndefinedFieldInspection */
-                if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-                /** @noinspection PhpUndefinedFieldInspection */
-                $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-                if (!$clientUser) continue;
-                /** @var User $clientUser */
-                if ($clientUser === $this->user) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => $messageContent
-                    );
-                }
-                else {
-                    if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
-                    $xresponse = array(
-                        'command' => 'showmessageprepend',
-                        'message' => $messageContent
-                    );
-                    $wsClient->send(json_encode($xresponse));
+            if (!$messageContent || $messageContent == '') {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Please specify a message')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
+                $wsClients = $ws->getClients();
+                $wsClientsData = $ws->getClientsData();
+                foreach ($wsClients as $wsClient) {
+                    /** @var ConnectionInterface $wsClient */
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+                    if (!$clientUser) continue;
+                    /** @var User $clientUser */
+                    if ($clientUser === $this->user) {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => $messageContent
+                        );
+                    }
+                    else {
+                        if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+                        $xresponse = array(
+                            'command' => 'showmessageprepend',
+                            'message' => $messageContent
+                        );
+                        $wsClient->send(json_encode($xresponse));
+                    }
                 }
             }
         }
@@ -153,32 +163,42 @@ class ChatService extends BaseService
         }
         if (!$this->response) {
             $messageContent = implode(' ', $contentArray);
-            if (!$messageContent || $messageContent == '') return true;
-            $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_FACTION);
-            $wsClients = $ws->getClients();
-            $wsClientsData = $ws->getClientsData();
-            foreach ($wsClients as $wsClient) {
-                /** @var ConnectionInterface $wsClient */
-                /** @noinspection PhpUndefinedFieldInspection */
-                if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-                /** @noinspection PhpUndefinedFieldInspection */
-                $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-                if (!$clientUser) continue;
-                /** @var User $clientUser */
-                if ($clientUser === $this->user) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => $messageContent
-                    );
-                }
-                else {
-                    if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
-                    if ($clientUser->getProfile()->getFaction() != $profile->getFaction()) continue;
-                    $xresponse = array(
-                        'command' => 'showmessageprepend',
-                        'message' => $messageContent
-                    );
-                    $wsClient->send(json_encode($xresponse));
+            if (!$messageContent || $messageContent == '') {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Please specify a message')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_FACTION);
+                $wsClients = $ws->getClients();
+                $wsClientsData = $ws->getClientsData();
+                foreach ($wsClients as $wsClient) {
+                    /** @var ConnectionInterface $wsClient */
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+                    if (!$clientUser) continue;
+                    /** @var User $clientUser */
+                    if ($clientUser === $this->user) {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => $messageContent
+                        );
+                    }
+                    else {
+                        if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+                        if ($clientUser->getProfile()->getFaction() != $profile->getFaction()) continue;
+                        $xresponse = array(
+                            'command' => 'showmessageprepend',
+                            'message' => $messageContent
+                        );
+                        $wsClient->send(json_encode($xresponse));
+                    }
                 }
             }
         }
@@ -199,32 +219,42 @@ class ChatService extends BaseService
             if (!$this->user) return true;
             $profile = $this->user->getProfile();
             $messageContent = implode(' ', $contentArray);
-            if (!$messageContent || $messageContent == '') return true;
-            $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_SAY);
-            $wsClients = $ws->getClients();
-            $wsClientsData = $ws->getClientsData();
-            foreach ($wsClients as $wsClient) {
-                /** @var ConnectionInterface $wsClient */
-                /** @noinspection PhpUndefinedFieldInspection */
-                if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-                /** @noinspection PhpUndefinedFieldInspection */
-                $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-                if (!$clientUser) continue;
-                /** @var User $clientUser */
-                // skip if they are not in the same node
-                if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
-                if ($clientUser === $this->user) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => $messageContent
-                    );
-                }
-                else {
-                    $xresponse = array(
-                        'command' => 'showmessageprepend',
-                        'message' => $messageContent
-                    );
-                    $wsClient->send(json_encode($xresponse));
+            if (!$messageContent || $messageContent == '') {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Please specify a message')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_SAY);
+                $wsClients = $ws->getClients();
+                $wsClientsData = $ws->getClientsData();
+                foreach ($wsClients as $wsClient) {
+                    /** @var ConnectionInterface $wsClient */
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+                    if (!$clientUser) continue;
+                    /** @var User $clientUser */
+                    // skip if they are not in the same node
+                    if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
+                    if ($clientUser === $this->user) {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => $messageContent
+                        );
+                    }
+                    else {
+                        $xresponse = array(
+                            'command' => 'showmessageprepend',
+                            'message' => $messageContent
+                        );
+                        $wsClient->send(json_encode($xresponse));
+                    }
                 }
             }
         }
@@ -245,30 +275,40 @@ class ChatService extends BaseService
         // get profile
         $profile = $this->user->getProfile();
         $messageContent = implode(' ', $contentArray);
-        if (!$messageContent || $messageContent == '') return true;
-        $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_NEWBIE);
-        $wsClients = $ws->getClients();
-        $wsClientsData = $ws->getClientsData();
-        foreach ($wsClients as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
-            /** @noinspection PhpUndefinedFieldInspection */
-            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-            if (!$clientUser) continue;
-            /** @var User $clientUser */
-            if ($clientUser === $this->user) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => $messageContent
-                );
-            }
-            else {
-                $xresponse = array(
-                    'command' => 'showmessageprepend',
-                    'message' => $messageContent
-                );
-                $wsClient->send(json_encode($xresponse));
+        if (!$messageContent || $messageContent == '') {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a message')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_NEWBIE);
+            $wsClients = $ws->getClients();
+            $wsClientsData = $ws->getClientsData();
+            foreach ($wsClients as $wsClient) {
+                /** @var ConnectionInterface $wsClient */
+                /** @noinspection PhpUndefinedFieldInspection */
+                if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+                /** @noinspection PhpUndefinedFieldInspection */
+                $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+                if (!$clientUser) continue;
+                /** @var User $clientUser */
+                if ($clientUser === $this->user) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => $messageContent
+                    ];
+                }
+                else {
+                    $xresponse = array(
+                        'command' => 'showmessageprepend',
+                        'message' => $messageContent
+                    );
+                    $wsClient->send(json_encode($xresponse));
+                }
             }
         }
         return $this->response;

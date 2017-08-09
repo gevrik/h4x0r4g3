@@ -827,12 +827,17 @@ class ProfileService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Your current credits: %s</pre>'),
+            $profile->getCredits()
+        );
+        $message .= sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Your current bank balance in credits: %s</pre>'),
+            $profile->getBankBalance()
+        );
         $this->response = [
             'command' => 'showmessage',
-            'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Your current bank balance in credits: %s</pre>'),
-                $profile->getBankBalance()
-            )
+            'message' => $message
         ];
         return $this->response;
     }

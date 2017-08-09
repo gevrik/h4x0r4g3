@@ -1091,7 +1091,6 @@ class NodeService extends BaseService
         $nodeTypeIds = []
     )
     {
-        var_dump($this->connectionsChecked);
         $nodeTypeFound = false;
         foreach ($this->connectionRepo->findBySourceNode($node) as $connection) {
             /** @var Connection $connection */
