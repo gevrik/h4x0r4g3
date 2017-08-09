@@ -16,6 +16,7 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
+use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -83,7 +84,7 @@ class ConnectionService extends BaseService
                 $connection->getType() == Connection::TYPE_CODEGATE &&
                 $profile !== $currentSystem->getProfile() &&
                 !$connection->getisOpen() &&
-                !$this->isSuperAdmin()
+                !$this->hasRole(NULL, Role::ROLE_ID_ADMIN)
             )
         ) {
             $this->response = array(
@@ -118,6 +119,16 @@ class ConnectionService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
+        // check if they can add connections
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter and check if this is a valid connection
         $parameter = $this->getNextParameter($contentArray, false);
@@ -128,16 +139,6 @@ class ConnectionService extends BaseService
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('No such connection')
-                )
-            );
-        }
-        // check if they can add connections
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
                 )
             );
         }
@@ -232,6 +233,16 @@ class ConnectionService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
+        // check if they can add connections
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
         $parameter = $this->getNextParameter($contentArray, false, true);
         if (!$this->response && !$parameter) {
             $returnMessage = array();
@@ -257,16 +268,6 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage
-            );
-        }
-        // check if they can add connections
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
             );
         }
         // check if this is a home node

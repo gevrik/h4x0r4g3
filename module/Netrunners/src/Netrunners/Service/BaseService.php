@@ -1177,39 +1177,49 @@ class BaseService
 
     /**
      * @param User|NULL $user
+     * @param $roleId
+     * @param bool $checkParents
      * @return bool
      */
-    protected function isSuperAdmin(User $user = NULL)
+    protected function hasRole(User $user = NULL, $roleId, $checkParents = true)
     {
-        $isAdmin = false;
+        $hasRole = false;
+        $neededRole = $this->entityManager->getRepository('TmoAuth\Entity\Role')->findOneBy([
+            'roleId' => $roleId
+        ]);
+        if (!$neededRole) return $hasRole;
+        /** @var Role $neededRole */
         $roles = ($user) ? $user->getRoles() : $this->user->getRoles();
-        foreach ($roles as $role) {
-            /** @var Role $role */
-            if ($role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
-                $isAdmin = true;
+        foreach ($roles as $xRole) {
+            /** @var Role $xRole */
+            if ($this->checkParentRoleSatisfy($xRole, $neededRole, $checkParents) === true) {
+                $hasRole = true;
                 break;
             }
         }
-        return $isAdmin;
+        return $hasRole;
     }
 
     /**
-     * @param User|NULL $user
+     * @param Role $checkRole
+     * @param Role $neededRole
+     * @param bool $checkParents
      * @return bool
      */
-    protected function isAdmin(User $user = NULL)
+    private function checkParentRoleSatisfy(
+        Role $checkRole,
+        Role $neededRole,
+        $checkParents = true
+    )
     {
-
-        $isAdmin = false;
-        $roles = ($user) ? $user->getRoles() : $this->user->getRoles();
-        foreach ($roles as $role) {
-            /** @var Role $role */
-            if ($role->getRoleId() === Role::ROLE_ID_ADMIN || $role->getRoleId() === Role::ROLE_ID_SUPERADMIN) {
-                $isAdmin = true;
-                break;
-            }
+        $hasRole = false;
+        if ($checkRole->getRoleId() == $neededRole->getRoleId()) {
+            $hasRole = true;
         }
-        return $isAdmin;
+        if (!$hasRole && $checkParents && $checkRole->getParent()) {
+            $hasRole = $this->checkParentRoleSatisfy($checkRole->getParent(), $neededRole, $checkParents);
+        }
+        return $hasRole;
     }
 
     /**
@@ -1331,7 +1341,7 @@ class BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if ($this->isSuperAdmin()) {
+        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->showSystemMap($resourceId);
         }
         $this->response = $this->isActionBlocked($resourceId, true);
@@ -1343,7 +1353,7 @@ class BaseService
             // if the profile or its faction or group owns this system, show them the full map
             $currentSystem = $currentNode->getSystem();
             if (
-                $profile == $currentSystem->getProfile() ||
+                $profile === $currentSystem->getProfile() ||
                 $profile->getFaction() == $currentSystem->getFaction() ||
                 $profile->getGroup() == $currentSystem->getGroup()
             ) {

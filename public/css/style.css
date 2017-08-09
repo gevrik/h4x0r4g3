@@ -1,6 +1,7 @@
 body {
     font-family: monospace;
     font-size: 12px;
+    line-height: normal;
     background-color: #000000;
 }
 
@@ -14,7 +15,6 @@ pre {
     padding: 0;
     margin: 0;
     font-size: 12px;
-    line-height: 12px;
     color: #888888;
     word-break: break-all;
     word-wrap: break-word;
@@ -49,6 +49,10 @@ pre {
 
 #messages {
     overflow-y: auto;
+}
+
+.text-small {
+    font-size: 8px;
 }
 
 .text-sysmsg {
@@ -142,6 +146,12 @@ pre {
 }
 
 .manpage-subject {
+    color: #888888;
+    background-color: #3c3c3c;
+    border-color: #282828;
+}
+
+.manpage-status {
     color: #888888;
     background-color: #3c3c3c;
     border-color: #282828;

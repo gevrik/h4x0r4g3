@@ -12,7 +12,9 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Manpage;
+use Netrunners\Entity\Node;
 use Netrunners\Repository\ManpageRepository;
+use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -21,6 +23,7 @@ class ManpageService extends BaseService
 {
 
     const DEFAULT_MANPAGE_ID = 1;
+    const ACTION_SAVE = 'save';
 
     /**
      * @var ManpageRepository
@@ -50,6 +53,7 @@ class ManpageService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $showInConsole = false;
+        $manpage = NULL;
         $command = 'showmessage';
         $message = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -78,7 +82,7 @@ class ManpageService extends BaseService
             $searchById = (is_numeric($keyword)) ? true : false;
             if ($searchById) {
                 $manpage = $this->manpageRepo->find($keyword);
-                if ($manpage) {
+                if ($manpage && $manpage->getStatus() != Manpage::STATUS_INVALID) {
                     $message = sprintf(
                         '%s',
                         $manpage->getContent()
@@ -126,6 +130,7 @@ class ManpageService extends BaseService
             else {
                 $view->setTemplate('netrunners/manpage/showmessage.phtml');
                 $view->setVariable('message', $message);
+                $view->setVariable('manpage', $manpage);
                 $view->setVariable('title', $title);
             }
             $command = 'openmanpagemenu';
@@ -146,7 +151,7 @@ class ManpageService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isSuperAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -161,8 +166,9 @@ class ManpageService extends BaseService
             foreach ($manpages as $manpage) {
                 /** @var Manpage $manpage */
                 $messages[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-11s|%s</pre>',
                     $manpage->getId(),
+                    Manpage::$lookup[$manpage->getStatus()],
                     $manpage->getSubject()
                 );
             }
@@ -183,7 +189,7 @@ class ManpageService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isSuperAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -194,7 +200,7 @@ class ManpageService extends BaseService
         }
         if (!$this->response) {
             $parameter = $this->getNextParameter($contentArray, false, false, true, true);
-            $subject = ($parameter) ? $parameter : 'new manpage';
+            $subject = ($parameter) ? $parameter : 'new manpage title';
             $content = 'new manpage content';
             $manpage = new Manpage();
             $manpage->setAuthor($this->user->getProfile());
@@ -203,6 +209,7 @@ class ManpageService extends BaseService
             $manpage->setParent(NULL);
             $manpage->setContent($content);
             $manpage->setSubject($subject);
+            $manpage->setStatus(Manpage::STATUS_INVALID);
             $this->entityManager->persist($manpage);
             $this->entityManager->flush($manpage);
             $this->response = $this->editManpage($resourceId, [$manpage->getId()]);
@@ -219,7 +226,7 @@ class ManpageService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isSuperAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -250,6 +257,7 @@ class ManpageService extends BaseService
                 $view = new ViewModel();
                 $view->setTemplate('netrunners/manpage/edit-manpage.phtml');
                 $view->setVariable('manpage', $manpage);
+                $view->setVariable('showstatusdropdown', $this->hasRole(NULL, Role::ROLE_ID_ADMIN));
                 $this->response = array(
                     'command' => 'openmanpagemenu',
                     'message' => $this->viewRenderer->render($view)
@@ -264,18 +272,20 @@ class ManpageService extends BaseService
      * @param string $content
      * @param string $mpTitle
      * @param $entityId
+     * @param int $status
      * @return array|bool|false
      */
     public function saveManpage(
         $resourceId,
         $content = '===invalid content===',
         $mpTitle = '===invalid title===',
-        $entityId
+        $entityId,
+        $status = Manpage::STATUS_INVALID
     )
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isSuperAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -301,8 +311,11 @@ class ManpageService extends BaseService
                 $mpTitle = htmLawed($mpTitle, ['safe'=>1,'elements'=>'strong']);
                 $manpage->setSubject($mpTitle);
                 $manpage->setContent($content);
+                $manpage->setStatus($status);
                 $manpage->setAuthor($this->user->getProfile());
                 $manpage->setUpdatedDateTime(new \DateTime());
+                // change status
+                $manpage->setStatus($this->getNewStatus($manpage));
                 $this->entityManager->flush($manpage);
                 $this->response = [
                     'command' => 'showmessage',
@@ -314,6 +327,30 @@ class ManpageService extends BaseService
             }
         }
         return $this->response;
+    }
+
+    /**
+     * @param Manpage $manpage
+     * @param string $action
+     * @return int
+     */
+    private function getNewStatus(Manpage $manpage, $action = self::ACTION_SAVE)
+    {
+        $newStatus = $manpage->getStatus();
+        switch ($action) {
+            default:
+                break;
+            case self::ACTION_SAVE:
+                if ($this->hasRole(NULL, Role::ROLE_ID_MODERATOR, false)) {
+                    switch ($manpage->getStatus()) {
+                        default:
+                            $newStatus = Manpage::STATUS_SUGGESTED;
+                            break;
+                    }
+                }
+                break;
+        }
+        return $newStatus;
     }
 
 }

@@ -22,6 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
 class Role implements HierarchicalRoleInterface
 {
 
+    const ROLE_ID_MODERATOR = 'moderator';
     const ROLE_ID_ADMIN = 'admin';
     const ROLE_ID_SUPERADMIN = 'superadmin';
 
@@ -103,7 +104,7 @@ class Role implements HierarchicalRoleInterface
     /**
      * Set the parent role.
      *
-     * @param Role $role
+     * @param Role $parent
      *
      * @return void
      */

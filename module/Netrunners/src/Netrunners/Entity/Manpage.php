@@ -17,6 +17,26 @@ use Doctrine\ORM\Mapping as ORM;
 class Manpage
 {
 
+    const STATUS_INVALID = 0;
+    const STATUS_SUGGESTED = 1;
+    const STATUS_REVIEW = 2;
+    const STATUS_CHANGES = 3;
+    const STATUS_ACCEPTED = 4;
+
+    const STATUS_INVALID_STRING = 'invalid';
+    const STATUS_SUGGESTED_STRING = 'suggested';
+    const STATUS_REVIEW_STRING = 'review';
+    const STATUS_CHANGES_STRING = 'changes';
+    const STATUS_ACCEPTED_STRING = 'accepted';
+
+    static $lookup = [
+        self::STATUS_INVALID => self::STATUS_INVALID_STRING,
+        self::STATUS_SUGGESTED => self::STATUS_SUGGESTED_STRING,
+        self::STATUS_REVIEW => self::STATUS_REVIEW_STRING,
+        self::STATUS_CHANGES => self::STATUS_CHANGES_STRING,
+        self::STATUS_ACCEPTED => self::STATUS_ACCEPTED_STRING,
+    ];
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -48,6 +68,12 @@ class Manpage
      * @var \DateTime
      */
     protected $updatedDateTime;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $status;
 
     // ORM
 
@@ -161,6 +187,24 @@ class Manpage
     public function setUpdatedDateTime($updatedDateTime)
     {
         $this->updatedDateTime = $updatedDateTime;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatus()
+    {
+        return $this->status;
+    }
+
+    /**
+     * @param int $status
+     * @return Manpage
+     */
+    public function setStatus($status)
+    {
+        $this->status = $status;
         return $this;
     }
 

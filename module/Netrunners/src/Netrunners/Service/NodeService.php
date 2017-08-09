@@ -326,7 +326,7 @@ class NodeService extends BaseService
     {
         $profile = $this->user->getProfile();
         $node = $profile->getCurrentNode();
-        if (!$this->response && $node->getSystem()->getProfile() != $profile) {
+        if (!$this->response && $node->getSystem()->getProfile() !== $profile) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -374,7 +374,7 @@ class NodeService extends BaseService
         // check if they are busy
         $this->response = $this->isActionBlocked($resourceId);
         // only allow owner of system to add nodes
-        if (!$this->response && $profile != $currentNode->getSystem()->getProfile()) {
+        if (!$this->response && $profile !== $currentNode->getSystem()->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -643,7 +643,7 @@ class NodeService extends BaseService
             );
         }
         // check if they can change the type
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -737,7 +737,7 @@ class NodeService extends BaseService
             );
         }
         // check if they can change the type
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -835,7 +835,7 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $this->response = $this->isActionBlocked($resourceId, true);
         // only allow owner of system to add nodes
-        if (!$this->response && $profile != $currentNode->getSystem()->getProfile()) {
+        if (!$this->response && $profile !== $currentNode->getSystem()->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -875,7 +875,7 @@ class NodeService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         // only allow owner of system to add nodes
-        if ($profile != $currentNode->getSystem()->getProfile()) {
+        if ($profile !== $currentNode->getSystem()->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -931,7 +931,7 @@ class NodeService extends BaseService
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
         // check if they are allowed to remove nodes
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -1149,7 +1149,7 @@ class NodeService extends BaseService
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId, true);
         // check if they can change the type
-        if (!$this->response && $profile != $currentSystem->getProfile()) {
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(

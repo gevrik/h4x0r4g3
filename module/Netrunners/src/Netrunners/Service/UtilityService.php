@@ -16,6 +16,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
+use TmoAuth\Entity\Role;
 
 class UtilityService extends BaseService
 {
@@ -107,6 +108,47 @@ class UtilityService extends BaseService
             }
         }
         return wordwrap(substr(bin2hex($r), 0, $length), $space, $sep, true);
+    }
+
+    /**
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function showCommands($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $message = 'addconnection  addnode  attack  bug  cd  changepassword  clear  code  commands  connect  consider  deposit  dl  download  editnode  entityname  equipment  execute  explore  factionchat fc  factionratings  factions  filemods  filename  filetypes  gc  help  home  idea  initarmor  inventory inv  jobs  kill  ls  mail  map  milkrun  newbie  nodename  nodes  nodetype  options  passwd  ps  removenode  resources res  say  scan  secureconnection  setemail  setlocale  showbalance  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  upgradenode  use  visible  vis  withdraw';
+        $returnMessage = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+            wordwrap($message, 120)
+        );
+        if ($this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
+            $message = 'listmanpages  addmanpage  editmanpage';
+            $returnMessage .= sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-addon">%s</pre>',
+                wordwrap($message, 120)
+            );
+        }
+        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            $message = 'banip  unbanip  banuser  unbanuser  clients  goto  kick  nlist  setcredits  setsnippets  syslist';
+            $returnMessage .= sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                wordwrap($message, 120)
+            );
+        }
+        if ($this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
+            $message = 'grantrole  removerole toggleadminmode';
+            $returnMessage .= sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
+                wordwrap($message, 120)
+            );
+        }
+        $response = array(
+            'command' => 'showmessage',
+            'message' => $returnMessage
+        );
+        return $response;
     }
 
 }

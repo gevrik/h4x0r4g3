@@ -260,7 +260,19 @@ class User implements UserInterface, ProviderInterface
      */
     public function addRole($role)
     {
-        $this->roles[] = $role;
+        if (!$this->roles->contains($role)) {
+            $this->roles[] = $role;
+        }
+    }
+
+    /**
+     * @param $role
+     */
+    public function removeRole($role)
+    {
+        if ($this->roles->contains($role)) {
+            $this->roles->removeElement($role);
+        }
     }
 
     /**

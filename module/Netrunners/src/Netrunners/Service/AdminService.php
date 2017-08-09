@@ -19,6 +19,7 @@ use Netrunners\Entity\System;
 use Netrunners\Repository\BannedIpRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
+use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\Validator\Ip;
@@ -52,7 +53,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -107,7 +108,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -173,7 +174,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -238,7 +239,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -287,7 +288,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -348,7 +349,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -393,7 +394,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -438,7 +439,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -467,7 +468,12 @@ class AdminService extends BaseService
                     )
                 ];
             }
-            if (!$this->response && ($this->isAdmin() || $this->isSuperAdmin())) {
+            $targetUser = NULL;
+            if (!$this->response) {
+                $targetUserClientData = $this->getWebsocketServer()->getClientData($targetResourceId);
+                $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserClientData['userId']);
+            }
+            if (!$this->response && $targetUser && $this->hasRole($targetUser, Role::ROLE_ID_SUPERADMIN)) {
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -513,7 +519,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isSuperAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -546,7 +552,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -599,7 +605,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -674,7 +680,7 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->isSuperAdmin()) {
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -710,6 +716,137 @@ class AdminService extends BaseService
             ];
         }
         return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function grantRoleCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        list($targetUser, $targetRole) = $this->validUserAndRoleCheck($contentArray);
+        /* all checks passed - we can add the role */
+        if (!$this->response && $targetUser && $targetRole) {
+            /** @var Role $targetRole */
+            $targetUser->addRole($targetRole);
+            $this->entityManager->flush($targetUser);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                    $this->translate('DONE')
+                )
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function removeRoleCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        list($targetUser, $targetRole) = $this->validUserAndRoleCheck($contentArray);
+        /* all checks passed - we can add the role */
+        if (!$this->response && $targetUser && $targetRole) {
+            /** @var User $targetUser */
+            /** @var Role $targetRole */
+            $targetUser->removeRole($targetRole);
+            $this->entityManager->flush($targetUser);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                    $this->translate('DONE')
+                )
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $contentArray
+     * @return array
+     */
+    private function validUserAndRoleCheck($contentArray)
+    {
+        $targetUser = NULL;
+        $targetRole = NULL;
+        if (!$this->response) {
+            list($contentArray, $targetUserId) = $this->getNextParameter($contentArray, true, true);
+            if (!$targetUserId) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Please specify the user id ("clients" for list)')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
+                /** @var User $targetUser */
+                if (!$targetUser) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid user id')
+                        )
+                    ];
+                }
+            }
+            if (!$this->response && $targetUser) {
+                $targetRoleString = $this->getNextParameter($contentArray, false);
+                if (!$targetRoleString) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Please specify the role to be granted')
+                        )
+                    ];
+                }
+                $targetRole = $this->entityManager->getRepository('TmoAuth\Entity\Role')->findOneBy([
+                    'roleId' => $targetRoleString
+                ]);
+                if (!$targetRole) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid role name')
+                        )
+                    ];
+                }
+            }
+        }
+        return [$targetUser, $targetRole];
     }
 
 }

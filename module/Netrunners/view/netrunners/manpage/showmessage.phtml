@@ -5,8 +5,26 @@
             <?php echo strtoupper($this->title); ?>
         </h3>
     </div>
-    <div class="panel-body" style="padding: 0;">
+    <div class="panel-body" style="padding: .25em;">
         <div id="manpage-content-container" class="manpage-content-container">
+            <?php if ($this->manpage) : ?>
+                <div class="well well-sm" style="margin-bottom: 4px;"><span class="text-muted text-small">created: <?php echo $this->manpage->getCreatedDateTime()->format('Y-m-d H:i:s'); ?> - updated: <?php echo ($this->manpage->getUpdatedDateTime()) ? $this->manpage->getUpdatedDateTime()->format('Y-m-d H:i:s') : 'never' ; ?></span></div>
+                <?php if ($this->manpage->getStatus() == \Netrunners\Entity\Manpage::STATUS_INVALID) : ?>
+                    <div class="alert alert-danger text-small">INVALID MANPAGE WITH OUTDATED INFORMATION - DO NOT USE!</div>
+                <?php endif; ?>
+                <?php if ($this->manpage->getStatus() == \Netrunners\Entity\Manpage::STATUS_SUGGESTED) : ?>
+                    <div class="alert alert-danger text-small">This manpage has been suggested for review - the information in this article might not be correct or even misleading!</div>
+                <?php endif; ?>
+                <?php if ($this->manpage->getStatus() == \Netrunners\Entity\Manpage::STATUS_REVIEW) : ?>
+                    <div class="alert alert-warning text-small">This manpage is undergoing review - the information in this article might not be accurate or even misleading.</div>
+                <?php endif; ?>
+                <?php if ($this->manpage->getStatus() == \Netrunners\Entity\Manpage::STATUS_CHANGES) : ?>
+                    <div class="alert alert-info text-small">This manpage is undergoing changes by the author - the information in this article might not be fully accurate, yet.</div>
+                <?php endif; ?>
+                <?php if ($this->manpage->getStatus() == \Netrunners\Entity\Manpage::STATUS_ACCEPTED) : ?>
+                    <div class="alert alert-success text-small">This manpage has been accepted by administration - the information in this article should be accurate and correct.</div>
+                <?php endif; ?>
+            <?php endif; ?>
             <?php echo $this->message; ?>
         </div>
     </div>

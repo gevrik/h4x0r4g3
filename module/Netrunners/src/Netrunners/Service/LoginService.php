@@ -50,8 +50,6 @@ class LoginService extends BaseService
         }
         else {
             $this->setUser($user);
-            $isAdmin = $this->isAdmin();
-            $isSuperAdmin = $this->isSuperAdmin();
             // check if they are banned
             if ($user->getBanned()) {
                 $response = [
@@ -64,7 +62,7 @@ class LoginService extends BaseService
                 $disconnect = true;
             }
             // check if admin mode is active
-            else if ($ws->isAdminMode() && !$isAdmin && !$isSuperAdmin) {
+            else if ($ws->isAdminMode() && !$this->hasRole($user, Role::ROLE_ID_ADMIN)) {
                 $response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -74,7 +72,7 @@ class LoginService extends BaseService
                 ];
                 $disconnect = true;
             }
-            else if (count($ws->getClients()) >= WebsocketService::MAX_CLIENTS && !$isAdmin && !$isSuperAdmin) {
+            else if (count($ws->getClients()) >= WebsocketService::MAX_CLIENTS && !$this->hasRole($user, Role::ROLE_ID_ADMIN)) {
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(

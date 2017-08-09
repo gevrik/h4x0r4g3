@@ -605,7 +605,8 @@ class WebsocketService implements MessageComponentInterface {
             case 'saveManpage':
                 if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                 $mpTitle = (isset($msgData->title)) ? $msgData->title : false;
-                $response = $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId);
+                $mpStatus = (isset($msgData->status)) ? $msgData->status : false;
+                $response = $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId, $mpStatus);
                 $from->send(json_encode($response));
                 break;
             case 'showprompt':

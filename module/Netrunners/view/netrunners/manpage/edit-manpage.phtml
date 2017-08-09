@@ -4,18 +4,31 @@
         <button id="save-manpage" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
         <h3 class="panel-title"><?php echo sprintf('%s: %s', $this->translate("EDITING"), $this->manpage->getSubject()); ?></h3>
     </div>
-    <div class="panel-body" style="padding: 0;">
-        <label for="manpage-subject">
-            <input type="text" id="manpage-subject" name="manpage-subject" class="manpage-subject" style="border: 0;" value="<?php echo $this->manpage->getSubject(); ?>" />
-        </label>
+    <div class="panel-body" style="padding: .25em;">
+        <div class="form-group">
+            <label for="manpage-subject">
+                <input type="text" id="manpage-subject" name="manpage-subject" class="manpage-subject form-control" style="border: 0;" value="<?php echo $this->manpage->getSubject(); ?>" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="manpage-status">
+                <select id="manpage-status" name="manpage-status" class="manpage-status form-control" <?php echo (!$this->showstatusdropdown) ? 'disabled="disabled"' : ''; ?>>
+                    <?php foreach (\Netrunners\Entity\Manpage::$lookup as $statusId => $statusString) : ?>
+                        <option value="<?php echo $statusId; ?>" <?php echo ($this->manpage->getStatus() == $statusId) ? 'selected="selected"' : '';?>>
+                            status: <?php echo $statusString; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
         <label for="manpage-content">
-            <textarea id="manpage-content" name="manpage-content" class="manpage-content" rows="10" style="border: 0;"><?php echo $this->manpage->getContent(); ?></textarea>
+            <textarea id="manpage-content" name="manpage-content" class="manpage-content" rows="12" style="border: 0; padding: .25em;"><?php echo $this->manpage->getContent(); ?></textarea>
         </label>
     </div>
 </div>
-<script>
+<script type="application/javascript">
 
-    var editorWidth = $('.panel-body').innerWidth();
+    var editorWidth = $('.panel-body').innerWidth() - 10;
     $('#manpage-content').css('width', editorWidth);
     $('#manpage-subject').css('width', editorWidth);
 
@@ -25,6 +38,7 @@
             hash: hash,
             content: editor1.getData(),
             title: $('#manpage-subject').val(),
+            status: $('#manpage-status').val(),
             entityId: <?php echo $this->manpage->getId(); ?>,
             silent: true
         };

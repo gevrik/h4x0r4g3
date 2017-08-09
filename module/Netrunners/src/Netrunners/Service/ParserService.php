@@ -259,7 +259,7 @@ class ParserService
                 $response = $this->codingService->enterCodeMode($resourceId);
                 break;
             case 'commands':
-                $response = $this->showCommands($resourceId);
+                $response = $this->getWebsocketServer()->getUtilityService()->showCommands($resourceId);
                 break;
             case 'connect':
                 $response = $this->nodeService->systemConnect($resourceId, $contentArray);
@@ -496,6 +496,10 @@ class ParserService
             case 'use':
                 $response = $this->fileService->useCommand($resourceId, $contentArray);
                 break;
+            case 'visible':
+            case 'vis':
+                $response = $this->profileService->stopStealthing($resourceId);
+                break;
             case 'withdraw':
                 $response = $this->profileService->withdrawCredits($resourceId, $contentArray);
                 break;
@@ -519,6 +523,12 @@ class ParserService
             case 'goto':
                 $response = $this->adminService->gotoNodeCommand($resourceId, $contentArray);
                 break;
+            case 'grantrole':
+                $response = $this->adminService->grantRoleCommand($resourceId, $contentArray);
+                break;
+            case 'removerole':
+                $response = $this->adminService->removeRoleCommand($resourceId, $contentArray);
+                break;
             case 'kickclient':
                 $response = $this->adminService->kickClient($resourceId, $contentArray);
                 break;
@@ -536,10 +546,6 @@ class ParserService
                 break;
             case 'toggleadminmode':
                 $response = $this->adminService->adminToggleAdminMode($resourceId);
-                break;
-            case 'visible':
-            case 'vis':
-                $response = $this->profileService->stopStealthing($resourceId);
                 break;
         }
         if (!is_array($response)) {
@@ -697,28 +703,6 @@ class ParserService
             $response['exitconfirmmode'] = true;
             $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         }
-        return $response;
-    }
-
-    /**
-     * @param int $resourceId
-     * @return array|bool
-     */
-    public function showCommands($resourceId)
-    {
-        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
-        /** @var User $user */
-        $message = $this->translator->translate('addconnection  addnode  attack  bug  cd  changepassword  clear  code  commands  connect  deposit  dl  download  editnode  entityname  equipment  execute  explore  factionratings  factions  filemods  filename  gc  help  home  idea  initarmor  inventory  jobs  kill  ls  mail  map  newbie  nodename  nodes  nodetype  options  passwd  ps  removenode  resources  say  scan  secureconnection  setemail  setlocale  showbalance  skillpoints  skills  stat  survey  system  time  touch  typo  ul  unload  use  withdraw');
-        $returnMessage = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-            wordwrap($message, 120)
-        );
-        $response = array(
-            'command' => self::CMD_SHOWMESSAGE,
-            'message' => $returnMessage
-        );
         return $response;
     }
 
