@@ -1187,7 +1187,7 @@ class BaseService
      * @param bool $checkParents
      * @return bool
      */
-    protected function hasRole(User $user = NULL, $roleId, $checkParents = true)
+    public function hasRole(User $user = NULL, $roleId, $checkParents = true)
     {
         $hasRole = false;
         $neededRole = $this->entityManager->getRepository('TmoAuth\Entity\Role')->findOneBy([

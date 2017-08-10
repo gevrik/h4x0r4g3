@@ -17,6 +17,7 @@ use Netrunners\Service\UtilityService;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 use React\EventLoop\LoopInterface;
+use TmoAuth\Entity\Role;
 use Zend\Log\Logger;
 use Zend\Validator\Ip;
 
@@ -508,7 +509,13 @@ class WebsocketService implements MessageComponentInterface {
                 );
                 $from->send(json_encode($response));
             }
-            if ($content != 'ticker') {
+            // log this command unless it is automated or contains sensitive informations
+            if (
+                $content != 'ticker' &&
+                $command != 'promptforpassword' &&
+                $command != 'createpassword' &&
+                $command != 'createpasswordconfirm'
+            ) {
                 $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
             }
             // check if we know the ip addy of the socket - if not, disconnect them
@@ -657,6 +664,24 @@ class WebsocketService implements MessageComponentInterface {
             if ($currentPlaySession) {
                 $currentPlaySession->setEnd(new \DateTime());
                 $this->entityManager->flush($currentPlaySession);
+            }
+            // inform admins
+            $informer = array(
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-addon">user [%s] has disconnected</pre>',
+                    $profile->getUser()->getUsername()
+                )
+            );
+            foreach ($this->getClients() as $wsClientId => $wsClient) {
+                if ($wsClient->resourceId == $resourceId) continue;
+                $xClientData = $this->getClientData($wsClient->resourceId);
+                if (!$xClientData) continue;
+                if (!$xClientData->userId) continue;
+                $xUser = $this->entityManager->find('TmoAuth\Entity\User', $xClientData->userId);
+                if (!$xUser) continue;
+                if (!$this->getUtilityService()->hasRole($xUser, Role::ROLE_ID_ADMIN)) continue;
+                $wsClient->send(json_encode($informer));
             }
         }
         // The connection is closed, remove it, as we can no longer send it messages

@@ -465,6 +465,25 @@ class LoginService extends BaseService
             $playSession->setSocketId($resourceId);
             $this->entityManager->persist($playSession);
             $this->entityManager->flush($playSession);
+            // inform admins
+            $informer = array(
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">user [%s] has connected</pre>'),
+                    $user->getUsername()
+                )
+            );
+            $ws = $this->getWebsocketServer();
+            foreach ($ws->getClients() as $wsClientId => $wsClient) {
+                if ($wsClient->resourceId == $resourceId) continue;
+                $xClientData = $ws->getClientData($wsClient->resourceId);
+                if (!$xClientData) continue;
+                if (!$xClientData->userId) continue;
+                $xUser = $this->entityManager->find('TmoAuth\Entity\User', $xClientData->userId);
+                if (!$xUser) continue;
+                if (!$this->hasRole($xUser, Role::ROLE_ID_ADMIN)) continue;
+                $wsClient->send(json_encode($informer));
+            }
         }
         return [$disconnect, $response];
     }
