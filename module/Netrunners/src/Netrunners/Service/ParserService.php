@@ -570,7 +570,7 @@ class ParserService
         }
         if ($response) $from->send(json_encode($response));
         // check if we have to work on more commands
-        if (array_key_exists('additionalCommands', $response)) {
+        if (is_array($response) && array_key_exists('additionalCommands', $response)) {
             foreach ($response['additionalCommands'] as $additionalCommandId => $additionalCommandData) {
                 $additionalResponse = false;
                 switch ($additionalCommandData['command']) {
