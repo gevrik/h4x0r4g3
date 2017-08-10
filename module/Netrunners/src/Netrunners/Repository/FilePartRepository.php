@@ -34,6 +34,7 @@ class FilePartRepository extends EntityRepository
     {
         $qb = $this->createQueryBuilder('fp');
         $qb->where($qb->expr()->like('fp.name', $qb->expr()->literal($keyword . '%')));
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

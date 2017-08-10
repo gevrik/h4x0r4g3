@@ -64,6 +64,7 @@ class NpcInstanceRepository extends EntityRepository
         $qb = $this->createQueryBuilder('ni');
         $qb->where('ni.homeNode = :node');
         $qb->setParameter('node', $node);
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

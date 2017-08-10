@@ -11,7 +11,6 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
-use Netrunners\Entity\Faction;
 use Netrunners\Entity\Profile;
 
 class PlaySessionRepository extends EntityRepository
@@ -43,6 +42,8 @@ class PlaySessionRepository extends EntityRepository
         $qb = $this->createQueryBuilder('ps');
         $qb->where('ps.profile = :profile AND ps.end IS NULL');
         $qb->setParameter('profile', $profile);
+        $qb->orderBy('ps.id', 'DESC');
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 
@@ -56,6 +57,7 @@ class PlaySessionRepository extends EntityRepository
         $qb->where('ps.profile = :profile AND ps.end IS NOT NULL');
         $qb->setParameter('profile', $profile);
         $qb->orderBy('ps.end', 'DESC');
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

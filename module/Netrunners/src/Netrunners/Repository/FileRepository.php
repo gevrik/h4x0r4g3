@@ -184,6 +184,7 @@ class FileRepository extends EntityRepository
             'fileType' => $chatclient,
             'profile' => $profile
         ]);
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

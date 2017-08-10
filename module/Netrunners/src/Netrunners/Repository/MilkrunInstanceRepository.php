@@ -29,6 +29,7 @@ class MilkrunInstanceRepository extends EntityRepository
             'now' => new \DateTime(),
             'profile' => $profile
         ]);
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

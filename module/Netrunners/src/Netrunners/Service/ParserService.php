@@ -553,16 +553,21 @@ class ParserService
                 break;
         }
         if (!is_array($response)) {
-            $response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translator->translate('Your command could not be parsed properly... This could either be a bug or you using the command in a wrong way...')
-                )
-            ];
+            if (!$silent) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translator->translate('Your command could not be parsed properly... This could either be a bug or you using the command in a wrong way...')
+                    )
+                ];
+                $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
+            }
         }
-        $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
-        $response['silent'] = $silent;
+        else {
+            $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
+            $response['silent'] = $silent;
+        }
         if ($response) $from->send(json_encode($response));
         // check if we have to work on more commands
         if (array_key_exists('additionalCommands', $response)) {

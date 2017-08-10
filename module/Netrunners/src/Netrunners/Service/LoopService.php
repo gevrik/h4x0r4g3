@@ -142,6 +142,7 @@ class LoopService extends BaseService
             $resourceId = $wsClient->resourceId;
             $clientData = $ws->getClientData($resourceId);
             // skip sockets that are not properly connected yet
+            if (!$clientData) continue;
             if (!$clientData->hash) continue;
             // first we get amount of notifications and actiontime
             $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);

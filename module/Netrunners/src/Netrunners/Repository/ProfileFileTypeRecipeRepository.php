@@ -30,6 +30,7 @@ class ProfileFileTypeRecipeRepository extends EntityRepository
             'profile' => $profile,
             'fileType' => $fileType
         ]);
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

@@ -51,6 +51,7 @@ class FileTypeRepository extends EntityRepository
     {
         $qb = $this->createQueryBuilder('ft');
         $qb->where($qb->expr()->like('ft.name', $qb->expr()->literal($keyword . '%')));
+        $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
     }
 

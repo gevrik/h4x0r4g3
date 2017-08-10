@@ -26,6 +26,7 @@
         });
 
         $('#panel-container').on('click', '.panel-heading .close', function(e){
+            console.log('.close in .panel-heading clicked');
             $('#panel-container').html('');
             commandInput.focus();
         });
