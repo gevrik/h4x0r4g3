@@ -1239,6 +1239,7 @@ class NodeService extends BaseService
             $addy = $parameter;
             // check if the target system exists
             $targetSystem = $this->systemRepo->findByAddy($addy);
+            $targetNode = NULL;
             if (!$this->response && !$targetSystem) {
                 $this->response = array(
                     'command' => 'showmessage',
@@ -1248,20 +1249,35 @@ class NodeService extends BaseService
                     )
                 );
             }
-            // now check if the node id exists
-            $targetNodeId = $this->getNextParameter($contentArray, false, true);
-            $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
-            /** @var Node $targetNode */
-            if (!$this->response && !$targetNode) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid node id')
-                    )
-                );
+            if (!$this->response) {
+                // now check if the node id exists
+                $targetNodeId = $this->getNextParameter($contentArray, false, true);
+                if (!$targetNodeId) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Please specify the target node id')
+                        )
+                    );
+                }
+                if (!$this->response) {
+                    $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+                    if (!$targetNode) {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                                $this->translate('Invalid target node id')
+                            )
+                        );
+                    }
+                }
             }
-            if (!$this->response && ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)) {
+            if (
+                !$this->response && $targetNode &&
+                ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)
+            ) {
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -1279,7 +1295,17 @@ class NodeService extends BaseService
                     )
                 );
             }
-            if (!$this->response) {
+            if (!$this->response && $targetNode && $targetNode == $currentNode) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You are already there')
+                    )
+                );
+            }
+            if (!$this->response && $targetNode) {
+                /** @var Node $targetNode */
                 $profile->setCurrentNode($targetNode);
                 $this->entityManager->flush($profile);
                 $this->response = array(

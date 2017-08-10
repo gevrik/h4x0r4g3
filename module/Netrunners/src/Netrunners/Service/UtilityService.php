@@ -124,7 +124,7 @@ class UtilityService extends BaseService
             wordwrap($message, 120)
         );
         if ($this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
-            $message = 'listmanpages  addmanpage  editmanpage';
+            $message = 'listmanpages  addmanpage  editmanpage  modchat mc';
             $returnMessage .= sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-addon">%s</pre>',
                 wordwrap($message, 120)

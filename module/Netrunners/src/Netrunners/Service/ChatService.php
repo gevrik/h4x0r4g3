@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
+use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -25,6 +26,11 @@ class ChatService extends BaseService
      * @const CHANNEL_GLOBAL
      */
     const CHANNEL_GLOBAL = 'GCHAT';
+
+    /**
+     * @const CHANNEL_MODERATOR
+     */
+    const CHANNEL_MODERATOR = 'MODCHAT';
 
     /**
      * @const CHANNEL_SAY
@@ -115,6 +121,74 @@ class ChatService extends BaseService
                     }
                     else {
                         if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+                        $xresponse = array(
+                            'command' => 'showmessageprepend',
+                            'message' => $messageContent
+                        );
+                        $wsClient->send(json_encode($xresponse));
+                    }
+                }
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function moderatorChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        // get profile
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
+        // check if the have a running chat client
+        if (!$this->response) {
+            if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Access denied')
+                    )
+                ];
+            }
+        }
+        if (!$this->response) {
+            $messageContent = implode(' ', $contentArray);
+            if (!$messageContent || $messageContent == '') {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Please specify a message')
+                    )
+                ];
+            }
+            if (!$this->response) {
+                $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_MODERATOR);
+                $wsClients = $ws->getClients();
+                $wsClientsData = $ws->getClientsData();
+                foreach ($wsClients as $wsClient) {
+                    /** @var ConnectionInterface $wsClient */
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
+                    if (!$clientUser) continue;
+                    /** @var User $clientUser */
+                    if ($clientUser === $this->user) {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => $messageContent
+                        );
+                    }
+                    else {
+                        if (!$this->hasRole($clientUser, Role::ROLE_ID_MODERATOR)) continue;
                         $xresponse = array(
                             'command' => 'showmessageprepend',
                             'message' => $messageContent

@@ -383,6 +383,10 @@ class ParserService
                     $response = $this->systemService->showSystemMap($resourceId);
                 }
                 break;
+            case 'modchat':
+            case 'mc':
+                $response = $this->chatService->moderatorChat($resourceId, $contentArray);
+                break;
             case 'new':
             case 'newbie':
                 $response = $this->chatService->newbieChat($resourceId, $contentArray);
