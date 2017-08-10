@@ -63,7 +63,7 @@ class CodebreakerService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a connection by name or number')
                 )
             );
@@ -74,7 +74,7 @@ class CodebreakerService extends BaseService
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Unable to find connection')
                     )
                 );
@@ -119,7 +119,7 @@ class CodebreakerService extends BaseService
                     'command' => 'showmessage',
                     'deadline' => 30,
                     'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">find the password: %s</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-directory">find the password: %s</pre>'),
                         $theString
                     )
                 );

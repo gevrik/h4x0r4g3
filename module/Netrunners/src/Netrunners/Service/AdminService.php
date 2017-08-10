@@ -57,7 +57,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -112,8 +112,8 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                    $this->translate('Unknown command')
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('unknown command')
                 )
             ];
             return $this->response;
@@ -123,7 +123,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a user id (use "clients" to get a list)')
                 )
             ];
@@ -136,7 +136,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a user id (use "clients" to get a list)')
                 )
             ];
@@ -146,7 +146,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify the amount')
                 )
             ];
@@ -178,8 +178,8 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                    $this->translate('Unknown command')
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('unknown command')
                 )
             ];
             return $this->response;
@@ -189,7 +189,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a user id (use "clients" to get a list)')
                 )
             ];
@@ -202,7 +202,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Unable to find a user for that ID'))
             ];
         }
@@ -211,7 +211,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify the amount')
                 )
             ];
@@ -243,7 +243,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -292,7 +292,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -353,7 +353,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -398,7 +398,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -443,7 +443,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -454,7 +454,7 @@ class AdminService extends BaseService
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Please specify the resource id ("clients" for list)')
                     )
                 ];
@@ -463,7 +463,7 @@ class AdminService extends BaseService
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('That socket is not connected!')
                     )
                 ];
@@ -477,7 +477,7 @@ class AdminService extends BaseService
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('They really would not like that!')
                     )
                 ];
@@ -523,7 +523,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -556,7 +556,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -567,7 +567,7 @@ class AdminService extends BaseService
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Please specify the node id ("nlist [systemid]" for list)')
                     )
                 ];
@@ -609,7 +609,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -620,7 +620,7 @@ class AdminService extends BaseService
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Please specify the system id ("syslist" for list)')
                     )
                 ];
@@ -684,7 +684,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -731,7 +731,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -766,7 +766,7 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];

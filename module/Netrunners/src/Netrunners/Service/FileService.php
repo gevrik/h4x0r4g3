@@ -81,7 +81,7 @@ class FileService extends BaseService
         if (!$this->response && count($targetFiles) < 1) {
             $this->response = array(
                 'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-sysmsg">No such file</pre>'
+                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
             );
         }
         /* start logic if we do not have a response already */
@@ -205,7 +205,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You download %s to your storage</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You download %s to your storage</pre>'),
                     $targetFile->getName()
                 )
             );
@@ -267,7 +267,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You unload %s to the node</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You unload %s to the node</pre>'),
                     $targetFile->getName()
                 )
             );
@@ -344,7 +344,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been created</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been created</pre>'),
                     $parameter
                 )
             );
@@ -371,7 +371,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s</pre>",
+                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
                     $this->translate('No such file')
                 )
             );
@@ -513,7 +513,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s</pre>",
+                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
                     $this->translate('No such file')
                 )
             );
@@ -612,7 +612,7 @@ class FileService extends BaseService
                     $this->response = array(
                         'command' => 'showmessage',
                         'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                             $this->translate('Unable to use this type of file')
                         )
                     );
@@ -652,7 +652,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('No such file')
                 )
             );
@@ -672,7 +672,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s is already running</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s is already running</pre>'),
                     $file->getName()
                 )
             );
@@ -682,7 +682,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You do not have enough memory to execute %s - build more memory nodes</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough memory to execute %s - build more memory nodes</pre>'),
                     $file->getName()
                 )
             );
@@ -694,7 +694,7 @@ class FileService extends BaseService
                     $this->response = array(
                         'command' => 'showmessage',
                         'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s is not executable, yet</pre>'),
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s is not executable, yet</pre>'),
                             $file->getName()
                         )
                     );
@@ -777,7 +777,7 @@ class FileService extends BaseService
                 $currentBlade = $profile->getBlade();
                 if ($currentBlade) {
                     $messages[] = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                         $currentBlade->getName()
                     );
                     $currentBlade->setRunning(false);
@@ -805,7 +805,7 @@ class FileService extends BaseService
                 $currentBlaster = $profile->getBlaster();
                 if ($currentBlaster) {
                     $messages[] = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                         $currentBlaster->getName()
                     );
                     $currentBlaster->setRunning(false);
@@ -833,7 +833,7 @@ class FileService extends BaseService
                 $currentShield = $profile->getBlaster();
                 if ($currentShield) {
                     $messages[] = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                         $currentShield->getName()
                     );
                     $currentShield->setRunning(false);
@@ -873,7 +873,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getHeadArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -901,7 +901,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getShoulderArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -929,7 +929,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getUpperArmArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -957,7 +957,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getLowerArmArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -985,7 +985,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getHandArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -1013,7 +1013,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getTorsoArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -1041,7 +1041,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getLegArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -1069,7 +1069,7 @@ class FileService extends BaseService
                             $currentArmor = $profile->getShoesArmor();
                             if ($currentArmor) {
                                 $messages[] = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You remove the [%s]</pre>'),
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You remove the [%s]</pre>'),
                                     $currentArmor->getName()
                                 );
                                 $currentArmor->setRunning(false);
@@ -1127,7 +1127,7 @@ class FileService extends BaseService
                     'contentArray' => $contentArray,
                 ];
                 $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start portscanning with [%s] - please wait</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start portscanning with [%s] - please wait</pre>'),
                     $file->getName()
                 );
                 break;
@@ -1140,7 +1140,7 @@ class FileService extends BaseService
                     'contentArray' => $contentArray,
                 ];
                 $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start breaking into the system with [%s] - please wait</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start breaking into the system with [%s] - please wait</pre>'),
                     $file->getName()
                 );
                 break;
@@ -1180,7 +1180,7 @@ class FileService extends BaseService
         $response = array(
             'command' => 'showmessage',
             'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                 $file->getName(),
                 $file->getId()
             )
@@ -1200,7 +1200,7 @@ class FileService extends BaseService
         $response = array(
             'command' => 'showmessage',
             'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                 $file->getName(),
                 $file->getId()
             )
@@ -1220,7 +1220,7 @@ class FileService extends BaseService
         $response = array(
             'command' => 'showmessage',
             'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                 $file->getName(),
                 $file->getId()
             )
@@ -1255,7 +1255,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1289,7 +1289,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1323,7 +1323,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1357,7 +1357,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1391,7 +1391,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1425,7 +1425,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1459,7 +1459,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(), $file->getId()
                 )
             );
@@ -1494,7 +1494,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1530,7 +1530,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1566,7 +1566,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1602,7 +1602,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1638,7 +1638,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has been started as process %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
                 )
@@ -1672,7 +1672,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a system address to scan')
                 ),
             );
@@ -1689,7 +1689,7 @@ class FileService extends BaseService
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Invalid system address')
                     ),
                 );
@@ -1705,7 +1705,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid system - unable to scan own systems')),
             );
         }
@@ -1737,7 +1737,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a system address to break in to')
                 ),
             );
@@ -1754,7 +1754,7 @@ class FileService extends BaseService
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Invalid system address')
                     ),
                 );
@@ -1770,7 +1770,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid system - unable to break in to your own systems')
                 ),
             );
@@ -1781,7 +1781,7 @@ class FileService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify a node ID to break in to')
                 ),
             );
@@ -1793,7 +1793,7 @@ class FileService extends BaseService
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Invalid node ID')
                     ),
                 );
@@ -1837,25 +1837,25 @@ class FileService extends BaseService
             }
             if (empty($messages)) {
                 $messages[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR : %s</pre>'),
                     $system->getAddy()
                 );
                 $messages[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
                     $this->translate('No vulnerable nodes detected')
                 );
             }
             else {
                 array_unshift($messages, sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-info">PORTSCANNER RESULTS FOR : %s</pre>'),
                     $system->getAddy()
                 ));
                 array_unshift($messages, sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-45s|%-11s|%-20s|%s</pre>',
-                    $this->translate('address'),
-                    $this->translate('id'),
-                    $this->translate('nodetype'),
-                    $this->translate('nodename')
+                    $this->translate('SYSTEM-ADDRESS'),
+                    $this->translate('NODE-ID'),
+                    $this->translate('NODE-TYPE'),
+                    $this->translate('NODE-NAME')
                 ));
             }
             $response = array(
@@ -1890,7 +1890,7 @@ class FileService extends BaseService
                 $node->getId()
             );
             $messages[] = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You break in to the target system\'s node</pre>')
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You break in to the target system\'s node</pre>')
             );
             $profile = $file->getProfile();
             /** @var Profile $profile */
@@ -1903,7 +1903,7 @@ class FileService extends BaseService
                 $node->getId()
             );
             $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
                 $this->translate('You fail to break in to the target system')
             );
         }
@@ -1935,7 +1935,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify the process id to kill (ps for list)')
                 )
             );
@@ -1963,7 +1963,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('No process with that id')
                 )
             );
@@ -1972,7 +1972,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('That process needs to be killed in the system that it is running in')
                 )
             );
@@ -1981,7 +1981,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('That process needs to be killed in the node that it is running in')
                 )
             );
@@ -1994,7 +1994,7 @@ class FileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Process with id %s has been killed</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Process with id [%s] has been killed</pre>'),
                     $runningFile->getId()
                 )
             );
@@ -2030,16 +2030,16 @@ class FileService extends BaseService
         $returnMessage = array();
         if (count($runningFiles) < 1) {
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                 $this->translate('No running processes')
             );
         }
         else {
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-12s|%-20s|%s</pre>',
-                $this->translate('process-id'),
-                $this->translate('file-type'),
-                $this->translate('file-name')
+                $this->translate('PROCESS-ID'),
+                $this->translate('FILE-TYPE'),
+                $this->translate('FILE-NAME')
             );
             foreach ($runningFiles as $runningFile) {
                 /** @var File $runningFile */
@@ -2069,9 +2069,9 @@ class FileService extends BaseService
         $returnMessage = array();
         $returnMessage[] = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%-4s|%s</pre>',
-            $this->translate('name'),
-            $this->translate('size'),
-            $this->translate('description')
+            $this->translate('FILETYPE-NAME'),
+            $this->translate('SIZE'),
+            $this->translate('DESCRIPTION')
         );
         foreach ($fileTypes as $fileType) {
             /** @var FileType $fileType */
@@ -2098,8 +2098,8 @@ class FileService extends BaseService
         $returnMessage = array();
         $returnMessage[] = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%s</pre>',
-            $this->translate('name'),
-            $this->translate('description')
+            $this->translate('FILEMOD-NAME'),
+            $this->translate('DESCRIPTION')
         );
         foreach ($fileMods as $fileMod) {
             /** @var FileMod $fileMod */

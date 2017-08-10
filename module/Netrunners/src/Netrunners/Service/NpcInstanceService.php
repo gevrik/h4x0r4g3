@@ -204,7 +204,7 @@ class NpcInstanceService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Entity name changed to [%s]</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Entity name changed to [%s]</pre>'),
                     $name
                 )
             );

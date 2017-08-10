@@ -155,7 +155,7 @@ class ManpageService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -193,7 +193,7 @@ class ManpageService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -230,7 +230,7 @@ class ManpageService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];
@@ -289,7 +289,7 @@ class ManpageService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('unknown command')
                 )
             ];

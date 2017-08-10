@@ -93,10 +93,11 @@ class SystemService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
                     $this->translate('You recall to your home node')
                 )
             );
+            $this->addAdditionalCommand();
         }
         return $this->response;
     }

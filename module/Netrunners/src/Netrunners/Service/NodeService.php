@@ -219,6 +219,7 @@ class NodeService extends BaseService
             'command' => 'showoutput',
             'message' => $returnMessage
         );
+        $this->addAdditionalCommand();
         return $this->response;
     }
 
@@ -431,7 +432,7 @@ class NodeService extends BaseService
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You do not have enough CPU rating to add another node to this system')
+                        $this->translate('You do not have enough CPU rating to add another node to this system - upgrade CPU nodes or add new CPU nodes')
                     )
                 );
             }
@@ -471,10 +472,11 @@ class NodeService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have added a new node to the system for %s credits</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have added a new node to the system for %s credits</pre>'),
                     self::RAW_NODE_COST
                 )
             );
+            $this->addAdditionalCommand();
         }
         return $this->response;
     }
@@ -596,6 +598,7 @@ class NodeService extends BaseService
                         $this->translate('You have found a hidden service')
                     )
                 );
+                $this->addAdditionalCommand();
             }
         }
         return $this->response;
@@ -662,10 +665,11 @@ class NodeService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Node name changed to %s</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Node name changed to %s</pre>'),
                     $name
                 )
             );
+            $this->addAdditionalCommand();
         }
         return $this->response;
     }
@@ -699,6 +703,7 @@ class NodeService extends BaseService
                     $nodeType->getName()
                 )
             );
+            $this->addAdditionalCommand();
         }
         return $this->response;
     }
@@ -725,7 +730,7 @@ class NodeService extends BaseService
                 /** @var NodeType $nodeType */
                 if ($nodeType->getId() == NodeType::ID_RAW) continue;
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-2s|%-18s|%sc</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-2s|%-18s|%sc</pre>',
                     $nodeType->getId(),
                     $nodeType->getName(),
                     $nodeType->getCost()
@@ -762,7 +767,7 @@ class NodeService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('No such node type')
                 )
             );
@@ -773,7 +778,7 @@ class NodeService extends BaseService
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('There is already a home node around this node')
                     )
                 );
@@ -891,7 +896,7 @@ class NodeService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
                     $this->translate('Node description saved')
                 )
             );
@@ -1037,13 +1042,13 @@ class NodeService extends BaseService
             $targetConnection = array_shift($targetConnection);
             $this->entityManager->remove($targetConnection);
             $this->entityManager->remove($connection);
-            $this->movePlayerToTargetNode(NULL, $profile, NULL, $currentNode, $newCurrentNode);
+            $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $newCurrentNode);
             $this->entityManager->remove($currentNode);
             $this->entityManager->flush();
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
                     $this->translate('The node has been removed')
                 )
             );
@@ -1311,10 +1316,11 @@ class NodeService extends BaseService
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
                         $this->translate('You have connected to the target system')
                     )
                 );
+                $this->addAdditionalCommand();
             }
         }
         return $this->response;

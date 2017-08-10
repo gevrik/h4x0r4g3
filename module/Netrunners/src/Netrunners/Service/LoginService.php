@@ -400,7 +400,7 @@ class LoginService extends BaseService
                 if ($client->resourceId != $resourceId && $wsClientsData[$client->resourceId]['username'] == $wsClientsData[$resourceId]['username']) {
                     $response = array(
                         'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-danger">Your connection has been terminated because you logged in from another location</pre>'
+                        'message' => '<pre style="white-space: pre-wrap;" class="text-danger">Your connection has been terminated because you are already logged in from another location</pre>'
                     );
                     $disconnect = true;
                     return [$disconnect, $response];
@@ -416,7 +416,7 @@ class LoginService extends BaseService
             );
             // message everyone in node
             $messageText = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has logged in to this node</pre>'),
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has logged in to this node</pre>'),
                 $user->getUsername()
             );
             $message = array(

@@ -97,7 +97,7 @@ class CodingService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('You must be in a coding node to enter coding mode')
                 )
             );
@@ -138,7 +138,7 @@ class CodingService extends BaseService
         }
         $this->getWebsocketServer()->setCodingOption($resourceId, 'mode', $value);
         $message = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">mode set to [%s]</pre>'),
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">mode set to [%s]</pre>'),
             $value
         );
         $this->response = array(
@@ -164,7 +164,7 @@ class CodingService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Choose a number between 1 and 100')
                 )
             );
@@ -173,14 +173,14 @@ class CodingService extends BaseService
             if ($parameter < 1 || $parameter > 100) {
                 $command = 'showmessage';
                 $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Choose a number between 1 and 100')
                 );
             }
             else {
                 $command = 'showmessage';
                 $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">level set to [%s]</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">level set to [%s]</pre>'),
                     $parameter
                 );
                 $this->getWebsocketServer()->setCodingOption($resourceId, 'fileLevel', $parameter);
@@ -337,7 +337,7 @@ class CodingService extends BaseService
                 $message .= $fileType->getName() . ' ';
             }
             $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
                 wordwrap($message, 120)
             );
             $this->response = array(
@@ -359,7 +359,7 @@ class CodingService extends BaseService
             $value = $entity->getId();
             // add message if not already set
             if (!$message) $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">type set to [%s]</pre>'),
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">type set to [%s]</pre>'),
                 $parameter
             );
             // set coding options on client data
@@ -488,7 +488,7 @@ class CodingService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding the %s for %s snippets</pre>'),
                     $filePart->getName(),
                     $level
                 )
@@ -622,7 +622,7 @@ class CodingService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You start coding the %s for %s snippets</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding the %s for %s snippets</pre>'),
                     $fileType->getName(),
                     $level
                 )

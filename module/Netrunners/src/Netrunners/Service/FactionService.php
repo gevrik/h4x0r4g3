@@ -63,9 +63,9 @@ class FactionService extends BaseService
             $factions = $this->factionRepo->findAll();
             $messages[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-7s|%-6s</pre>',
-                $this->translate('name'),
-                $this->translate('members'),
-                $this->translate('rating')
+                $this->translate('NAME'),
+                $this->translate('MEMBERS'),
+                $this->translate('RATING')
             );
             foreach ($factions as $faction) {
                 /** @var Faction $faction */

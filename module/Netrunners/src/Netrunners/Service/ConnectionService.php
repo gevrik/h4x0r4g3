@@ -97,11 +97,6 @@ class ConnectionService extends BaseService
         }
         if (!$this->response) {
             $this->response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
-            $this->response['additionalCommands'][] = [
-                'command' => 'map',
-                'content' => false,
-                'silent' => true
-            ];
         }
         return $this->response;
     }
@@ -253,8 +248,8 @@ class ConnectionService extends BaseService
             $nodes = $this->nodeRepo->findBySystem($currentSystem);
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%s</pre>',
-                $this->translate('node-id'),
-                $this->translate('node-name')
+                $this->translate('NODE-ID'),
+                $this->translate('NODE-NAME')
             );
             foreach ($nodes as $node) {
                 /** @var Node $node */
@@ -358,10 +353,11 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">The connection has been created for %s credits</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">The connection has been created for %s credits</pre>'),
                     self::CONNECTION_COST
                 )
             );
+            $this->addAdditionalCommand();
         }
         return $this->response;
     }
@@ -434,7 +430,7 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('This connection is already secure')
                 )
             );
@@ -452,10 +448,11 @@ class ConnectionService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
                     $this->translate('The connection has been secured')
                 )
             );
+            $this->addAdditionalCommand();
         }
         return $this->response;
     }

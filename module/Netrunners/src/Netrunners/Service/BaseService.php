@@ -576,6 +576,8 @@ class BaseService
     }
 
     /**
+     * Sends the given message to everyone in the given node, optionally excluding the source of the message.
+     * If a profile is given, that profile will be excluded as it will be considered to be the source of the message.
      * @param Node $node
      * @param $message
      * @param Profile|NULL $profile
@@ -586,10 +588,10 @@ class BaseService
         /** @var ProfileRepository $profileRepo */
         $wsClients = $this->getWebsocketServer()->getClients();
         $wsClientsData = $this->getWebsocketServer()->getClientsData();
-        $profiles = $profileRepo->findByCurrentNode($node, $profile);
+        $profiles = $profileRepo->findByCurrentNode($node);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */
-            if ($xprofile === $profile) continue;
+            if ($profile && $xprofile === $profile) continue;
             foreach ($wsClients as $wsClient) {
                 if (
                     isset($wsClientsData[$wsClient->resourceId]) &&
@@ -756,11 +758,12 @@ class BaseService
             $sourceNode = $connection->getSourceNode();
             $targetNode = $connection->getTargetNode();
         }
+        $toString = ($connection) ? $targetNode->getName() : $this->translate('somewhere unknown');
         // message everyone in source node
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>'),
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has used the connection to %s</pre>'),
             $profile->getUser()->getUsername(),
-            $targetNode->getName()
+            $toString
         );
         $message = array(
             'command' => 'showmessageprepend',
@@ -768,10 +771,11 @@ class BaseService
         );
         $this->messageEveryoneInNode($sourceNode, $message, $profile);
         $profile->setCurrentNode($targetNode);
+        $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>'),
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has connected to this node from %s</pre>'),
             $profile->getUser()->getUsername(),
-            $sourceNode->getName()
+            $fromString
         );
         $message = array(
             'command' => 'showmessageprepend',
@@ -801,10 +805,11 @@ class BaseService
             $targetNode = $connection->getTargetNode();
         }
         // message everyone in source node
+        $toString = ($connection) ? $targetNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has used the connection to %s</pre>'),
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has used the connection to %s</pre>'),
             $npc->getName(),
-            $targetNode->getName()
+            $toString
         );
         $message = array(
             'command' => 'showmessageprepend',
@@ -812,10 +817,11 @@ class BaseService
         );
         $this->messageEveryoneInNode($sourceNode, $message);
         $npc->setNode($targetNode);
+        $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s has connected to this node from %s</pre>'),
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has connected to this node from %s</pre>'),
             $npc->getName(),
-            $sourceNode->getName()
+            $fromString
         );
         $message = array(
             'command' => 'showmessageprepend',
@@ -1402,6 +1408,20 @@ class BaseService
             );
         }
         return $this->response;
+    }
+
+    /**
+     * @param string $command
+     * @param bool $content
+     * @param bool $silent
+     */
+    protected function addAdditionalCommand($command = 'map', $content = false, $silent = true)
+    {
+        $this->response['additionalCommands'][] = [
+            'command' => $command,
+            'content' => $content,
+            'silent' => $silent
+        ];
     }
 
 }

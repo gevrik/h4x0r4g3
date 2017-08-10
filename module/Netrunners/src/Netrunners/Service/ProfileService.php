@@ -165,7 +165,7 @@ class ProfileService extends BaseService
             $returnMessage = [];
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>',
-                $this->translate('skillpoints'),
+                $this->translate('SKILLPOINTS'),
                 $profile->getSkillPoints()
             );
             $skills = $this->skillRepo->findAll();
@@ -349,7 +349,7 @@ class ProfileService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
                     $this->translate('No running jobs')
                 )
             );
@@ -410,7 +410,7 @@ class ProfileService extends BaseService
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('You have no file parts')
                     )
                 );
@@ -466,7 +466,7 @@ class ProfileService extends BaseService
                     )
                 ];
                 $xmessage = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">[%s] starts stealthing</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] starts stealthing</pre>'),
                     $profile->getUser()->getDisplayName()
                 );
                 $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile);
@@ -506,7 +506,7 @@ class ProfileService extends BaseService
                     )
                 ];
                 $xmessage = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">[%s] stops stealthing</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] stops stealthing</pre>'),
                     $profile->getUser()->getDisplayName()
                 );
                 $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile);
@@ -645,7 +645,7 @@ class ProfileService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Please specify how many skill points you want to invest')
                 )
             ];
@@ -655,7 +655,7 @@ class ProfileService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You can only spend up to %s skillpoints</pre>'),
                     $profile->getSkillPoints()
                 )
             ];
@@ -672,7 +672,7 @@ class ProfileService extends BaseService
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You can only spend up to %s skillpoints on that skill</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You can only spend up to %s skillpoints on that skill</pre>'),
                         $possible
                     )
                 ];
@@ -686,7 +686,7 @@ class ProfileService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have raised [%s] to %s by spending %s skillpoints</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have raised [%s] to %s by spending %s skillpoints</pre>'),
                     $targetSkill->getName(),
                     $skillRatingObject->getRating(),
                     $skillPointAmount

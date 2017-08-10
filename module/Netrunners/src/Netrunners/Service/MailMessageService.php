@@ -71,7 +71,7 @@ class MailMessageService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">You have %s unread mails in your inbox</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-info">You have %s unread mails in your inbox</pre>'),
                     $countUnreadMails
                 )
             ];
@@ -232,7 +232,7 @@ class MailMessageService extends BaseService
         if (!$this->response) {
             /** @var MailMessage $mail */
             $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Mail #%s has been deleted</pre>'),
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Mail #%s has been deleted</pre>'),
                 $mailNumber
             );
             $this->entityManager->remove($mail);

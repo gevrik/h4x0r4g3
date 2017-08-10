@@ -229,8 +229,8 @@ class ParserService
                 $response = array(
                     'command' => self::CMD_SHOWMESSAGE,
                     'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                        $this->translator->translate('Unknown command')
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translator->translate('unknown command')
                     )
                 );
                 break;
@@ -473,7 +473,7 @@ class ParserService
                 $response = array(
                     'command' => self::CMD_SHOWMESSAGE,
                     'message' => sprintf(
-                        $this->translator->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">current server time: %s</pre>'),
+                        $this->translator->translate('<pre style="white-space: pre-wrap;" class="text-info">current server time: %s</pre>'),
                         $now->format('Y/m/d H:i:s')
                     )
                 );
