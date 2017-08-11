@@ -56,7 +56,8 @@ class ConnectionRepository extends EntityRepository
             'sourceNode' => $sourceNode,
             'targetNode' => $targetNode
         ]);
-        return $qb->getQuery()->getResult();
+        $qb->setMaxResults(1);
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
 }

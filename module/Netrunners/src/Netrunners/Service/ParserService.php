@@ -551,6 +551,9 @@ class ParserService
             case 'toggleadminmode':
                 $response = $this->adminService->adminToggleAdminMode($resourceId);
                 break;
+            case 'cybermap':
+                $response = $this->adminService->showCyberspaceMap($resourceId);
+                break;
         }
         if (!is_array($response)) {
             if (!$silent) {

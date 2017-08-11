@@ -1340,6 +1340,62 @@ class BaseService
     }
 
     /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showCyberspaceMap($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        // TODO make admin+ only
+        if (!$this->response) {
+            $mapArray = [
+                'nodes' => [],
+                'links' => []
+            ];
+            $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+            /** @var NodeRepository $nodeRepo */
+            $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+            /** @var ConnectionRepository $connectionRepo */
+            $systems = $this->entityManager->getRepository('Netrunners\Entity\System')->findAll();
+            foreach ($systems as $currentSystem) {
+                /** @var System $currentSystem */
+                $nodes = $nodeRepo->findBySystem($currentSystem);
+                foreach ($nodes as $node) {
+                    /** @var Node $node */
+                    $group = $currentSystem->getId();
+                    $mapArray['nodes'][] = [
+                        'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
+                        'type' => $group
+                    ];
+                    $connections = $connectionRepo->findBySourceNode($node);
+                    foreach ($connections as $connection) {
+                        /** @var Connection $connection */
+                        $mapArray['links'][] = [
+                            'source' => (string)$connection->getSourceNode()->getId() . '_' .
+                                $connection->getSourceNode()->getNodeType()->getShortName() . '_' .
+                                $connection->getSourceNode()->getName(),
+                            'target' => (string)$connection->getTargetNode()->getId() . '_' .
+                                $connection->getTargetNode()->getNodeType()->getShortName() . '_' .
+                                $connection->getTargetNode()->getName(),
+                            'value' => 2,
+                            'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                        ];
+                    }
+                }
+            }
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/partials/map.phtml');
+            $view->setVariable('json', json_encode($mapArray));
+            $this->response = array(
+                'command' => 'showpanel',
+                'content' => $this->viewRenderer->render($view)
+            );
+        }
+        return $this->response;
+    }
+
+    /**
      * @param int $resourceId
      * @return array|bool
      */

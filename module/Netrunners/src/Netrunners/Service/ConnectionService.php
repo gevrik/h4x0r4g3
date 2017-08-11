@@ -138,8 +138,8 @@ class ConnectionService extends BaseService
             );
         }
         // check if there is still a connection to an io node
+        $nodeService = $this->getWebsocketServer()->getNodeService();
         if (!$this->response && $connection) {
-            $nodeService = $this->getWebsocketServer()->getNodeService();
             $nodeService->initConnectionsChecked();
             $stillConnectedToIo = $nodeService->nodeStillConnectedToNodeType(
                 $currentNode,
@@ -157,8 +157,30 @@ class ConnectionService extends BaseService
             }
             $nodeService->initConnectionsChecked();
         }
+        // check the same for the target node
+        if (!$this->response && $connection) {
+            $nodeService->initConnectionsChecked();
+            $targetNode = $connection->getTargetNode();
+            $reversedConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetNode, $currentNode);
+            $stillConnectedToIo = $nodeService->nodeStillConnectedToNodeType(
+                $targetNode,
+                $reversedConnection,
+                [NodeType::ID_PUBLICIO, NodeType::ID_IO]
+            );
+            if (!$stillConnectedToIo) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('The target node would no longer be connected to an io-node after removing this connection')
+                    )
+                );
+            }
+            $nodeService->initConnectionsChecked();
+        }
         /* all seems good, we can remove the connection */
         if (!$this->response) {
+
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -166,7 +188,6 @@ class ConnectionService extends BaseService
                     $this->translate('=== CAN REMOVE CONN ===')
                 )
             );
-            // TODO finish this
         }
         return $this->response;
     }
@@ -320,7 +341,7 @@ class ConnectionService extends BaseService
             );
         }
         // check if there already is a connection between the current node and the target node
-        if (!$this->response && count($this->connectionRepo->findBySourceNodeAndTargetNode($currentNode, $targetNode)) >= 1) {
+        if (!$this->response && $this->connectionRepo->findBySourceNodeAndTargetNode($currentNode, $targetNode)) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -441,7 +462,7 @@ class ConnectionService extends BaseService
             $connection->setIsOpen(false);
             $targetnode = $connection->getTargetNode();
             $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
-            $targetConnection = array_shift($targetConnection);
+            /** @var Connection $targetConnection */
             $targetConnection->setType(Connection::TYPE_CODEGATE);
             $targetConnection->setIsOpen(false);
             $this->entityManager->flush();
