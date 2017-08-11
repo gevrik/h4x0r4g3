@@ -158,6 +158,8 @@ class ConnectionService extends BaseService
             $nodeService->initConnectionsChecked();
         }
         // check the same for the target node
+        $reversedConnection = NULL;
+        $targetNode = NULL;
         if (!$this->response && $connection) {
             $nodeService->initConnectionsChecked();
             $targetNode = $connection->getTargetNode();
@@ -179,15 +181,28 @@ class ConnectionService extends BaseService
             $nodeService->initConnectionsChecked();
         }
         /* all seems good, we can remove the connection */
-        if (!$this->response) {
-
+        if (!$this->response && $connection && $reversedConnection) {
+            $this->entityManager->remove($connection);
+            $this->entityManager->remove($reversedConnection);
+            $this->entityManager->flush();
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('=== CAN REMOVE CONN ===')
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You removed the connection to [%s]</pre>'),
+                    ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
                 )
             );
+            $this->addAdditionalCommand();
+            $sourceMessage = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
+                ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
+            );
+            $this->messageEveryoneInNode($currentNode, $sourceMessage, $profile);
+            $targetMessage = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
+                $currentNode->getName()
+            );
+            $this->messageEveryoneInNode($targetNode, $targetMessage);
         }
         return $this->response;
     }

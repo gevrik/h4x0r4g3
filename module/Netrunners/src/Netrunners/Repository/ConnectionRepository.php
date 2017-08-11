@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
 
 class ConnectionRepository extends EntityRepository
@@ -46,7 +47,7 @@ class ConnectionRepository extends EntityRepository
      * Finds the connection for the given source and target node combination.
      * @param Node $sourceNode
      * @param Node $targetNode
-     * @return array
+     * @return Connection
      */
     public function findBySourceNodeAndTargetNode(Node $sourceNode, Node $targetNode)
     {

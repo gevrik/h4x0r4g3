@@ -13,7 +13,10 @@ namespace Netrunners\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
-/** @ORM\Entity(repositoryClass="Netrunners\Repository\ManpageRepository") */
+/**
+ * @ORM\Entity(repositoryClass="Netrunners\Repository\ManpageRepository")
+ * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"subject"})})
+ */
 class Manpage
 {
 

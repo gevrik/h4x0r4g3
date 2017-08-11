@@ -13,7 +13,10 @@ namespace Netrunners\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
-/** @ORM\Entity(repositoryClass="Netrunners\Repository\FileTypeRepository") */
+/**
+ * @ORM\Entity(repositoryClass="Netrunners\Repository\FileTypeRepository")
+ * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"})})
+ */
 class FileType
 {
 

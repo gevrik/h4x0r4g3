@@ -1099,27 +1099,21 @@ class NodeService extends BaseService
         $nodeTypeFound = false;
         foreach ($this->connectionRepo->findBySourceNode($node) as $connection) {
             /** @var Connection $connection */
-            var_dump('checking connection ' . $connection->getId());
             if ($connection == $ignoredConnection) {
-                var_dump('connection is ignored');
                 continue;
             }
             if (in_array($connection->getId(), $this->connectionsChecked)) {
-                var_dump('connection has already been checked');
                 continue;
             }
-            var_dump('not checked yet');
             $this->connectionsChecked[] = $connection->getId();
             $targetNode = $connection->getTargetNode();
             if (in_array($targetNode->getNodeType()->getId(), $nodeTypeIds)) {
                 $nodeTypeFound = true;
             }
             if ($nodeTypeFound) {
-                var_dump('found io');
                 break;
             }
             else {
-                var_dump('not found - recurse with new connection');
                 $targetConnection = $this->connectionRepo->findOneBy([
                     'sourceNode' => $targetNode,
                     'targetNode' => $node
