@@ -356,7 +356,7 @@ class ProfileService extends BaseService
         }
         else {
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-4s|%-10s|%-20s|%-20s|%s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-4s|%-10s|%-32|%-20s|%s</pre>',
                 $this->translate('ID'),
                 $this->translate('TYPE'),
                 $this->translate('NAME'),
@@ -376,7 +376,7 @@ class ProfileService extends BaseService
                     $newCode = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
                 }
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-4s|%-10s|%-20s|%-20s|%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-4s|%-10s|%-32|%-20s|%s</pre>',
                     $jobId,
                     $type,
                     $newCode->getName(),

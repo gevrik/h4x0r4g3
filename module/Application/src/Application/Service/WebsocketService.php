@@ -597,6 +597,9 @@ class WebsocketService implements MessageComponentInterface {
                     if ($disconnect) {
                         $from->close();
                     }
+                    else {
+                        $from->send(json_encode($this->utilityService->showMotd($resourceId)));
+                    }
                     break;
                 case 'saveFeedback':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;

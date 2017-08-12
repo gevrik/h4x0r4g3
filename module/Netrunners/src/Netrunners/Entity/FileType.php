@@ -46,6 +46,7 @@ class FileType
     const ID_PHISHER = 24;
     const ID_BEARTRAP = 25;
     const ID_WILDERSPACE_HUB_PORTAL = 26;
+    const ID_RESEARCHER = 27;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -73,6 +74,7 @@ class FileType
     const STRING_PHISHER = 'phisher';
     const STRING_BEARTRAP = 'beartrap';
     const STRING_WILDERSPACE_HUB_PORTAL = 'wilderspace-hub-portal';
+    const STRING_RESEARCHER = 'researcher';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -101,6 +103,7 @@ class FileType
         self::STRING_PHISHER => self::ID_PHISHER,
         self::STRING_BEARTRAP => self::ID_BEARTRAP,
         self::STRING_WILDERSPACE_HUB_PORTAL => self::ID_WILDERSPACE_HUB_PORTAL,
+        self::STRING_RESEARCHER => self::ID_RESEARCHER,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;
@@ -213,6 +216,11 @@ class FileType
      */
     protected $optionalFileParts;
 
+    /**
+     * @ORM\ManyToMany(targetEntity="Netrunners\Entity\FileCategory")
+     */
+    protected $fileCategories;
+
 
     /**
      *
@@ -221,6 +229,7 @@ class FileType
     {
         $this->fileParts = new ArrayCollection();
         $this->optionalFileParts = new ArrayCollection();
+        $this->fileCategories = new ArrayCollection();
     }
 
     /**
@@ -469,6 +478,30 @@ class FileType
     public function removeOptionalFilePart(FilePart $filePart)
     {
         if ($this->fileParts->contains($filePart)) $this->fileParts->removeElement($filePart);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getFileCategories()
+    {
+        return $this->fileCategories;
+    }
+
+    /**
+     * @param FileCategory $fileCategory
+     */
+    public function addFileCategory(FileCategory $fileCategory)
+    {
+        if (!$this->fileCategories->contains($fileCategory)) $this->fileCategories[] = $fileCategory;
+    }
+
+    /**
+     * @param FileCategory $fileCategory
+     */
+    public function removeFileCategory(FileCategory $fileCategory)
+    {
+        if ($this->fileCategories->contains($fileCategory)) $this->fileCategories->removeElement($fileCategory);
     }
 
 }

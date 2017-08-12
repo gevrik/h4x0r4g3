@@ -28,6 +28,7 @@ use Netrunners\Entity\Notification;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
+use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
@@ -52,6 +53,15 @@ use Zend\View\Renderer\PhpRenderer;
 
 class BaseService
 {
+
+    const SETTING_MOTD = 'motd';
+    const SETTING_CHATSUBO_SYSTEM_ID = 'csid';
+    const SETTING_CHATSUBO_NODE_ID = 'cnid';
+    const SETTING_WILDERNESS_SYSTEM_ID = 'wsid';
+    const SETTING_WILDERNESS_NODE_ID = 'wnid';
+    const VALUE_TYPE_CODINGNODELEVELS = 'codingnodelevels';
+    const VALUE_TYPE_MEMORYLEVELS = 'memorylevels';
+    const VALUE_TYPE_STORAGELEVELS = 'storagelevels';
 
     /**
      * @var \Doctrine\ORM\EntityManager
@@ -941,6 +951,9 @@ class BaseService
             default:
                 $result = true;
                 break;
+            case FileType::ID_RESEARCHER:
+                $validNodeTypes[] = NodeType::ID_MEMORY;
+                break;
             case FileType::ID_COINMINER:
                 $validNodeTypes[] = NodeType::ID_TERMINAL;
                 break;
@@ -1470,14 +1483,102 @@ class BaseService
      * @param string $command
      * @param bool $content
      * @param bool $silent
+     * @param null $response
+     * @return bool|null|array
      */
-    protected function addAdditionalCommand($command = 'map', $content = false, $silent = true)
+    protected function addAdditionalCommand(
+        $command = 'map',
+        $content = false,
+        $silent = true,
+        $response = NULL
+    )
     {
+        if ($response) {
+            if (!array_key_exists('additionalCommands', $response)) $response['additionalCommands'] = [];
+            $response['additionalCommands'][] = [
+                'command' => $command,
+                'content' => $content,
+                'silent' => $silent
+            ];
+            return $response;
+        }
         $this->response['additionalCommands'][] = [
             'command' => $command,
             'content' => $content,
             'silent' => $silent
         ];
+        return true;
+    }
+
+    /**
+     * @param null $setting
+     * @return int|string
+     * @throws \Exception
+     */
+    protected function getServerSetting($setting = NULL)
+    {
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        /** @var ServerSetting $serverSetting */
+        switch ($setting) {
+            default:
+                throw new \Exception('No setting was given');
+                break;
+            case self::SETTING_MOTD:
+                $result = $serverSetting->getMotd();
+                break;
+            case self::SETTING_CHATSUBO_NODE_ID:
+                $result = $serverSetting->getChatsuboNodeId();
+                break;
+            case self::SETTING_CHATSUBO_SYSTEM_ID:
+                $result = $serverSetting->getChatsuboSystemId();
+                break;
+            case self::SETTING_WILDERNESS_NODE_ID:
+                $result = $serverSetting->getWildernessHubNodeId();
+                break;
+            case self::SETTING_WILDERNESS_SYSTEM_ID:
+                $result = $serverSetting->getWildernessSystemId();
+                break;
+        }
+        return $result;
+    }
+
+    /**
+     * @param System $system
+     * @param string $valueType
+     * @return int|null
+     * @throws \Exception
+     */
+    protected function getTotalSystemValueByNodeType(System $system, $valueType = '')
+    {
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $value = NULL;
+        $nodeType = NULL;
+        switch ($valueType) {
+            default:
+                break;
+            case self::VALUE_TYPE_CODINGNODELEVELS:
+                $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CODING);
+                break;
+            case self::VALUE_TYPE_MEMORYLEVELS:
+                $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_MEMORY);
+                break;
+            case self::VALUE_TYPE_STORAGELEVELS:
+                $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_STORAGE);
+                break;
+        }
+        if ($nodeType && !empty($valueType)) {
+            $affectedNodes = $nodeRepo->findBy([
+                'system' => $system,
+                'nodeType' => $nodeType
+            ]);
+            foreach ($affectedNodes as $affectedNode) {
+                /** @var Node $affectedNode */
+                $value += $affectedNode->getLevel();
+            }
+        }
+        if (!$value) throw new \Exception('Invalid system or value type given');
+        return $value;
     }
 
 }

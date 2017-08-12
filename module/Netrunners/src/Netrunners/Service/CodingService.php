@@ -349,21 +349,23 @@ class CodingService extends BaseService
             /* param was given - we need to check if this is a valid filetype or filepart */
             $message = false;
             $entity = $typeRepository->findLikeName($parameter);
-            /** @var FilePart|FileType $entity */
-            if (!$entity) {
+            if (!$entity instanceof FilePart && !$entity instanceof FileType) {
+                /** @var FilePart|FileType $entity */
                 $message = sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid type given')
                 );
             }
-            $value = $entity->getId();
             // add message if not already set
-            if (!$message) $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">type set to [%s]</pre>'),
-                $parameter
-            );
-            // set coding options on client data
-            $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
+            if (!$message) {
+                $value = $entity->getId();
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">type set to [%s]</pre>'),
+                    $parameter
+                );
+                // set coding options on client data
+                $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
+            }
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => $message
@@ -594,6 +596,25 @@ class CodingService extends BaseService
         }
         if (!$this->response && in_array('advanced-networking', $skillList)) {
             $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+        }
+        // check if the system has enough coding levels to support this job
+        $alljobs = $this->loopService->getJobs();
+        $systemJobAmount = 0;
+        $currentSystem = $profile->getCurrentNode()->getSystem();
+        foreach ($alljobs as $alljobId => $jobData) {
+            $codeNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);
+            if ($codeNode->getSystem() == $currentSystem) {
+                $systemJobAmount++;
+            }
+        }
+        if (!$this->response && $systemJobAmount >= $this->getTotalSystemValueByNodeType($currentSystem, self::VALUE_TYPE_CODINGNODELEVELS)) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('The system does not have enough coding rating to accept another coding job - please wait until another job has finished')
+                )
+            );
         }
         /* checks passed, we can now create the file */
         if (!$this->response) {

@@ -151,4 +151,27 @@ class UtilityService extends BaseService
         return $response;
     }
 
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showMotd($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $message = '<pre style="white-space: pre-wrap;" class="text-sysmsg">MESSAGE OF THE DAY:</pre>';
+            $message .= sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                wordwrap($this->getServerSetting(self::SETTING_MOTD), 120)
+            );
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
 }

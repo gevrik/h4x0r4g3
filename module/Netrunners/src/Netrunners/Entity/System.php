@@ -69,6 +69,12 @@ class System
      */
     protected $integrity;
 
+    /**
+     * @ORM\Column(type="string", options={"default":"0,0"}, nullable=true)
+     * @var int
+     */
+    protected $geocoords;
+
     // ORM
 
     /**
@@ -210,6 +216,24 @@ class System
     public function setIntegrity($integrity)
     {
         $this->integrity = $integrity;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getGeocoords()
+    {
+        return $this->geocoords;
+    }
+
+    /**
+     * @param int $geocoords
+     * @return System
+     */
+    public function setGeocoords($geocoords)
+    {
+        $this->geocoords = $geocoords;
         return $this;
     }
 

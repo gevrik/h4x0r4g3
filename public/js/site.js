@@ -65,8 +65,18 @@
             conn.send(JSON.stringify(command));
         });
 
+        mymap = L.map('mapid').setView([51.505, -0.09], 13);
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL.',
+            maxZoom: 13
+        }).addTo(mymap);
+        mymap.removeControl(mymap.zoomControl);
+        var clientip = $('#ipaddy').val();
+        if (clientip === '127.0.0.1') clientip = null;
+        centerMapOnPosition(15, clientip);
+
         // resize message div to be full height
-        var vph = $(window).height() - 5;
+        var vph = $(window).height();
         md.css({'height': vph + 'px', 'max-height': vph + 'px'});
 
         // websocket stuff
@@ -163,7 +173,6 @@
                     hash = data.hash;
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
-                    showprompt();
                     $('.notification-box').show();
                     $('.actiontime-box').show();
                     playSoundById(4);

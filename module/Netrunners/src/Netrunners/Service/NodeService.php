@@ -152,7 +152,11 @@ class NodeService extends BaseService
         foreach ($files as $file) {
             /** @var File $file */
             $counter++;
-            $returnMessage[] = sprintf('<pre class="text-executable">%-12s: %s</pre>', $counter, $file->getName());
+            $returnMessage[] = sprintf(
+                '<pre class="text-executable">%-12s: %s%s</pre>',
+                $counter, $file->getName(),
+                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
+            );
         }
         // get profiles and show them if there are any
         $profiles = [];
@@ -510,9 +514,7 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId);
-        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
-        /** @var ServerSetting $serverSetting */
-        if (!$this->response && $currentSystem->getId() != $serverSetting->getWildernessSystemId()) {
+        if (!$this->response && $currentSystem->getId() != $this->getServerSetting(self::SETTING_WILDERNESS_SYSTEM_ID)) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(

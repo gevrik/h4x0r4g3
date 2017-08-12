@@ -98,3 +98,24 @@ function playSoundById(soundId) {
         // when complete
     });
 }
+
+var centerMapOnPosition = function (zoom, ip) {
+    var url = "https://freegeoip.net/json/";
+    var result = L.latLng(0, 0);
+
+    if (ip !== undefined) {
+        url = url + ip;
+    } else {
+        //lookup our own ip address
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            var geoipdata = JSON.parse(xhr.response);
+            mymap.setView([geoipdata.latitude, geoipdata.longitude], 15);
+        }
+    };
+    xhr.send(null);
+};

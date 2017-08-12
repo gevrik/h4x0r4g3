@@ -411,7 +411,8 @@ class LoginService extends BaseService
             $response = array(
                 'command' => 'logincomplete',
                 'hash' => $hash,
-                'prompt' => $ws->getUtilityService()->showPrompt($clientData)
+                'prompt' => $ws->getUtilityService()->showPrompt($clientData),
+                'silent' => true
             );
             // message everyone in node
             $messageText = sprintf(

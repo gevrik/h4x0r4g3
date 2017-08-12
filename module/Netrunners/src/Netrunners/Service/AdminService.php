@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\BannedIp;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\System;
 use Netrunners\Repository\BannedIpRepository;
 use Netrunners\Repository\NodeRepository;
@@ -94,6 +95,41 @@ class AdminService extends BaseService
             $this->response = [
                 'command' => 'showoutput',
                 'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function adminSetMotd($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+            /** @var ServerSetting $serverSetting */
+            $motd = $this->getNextParameter($contentArray, false, false, true, true);
+            $serverSetting->setMotd($motd);
+            $this->entityManager->flush($serverSetting);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                    $this->translate('DONE')
+                )
             ];
         }
         return $this->response;

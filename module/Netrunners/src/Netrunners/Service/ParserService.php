@@ -15,7 +15,6 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Feedback;
 use Netrunners\Entity\Profile;
 use Ratchet\ConnectionInterface;
-use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 
 class ParserService
@@ -128,6 +127,12 @@ class ParserService
     protected $factionService;
 
     /**
+     * @var ResearchService
+     */
+    protected $researchService;
+
+
+    /**
      * @param EntityManager $entityManager
      * @param Translator $translator
      * @param FileService $fileService
@@ -148,6 +153,7 @@ class ParserService
      * @param CombatService $combatService
      * @param NpcInstanceService $npcInstanceService
      * @param FactionService $factionService
+     * @param ResearchService $researchService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -169,7 +175,8 @@ class ParserService
         ManpageService $manpageService,
         CombatService $combatService,
         NpcInstanceService $npcInstanceService,
-        FactionService $factionService
+        FactionService $factionService,
+        ResearchService $researchService
     )
     {
         $this->entityManager = $entityManager;
@@ -192,6 +199,7 @@ class ParserService
         $this->combatService = $combatService;
         $this->npcInstanceService = $npcInstanceService;
         $this->factionService = $factionService;
+        $this->researchService = $researchService;
     }
 
     /**
@@ -387,6 +395,9 @@ class ParserService
             case 'mc':
                 $response = $this->chatService->moderatorChat($resourceId, $contentArray);
                 break;
+            case 'motd':
+                $response = $this->getWebsocketServer()->getUtilityService()->showMotd($resourceId);
+                break;
             case 'new':
             case 'newbie':
                 $response = $this->chatService->newbieChat($resourceId, $contentArray);
@@ -408,6 +419,9 @@ class ParserService
                 break;
             case 'removenode':
                 $response = $this->nodeService->removeNode($resourceId);
+                break;
+            case 'research':
+                $response = $this->researchService->researchCommand($resourceId, $contentArray);
                 break;
             case 'parts':
             case 'resources':
@@ -554,6 +568,9 @@ class ParserService
             case 'cybermap':
                 $response = $this->adminService->showCyberspaceMap($resourceId);
                 break;
+            case 'setmotd':
+                $response = $this->adminService->adminSetMotd($resourceId, $contentArray);
+                break;
         }
         if (!is_array($response)) {
             if (!$silent) {
@@ -581,10 +598,10 @@ class ParserService
                         break;
                     case 'map':
                         $additionalResponse = $this->systemService->showAreaMap($resourceId);
-                        $additionalResponse['silent'] = true;
                         break;
                 }
-                if ($additionalResponse) {
+                if (is_array($additionalResponse)) {
+                    $additionalResponse['silent'] = $additionalCommandData['silent'];
                     $from->send(json_encode($additionalResponse));
                 }
             }

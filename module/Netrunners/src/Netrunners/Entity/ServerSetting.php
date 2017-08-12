@@ -48,6 +48,12 @@ class ServerSetting
      */
     protected $chatsuboNodeId;
 
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $motd;
+
 
     /**
      * @return int
@@ -136,6 +142,24 @@ class ServerSetting
     public function setChatsuboNodeId($chatsuboNodeId)
     {
         $this->chatsuboNodeId = $chatsuboNodeId;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getMotd()
+    {
+        return $this->motd;
+    }
+
+    /**
+     * @param string $motd
+     * @return ServerSetting
+     */
+    public function setMotd($motd)
+    {
+        $this->motd = $motd;
         return $this;
     }
 

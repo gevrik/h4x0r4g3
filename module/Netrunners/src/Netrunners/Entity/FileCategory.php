@@ -12,9 +12,26 @@ namespace Netrunners\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
-/** @ORM\Entity(repositoryClass="Netrunners\Repository\FileCategoryRepository") */
+/**
+ * @ORM\Entity(repositoryClass="Netrunners\Repository\FileCategoryRepository")
+ * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"})})
+ */
 class FileCategory
 {
+
+    const ID_UTILITY = 1;
+    const ID_MINER = 2;
+    const ID_DEFENSE = 3;
+    const ID_EQUIPMENT = 4;
+    const ID_FORENSICS = 5;
+    const ID_INTRUSION = 6;
+    const ID_BYPASS = 7;
+    const ID_MALWARE = 8;
+    const ID_TRACER = 9;
+    const ID_NODE_UPGRADE = 10;
+    const ID_EXOTIC = 11;
+    const ID_STEALTH = 12;
+
 
     /**
      * @ORM\Id
@@ -35,6 +52,7 @@ class FileCategory
      * @var string
      */
     protected $description;
+
 
     /**
      * @return int

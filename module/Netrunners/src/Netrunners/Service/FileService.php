@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
@@ -133,6 +134,16 @@ class FileService extends BaseService
                 '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
                 $this->translate("Modified"),
                 ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : $this->translate("---")
+            );
+            $categories = '';
+            foreach ($targetFile->getFileType()->getFileCategories() as $fileCategory) {
+                /** @var FileCategory $fileCategory */
+                $categories .= $fileCategory->getName() . ' ';
+            }
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%s: %s</pre>',
+                $this->translate("Categories"),
+                $categories
             );
             $this->response = array(
                 'command' => 'showoutput',
@@ -749,6 +760,9 @@ class FileService extends BaseService
                     $this->response = $this->executePhisher($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_WILDERSPACE_HUB_PORTAL:
+                    $this->response = $this->executeWilderspaceHubPortal($file, $profile->getCurrentNode());
+                    break;
+                case FileType::ID_RESEARCHER:
                     $this->response = $this->executeWilderspaceHubPortal($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_CODEBLADE:
@@ -1611,6 +1625,37 @@ class FileService extends BaseService
         return $response;
     }
 
+    protected function executeResearcher(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a memory node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
     /**
      * @param File $file
      * @param Node $node
@@ -2068,16 +2113,23 @@ class FileService extends BaseService
         ]);
         $returnMessage = array();
         $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%-4s|%s</pre>',
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-20s|%-4s|%s</pre>',
             $this->translate('FILETYPE-NAME'),
+            $this->translate('FILETYPE-CATEGORIES'),
             $this->translate('SIZE'),
             $this->translate('DESCRIPTION')
         );
         foreach ($fileTypes as $fileType) {
             /** @var FileType $fileType */
+            $categories = '';
+            foreach ($fileType->getFileCategories() as $fileCategory) {
+                /** @var FileCategory $fileCategory */
+                $categories .= $fileCategory->getName() . ' ';
+            }
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-20s|%-4s|%s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-20s|%-4s|%s</pre>',
                 $fileType->getName(),
+                $categories,
                 $fileType->getSize(),
                 $fileType->getDescription()
             );

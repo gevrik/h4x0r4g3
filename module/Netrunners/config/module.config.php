@@ -66,6 +66,7 @@ return array(
             'Netrunners\Service\MilkrunService' => 'Netrunners\Factory\MilkrunServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',
             'Netrunners\Service\ProfileService' => 'Netrunners\Factory\ProfileServiceFactory',
+            'Netrunners\Service\ResearchService' => 'Netrunners\Factory\ResearchServiceFactory',
             'Netrunners\Service\SystemService' => 'Netrunners\Factory\SystemServiceFactory',
             'Netrunners\Service\UtilityService' => 'Netrunners\Factory\UtilityServiceFactory',
         ),

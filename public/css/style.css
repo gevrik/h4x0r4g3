@@ -70,6 +70,10 @@ pre.text-sysmsg {
     color: #ffff00;
 }
 
+.text-attention {
+    color: #ffff00;
+}
+
 .text-white {
     color: #ffffff;
 }
@@ -153,6 +157,10 @@ pre.text-sysmsg {
     width: 40%;
     top: 2em;
     right: 2em;
+}
+
+.content {
+    background-color: rgba(0,0,0,0.8);
 }
 
 .manpage-content-container {
@@ -279,4 +287,8 @@ textarea {
 
 .deadline-progress {
     display: none;
+}
+
+.leaflet-container .leaflet-control-attribution {
+    background-color: rgba(0, 0, 0, .7);
 }

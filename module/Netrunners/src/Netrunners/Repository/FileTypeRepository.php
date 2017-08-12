@@ -25,6 +25,7 @@ class FileTypeRepository extends EntityRepository
     {
         $qb = $this->createQueryBuilder('ft');
         $qb->where('ft.codable > 0');
+        $qb->orderBy('ft.name', 'ASC');
         $fileTypes = $qb->getQuery()->getResult();
         $availableFileTypes = [];
         $profileFileTypeRecipeRepo = $this->getEntityManager()->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');

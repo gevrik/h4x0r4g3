@@ -188,4 +188,24 @@ class FileRepository extends EntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    /**
+     * @param Node $node
+     * @param Profile $profile
+     * @param int $fileTypeId
+     * @return mixed
+     */
+    public function findOneRunningInNodeByTypeAndProfile(Node $node, Profile $profile, $fileTypeId)
+    {
+        $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.fileType = :fileType AND f.running IS NOT NULL AND f.integrity >= 1 AND f.profile = :profile AND f.node = :node');
+        $qb->setParameters([
+            'fileType' => $fileType,
+            'profile' => $profile,
+            'node' => $node
+        ]);
+        $qb->setMaxResults(1);
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
 }
