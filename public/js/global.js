@@ -10,3 +10,4 @@ var prompt = '';
 var preload;
 var editor1 = null;
 var mymap;
+var myGeoCoords = [];

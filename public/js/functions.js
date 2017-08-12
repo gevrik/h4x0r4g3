@@ -99,9 +99,8 @@ function playSoundById(soundId) {
     });
 }
 
-var centerMapOnPosition = function (zoom, ip) {
+var getGeoCoordsForIp = function (ip) {
     var url = "https://freegeoip.net/json/";
-    var result = L.latLng(0, 0);
 
     if (ip !== undefined) {
         url = url + ip;
@@ -113,8 +112,10 @@ var centerMapOnPosition = function (zoom, ip) {
     xhr.open("GET", url, true);
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
+            console.log('setting gecoords');
             var geoipdata = JSON.parse(xhr.response);
-            mymap.setView([geoipdata.latitude, geoipdata.longitude], 15);
+            myGeoCoords = [geoipdata.latitude, geoipdata.longitude];
+            mymap.setView(myGeoCoords, 15);
         }
     };
     xhr.send(null);

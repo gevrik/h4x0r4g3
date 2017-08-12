@@ -65,15 +65,12 @@
             conn.send(JSON.stringify(command));
         });
 
-        mymap = L.map('mapid').setView([51.505, -0.09], 13);
+        mymap = L.map('mapid').setView([51.505, -0.09], 15);
         L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL.',
-            maxZoom: 13
+            maxZoom: 15
         }).addTo(mymap);
         mymap.removeControl(mymap.zoomControl);
-        var clientip = $('#ipaddy').val();
-        if (clientip === '127.0.0.1') clientip = null;
-        centerMapOnPosition(15, clientip);
 
         // resize message div to be full height
         var vph = $(window).height();
@@ -117,6 +114,32 @@
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
+                    //if (ipaddy === '127.0.0.1') ipaddy = '0.0.0.0';
+                    var url = "https://freegeoip.net/json/";
+
+                    if (ipaddy !== undefined) {
+                        url = url + ipaddy;
+                    } else {
+                        //lookup our own ip address
+                    }
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("GET", url, true);
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4) {
+                            var geoipdata = JSON.parse(xhr.response);
+                            myGeoCoords = [geoipdata.latitude, geoipdata.longitude];
+                            mymap.flyTo(myGeoCoords, 15);
+                            jsonData = {
+                                command: 'setgeocoords',
+                                hash: hash,
+                                content: myGeoCoords,
+                                silent: true
+                            };
+                            conn.send(JSON.stringify(jsonData));
+                        }
+                    };
+                    xhr.send(null);
                     jsonData = {
                         command: 'setipaddy',
                         hash: hash,

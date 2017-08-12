@@ -401,6 +401,7 @@ class WebsocketService implements MessageComponentInterface {
             'tempPassword' => false,
             'profileId' => false,
             'ipaddy' => false,
+            'geocoords' => false,
             'codingOptions' => [
                 'fileType' => 0,
                 'fileLevel' => 0,
@@ -491,7 +492,7 @@ class WebsocketService implements MessageComponentInterface {
             // init vars
             $hash = $msgData->hash;
             $content = $msgData->content;
-            if ($command != 'saveManpage') {
+            if ($command != 'saveManpage' && $command != 'setgeocoords') {
                 $content = trim($content);
                 $content = htmLawed($content, ['safe'=>1,'elements'=>'strong']);
             }
@@ -557,6 +558,12 @@ class WebsocketService implements MessageComponentInterface {
                         $from->close();
                         return true;
                     }
+                    break;
+                case 'setgeocoords':
+                    $content = implode(',', $content);
+                    $content = trim($content);
+                    $geocoords = htmLawed($content, ['safe'=>1,'elements'=>'strong']);
+                    $this->clientsData[$resourceId]['geocoords'] = $geocoords;
                     break;
                 case 'login':
                     list($response, $disconnect) = $this->loginService->login($resourceId, $content);
