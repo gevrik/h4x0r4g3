@@ -88,8 +88,8 @@ class SystemService extends BaseService
         }
         /* checks passed, we can now move the player to their home node */
         if (!$this->response) {
-            $profile->setCurrentNode($profile->getHomeNode());
-            $this->entityManager->flush($profile);
+            $homeNode = $profile->getHomeNode();
+            $this->movePlayerToTargetNode(NULL, $profile, NULL, $currentNode, $homeNode);
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -98,6 +98,9 @@ class SystemService extends BaseService
                 )
             );
             $this->addAdditionalCommand();
+            if ($currentNode->getSystem() != $homeNode->getSystem()) {
+                $this->addAdditionalCommand('flyto', $homeNode->getSystem()->getGeocoords(), true);
+            }
         }
         return $this->response;
     }

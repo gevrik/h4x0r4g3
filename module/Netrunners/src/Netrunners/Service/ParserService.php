@@ -599,6 +599,12 @@ class ParserService
                     case 'map':
                         $additionalResponse = $this->systemService->showAreaMap($resourceId);
                         break;
+                    case 'flyto':
+                        $additionalResponse = [
+                            'command' => 'flytocoords',
+                            'content' => explode(',', $additionalCommandData['content'])
+                        ];
+                        break;
                 }
                 if (is_array($additionalResponse)) {
                     $additionalResponse['silent'] = $additionalCommandData['silent'];

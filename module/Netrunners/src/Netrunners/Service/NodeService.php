@@ -1317,8 +1317,7 @@ class NodeService extends BaseService
             }
             if (!$this->response && $targetNode) {
                 /** @var Node $targetNode */
-                $profile->setCurrentNode($targetNode);
-                $this->entityManager->flush($profile);
+                $this->movePlayerToTargetNode(NULL, $profile, NULL, $currentNode, $targetNode);
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -1327,6 +1326,7 @@ class NodeService extends BaseService
                     )
                 );
                 $this->addAdditionalCommand();
+                $this->addAdditionalCommand('flyto', $targetNode->getSystem()->getGeocoords(), true);
             }
         }
         return $this->response;

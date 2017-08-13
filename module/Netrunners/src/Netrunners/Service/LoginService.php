@@ -322,6 +322,7 @@ class LoginService extends BaseService
             $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
             $system->setAlertLevel(0);
             $system->setNoclaim(true);
+            $system->setGeocoords($clientData['geocoords']);
             $this->entityManager->persist($system);
             // default io node
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
@@ -384,6 +385,7 @@ class LoginService extends BaseService
         $clientData = $ws->getClientData($resourceId);
         $disconnect = false;
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        /** @var User $user */
         $currentPassword = $user->getPassword();
         $bcrypt = new Bcrypt();
         if (!$bcrypt->verify($content, $currentPassword)) {
@@ -394,6 +396,9 @@ class LoginService extends BaseService
             $disconnect = true;
         }
         else {
+            $profile = $user->getProfile();
+            $currentNode = $profile->getCurrentNode();
+            $currentSystem = $currentNode->getSystem();
             $wsClients = $ws->getClients();
             $wsClientsData = $ws->getClientsData();
             foreach ($wsClients as $client) {
@@ -408,11 +413,15 @@ class LoginService extends BaseService
             }
             $hash = hash('sha256', $ws->getHash() . $user->getId());
             $ws->setClientData($resourceId, 'hash', $hash);
+            $homeCoords = $profile->getHomeNode()->getSystem()->getGeocoords();
+            $currentCoords = $currentSystem->getGeocoords();
             $response = array(
                 'command' => 'logincomplete',
                 'hash' => $hash,
                 'prompt' => $ws->getUtilityService()->showPrompt($clientData),
-                'silent' => true
+                'silent' => true,
+                'homecoords' => explode(',', $homeCoords),
+                'geocoords' => explode(',', $currentCoords)
             );
             // message everyone in node
             $messageText = sprintf(
@@ -427,7 +436,6 @@ class LoginService extends BaseService
             // clear orphaned play-sessions and start a new one
             $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
             /** @var PlaySessionRepository $playSessionRepo */
-            $profile = $user->getProfile();
             foreach ($playSessionRepo->findOrphaned($profile) as $orphanedPlaySession) {
                 $this->entityManager->remove($orphanedPlaySession);
             }

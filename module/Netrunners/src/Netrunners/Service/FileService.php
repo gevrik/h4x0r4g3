@@ -631,6 +631,7 @@ class FileService extends BaseService
                 case FileType::ID_WILDERSPACE_HUB_PORTAL:
                     $hubNode = $this->entityManager->find('Netrunners\Entity\Node', $serverSetting->getWildernessHubNodeId());
                     $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $profile->getCurrentNode(), $hubNode);
+                    $this->addAdditionalCommand('flyto', $hubNode->getSystem()->getGeocoords(), true);
                     break;
             }
         }
@@ -1940,6 +1941,7 @@ class FileService extends BaseService
             $profile = $file->getProfile();
             /** @var Profile $profile */
             $response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $file->getProfile()->getCurrentNode(), $node);
+            $response = $this->addAdditionalCommand('flyto', $node->getSystem()->getGeocoords(), true, $response);
         }
         else {
             $messages[] = sprintf(

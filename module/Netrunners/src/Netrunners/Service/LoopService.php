@@ -320,10 +320,18 @@ class LoopService extends BaseService
             if ($combatData->profileTarget) {
                 $target = $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget);
             }
-            list($attackerMessage, $defenderMessage) = $this->combatService->resolveCombatRound($npc, $target);
+            list($attackerMessage, $defenderMessage, $flyToDefender) = $this->combatService->resolveCombatRound($npc, $target);
             /** @var Profile|NpcInstance $target */
             if ($wsClient && $defenderMessage) {
                 $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
+                if ($flyToDefender) {
+                    $flyToMessage = [
+                        'command' => 'flytocoords',
+                        'content' => explode(',', $target->getCurrentNode()->getSystem()->getGeocoords()),
+                        'silent' => true
+                    ];
+                    $wsClient->send(json_encode($flyToMessage));
+                }
             }
         }
     }

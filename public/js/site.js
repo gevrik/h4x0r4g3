@@ -114,7 +114,7 @@
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
-                    //if (ipaddy === '127.0.0.1') ipaddy = '0.0.0.0';
+                    if (ipaddy === '127.0.0.1') ipaddy = '79.234.10.170';
                     var url = "https://freegeoip.net/json/";
 
                     if (ipaddy !== undefined) {
@@ -129,7 +129,8 @@
                         if (xhr.readyState === 4) {
                             var geoipdata = JSON.parse(xhr.response);
                             myGeoCoords = [geoipdata.latitude, geoipdata.longitude];
-                            mymap.flyTo(myGeoCoords, 15);
+                            console.log(myGeoCoords);
+                            mymap.setView(myGeoCoords, 15);
                             jsonData = {
                                 command: 'setgeocoords',
                                 hash: hash,
@@ -151,6 +152,9 @@
                 case 'cd':
                     md.append(data.message);
                     showprompt();
+                    break;
+                case 'flytocoords':
+                    mymap.flyTo([data.content[0], data.content[1]], 15);
                     break;
                 case 'echocommand':
                     var lastOutput = $('#messages div.output-line:last');
@@ -199,6 +203,8 @@
                     $('.notification-box').show();
                     $('.actiontime-box').show();
                     playSoundById(4);
+                    mymap.flyTo([data.homecoords[0], data.homecoords[1]], 15);
+                    mymap.flyTo([data.geocoords[0], data.geocoords[1]], 15);
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;

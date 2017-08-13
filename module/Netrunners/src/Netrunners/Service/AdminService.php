@@ -627,6 +627,9 @@ class AdminService extends BaseService
                 $profile = $this->user->getProfile();
                 $currentNode = $profile->getCurrentNode();
                 $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $targetNode);
+                if ($currentNode->getSystem() != $targetNode->getSystem()) {
+                    $this->addAdditionalCommand('flyto', $targetNode->getSystem()->getGeocoords(), true);
+                }
             }
         }
         return $this->response;

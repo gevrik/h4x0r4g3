@@ -71,7 +71,7 @@ class System
 
     /**
      * @ORM\Column(type="string", options={"default":"0,0"}, nullable=true)
-     * @var int
+     * @var string
      */
     protected $geocoords;
 
@@ -220,7 +220,7 @@ class System
     }
 
     /**
-     * @return int
+     * @return string
      */
     public function getGeocoords()
     {
@@ -228,7 +228,7 @@ class System
     }
 
     /**
-     * @param int $geocoords
+     * @param string $geocoords
      * @return System
      */
     public function setGeocoords($geocoords)

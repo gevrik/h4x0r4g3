@@ -106,6 +106,7 @@ class CombatService extends BaseService
         $defenderMessage = NULL;
         $defenderName = ($defender instanceof NpcInstance) ? $defender->getName() : $defender->getUser()->getUsername();
         $attackerName = ($attacker instanceof NpcInstance) ? $attacker->getName() : $attacker->getUser()->getUsername();
+        $flyToDefender = false;
         // modifier for profile attacker
         if ($attacker instanceof Profile) {
             $skillRating += $this->getSkillRating($attacker, Skill::ID_BLADES);
@@ -151,6 +152,7 @@ class CombatService extends BaseService
                         $attackerName,
                         $damage
                     );
+                    $flyToDefender = true;
                 }
                 else {
                     if ($attacker instanceof Profile) {
@@ -209,7 +211,7 @@ class CombatService extends BaseService
             }
         }
         $this->entityManager->flush();
-        return [$attackerMessage, $defenderMessage];
+        return [$attackerMessage, $defenderMessage, $flyToDefender];
     }
 
     /**
@@ -219,7 +221,9 @@ class CombatService extends BaseService
     {
         $profile->setEeg(10);
         $this->entityManager->flush($profile);
-        $this->movePlayerToTargetNode(NULL, $profile , NULL, $profile->getCurrentNode(), $profile->getHomeNode());
+        $currentNode = $profile->getCurrentNode();
+        $homeNode = $profile->getHomeNode();
+        $this->movePlayerToTargetNode(NULL, $profile , NULL, $currentNode, $homeNode);
     }
 
     /**
