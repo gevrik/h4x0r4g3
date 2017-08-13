@@ -122,6 +122,12 @@ class MailMessageService extends BaseService
                 'message' => $message,
                 'mailNumber' => $mailNumber
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has entered mail-mode</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -137,6 +143,12 @@ class MailMessageService extends BaseService
             'command' => 'exitmailmode',
             'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData)
         );
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has exited mail-mode</pre>'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNode($this->user->getProfile()->getCurrentNode(), $message);
         return $this->response;
     }
 

@@ -320,6 +320,13 @@ class NodeService extends BaseService
                 'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData),
                 'exitconfirmmode' => true
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has upgraded the node to level [%s]</pre>'),
+                $this->user->getUsername(),
+                $node->getLevel()
+            );
+            $this->messageEveryoneInNode($node, $message);
         }
         return $this->response;
     }
@@ -481,6 +488,12 @@ class NodeService extends BaseService
                 )
             );
             $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] added a new node to the system</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }
@@ -602,6 +615,12 @@ class NodeService extends BaseService
                 );
                 $this->addAdditionalCommand();
             }
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is searching for a hidden service connection</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -672,6 +691,13 @@ class NodeService extends BaseService
                 )
             );
             $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has changed the node name to [%s]</pre>'),
+                $this->user->getUsername(),
+                $name
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }
@@ -866,6 +892,12 @@ class NodeService extends BaseService
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is editing the node</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }
@@ -1045,6 +1077,7 @@ class NodeService extends BaseService
             $this->entityManager->remove($targetConnection);
             $this->entityManager->remove($connection);
             $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $newCurrentNode);
+            $currentNodeName = $currentNode->getName();
             $this->entityManager->remove($currentNode);
             $this->entityManager->flush();
             $this->response = array(
@@ -1058,6 +1091,12 @@ class NodeService extends BaseService
                 'command' => 'ls',
                 'content' => false
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The adjacent node [%s] has been removed</pre>'),
+                $currentNodeName
+            );
+            $this->messageEveryoneInNode($newCurrentNode, $message);
         }
         $this->connectionsChecked = [];
         return $this->response;
@@ -1081,6 +1120,12 @@ class NodeService extends BaseService
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is looking around</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }

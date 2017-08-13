@@ -152,6 +152,13 @@ class FactionService extends BaseService
                         $faction->getName()
                     )
                 ];
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has joined [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $faction->getName()
+                );
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
             }
         }
         return $this->response;

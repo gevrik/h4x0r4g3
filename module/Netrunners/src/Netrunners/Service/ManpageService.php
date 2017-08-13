@@ -12,7 +12,6 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Manpage;
-use Netrunners\Entity\Node;
 use Netrunners\Repository\ManpageRepository;
 use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;

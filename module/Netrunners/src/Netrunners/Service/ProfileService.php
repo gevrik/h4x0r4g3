@@ -325,6 +325,12 @@ class ProfileService extends BaseService
                 'command' => 'showoutput',
                 'message' => $messages
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is checking out their equipment</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -896,6 +902,12 @@ class ProfileService extends BaseService
                     $amount
                 )
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has deposited some credits</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }

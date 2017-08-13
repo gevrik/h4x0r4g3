@@ -124,6 +124,13 @@ class ResearchService extends BaseService
                             ($fileType) ? ' ' . $fileType->getName() : ''
                         )
                     ];
+                    // inform other players in node
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has changed some research settings on [%s]</pre>'),
+                        $this->user->getUsername(),
+                        $researcher->getName()
+                    );
+                    $this->messageEveryoneInNode($currentNode, $message);
                 }
             }
         }

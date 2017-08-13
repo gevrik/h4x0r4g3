@@ -208,6 +208,13 @@ class NpcInstanceService extends BaseService
                     $name
                 )
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has edited [%s]</pre>'),
+                $this->user->getUsername(),
+                $name
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }

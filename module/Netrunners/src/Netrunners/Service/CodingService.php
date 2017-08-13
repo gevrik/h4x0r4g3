@@ -111,6 +111,12 @@ class CodingService extends BaseService
                 'command' => 'entercodemode',
                 'message' => $message
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has entered coding mode</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }

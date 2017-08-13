@@ -247,6 +247,13 @@ class ConnectionService extends BaseService
         }
         if (!$this->response) {
             $this->response = $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId, $connection->getTargetNode());
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is scanning into [%s]</pre>'),
+                $this->user->getUsername(),
+                $connection->getTargetNode()->getName()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }
@@ -394,6 +401,12 @@ class ConnectionService extends BaseService
                 )
             );
             $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] added a new connection</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }
@@ -489,6 +502,13 @@ class ConnectionService extends BaseService
                 )
             );
             $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has secured the connection to [%s]</pre>'),
+                $this->user->getUsername(),
+                $targetConnection->getTargetNode()->getName()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
         }
         return $this->response;
     }

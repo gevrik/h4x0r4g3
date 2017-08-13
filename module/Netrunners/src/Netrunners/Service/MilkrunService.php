@@ -133,6 +133,12 @@ class MilkrunService extends BaseService
                 'attack' => (int)$milkrunData['attack'],
                 'armor' => (int)$milkrunData['armor']
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has requested a milkrun</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }

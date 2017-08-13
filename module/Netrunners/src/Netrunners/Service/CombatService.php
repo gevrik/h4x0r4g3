@@ -84,6 +84,13 @@ class CombatService extends BaseService
                         $npc->getName()
                     )
                 );
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $npc->getName()
+                );
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
             }
         }
         return $this->response;

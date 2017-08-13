@@ -220,6 +220,13 @@ class FileService extends BaseService
                     $targetFile->getName()
                 )
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] downloaded [%s]</pre>'),
+                $this->user->getUsername(),
+                $targetFile->getName()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -282,6 +289,13 @@ class FileService extends BaseService
                     $targetFile->getName()
                 )
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unloaded [%s] into the node</pre>'),
+                $this->user->getUsername(),
+                $targetFile->getName()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -359,6 +373,12 @@ class FileService extends BaseService
                     $parameter
                 )
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has created a text file</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
             return $this->response;
         }
         return $this->response;
@@ -495,6 +515,13 @@ class FileService extends BaseService
                             FileType::$armorSubtypeLookup[$realType]
                         )
                     );
+                    // inform other players in node
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has initialized [%s]</pre>'),
+                        $this->user->getUsername(),
+                        $file->getName()
+                    );
+                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
                 }
             }
         }
@@ -571,6 +598,13 @@ class FileService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-success">File name changed to %s</pre>', $newName)
             );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has edited [%s]</pre>'),
+                $this->user->getUsername(),
+                $newName
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -634,6 +668,13 @@ class FileService extends BaseService
                     $this->addAdditionalCommand('flyto', $hubNode->getSystem()->getGeocoords(), true);
                     break;
             }
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has used [%s]</pre>'),
+                $this->user->getUsername(),
+                $file->getName()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -773,6 +814,13 @@ class FileService extends BaseService
                     $this->response = $this->equipFile($file);
                     break;
             }
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has executed [%s]</pre>'),
+                $this->user->getUsername(),
+                $file->getName()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -1747,7 +1795,7 @@ class FileService extends BaseService
         /** @var System $system */
         $profile = $file->getProfile();
         /** @var Profile $profile */
-        if (!$response && $system->getProfile() == $profile) {
+        if (!$response && $system->getProfile() === $profile) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -1812,7 +1860,7 @@ class FileService extends BaseService
         /** @var System $system */
         $profile = $file->getProfile();
         /** @var Profile $profile */
-        if (!$response && $system->getProfile() == $profile) {
+        if (!$response && $system->getProfile() === $profile) {
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -2025,26 +2073,32 @@ class FileService extends BaseService
             );
         }
         if (!$this->response && $runningFile->getNode() != $profile->getCurrentNode()) {
-            $this->response = array(
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('That process needs to be killed in the node that it is running in')
                 )
-            );
+            ];
         }
         if (!$this->response) {
             $runningFile->setRunning(false);
             $runningFile->setSystem(NULL);
             $runningFile->setNode(NULL);
             $this->entityManager->flush($runningFile);
-            $this->response = array(
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Process with id [%s] has been killed</pre>'),
                     $runningFile->getId()
                 )
+            ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] killed a process<s/pre>'),
+                $this->user->getUsername()
             );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
         }
         return $this->response;
     }
@@ -2063,18 +2117,18 @@ class FileService extends BaseService
         $profile = $this->user->getProfile();
         $showAll = $this->getNextParameter($contentArray, false);
         if ($showAll) {
-            $runningFiles = $this->fileRepo->findBy(array(
+            $runningFiles = $this->fileRepo->findBy([
                 'profile' => $profile,
                 'running' => true
-            ));
+            ]);
         }
         else {
-            $runningFiles = $this->fileRepo->findBy(array(
+            $runningFiles = $this->fileRepo->findBy([
                 'system' => $profile->getCurrentNode()->getSystem(),
                 'running' => true
-            ));
+            ]);
         }
-        $returnMessage = array();
+        $returnMessage = [];
         if (count($runningFiles) < 1) {
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
@@ -2098,10 +2152,10 @@ class FileService extends BaseService
                 );
             }
         }
-        $this->response = array(
+        $this->response = [
             'command' => 'showoutput',
             'message' => $returnMessage
-        );
+        ];
         return $this->response;
     }
 
@@ -2110,9 +2164,10 @@ class FileService extends BaseService
      */
     public function showFileTypes()
     {
-        $fileTypes = $this->entityManager->getRepository('Netrunners\Entity\FileType')->findBy([
-            'codable' => true
-        ]);
+        $fileTypes = $this->entityManager->getRepository('Netrunners\Entity\FileType')->findBy(
+            ['codable' => true],
+            ['name' => 'ASC']
+        );
         $returnMessage = array();
         $returnMessage[] = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-20s|%-4s|%s</pre>',
@@ -2148,7 +2203,10 @@ class FileService extends BaseService
      */
     public function showFileMods()
     {
-        $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileMod')->findAll();
+        $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileMod')->findBy(
+            [],
+            ['name' => 'ASC']
+        );
         $returnMessage = array();
         $returnMessage[] = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%s</pre>',
