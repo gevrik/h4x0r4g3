@@ -322,7 +322,7 @@ class LoginService extends BaseService
             $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
             $system->setAlertLevel(0);
             $system->setNoclaim(true);
-            $system->setGeocoords($clientData['geocoords']);
+            $system->setGeocoords($clientData->geocoords);
             $this->entityManager->persist($system);
             // default io node
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);

@@ -114,7 +114,7 @@
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
-                    if (ipaddy === '127.0.0.1') ipaddy = '79.234.10.170';
+                    if (ipaddy === '127.0.0.1') ipaddy = '137.74.164.116';
                     var url = "https://freegeoip.net/json/";
 
                     if (ipaddy !== undefined) {
