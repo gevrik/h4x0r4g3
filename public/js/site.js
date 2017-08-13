@@ -26,7 +26,6 @@
         });
 
         $('#panel-container').on('click', '.panel-heading .close', function(e){
-            console.log('.close in .panel-heading clicked');
             $('#panel-container').html('');
             commandInput.focus();
         });
@@ -129,7 +128,6 @@
                         if (xhr.readyState === 4) {
                             var geoipdata = JSON.parse(xhr.response);
                             myGeoCoords = [geoipdata.latitude, geoipdata.longitude];
-                            console.log(myGeoCoords);
                             mymap.setView(myGeoCoords, 15);
                             jsonData = {
                                 command: 'setgeocoords',
@@ -442,7 +440,6 @@
             $('#manpage-content-container ul a').map(function() {
                 $(this).unbind().on('click', function(e) {
                     e.preventDefault();
-                    console.log($(this).attr('id'));
                     command = {
                         command: 'parseInput',
                         hash: hash,
