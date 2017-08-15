@@ -131,7 +131,7 @@ class UtilityService extends BaseService
             );
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-            $message = 'banip  unbanip  banuser  unbanuser  clients  goto  kick  nlist  setcredits  setsnippets  syslist';
+            $message = 'banip  cybermap  unbanip  banuser  unbanuser  clients  goto  kick  nlist  setcredits  setsnippets  syslist';
             $returnMessage .= sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
                 wordwrap($message, 120)

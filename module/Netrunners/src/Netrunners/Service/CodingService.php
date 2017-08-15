@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
@@ -18,6 +19,8 @@ use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
+use Netrunners\Repository\FileModInstanceRepository;
+use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
 use Netrunners\Repository\FileTypeRepository;
@@ -52,6 +55,11 @@ class CodingService extends BaseService
     protected $filePartInstanceRepo;
 
     /**
+     * @var FileModInstanceRepository
+     */
+    protected $fileModInstanceRepo;
+
+    /**
      * @var FilePartRepository
      */
     protected $filePartRepo;
@@ -60,6 +68,11 @@ class CodingService extends BaseService
      * @var FileTypeRepository
      */
     protected $fileTypeRepo;
+
+    /**
+     * @var FileModRepository
+     */
+    protected $fileModRepo;
 
 
     /**
@@ -81,6 +94,8 @@ class CodingService extends BaseService
         $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
         $this->filePartRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePart');
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
+        $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
+        $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
     }
 
     /**
@@ -140,6 +155,9 @@ class CodingService extends BaseService
                 break;
             case 'program':
                 $value = 'program';
+                break;
+            case 'mod':
+                $value = 'mod';
                 break;
         }
         $this->getWebsocketServer()->setCodingOption($resourceId, 'mode', $value);
@@ -224,7 +242,7 @@ class CodingService extends BaseService
         /* options are different depending on if we are in program or resource mode */
         // if we are in program mode
         if ($codeOptions->mode == 'program') {
-            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $codeOptions->fileType);
+            $fileType = $this->fileTypeRepo->find($codeOptions->fileType);
             /** @var FileType $fileType*/
             $message .= sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
@@ -241,13 +259,11 @@ class CodingService extends BaseService
                 foreach ($fileType->getFileParts() as $filePart) {
                     /** @var FilePart $filePart */
                     $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
-                    $name = $filePart->getName();
-                    $shortName = explode(' ', $name);
                     if (empty($filePartInstances)) {
-                        $partsString .= '<span class="text-danger">' . $shortName[0] . '</span> ';
+                        $partsString .= '<span class="text-danger">' . $filePart->getName() . '</span> ';
                     }
                     else {
-                        $partsString .= '<span class="text-success">' . $shortName[0] . '</span> ';
+                        $partsString .= '<span class="text-success">' . $filePart->getName() . '</span> ';
                     }
                 }
                 $message .= sprintf(
@@ -270,9 +286,37 @@ class CodingService extends BaseService
                 );
             }
         }
+        else if ($codeOptions->mode == 'mod') {
+            /* filemod mode */
+            $fileType = $this->fileModRepo->find($codeOptions->fileType);
+            /** @var FileMod $fileType*/
+            $message .= sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+                $this->translate('type'),
+                ($fileType) ? $fileType->getName() : $this->translate('not set')
+            );
+            $partsString = '';
+            if ($fileType) {
+                foreach ($fileType->getFileParts() as $filePart) {
+                    /** @var FilePart $filePart */
+                    $filePartInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileType, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
+                    if (empty($filePartInstances)) {
+                        $partsString .= '<span class="text-danger">' . $filePart->getName() . '</span> ';
+                    }
+                    else {
+                        $partsString .= '<span class="text-success">' . $filePart->getName() . '</span> ';
+                    }
+                }
+                $message .= sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+                    $this->translate('resources'),
+                    $partsString
+                );
+            }
+        }
         else {
             /* resource mode */
-            $fileType = $this->entityManager->find('Netrunners\Entity\FilePart', $codeOptions->fileType);
+            $fileType = $this->filePartRepo->find($codeOptions->fileType);
             /** @var FilePart $fileType*/
             $message .= sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
@@ -334,6 +378,10 @@ class CodingService extends BaseService
                 $typeRepository = $this->fileTypeRepo;
                 /** @var FileTypeRepository $typeRepository */
                 break;
+            case 'mod':
+                $typeRepository = $this->fileModRepo;
+                /** @var FileModRepository $typeRepository */
+                break;
         }
         if (!$parameter) {
             /* if no param was given we return a list of possible options */
@@ -352,11 +400,11 @@ class CodingService extends BaseService
             );
         }
         else {
-            /* param was given - we need to check if this is a valid filetype or filepart */
+            /* param was given - we need to check if this is a valid filetype, filepart or mod */
             $message = false;
             $entity = $typeRepository->findLikeName($parameter);
-            if (!$entity instanceof FilePart && !$entity instanceof FileType) {
-                /** @var FilePart|FileType $entity */
+            if (!$entity instanceof FilePart && !$entity instanceof FileType && !$entity instanceof FileMod) {
+                /** @var FilePart|FileType|FileMod $entity */
                 $message = sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid type given')
@@ -400,6 +448,9 @@ class CodingService extends BaseService
                         $this->translate('Invalid code mode')
                     )
                 );
+                break;
+            case 'mod':
+                $this->response = $this->codeFileMod($codeOptions);
                 break;
             case 'program':
                 $this->response = $this->codeProgram($codeOptions);
@@ -511,6 +562,118 @@ class CodingService extends BaseService
 
     /**
      * @param $codeOptions
+     * @return array|false
+     */
+    private function codeFileMod($codeOptions)
+    {
+        $profile = $this->user->getProfile();
+        $type = $codeOptions->fileType;
+        if ($type === 0) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You need to specify a type first')
+                )
+            );
+        }
+        $level = (int)$codeOptions->fileLevel;
+        if (!$this->response && $level === 0) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You need to specify a level first')
+                )
+            );
+        }
+        /* check if the given type is valid */
+        $fileMod = NULL;
+        if (!$this->response) {
+            $fileMod = $this->fileModRepo->find($type);
+            if (!$fileMod) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Unknown file mod: %s</pre>'),
+                        htmLawed($type,['safe'=>1,'elements'=>'strong'])
+                    )
+                );
+            }
+        }
+        // now we check if the player has all the needed resources
+        if (!$this->response) {
+            /** @var FileMod $fileMod */
+            $neededResources = $fileMod->getFileParts();
+            $missingResources = [];
+            foreach ($neededResources as $neededResource) {
+                /** @var FilePart $neededResource */
+                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
+                if (empty($filePartInstances)) {
+                    $missingResources[] = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need [%s] with at least level %s to code the [%s]</pre>'),
+                        $neededResource->getName(),
+                        $level,
+                        $fileMod->getName()
+                    );
+                }
+            }
+            if (!empty($missingResources)) {
+                $this->response = array(
+                    'command' => 'showoutput',
+                    'message' => $missingResources
+                );
+            }
+        }
+        // check if advanced coding is involved and check for skill rating requirements
+        $skillList = $this->getSkillListForType($codeOptions);
+        $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+        /* checks passed, we can now create the mod */
+        if (!$this->response) {
+            $difficulty = $level;
+            $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+            $skillModifier = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+            $modifier = floor(($skillRating + $skillModifier)/2);
+            $modifier = (int)$modifier;
+            $completionDate = new \DateTime();
+            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM) . 'S'));
+            $fileTypeId = $fileMod->getId();
+            foreach ($fileMod->getFileParts() as $neededResource) {
+                /** @var FilePart $neededResource */
+                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
+                $filePartInstance = array_shift($filePartInstances);
+                $modifier += $filePartInstance->getLevel() - $level;
+                $this->entityManager->remove($filePartInstance);
+            }
+            // add the coding job to the loop service
+            $this->loopService->addJob([
+                'difficulty' => $difficulty,
+                'modifier' => $modifier,
+                'completionDate' => $completionDate,
+                'typeId' => $fileTypeId,
+                'type' => 'mod',
+                'mode' => 'mod',
+                'skills' => $skillList,
+                'profileId' => $profile->getId(),
+                'socketId' => $this->clientData->socketId,
+                'nodeId' => $profile->getCurrentNode()->getId()
+            ]);
+            // prepare response message and add clientdata
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding the %s</pre>'),
+                    $fileMod->getName()
+                )
+            );
+            $this->entityManager->flush();
+
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $codeOptions
      * @return array|bool
      */
     private function codeProgram($codeOptions)
@@ -539,7 +702,7 @@ class CodingService extends BaseService
         /* check if the given type is valid and if they have enough snippets */
         $fileType = NULL;
         if (!$this->response) {
-            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $type);
+            $fileType = $this->fileTypeRepo->find($type);
             if (!$fileType) {
                 $this->response = array(
                     'command' => 'showmessage',
@@ -632,6 +795,13 @@ class CodingService extends BaseService
             $completionDate = new \DateTime();
             $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM) . 'S'));
             $fileTypeId = $fileType->getId();
+            foreach ($fileType->getFileParts() as $neededResource) {
+                /** @var FilePart $neededResource */
+                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
+                $filePartInstance = array_shift($filePartInstances);
+                $modifier += $filePartInstance->getLevel();
+                $this->entityManager->remove($filePartInstance);
+            }
             // add the coding job to the loop service
             $this->loopService->addJob([
                 'difficulty' => $difficulty,
@@ -654,13 +824,6 @@ class CodingService extends BaseService
                     $level
                 )
             );
-            $neededResources = $fileType->getFileParts();
-            foreach ($neededResources as $neededResource) {
-                /** @var FilePart $neededResource */
-                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
-                $filePartInstance = array_shift($filePartInstances);
-                $this->entityManager->remove($filePartInstance);
-            }
             $currentSnippets = $profile->getSnippets();
             $profile->setSnippets($currentSnippets - $level);
             $this->entityManager->flush();
@@ -693,14 +856,18 @@ class CodingService extends BaseService
         $skillList = [];
         switch ($codeOptions->mode) {
             default:
-                $object = $this->entityManager->find('Netrunners\Entity\FilePart', $codeOptions->fileType);
+                $object = $this->filePartRepo->find($codeOptions->fileType);
                 $repo = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill');
                 $results = $repo->findBy([
                     'filePart' => $object
                 ]);
                 break;
+            case 'mod':
+                $advancedCodingSkill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->find(Skill::ID_ADVANCED_CODING);
+                $results = [$advancedCodingSkill];
+                break;
             case 'program':
-                $object = $this->entityManager->find('Netrunners\Entity\FileType', $codeOptions->fileType);
+                $object = $this->fileTypeRepo->find($codeOptions->fileType);
                 $repo = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill');
                 $results = $repo->findBy([
                     'fileType' => $object
@@ -709,7 +876,7 @@ class CodingService extends BaseService
         }
         foreach ($results as $result) {
             /** @var FilePartSkill|FileTypeSkill $result */
-            $skillList[] = $this->getNameWithoutSpaces($result->getSkill()->getName(), '-');
+            $skillList[] = ($result instanceof Skill) ? $this->getNameWithoutSpaces($result->getName()) : $this->getNameWithoutSpaces($result->getSkill()->getName(), '-');
         }
         return $skillList;
     }

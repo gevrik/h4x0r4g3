@@ -390,6 +390,7 @@
                     $(data.message.element).html(data.message.value);
                     break;
                 case 'showmessage':
+                    //getRandomInRange(0, 6);
                     md.append(data.message);
                     showprompt();
                     if (data.deadline) {

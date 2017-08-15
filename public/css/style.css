@@ -160,7 +160,7 @@ pre.text-sysmsg {
 }
 
 .content {
-    background-color: rgba(0,0,0,0.75);
+    background-color: rgba(0,0,0,0.6);
 }
 
 .manpage-content-container {
@@ -290,9 +290,9 @@ textarea {
 }
 
 .leaflet-container .leaflet-control-attribution {
-    background-color: rgba(0, 0, 0, .7);
+    background-color: rgba(0, 0, 0, .6);
 }
 
 .leaflet-container {
-    background: rgba(0, 0, 0, .5);
+    background: rgba(0, 0, 0, .6);
 }

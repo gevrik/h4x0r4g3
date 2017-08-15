@@ -103,7 +103,7 @@ class CombatService extends BaseService
      */
     public function resolveCombatRound($attacker, $defender)
     {
-        if (!$attacker || !$defender) return [NULL, NULL];
+        if (!$attacker || !$defender) return [NULL, NULL, NULL];
         // init vars
         $skillRating = 0;
         $blade = NULL;
@@ -255,6 +255,7 @@ class CombatService extends BaseService
         foreach ($files as $file) {
             /** @var File $file */
             $file->setNpc(NULL);
+            $file->setRunning(false);
             $file->setNode($npcInstance->getNode());
             $file->setSystem($npcInstance->getNode()->getSystem());
         }

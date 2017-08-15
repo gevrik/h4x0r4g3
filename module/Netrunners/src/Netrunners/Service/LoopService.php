@@ -14,6 +14,8 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
@@ -246,6 +248,7 @@ class LoopService extends BaseService
                     'prompt' => $ws->getUtilityService()->showPrompt($targetClientData)
                 ];
                 $targetClient->send(json_encode($response));
+                // TODO lower rating
             }
             else {
                 /* store notification */
@@ -254,6 +257,7 @@ class LoopService extends BaseService
                     'Your current milkrun has expired before you could complete it',
                     'warning'
                 );
+                // TODO lower rating
             }
         }
         return true;
@@ -396,18 +400,20 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group);
+                $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group, $firewallNode);
             }
             $terminalNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_TERMINAL);
             foreach ($terminalNodes as $terminalNode) {
                 /** @var Node $terminalNode */
-                if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) break;
+                /* check if this node has already spawned a sentinel */
+                $existing = $this->npcInstanceRepo->findOneByHomeNode($terminalNode);
+                if ($existing) continue;
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WORKER_PROGRAM);
                 /** @var Npc $npc */
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $terminalNode, $profile, $faction, $group);
+                $this->spawnNpcInstance($npc, $terminalNode, $profile, $faction, $group, $terminalNode);
             }
             $recruitmentNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_RECRUITMENT);
             foreach ($recruitmentNodes as $recruitmentNode) {
@@ -420,7 +426,7 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group);
+                $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group, $recruitmentNode);
             }
             $intrusionNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_INTRUSION);
             foreach ($intrusionNodes as $intrusionNode) {
@@ -439,13 +445,15 @@ class LoopService extends BaseService
      * @param Profile|NULL $profile
      * @param Faction|NULL $faction
      * @param Group|NULL $group
+     * @param Node|NULL $homeNode
      */
     private function spawnNpcInstance(
         Npc $npc,
         Node $node,
         Profile $profile = NULL,
         Faction $faction = NULL,
-        Group $group = NULL
+        Group $group = NULL,
+        Node $homeNode = NULL
     )
     {
         $nodeLevel = $node->getLevel();
@@ -466,7 +474,7 @@ class LoopService extends BaseService
         $npcInstance->setDescription($npc->getDescription());
         $npcInstance->setName($npc->getName());
         $npcInstance->setFaction($faction);
-        $npcInstance->setHomeNode($node);
+        $npcInstance->setHomeNode($homeNode);
         $npcInstance->setRoaming($npc->getRoaming());
         $npcInstance->setGroup($group);
         $npcInstance->setLevel($node->getLevel());
@@ -551,16 +559,37 @@ class LoopService extends BaseService
         $roamingNpcs = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance')->findBy([
             'roaming' => true
         ]);
+        $currentSystem = NULL;
+        $currentOwner = NULL;
+        $currentFaction = NULL;
+        $currentGroup = NULL;
         foreach ($roamingNpcs as $roamingNpc) {
             /** @var NpcInstance $roamingNpc */
+            // skip if npc is in combat
             if ($this->isInCombat($roamingNpc)) continue;
+            // skip if 50% TODO make this more dynamic
             if (mt_rand(1, 100) > 50) continue;
             $connections = $connectionRepo->findBySourceNode($roamingNpc->getNode());
             $connectionsCount = count($connections);
             $randConnectionIndex = mt_rand(0, $connectionsCount - 1);
             $connection = $connections[$randConnectionIndex];
             /** @var Connection $connection */
-            if ($connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()) continue;
+            // now we need to check a few things if the connection is secured
+            if ($connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()) {
+                if ($currentSystem != $roamingNpc->getSystem()) {
+                    $currentSystem = $roamingNpc->getSystem();
+                    $currentOwner = $currentSystem->getProfile();
+                    $currentFaction = $currentSystem->getFaction();
+                    $currentGroup = $currentSystem->getGroup();
+                }
+                if (
+                    $roamingNpc->getProfile() != $currentOwner ||
+                    $roamingNpc->getGroup() != $currentGroup ||
+                    $roamingNpc->getFaction() != $currentFaction)
+                {
+                    continue;
+                }
+            };
             $this->moveNpcToTargetNode($roamingNpc, $connection);
         }
     }
@@ -574,28 +603,42 @@ class LoopService extends BaseService
         $items = [];
         // get all the db nodes (for snippet generation)
         $databaseNodes = $this->nodeRepo->findByType(NodeType::ID_DATABASE);
+        $system = NULL;
+        $systemOwner = NULL;
+        $currentNodeProfileId = NULL;
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
-            if (!$databaseNode->getProfile()) continue;
-            $currentNodeProfileId = $databaseNode->getSystem()->getProfile()->getId();
-            /** @var Profile $currentNodeProfile */
+            if ($databaseNode->getSystem() != $system) {
+                $system = $databaseNode->getSystem();
+                $systemOwner = $system->getProfile();
+                $currentNodeProfileId = $systemOwner->getId();
+            }
+            if (!$systemOwner) continue;
+            if ($system->getGroup()) continue;
+            if ($system->getFaction()) continue;
             // add the profile id to the items if it is not already set
             $items = $this->addProfileIdToItems($items, $currentNodeProfileId);
-            // add the snippets
             $items[$currentNodeProfileId]['snippets'] += $databaseNode->getLevel();
-            // now check if there are running files in the same node that could affect the resource amount
-            $items = $this->checkForModifyingFiles($databaseNode, $currentNodeProfileId, FileType::ID_DATAMINER, $items, 'snippets');
+            $this->checkForModifyingFiles($databaseNode);
         }
         $terminalNodes = $this->nodeRepo->findByType(NodeType::ID_TERMINAL);
+        $system = NULL;
+        $systemOwner = NULL;
+        $currentNodeProfileId = NULL;
         foreach ($terminalNodes as $terminalNode) {
             /** @var Node $terminalNode */
-            if (!$terminalNode->getProfile()) continue;
-            $currentNodeProfileId = $terminalNode->getSystem()->getProfile()->getId();
-            /** @var Profile $currentNodeProfile */
+            if ($terminalNode->getSystem() != $system) {
+                $system = $terminalNode->getSystem();
+                $systemOwner = $system->getProfile();
+                $currentNodeProfileId = $systemOwner->getId();
+            }
+            if (!$systemOwner) continue;
+            if ($system->getGroup()) continue;
+            if ($system->getFaction()) continue;
             // add the profile id to the items if it is not already set
             $items = $this->addProfileIdToItems($items, $currentNodeProfileId);
             $items[$currentNodeProfileId]['credits'] += $terminalNode->getLevel();
-            $items = $this->checkForModifyingFiles($terminalNode, $currentNodeProfileId, FileType::ID_COINMINER, $items, 'credits');
+            $this->checkForModifyingFiles($terminalNode);
         }
         foreach ($items as $profileId => $amountData) {
             $profile = $this->entityManager->find('Netrunners\Entity\Profile', $profileId);
@@ -623,13 +666,9 @@ class LoopService extends BaseService
 
     /**
      * @param Node $node
-     * @param $profileId
-     * @param $fileTypeId
-     * @param $items
-     * @param $resource
-     * @return mixed
+     * @return bool
      */
-    private function checkForModifyingFiles(Node $node, $profileId, $fileTypeId, $items, $resource)
+    private function checkForModifyingFiles(Node $node)
     {
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */
@@ -640,21 +679,25 @@ class LoopService extends BaseService
             if (!$fileInNode->getRunning()) continue;
             if ($fileInNode->getIntegrity() < 1) continue;
             if (!$fileInNode->getProfile()) continue;
-            if ($fileInNode->getFileType()->getId() == $fileTypeId) {
-                if ($fileInNode->getProfile()->getId() != $profileId) {
-                    // check if the owning profile of this node is already in our item list, if not, add the profile
-                    if (!isset($items[$fileInNode->getProfile()->getId()])) $items[$fileInNode->getProfile()->getId()] = [
-                        'snippets' => 0,
-                        'credits' => 0
-                    ];
-                    $items[$fileInNode->getProfile()->getId()][$resource] += $fileInNode->getLevel();
-                }
-                else {
-                    $items[$profileId][$resource] += $fileInNode->getLevel();
-                }
+            switch ($fileInNode->getFileType()->getId()) {
+                default:
+                    continue;
+                case FileType::ID_DATAMINER:
+                case FileType::ID_COINMINER:
+                    $fileData = json_decode($fileInNode->getData());
+                    if (!is_object($fileData)) {
+                        $fileData = json_encode($fileData);
+                        $fileData = json_decode($fileData);
+                    }
+                    // skip if the program has already collected equal to or more than its integrity allows
+                    if ($fileData->value >= $fileInNode->getIntegrity()) continue;
+                    $fileData->value += $fileInNode->getLevel();
+                    if ($fileData->value > $fileInNode->getIntegrity()) $fileData->value = $fileInNode->getIntegrity();
+                    $fileInNode->setData(json_encode($fileData));
+                    break;
             }
         }
-        return $items;
+        return true;
     }
 
     /**
@@ -677,6 +720,9 @@ class LoopService extends BaseService
         if ($jobData['mode'] == 'resource') {
             $basePart = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
         }
+        else if ($jobData['mode'] == 'mod') {
+            $basePart = $this->entityManager->find('Netrunners\Entity\FileMod', $typeId);
+        }
         else {
             $basePart = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
         }
@@ -686,6 +732,16 @@ class LoopService extends BaseService
                 $newCode = new FilePartInstance();
                 $newCode->setCoder($profile);
                 $newCode->setFilePart($basePart);
+                $newCode->setLevel($difficulty);
+                $newCode->setProfile($profile);
+                $this->entityManager->persist($newCode);
+            }
+            else if ($jobData['mode'] == 'mod') {
+                // create the file mod instance
+                $newCode = new FileModInstance();
+                $newCode->setCoder($profile);
+                $newCode->setFileMod($basePart);
+                $newCode->setAdded(new \DateTime());
                 $newCode->setLevel($difficulty);
                 $newCode->setProfile($profile);
                 $this->entityManager->persist($newCode);
@@ -743,7 +799,7 @@ class LoopService extends BaseService
         else {
             $message = '';
             $this->learnFromFailure($profile, $jobData);
-            if ($basePart instanceof FileType) {
+            if ($basePart instanceof FileType || $basePart instanceof FileMod) {
                 $neededParts = $basePart->getFileParts();
                 foreach ($neededParts as $neededPart) {
                     /** @var FilePart $neededPart */

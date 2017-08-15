@@ -120,3 +120,71 @@ var getGeoCoordsForIp = function (ip) {
     };
     xhr.send(null);
 };
+
+var zoneBoundsData = [
+    {'name':'global', 'latfrom': -80, 'latto': 80, 'lngfrom': -180, 'lngto': 180},
+    {'name':'aztech', 'latfrom': -54, 'latto': 71, 'lngfrom': -179, 'lngto': -29},
+    {'name':'euro', 'latfrom': -35, 'latto': 71, 'lngfrom': -30, 'lngto': 55},
+    {'name':'asia', 'latfrom': -47, 'latto': 71, 'lngfrom': -56, 'lngto': 180}
+];
+
+var getRandomInRange = function (zoneid, fixed) {
+    var lat, lng;
+    lat = (Math.random() * (zoneBoundsData[zoneid].latto - zoneBoundsData[zoneid].latfrom) + zoneBoundsData[zoneid].latfrom).toFixed(fixed) * 1;
+    lng = (Math.random() * (zoneBoundsData[zoneid].lngto - zoneBoundsData[zoneid].lngfrom) + zoneBoundsData[zoneid].lngfrom).toFixed(fixed) * 1;
+    return sendGeocodeRequest(lat, lng);
+};
+
+var sendGeocodeRequest = function (lat, lng) {
+    var result = false;
+    var xhr = new XMLHttpRequest();
+    var url = 'http://maps.google.com/maps/api/geocode/json?address=' + lat + ',' + lng + '&sensor=false';
+    var attempts = 0;
+    while (!result && attempts < 3) {
+        xhr.open("GET", url, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                var geoipdata = JSON.parse(xhr.response);
+                console.log(geoipdata);
+                if (geoipdata.status === "OK") {
+                    var possibleLocations = [];
+                    $.each(geoipdata.results, function(i, resultData){
+                        $.each(resultData.types, function(ix, typeData){
+                            if (
+                                typeData === 'street_address' ||
+                                typeData === 'intersection' ||
+                                typeData === 'premise' ||
+                                typeData === 'subpremise' ||
+                                typeData === 'point_of_interest' ||
+                                typeData === 'state' ||
+                                typeData === 'country' ||
+                                typeData === 'administrative_area_level_1' ||
+                                typeData === 'administrative_area_level_2' ||
+                                typeData === 'administrative_area_level_3' ||
+                                typeData === 'administrative_area_level_4' ||
+                                typeData === 'administrative_area_level_5'
+                            )
+                            {
+                                possibleLocations.push(resultData);
+                            }
+                        });
+                    });
+                    console.log(possibleLocations);
+                    if (possibleLocations.length >= 1) {
+                        //result = possibleLocations[Math.floor(Math.random() * possibleLocations.length)];
+                        //console.log(result);
+                        var command = {
+                            command: 'processlocations',
+                            hash: hash,
+                            content: possibleLocations,
+                            silent: true
+                        };
+                        conn.send(JSON.stringify(command));
+                    }
+                }
+            }
+        };
+        xhr.send(null);
+        attempts++;
+    }
+};

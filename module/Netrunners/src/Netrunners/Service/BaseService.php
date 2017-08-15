@@ -670,6 +670,9 @@ class BaseService
             /** @var FilePart $targetType */
             $skillModifier = $this->getSkillModifierForFilePart($targetType, $profile);
         }
+        if ($codeOptions->mode == 'mod') {
+            $skillModifier = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+        }
         $skillCoding = $this->getSkillRating($profile, Skill::ID_CODING);
         $skillRating = floor(($skillCoding + $skillModifier)/2);
         $chance = $skillRating - $difficulty;

@@ -4,9 +4,11 @@ namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Feedback;
+use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\BannedIpRepository;
+use Netrunners\Repository\GeocoordRepository;
 use Netrunners\Repository\PlaySessionRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
@@ -41,7 +43,7 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @const LOOP_NPC_SPAWN the amount of seconds between npc spawn checks
      */
-    const LOOP_NPC_SPAWN = 300;
+    const LOOP_NPC_SPAWN = 600;
 
     /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
@@ -468,7 +470,7 @@ class WebsocketService implements MessageComponentInterface {
                 $this->clientsData[$resourceId]['spamcount'] = 0;
             }
             else {
-                if ($command != 'ticker') {
+                if ($command != 'ticker' && $command != 'setgeocoords' && $command != 'processlocations') {
                     $querytime = $this->microtime_diff($this->clientsData[$resourceId]['millis']);
                     if ($querytime <= 0.2) {
                         $this->clientsData[$resourceId]['spamcount']++;
@@ -492,7 +494,7 @@ class WebsocketService implements MessageComponentInterface {
             // init vars
             $hash = $msgData->hash;
             $content = $msgData->content;
-            if ($command != 'saveManpage' && $command != 'setgeocoords') {
+            if ($command != 'saveManpage' && $command != 'setgeocoords' && $command != 'processlocations') {
                 $content = trim($content);
                 $content = htmLawed($content, ['safe'=>1,'elements'=>'strong']);
             }
@@ -514,6 +516,7 @@ class WebsocketService implements MessageComponentInterface {
             if (
                 $content != 'ticker' &&
                 $command != 'promptforpassword' &&
+                $command != 'processlocations' &&
                 $command != 'createpassword' &&
                 $command != 'createpasswordconfirm'
             ) {
@@ -564,6 +567,28 @@ class WebsocketService implements MessageComponentInterface {
                     $content = trim($content);
                     $geocoords = htmLawed($content, ['safe'=>1,'elements'=>'strong']);
                     $this->clientsData[$resourceId]['geocoords'] = $geocoords;
+                    break;
+                case 'processlocations':
+                    $coordRepo = $this->entityManager->getRepository('Netrunners\Entity\Geocoord');
+                    /** @var GeocoordRepository $coordRepo */
+                    $needFlush = false;
+                    foreach ($content as $locationData) {
+                        $lat = $locationData->geometry->location->lat;
+                        $lng = $locationData->geometry->location->lng;
+                        $placeId = $locationData->place_id;
+                        if (!$coordRepo->findOneUnique($lat, $lng, $placeId)) {
+                            $geocoord = new Geocoord();
+                            $geocoord->setAdded(new \DateTime());
+                            $geocoord->setLat($lat);
+                            $geocoord->setLng($lng);
+                            $geocoord->setPlaceId($placeId);
+                            $geocoord->setData(json_encode($locationData));
+                            $this->entityManager->persist($geocoord);
+                            $needFlush = true;
+                        }
+                    }
+                    if ($needFlush) $this->entityManager->flush();
+                    return true;
                     break;
                 case 'login':
                     list($response, $disconnect) = $this->loginService->login($resourceId, $content);

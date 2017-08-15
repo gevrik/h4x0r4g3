@@ -125,6 +125,12 @@ class Npc
     protected $stealthing;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $social;
+
+    /**
      * @ORM\Column(type="integer", nullable=true)
      * @var int
      */
@@ -416,6 +422,24 @@ class Npc
     public function setStealthing($stealthing)
     {
         $this->stealthing = $stealthing;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSocial()
+    {
+        return $this->social;
+    }
+
+    /**
+     * @param int $social
+     * @return Npc
+     */
+    public function setSocial($social)
+    {
+        $this->social = $social;
         return $this;
     }
 

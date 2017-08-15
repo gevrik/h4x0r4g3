@@ -145,6 +145,26 @@ class FileService extends BaseService
                 $this->translate("Categories"),
                 $categories
             );
+            switch ($targetFile->getFileType()->getId()) {
+                default:
+                    break;
+                case FileType::ID_COINMINER:
+                    $fileData = json_decode($targetFile->getData());
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                        $this->translate("Collected credits"),
+                        (isset($fileData->value)) ? $fileData->value : 0
+                    );
+                    break;
+                case FileType::ID_DATAMINER:
+                    $fileData = json_decode($targetFile->getData());
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                        $this->translate("Collected snippets"),
+                        (isset($fileData->value)) ? $fileData->value : 0
+                    );
+                    break;
+            }
             $this->response = array(
                 'command' => 'showoutput',
                 'message' => $returnMessage

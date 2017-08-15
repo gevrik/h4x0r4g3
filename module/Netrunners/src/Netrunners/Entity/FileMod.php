@@ -12,6 +12,7 @@
 
 namespace Netrunners\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\FileModRepository") */
@@ -45,6 +46,22 @@ class FileMod
      * @var string
      */
     protected $description;
+
+    // ORM
+
+    /**
+     * @ORM\ManyToMany(targetEntity="Netrunners\Entity\FilePart")
+     */
+    protected $fileParts;
+
+
+    /**
+     *
+     */
+    public function __construct()
+    {
+        $this->fileParts = new ArrayCollection();
+    }
 
     /**
      * @return int
@@ -98,6 +115,30 @@ class FileMod
     {
         $this->description = $description;
         return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getFileParts()
+    {
+        return $this->fileParts;
+    }
+
+    /**
+     * @param FilePart $filePart
+     */
+    public function addFilePart(FilePart $filePart)
+    {
+        if (!$this->fileParts->contains($filePart)) $this->fileParts[] = $filePart;
+    }
+
+    /**
+     * @param FilePart $filePart
+     */
+    public function removeFilePart(FilePart $filePart)
+    {
+        if ($this->fileParts->contains($filePart)) $this->fileParts->removeElement($filePart);
     }
 
 }
