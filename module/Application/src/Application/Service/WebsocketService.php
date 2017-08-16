@@ -404,6 +404,7 @@ class WebsocketService implements MessageComponentInterface {
             'profileId' => false,
             'ipaddy' => false,
             'geocoords' => false,
+            'awaitingcoords' => false,
             'codingOptions' => [
                 'fileType' => 0,
                 'fileLevel' => 0,

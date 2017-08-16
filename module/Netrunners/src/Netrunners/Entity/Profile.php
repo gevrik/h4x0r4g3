@@ -82,6 +82,12 @@ class Profile
     protected $locale;
 
     /**
+     * @ORM\Column(type="string", options={"default":"0.6"}, nullable=true)
+     * @var string
+     */
+    protected $bgopacity;
+
+    /**
      * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
@@ -371,6 +377,24 @@ class Profile
     public function setLocale($locale)
     {
         $this->locale = $locale;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getBgopacity()
+    {
+        return $this->bgopacity;
+    }
+
+    /**
+     * @param string $bgopacity
+     * @return Profile
+     */
+    public function setBgopacity($bgopacity)
+    {
+        $this->bgopacity = $bgopacity;
         return $this;
     }
 

@@ -260,6 +260,9 @@ class ParserService
             case 'addmanpage':
                 $response = $this->manpageService->addManpage($resourceId, $contentArray);
                 break;
+            case 'bgopacity':
+                $response = $this->profileService->changeBackgroundOpacity($resourceId, $contentArray);
+                break;
             case 'cd':
                 $response = $this->connectionService->useConnection($resourceId, $contentArray);
                 break;
@@ -603,6 +606,12 @@ class ParserService
                         $additionalResponse = [
                             'command' => 'flytocoords',
                             'content' => explode(',', $additionalCommandData['content'])
+                        ];
+                        break;
+                    case 'setopacity':
+                        $additionalResponse = [
+                            'command' => 'setbgopacity',
+                            'content' => $additionalCommandData['content']
                         ];
                         break;
                 }

@@ -912,6 +912,37 @@ class ProfileService extends BaseService
         return $this->response;
     }
 
+    public function changeBackgroundOpacity($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            $newOpacity = $this->getNextParameter($contentArray, false, false, false, true);
+            if ($newOpacity === NULL) {
+                $newOpacity = 0.6;
+            }
+            if ($newOpacity < 0) {
+                $newOpacity = 0;
+            }
+            if ($newOpacity > 1) {
+                $newOpacity = 1;
+            }
+            $profile->setBgopacity($newOpacity);
+            $this->entityManager->flush($profile);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Background opacity set to: %s</pre>'),
+                    $newOpacity
+                )
+            ];
+            $this->addAdditionalCommand('setopacity', $newOpacity);
+        }
+        return $this->response;
+    }
+
     /**
      * @param $resourceId
      * @param $contentArray

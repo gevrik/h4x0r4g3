@@ -105,4 +105,92 @@ class SystemService extends BaseService
         return $this->response;
     }
 
+    public function changeGeocoords($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $this->response = $this->isActionBlocked($resourceId, true);
+        // check if they can change the coords
+        if (!$this->response && $currentSystem->getProfile() !== $profile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        /* checks passed, we can now get new coords for the system */
+        if (!$this->response) {
+            // check if the player has sent a faction argument
+            $this->getWebsocketServer()->setClientData($resourceId, 'awaitingcoords', true);
+            $faction = $this->getNextParameter($contentArray, false, false, true, true);
+            $param = NULL;
+            $command = NULL;
+            $message = NULL;
+            $additionalCommand = NULL;
+            $additionalContent = NULL;
+            switch ($faction) {
+                default:
+                    $command = 'showmessage';
+                    $message = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate("System-coords have been updated - you will now be taken to the new location")
+                    );
+                    $additionalCommand = 'flyto';
+                    $newCoords = $this->clientData->geocoords;
+                    $additionalContent = explode(',', $newCoords);
+                    $currentSystem->setGeocoords($newCoords);
+                    $this->entityManager->flush($currentSystem);
+                    break;
+                case 'random':
+                    $param = 0;
+                    break;
+                case 'aztechnology':
+                case 'gangers':
+                    $param = 1;
+                    break;
+                case 'eurocorp':
+                case 'mafia':
+                    $param = 2;
+                    break;
+                case 'asiancoalition':
+                case 'yakuza':
+                    $param = 3;
+                    break;
+            }
+            if ($param !== NULL) {
+                $command = 'showmessage';
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                    $this->translate("System-coords will be randomly generated within the requested region")
+                );
+                $additionalCommand = 'getrandomgeocoords';
+                $additionalContent = $param;
+            }
+            if ($command && $message) {
+                $this->response = array(
+                    'command' => $command,
+                    'message' => $message
+                );
+                if ($additionalCommand && $additionalContent) {
+                    $this->addAdditionalCommand($additionalCommand, $additionalContent);
+                }
+            }
+            else {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate("Unable to change the coords of this system at the moment")
+                    )
+                );
+            }
+        }
+        return $this->response;
+    }
+
 }

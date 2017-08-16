@@ -154,6 +154,9 @@
                 case 'flytocoords':
                     mymap.flyTo([data.content[0], data.content[1]], 15);
                     break;
+                case 'setbgopacity':
+                    $('.content').css('background-color', 'rgba(0,0,0,' + data.content + ')');
+                    break;
                 case 'echocommand':
                     var lastOutput = $('#messages div.output-line:last');
                     if (loginStage !== 'createpassword' && loginStage !== 'createpasswordconfirm' && loginStage !== 'promptforpassword') {

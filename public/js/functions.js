@@ -128,10 +128,16 @@ var zoneBoundsData = [
     {'name':'asia', 'latfrom': -47, 'latto': 71, 'lngfrom': -56, 'lngto': 180}
 ];
 
-var getRandomInRange = function (zoneid, fixed) {
+var getRandomInRange = function (zoneid, fixed, givenLat, givenLng) {
     var lat, lng;
-    lat = (Math.random() * (zoneBoundsData[zoneid].latto - zoneBoundsData[zoneid].latfrom) + zoneBoundsData[zoneid].latfrom).toFixed(fixed) * 1;
-    lng = (Math.random() * (zoneBoundsData[zoneid].lngto - zoneBoundsData[zoneid].lngfrom) + zoneBoundsData[zoneid].lngfrom).toFixed(fixed) * 1;
+    if (givenLat !== undefined && givenLng !== undefined) {
+        lat = givenLat;
+        lng = givenLng;
+    }
+    else {
+        lat = (Math.random() * (zoneBoundsData[zoneid].latto - zoneBoundsData[zoneid].latfrom) + zoneBoundsData[zoneid].latfrom).toFixed(fixed) * 1;
+        lng = (Math.random() * (zoneBoundsData[zoneid].lngto - zoneBoundsData[zoneid].lngfrom) + zoneBoundsData[zoneid].lngfrom).toFixed(fixed) * 1;
+    }
     return sendGeocodeRequest(lat, lng);
 };
 
