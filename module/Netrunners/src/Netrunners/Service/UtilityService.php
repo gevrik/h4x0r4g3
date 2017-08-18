@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Netrunners\Entity\File;
+use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
@@ -169,6 +170,40 @@ class UtilityService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param Geocoord $location
+     * @return array|bool|false
+     */
+    public function updateSystemCoords($resourceId, Geocoord $location)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        if ($currentSystem->getProfile() === $profile) {
+            $currentSystem->setGeocoords($location->getLat() . ',' . $location->getLng());
+            $this->response = [
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                    $this->translate('System coords successfully updated')
+                )
+            ];
+        }
+        else {
+            $this->response = [
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to update system coords - permission denied')
+                )
             ];
         }
         return $this->response;

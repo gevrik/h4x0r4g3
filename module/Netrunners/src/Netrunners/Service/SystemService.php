@@ -105,6 +105,11 @@ class SystemService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function changeGeocoords($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -142,7 +147,7 @@ class SystemService extends BaseService
                     );
                     $additionalCommand = 'flyto';
                     $newCoords = $this->clientData->geocoords;
-                    $additionalContent = explode(',', $newCoords);
+                    $additionalContent = $newCoords;
                     $currentSystem->setGeocoords($newCoords);
                     $this->entityManager->flush($currentSystem);
                     break;
@@ -177,7 +182,7 @@ class SystemService extends BaseService
                     'message' => $message
                 );
                 if ($additionalCommand && $additionalContent) {
-                    $this->addAdditionalCommand($additionalCommand, $additionalContent);
+                    $this->addAdditionalCommand($additionalCommand, $additionalContent, true);
                 }
             }
             else {

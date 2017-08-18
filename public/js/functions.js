@@ -142,55 +142,42 @@ var getRandomInRange = function (zoneid, fixed, givenLat, givenLng) {
 };
 
 var sendGeocodeRequest = function (lat, lng) {
-    var result = false;
     var xhr = new XMLHttpRequest();
     var url = 'http://maps.google.com/maps/api/geocode/json?address=' + lat + ',' + lng + '&sensor=false';
-    var attempts = 0;
-    while (!result && attempts < 3) {
-        xhr.open("GET", url, true);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                var geoipdata = JSON.parse(xhr.response);
-                console.log(geoipdata);
-                if (geoipdata.status === "OK") {
-                    var possibleLocations = [];
-                    $.each(geoipdata.results, function(i, resultData){
-                        $.each(resultData.types, function(ix, typeData){
-                            if (
-                                typeData === 'street_address' ||
-                                typeData === 'intersection' ||
-                                typeData === 'premise' ||
-                                typeData === 'subpremise' ||
-                                typeData === 'point_of_interest' ||
-                                typeData === 'state' ||
-                                typeData === 'country' ||
-                                typeData === 'administrative_area_level_1' ||
-                                typeData === 'administrative_area_level_2' ||
-                                typeData === 'administrative_area_level_3' ||
-                                typeData === 'administrative_area_level_4' ||
-                                typeData === 'administrative_area_level_5'
-                            )
-                            {
-                                possibleLocations.push(resultData);
-                            }
-                        });
-                    });
-                    console.log(possibleLocations);
-                    if (possibleLocations.length >= 1) {
-                        //result = possibleLocations[Math.floor(Math.random() * possibleLocations.length)];
-                        //console.log(result);
-                        var command = {
-                            command: 'processlocations',
-                            hash: hash,
-                            content: possibleLocations,
-                            silent: true
-                        };
-                        conn.send(JSON.stringify(command));
+    var possibleLocations = [];
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            var geoipdata = JSON.parse(xhr.response);
+            $.each(geoipdata.results, function (i, resultData) {
+                $.each(resultData.types, function (ix, typeData) {
+                    if (
+                        typeData === 'street_address' ||
+                        typeData === 'intersection' ||
+                        typeData === 'premise' ||
+                        typeData === 'subpremise' ||
+                        typeData === 'point_of_interest' ||
+                        typeData === 'state' ||
+                        typeData === 'country' ||
+                        typeData === 'administrative_area_level_1' ||
+                        typeData === 'administrative_area_level_2' ||
+                        typeData === 'administrative_area_level_3' ||
+                        typeData === 'administrative_area_level_4' ||
+                        typeData === 'administrative_area_level_5'
+                    ) {
+                        possibleLocations = [];
+                        possibleLocations.push(resultData);
                     }
-                }
-            }
-        };
-        xhr.send(null);
-        attempts++;
-    }
+                });
+            });
+            var command = {
+                command: 'processlocations',
+                hash: hash,
+                content: possibleLocations,
+                silent: true
+            };
+            conn.send(JSON.stringify(command));
+        }
+    };
+    xhr.send(null);
 };

@@ -511,6 +511,9 @@ class ParserService
             case 'ul':
                 $response = $this->fileService->unloadFile($resourceId, $contentArray);
                 break;
+            case 'updatesystemcoords':
+                $response = $this->systemService->changeGeocoords($resourceId, $contentArray);
+                break;
             case 'upgradenode':
                 $response = $this->nodeService->enterMode($resourceId, $userCommand);
                 break;
@@ -611,6 +614,12 @@ class ParserService
                     case 'setopacity':
                         $additionalResponse = [
                             'command' => 'setbgopacity',
+                            'content' => $additionalCommandData['content']
+                        ];
+                        break;
+                    case 'getrandomgeocoords':
+                        $additionalResponse = [
+                            'command' => 'getrandomgeocoords',
                             'content' => $additionalCommandData['content']
                         ];
                         break;

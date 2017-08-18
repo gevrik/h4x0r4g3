@@ -109,6 +109,7 @@
             }
             switch (command) {
                 default:
+                    console.log(command);
                     console.log('=== unknown command received ===');
                     break;
                 case 'getipaddy':
@@ -290,6 +291,9 @@
                     $('#milkrun-container').html('');
                     md.append(data.content);
                     showprompt();
+                    break;
+                case 'getrandomgeocoords':
+                    getRandomInRange(data.content, 6);
                     break;
                 case 'showpanel':
                     $('#panel-container').html('').append(data.content);

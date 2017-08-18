@@ -502,7 +502,7 @@ class WebsocketService implements MessageComponentInterface {
             $silent = (isset($msgData->silent)) ? $msgData->silent : false;
             $entityId = (isset($msgData->entityId)) ? (int)$msgData->entityId : false;
             if (!$content || $content == '') {
-                if ($command != 'parseMailInput') {
+                if ($command != 'parseMailInput' && $command != 'processlocations') {
                     return true;
                 }
             }
@@ -570,14 +570,18 @@ class WebsocketService implements MessageComponentInterface {
                     $this->clientsData[$resourceId]['geocoords'] = $geocoords;
                     break;
                 case 'processlocations':
+                    if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                     $coordRepo = $this->entityManager->getRepository('Netrunners\Entity\Geocoord');
                     /** @var GeocoordRepository $coordRepo */
                     $needFlush = false;
+                    $possibleLocations = [];
+                    $awaitingcoords = $this->clientsData[$resourceId]['awaitingcoords'];
                     foreach ($content as $locationData) {
                         $lat = $locationData->geometry->location->lat;
                         $lng = $locationData->geometry->location->lng;
                         $placeId = $locationData->place_id;
-                        if (!$coordRepo->findOneUnique($lat, $lng, $placeId)) {
+                        $existingGeocoord = $coordRepo->findOneUnique($lat, $lng, $placeId);
+                        if (!$existingGeocoord) {
                             $geocoord = new Geocoord();
                             $geocoord->setAdded(new \DateTime());
                             $geocoord->setLat($lat);
@@ -585,7 +589,37 @@ class WebsocketService implements MessageComponentInterface {
                             $geocoord->setPlaceId($placeId);
                             $geocoord->setData(json_encode($locationData));
                             $this->entityManager->persist($geocoord);
+                            if (!$needFlush) $needFlush = true;
+                            if ($awaitingcoords) $possibleLocations[] = $geocoord;
+                        }
+                        else {
+                            if ($awaitingcoords) $possibleLocations[] = $existingGeocoord;
+                        }
+                    }
+                    if ($awaitingcoords) {
+                        $this->clientsData[$resourceId]['awaitingcoords'] = false;
+                        if (!empty($possibleLocations)) {
+                            $count = count($possibleLocations);
+                            $randLocNumber = mt_rand(0, $count-1);
+                            $location = $possibleLocations[$randLocNumber];
+                            $response = $this->utilityService->updateSystemCoords($resourceId, $location);
+                            $from->send(json_encode($response));
                             $needFlush = true;
+                            $response = [
+                                'command' => 'flytocoords',
+                                'content' => [$location->getLat(),$location->getLng()],
+                                'silent' => true
+                            ];
+                            $from->send(json_encode($response));
+                        }
+                        else {
+                            $response = [
+                                'command' => 'showmessageprepend',
+                                'message' => sprintf(
+                                    '<pre style="white-space: pre-wrap;" class="text-warning">Unable to process coordinates at this time - please try again later</pre>'
+                                )
+                            ];
+                            $from->send(json_encode($response));
                         }
                     }
                     if ($needFlush) $this->entityManager->flush();
