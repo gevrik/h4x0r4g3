@@ -297,13 +297,22 @@ class LoopService extends BaseService
                 }
             }
             /** @var Profile|NpcInstance $target */
-            list($attackerMessage, $defenderMessage) = $this->combatService->resolveCombatRound($profile, $target);
+            list($attackerMessage, $defenderMessage, $flyToDefender, $nodeMessage) = $this->combatService->resolveCombatRound($profile, $target);
             if ($wsClient && $attackerMessage) {
                 $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$attackerMessage]));
             }
             if ($targetWsClient && $defenderMessage) {
                 $targetWsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
                 $this->updateInterfaceElement($targetWsClient->resourceId, '#current-eeg', $target->getEeg());
+            }
+            if ($nodeMessage) {
+                $ignoredProfiles = [$profile->getId()];
+                if (!$combatData->npcTarget) $ignoredProfiles[] = $target->getId();
+                $this->messageEveryoneInNode(
+                    ($combatData->npcTarget) ? $target->getNode() : $target->getCurrentNode(),
+                    ['command' => 'showmessageprepend', 'message' => $nodeMessage],
+                    $ignoredProfiles
+                );
             }
         }
         foreach ($combatants['npcs'] as $npcId => $combatData) {
@@ -324,7 +333,7 @@ class LoopService extends BaseService
             if ($combatData->profileTarget) {
                 $target = $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget);
             }
-            list($attackerMessage, $defenderMessage, $flyToDefender) = $this->combatService->resolveCombatRound($npc, $target);
+            list($attackerMessage, $defenderMessage, $flyToDefender, $nodeMessage) = $this->combatService->resolveCombatRound($npc, $target);
             /** @var Profile|NpcInstance $target */
             if ($wsClient && $defenderMessage) {
                 $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
@@ -336,6 +345,15 @@ class LoopService extends BaseService
                     ];
                     $wsClient->send(json_encode($flyToMessage));
                 }
+            }
+            if ($nodeMessage) {
+                $ignoredProfiles = [];
+                if (!$combatData->npcTarget) $ignoredProfiles[] = $target->getId();
+                $this->messageEveryoneInNode(
+                    ($combatData->npcTarget) ? $target->getNode() : $target->getCurrentNode(),
+                    ['command' => 'showmessageprepend', 'message' => $nodeMessage],
+                    $ignoredProfiles
+                );
             }
         }
     }
@@ -381,12 +399,16 @@ class LoopService extends BaseService
             $databaseNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_DATABASE);
             foreach ($databaseNodes as $databaseNode) {
                 /** @var Node $databaseNode */
-                if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) break;
-                $possibleSpawns = [Npc::ID_MURPHY_VIRUS, Npc::ID_KILLER_VIRUS];
-                $spawn = mt_rand(0, count($possibleSpawns)-1);
-                $npc = $this->entityManager->find('Netrunners\Entity\Npc', $possibleSpawns[$spawn]);
+                $this->spawnVirus($system, $databaseNode);
+                /* check if this node has already spawned a worker */
+                $existing = $this->npcInstanceRepo->findOneByHomeNode($databaseNode);
+                if ($existing) continue;
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WORKER_PROGRAM);
                 /** @var Npc $npc */
-                $this->spawnNpcInstance($npc, $databaseNode);
+                $profile = $system->getProfile();
+                $faction = $system->getFaction();
+                $group = $system->getGroup();
+                $this->spawnNpcInstance($npc, $databaseNode, $profile, $faction, $group, $databaseNode);
             }
             $firewallNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_FIREWALL);
             foreach ($firewallNodes as $firewallNode) {
@@ -405,7 +427,8 @@ class LoopService extends BaseService
             $terminalNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_TERMINAL);
             foreach ($terminalNodes as $terminalNode) {
                 /** @var Node $terminalNode */
-                /* check if this node has already spawned a sentinel */
+                $this->spawnVirus($system, $terminalNode);
+                /* check if this node has already spawned a worker */
                 $existing = $this->npcInstanceRepo->findOneByHomeNode($terminalNode);
                 if ($existing) continue;
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WORKER_PROGRAM);
@@ -428,6 +451,19 @@ class LoopService extends BaseService
                 $group = $system->getGroup();
                 $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group, $recruitmentNode);
             }
+            $cpuNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_CPU);
+            foreach ($cpuNodes as $cpuNode) {
+                /** @var Node $cpuNode */
+                /* check if this node has already spawned a debugger */
+                $existing = $this->npcInstanceRepo->findOneByHomeNode($cpuNode);
+                if ($existing) continue;
+                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_DEBUGGER_PROGRAM);
+                /** @var Npc $npc */
+                $profile = $system->getProfile();
+                $faction = $system->getFaction();
+                $group = $system->getGroup();
+                $this->spawnNpcInstance($npc, $cpuNode, $profile, $faction, $group, $cpuNode);
+            }
             $intrusionNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_INTRUSION);
             foreach ($intrusionNodes as $intrusionNode) {
                 /** @var Node $intrusionNode */
@@ -437,6 +473,21 @@ class LoopService extends BaseService
             }
         }
         $this->entityManager->flush();
+    }
+
+    /**
+     * @param $system
+     * @param $node
+     */
+    private function spawnVirus($system, $node)
+    {
+        if ($this->npcInstanceRepo->countBySystem($system) < $this->nodeRepo->countBySystem($system)) {
+            $possibleSpawns = [Npc::ID_MURPHY_VIRUS, Npc::ID_KILLER_VIRUS];
+            $spawn = mt_rand(0, count($possibleSpawns)-1);
+            $npc = $this->entityManager->find('Netrunners\Entity\Npc', $possibleSpawns[$spawn]);
+            /** @var Npc $npc */
+            $this->spawnNpcInstance($npc, $node);
+        }
     }
 
     /**
@@ -571,6 +622,7 @@ class LoopService extends BaseService
             if (mt_rand(1, 100) > 50) continue;
             $connections = $connectionRepo->findBySourceNode($roamingNpc->getNode());
             $connectionsCount = count($connections);
+            if ($connectionsCount - 1 < 0) continue;
             $randConnectionIndex = mt_rand(0, $connectionsCount - 1);
             $connection = $connections[$randConnectionIndex];
             /** @var Connection $connection */

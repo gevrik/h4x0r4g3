@@ -197,7 +197,7 @@ class ConnectionService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
                 ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
             );
-            $this->messageEveryoneInNode($currentNode, $sourceMessage, $profile);
+            $this->messageEveryoneInNode($currentNode, $sourceMessage, [$profile->getId()]);
             $targetMessage = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
                 $currentNode->getName()

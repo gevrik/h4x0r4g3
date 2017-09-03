@@ -310,6 +310,9 @@ class ParserService
             case 'eq':
                 $response = $this->profileService->showEquipment($resourceId);
                 break;
+            case 'eset':
+                $response = $this->npcInstanceService->esetCommand($resourceId, $contentArray);
+                break;
             case 'exe':
             case 'execute':
                 $response = $this->fileService->executeFile($resourceId, $contentArray);

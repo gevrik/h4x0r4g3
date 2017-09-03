@@ -103,7 +103,7 @@ class CombatService extends BaseService
      */
     public function resolveCombatRound($attacker, $defender)
     {
-        if (!$attacker || !$defender) return [NULL, NULL, NULL];
+        if (!$attacker || !$defender) return [NULL, NULL, NULL, NULL];
         // init vars
         $skillRating = 0;
         $blade = NULL;
@@ -111,10 +111,12 @@ class CombatService extends BaseService
         $damage = 1;
         $attackerMessage = NULL;
         $defenderMessage = NULL;
+        $nodeMessage = NULL;
         $defenderName = ($defender instanceof NpcInstance) ? $defender->getName() : $defender->getUser()->getUsername();
         $attackerName = ($attacker instanceof NpcInstance) ? $attacker->getName() : $attacker->getUser()->getUsername();
         $flyToDefender = false;
         // modifier for profile attacker
+        //var_dump($attackerName . ' attacking ' . $defenderName);
         if ($attacker instanceof Profile) {
             $skillRating += $this->getSkillRating($attacker, Skill::ID_BLADES);
             $blade = $attacker->getBlade();
@@ -160,6 +162,11 @@ class CombatService extends BaseService
                         $damage
                     );
                     $flyToDefender = true;
+                    $nodeMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlined [%s]</pre>'),
+                        $attackerName,
+                        $defenderName
+                    );
                 }
                 else {
                     if ($attacker instanceof Profile) {
@@ -174,6 +181,11 @@ class CombatService extends BaseService
                         $attackerName,
                         $damage
                     );
+                    $nodeMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] hits [%s]</pre>'),
+                        $attackerName,
+                        $defenderName
+                    );
                     $defender->setEeg($newHealth);
                 }
             }
@@ -182,22 +194,36 @@ class CombatService extends BaseService
                 $newHealth = $health - $damage;
                 if ($newHealth <= 0) {
                     // npc instance flatlined - remove combatants
-                    $attackerMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage</pre>'),
-                        $defenderName,
-                        $damage
-                    );
+                    if ($attacker instanceof Profile) {
+                        $attackerMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage</pre>'),
+                            $defenderName,
+                            $damage
+                        );
+                    }
                     $this->getWebsocketServer()->removeCombatant($defender);
                     $this->getWebsocketServer()->removeCombatant($attacker);
                     $this->flatlineNpcInstance($defender);
+                    $nodeMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlines [%s]</pre>'),
+                        $attackerName,
+                        $defenderName
+                    );
                 }
                 else {
-                    $attackerMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage</pre>'),
-                        $defenderName,
-                        $damage
-                    );
+                    if ($attacker instanceof Profile) {
+                        $attackerMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage</pre>'),
+                            $defenderName,
+                            $damage
+                        );
+                    }
                     $defender->setCurrentEeg($newHealth);
+                    $nodeMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] hits [%s]</pre>'),
+                        $attackerName,
+                        $defenderName
+                    );
                 }
             }
         }
@@ -216,9 +242,14 @@ class CombatService extends BaseService
                     $attackerName
                 );
             }
+            $nodeMessage = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] misses [%s]</pre>'),
+                $attackerName,
+                $defenderName
+            );
         }
         $this->entityManager->flush();
-        return [$attackerMessage, $defenderMessage, $flyToDefender];
+        return [$attackerMessage, $defenderMessage, $flyToDefender, $nodeMessage];
     }
 
     /**

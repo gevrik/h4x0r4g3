@@ -219,4 +219,120 @@ class NpcInstanceService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function esetCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        /* npc param can be given as name or number, so we need to handle both */
+        // get parameter
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray, true);
+        // check if they have specified the npc instance to change
+        if (!$this->response && !$parameter) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify the name or number of the entity that you want to modify')
+                )
+            );
+        }
+        // now check if we can find that npc instance
+        $npc = NULL;
+        if (!$this->response && $parameter) {
+            $npc = $this->findNpcByNameOrNumberInCurrentNode($parameter);
+            if (!$this->response && !$npc) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('No such entity')
+                    )
+                );
+            }
+        }
+        // check if they can change the entity
+        if (!$this->response && $npc && $profile != $npc->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        // get which property they want to change
+        list($contentArray, $npcPropertyString) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$this->response && !$npcPropertyString) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify the property that you want to set (roaming, aggressive)')
+                )
+            );
+        }
+        if (!$this->response) {
+            // get which value the property should be set to (if not given, default is off)
+            $propertyValueString = $this->getNextParameter($contentArray, false, false, true, true);
+            if (!$propertyValueString) $propertyValueString = 'off';
+            switch ($propertyValueString) {
+                default:
+                    $propertyValue = 0;
+                    $propertyValueString = 'off';
+                    break;
+                case 'on':
+                    $propertyValue = 1;
+                    break;
+                case 'off':
+                    $propertyValue = 0;
+                    break;
+            }
+            switch ($npcPropertyString) {
+                default:
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Please specify the property that you want to set (roaming, aggressive)')
+                        )
+                    );
+                    break;
+                case 'roaming':
+                    $npc->setRoaming($propertyValue);
+                    $this->entityManager->flush($npc);
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] [%s] set to [%s]</pre>'),
+                            $npc->getName(),
+                            $npcPropertyString,
+                            $propertyValueString
+                        )
+                    );
+                break;
+                case 'aggressive':
+                    $npc->setAggressive($propertyValue);
+                    $this->entityManager->flush($npc);
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] [%s] set to [%s]</pre>'),
+                            $npc->getName(),
+                            $npcPropertyString,
+                            $propertyValueString
+                        )
+                    );
+                break;
+            }
+        }
+        return $this->response;
+    }
+
 }

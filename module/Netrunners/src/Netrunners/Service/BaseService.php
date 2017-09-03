@@ -587,12 +587,12 @@ class BaseService
 
     /**
      * Sends the given message to everyone in the given node, optionally excluding the source of the message.
-     * If a profile is given, that profile will be excluded as it will be considered to be the source of the message.
+     * If a profiles is given, those profiles will be excluded as they will be considered to be the source of the message.
      * @param Node $node
      * @param $message
-     * @param Profile|NULL $profile
+     * @param array $ignoredProfileIds
      */
-    public function messageEveryoneInNode(Node $node, $message, Profile $profile = NULL)
+    public function messageEveryoneInNode(Node $node, $message, $ignoredProfileIds = [])
     {
         $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         /** @var ProfileRepository $profileRepo */
@@ -601,10 +601,11 @@ class BaseService
         $profiles = $profileRepo->findByCurrentNode($node);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */
-            if ($profile && $xprofile === $profile) continue;
+            if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
             foreach ($wsClients as $wsClient) {
                 if (
                     isset($wsClientsData[$wsClient->resourceId]) &&
+                    $wsClientsData[$wsClient->resourceId]['hash'] &&
                     $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()
                 ) {
                     $wsClient->send(json_encode($message));
@@ -782,7 +783,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($sourceNode, $message, $profile);
+        $this->messageEveryoneInNode($sourceNode, $message, [$profile->getId()]);
         $profile->setCurrentNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
@@ -794,8 +795,9 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($targetNode, $message, $profile);
+        $this->messageEveryoneInNode($targetNode, $message, [$profile->getId()]);
         $this->entityManager->flush($profile);
+        $this->checkNpcAggro($profile, $resourceId);
         return ($resourceId) ? $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId) : false;
     }
 
@@ -842,6 +844,7 @@ class BaseService
         );
         $this->messageEveryoneInNode($targetNode, $message);
         $this->entityManager->flush($npc);
+        $this->checkNpcAggro($npc);
         return true;
     }
 
@@ -1070,11 +1073,7 @@ class BaseService
     }
 
     /**
-     * Generate a random string, using a cryptographically secure
-     * pseudorandom number generator (random_int)
-     *
-     * For PHP 7, random_int is a PHP core function
-     * For PHP 5.x, depends on https://github.com/paragonie/random_compat
+     * Generate a random string.
      *
      * @param int $length      How many characters do we want?
      * @param string $keyspace A string of all possible characters
@@ -1086,7 +1085,7 @@ class BaseService
         $str = '';
         $max = mb_strlen($keyspace, '8bit') - 1;
         for ($i = 0; $i < $length; ++$i) {
-            $str .= $keyspace[random_int(0, $max)];
+            $str .= $keyspace[mt_rand(0, $max)];
         }
         return $str;
     }
@@ -1582,6 +1581,56 @@ class BaseService
         }
         if (!$value) throw new \Exception('Invalid system or value type given');
         return $value;
+    }
+
+    /**
+     * @param NpcInstance|Profile $target
+     * @param null|int $resourceId
+     */
+    public function checkNpcAggro($target, $resourceId = NULL)
+    {
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $currentNode = ($target instanceof Profile) ? $target->getCurrentNode() : $target->getNode();
+        $npcInstances = $npcInstanceRepo->findByNode($currentNode);
+        foreach ($npcInstances as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
+            if ($npcInstance === $target) continue;
+            if (!$npcInstance->getAggressive()) continue;
+            if ($this->isInCombat($npcInstance)) continue;
+            if (!$this->canSee($npcInstance, $target)) continue;
+            if ($target instanceof Profile) {
+                if ($npcInstance->getProfile() == $target) continue;
+                if ($target->getGroup() && $npcInstance->getGroup() == $target->getGroup()) continue;
+                if ($target->getFaction() && $npcInstance->getFaction() == $target->getFaction()) continue;
+                // set combatants
+                $this->getWebsocketServer()->addCombatant($npcInstance, $target, NULL, $resourceId);
+                if (!$this->isInCombat($target)) $this->getWebsocketServer()->addCombatant($target, $npcInstance, $resourceId);
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
+                    $npcInstance->getName(),
+                    $target->getUser()->getUsername()
+                );
+                $this->messageEveryoneInNode($currentNode, $message);
+            }
+            if ($target instanceof NpcInstance) {
+                if ($npcInstance->getProfile() == $target->getProfile()) continue;
+                if ($target->getGroup() && $npcInstance->getGroup() == $target->getGroup()) continue;
+                if ($target->getFaction() && $npcInstance->getFaction() == $target->getFaction()) continue;
+                if ($target->getProfile() == NULL && $target->getFaction() == NULL && $target->getGroup() == NULL && $npcInstance->getProfile() == NULL && $npcInstance->getFaction() == NULL && $npcInstance->getGroup() == NULL) continue;
+                // set combatants
+                $this->getWebsocketServer()->addCombatant($npcInstance, $target);
+                if (!$this->isInCombat($target)) $this->getWebsocketServer()->addCombatant($target, $npcInstance);
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
+                    $npcInstance->getName(),
+                    $target->getName()
+                );
+                $this->messageEveryoneInNode($currentNode, $message);
+            }
+        }
     }
 
 }

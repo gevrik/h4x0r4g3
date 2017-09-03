@@ -475,7 +475,7 @@ class ProfileService extends BaseService
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] starts stealthing</pre>'),
                     $profile->getUser()->getDisplayName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile);
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, [$profile->getId()]);
             }
         }
         return $this->response;
@@ -515,7 +515,7 @@ class ProfileService extends BaseService
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] stops stealthing</pre>'),
                     $profile->getUser()->getDisplayName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile);
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, [$profile->getId()]);
             }
         }
         return $this->response;
@@ -553,7 +553,7 @@ class ProfileService extends BaseService
             /** @var File $file */
             $subtypeString = $this->translate('---');
             $fileData = json_decode($file->getData());
-            if ($fileData && $fileData->subtype) {
+            if ($fileData && isset($fileData->subtype)) {
                 switch ($file->getFileType()->getId()) {
                     default:
                         break;

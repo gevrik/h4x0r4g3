@@ -415,7 +415,7 @@ class NpcInstance
     }
 
     /**
-     * @return mixed
+     * @return Node|NULL
      */
     public function getNode()
     {

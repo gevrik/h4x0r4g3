@@ -41,7 +41,7 @@ class CodebreakerService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
-        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
     }
 
     /**
@@ -59,7 +59,7 @@ class CodebreakerService extends BaseService
         $profile = $this->user->getProfile();
         $connection = false;
         list($contentArray, $connectionParameter) = $this->getNextParameter($contentArray);
-        if (!$connectionParameter) {
+        if (!$this->response && !$connectionParameter) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -86,43 +86,54 @@ class CodebreakerService extends BaseService
                 /* mini game logic solve attempt */
                 $this->response = $this->solveCodebreaker($resourceId, $guess);
             }
-            if (!$this->response) {
-                $this->response = $this->isActionBlocked($resourceId);
-            }
-            if (!$this->response) {
-                /* mini game logic start */
-                $wordLength = 4 + $connection->getLevel();
-                $hashLength = 8 * $connection->getLevel();
-                $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
-                $word = array_shift($words);
-                $thePassword = $word->getContent();
-                $randomString = $this->getRandomString($hashLength);
-                for ($index = 0; $index < mb_strlen($thePassword); $index++) {
-                    if (mt_rand(1, 100) > 50) {
-                        $thePassword[$index] = strtoupper($thePassword[$index]);
-                    }
-                    else {
-                        $thePassword[$index] = strtolower($thePassword[$index]);
-                    }
+            else {
+                if (!empty($this->clientData->codebreaker) && !$this->response) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Codebreaker attempt already running')
+                        )
+                    );
                 }
-                $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
-                $deadline = new \DateTime();
-                $deadline->add(new \DateInterval('PT30S'));
-                $ws->setClientData($resourceId, 'codebreaker', [
-                    'thePassword' => $thePassword,
-                    'theString' => $theString,
-                    'deadline' => 30,
-                    'fileId' => $file->getId(),
-                    'connectionId' => $connection->getId()
-                ]);
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'deadline' => 30,
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-directory">find the password: %s</pre>'),
-                        $theString
-                    )
-                );
+                if (!$this->response) {
+                    $this->response = $this->isActionBlocked($resourceId);
+                }
+                if (!$this->response) {
+                    /* mini game logic start */
+                    $wordLength = 4 + $connection->getLevel();
+                    $hashLength = 8 * $connection->getLevel();
+                    $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
+                    $word = array_shift($words);
+                    $thePassword = $word->getContent();
+                    $randomString = $this->getRandomString($hashLength);
+                    for ($index = 0; $index < mb_strlen($thePassword); $index++) {
+                        if (mt_rand(1, 100) > 50) {
+                            $thePassword[$index] = strtoupper($thePassword[$index]);
+                        }
+                        else {
+                            $thePassword[$index] = strtolower($thePassword[$index]);
+                        }
+                    }
+                    $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
+                    $deadline = new \DateTime();
+                    $deadline->add(new \DateInterval('PT30S'));
+                    $ws->setClientData($resourceId, 'codebreaker', [
+                        'thePassword' => $thePassword,
+                        'theString' => $theString,
+                        'deadline' => 30,
+                        'fileId' => $file->getId(),
+                        'connectionId' => $connection->getId()
+                    ]);
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'deadline' => 30,
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-directory">find the password: %s</pre>'),
+                            $theString
+                        )
+                    );
+                }
             }
         }
         return $this->response;
@@ -145,11 +156,10 @@ class CodebreakerService extends BaseService
         if ($guess == $codebreakerData['thePassword']) {
             $this->movePlayerToTargetNode($resourceId, $profile, $connection);
             $connection->setIsOpen(true);
-            $this->entityManager->flush($connection);
             $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
             /** @var Connection $otherConnection */
             $otherConnection->setIsOpen(true);
-            $this->entityManager->flush($otherConnection);
+            $this->entityManager->flush();
             $this->response = array(
                 'command' => 'showmessage',
                 'cleardeadline' => true,
