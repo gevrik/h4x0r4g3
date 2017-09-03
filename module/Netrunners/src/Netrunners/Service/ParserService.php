@@ -429,6 +429,9 @@ class ParserService
             case 'research':
                 $response = $this->researchService->researchCommand($resourceId, $contentArray);
                 break;
+            case 'showresearch':
+                $response = $this->researchService->showResearchers($resourceId);
+                break;
             case 'parts':
             case 'resources':
             case 'res':

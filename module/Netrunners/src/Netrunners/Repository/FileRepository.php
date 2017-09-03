@@ -208,4 +208,21 @@ class FileRepository extends EntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    /**
+     * @param Profile $profile
+     * @param $fileTypeId
+     * @return array
+     */
+    public function findByProfileAndType(Profile $profile, $fileTypeId)
+    {
+        $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.fileType = :fileType AND f.profile = :profile');
+        $qb->setParameters([
+            'fileType' => $fileType,
+            'profile' => $profile
+        ]);
+        return $qb->getQuery()->getResult();
+    }
+
 }

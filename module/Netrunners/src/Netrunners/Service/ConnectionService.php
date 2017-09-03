@@ -513,4 +513,102 @@ class ConnectionService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param int $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function unsecureConnection($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $this->response = $this->isActionBlocked($resourceId);
+        // check if they can add connections
+        if (!$this->response && $profile !== $currentSystem->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        /* connections can be given by name or number, so we need to handle both */
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false);
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $connections = $this->connectionRepo->findBySourceNode($currentNode);
+        $connection = false;
+        if ($searchByNumber) {
+            if (isset($connections[$parameter - 1])) {
+                $connection = $connections[$parameter - 1];
+            }
+        } else {
+            foreach ($connections as $pconnection) {
+                /** @var Connection $pconnection */
+                if ($pconnection->getTargetNode()->getName() == $parameter) {
+                    $connection = $pconnection;
+                    break;
+                }
+            }
+        }
+        if (!$this->response && !$connection) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such connection')
+                )
+            );
+        }
+        if (!$this->response && $connection->getType() != Connection::TYPE_CODEGATE) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('This connection is not secure')
+                )
+            );
+        }
+        if (!$this->response) {
+            $connection->setType(Connection::TYPE_NORMAL);
+            $connection->setIsOpen(false);
+            $targetnode = $connection->getTargetNode();
+            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
+            /** @var Connection $targetConnection */
+            $targetConnection->setType(Connection::TYPE_NORMAL);
+            $targetConnection->setIsOpen(false);
+            $this->entityManager->flush();
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                    $this->translate('The connection is no longer secured')
+                )
+            );
+            $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unsecured the connection to [%s]</pre>'),
+                $this->user->getUsername(),
+                $targetnode->getName()
+            );
+            $this->messageEveryoneInNode($currentNode, $message);
+            // inform other players in target node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unsecured the connection to [%s]</pre>'),
+                $this->user->getUsername(),
+                $currentNode->getName()
+            );
+            $this->messageEveryoneInNode($targetnode, $message);
+        }
+        return $this->response;
+    }
+
 }

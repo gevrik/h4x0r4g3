@@ -44,6 +44,54 @@ class ResearchService extends BaseService
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
     }
 
+    public function showResearchers($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $researchers = $this->fileRepo->findByProfileAndType($profile, FileType::ID_RESEARCHER);
+            $returnMessage = array();
+            if (count($researchers) < 1) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        $this->translate('You do not have any researcher programs')
+                    )
+                ];
+            }
+            else {
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-32s|%-1s|%s</pre>',
+                    $this->translate('NAME'),
+                    $this->translate('NODE'),
+                    $this->translate('R'),
+                    $this->translate('DATA')
+                );
+                foreach ($researchers as $researcher) {
+                    /** @var File $researcher */
+                    if ($researcher->getData()) {
+                        $researcherData = json_decode($researcher->getData());
+                    }
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-32s|%-1s|%s</pre>',
+                        $researcher->getName(),
+                        ($researcher->getNode()) ? $researcher->getNode()->getName() : $this->translate('---'),
+                        ($researcher->getRunning()) ? $this->translate('<span class="text-success">Y</span>') : $this->translate('<span class="text-danger">N</span>'),
+                        '---'
+                    );
+                    $this->response = [
+                        'command' => 'showoutput',
+                        'message' => $returnMessage
+                    ];
+                }
+            }
+        }
+        return $this->response;
+    }
+
     public function researchCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);

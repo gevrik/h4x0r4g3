@@ -344,10 +344,10 @@ class BaseService
             if (mt_rand(1, 100) > $chance) $canSee = false;
             // check for skill gain
             if ($canSee) {
-                $this->learnFromSuccess($detector, ['skills' => ['detection']], -50);
+                if ($detector instanceof Profile) $this->learnFromSuccess($detector, ['skills' => ['detection']], -50);
             }
             else {
-                $this->learnFromSuccess($stealther, ['skills' => ['stealth']], -50);
+                if ($stealther instanceof Profile) $this->learnFromSuccess($stealther, ['skills' => ['stealth']], -50);
             }
         }
         // return result
@@ -497,7 +497,7 @@ class BaseService
         else {
             foreach ($npcs as $xnpc) {
                 /** @var NpcInstance $xnpc */
-                if ($xnpc->getName() == $parameter) {
+                if (mb_strrpos($xnpc->getName(), $parameter) !== false) {
                     $npc = $xnpc;
                     break;
                 }
@@ -608,6 +608,12 @@ class BaseService
                     $wsClientsData[$wsClient->resourceId]['hash'] &&
                     $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()
                 ) {
+                    if (is_array($message)) {
+                        $message = [
+                            'command' => 'showmessageprepend',
+                            'message' => $message
+                        ];
+                    }
                     $wsClient->send(json_encode($message));
                 }
             }
@@ -1612,7 +1618,7 @@ class BaseService
                     $npcInstance->getName(),
                     $target->getUser()->getUsername()
                 );
-                $this->messageEveryoneInNode($currentNode, $message);
+                $this->messageEveryoneInNode($currentNode, ['command' => 'showmessageprepend', 'message' => $message]);
             }
             if ($target instanceof NpcInstance) {
                 if ($npcInstance->getProfile() == $target->getProfile()) continue;
@@ -1628,7 +1634,7 @@ class BaseService
                     $npcInstance->getName(),
                     $target->getName()
                 );
-                $this->messageEveryoneInNode($currentNode, $message);
+                $this->messageEveryoneInNode($currentNode, ['command' => 'showmessageprepend', 'message' => $message]);
             }
         }
     }

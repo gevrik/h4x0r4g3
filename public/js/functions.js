@@ -143,7 +143,7 @@ var getRandomInRange = function (zoneid, fixed, givenLat, givenLng) {
 
 var sendGeocodeRequest = function (lat, lng) {
     var xhr = new XMLHttpRequest();
-    var url = 'http://maps.google.com/maps/api/geocode/json?address=' + lat + ',' + lng + '&sensor=false';
+    var url = 'https://maps.google.com/maps/api/geocode/json?address=' + lat + ',' + lng + '&sensor=false';
     var possibleLocations = [];
     xhr.open("GET", url, true);
     xhr.onreadystatechange = function () {

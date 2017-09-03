@@ -105,6 +105,11 @@ class NpcInstanceService extends BaseService
                 );
                 $messages[] = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-12s : %s</pre>'),
+                    $this->translate('roaming'),
+                    ($npc->getRoaming()) ? $this->translate('yes') : $this->translate('no')
+                );
+                $messages[] = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-12s : %s</pre>'),
                     $this->translate('stealthing'),
                     ($npc->getStealthing()) ? $this->translate('<span class="text-danger">yes</span>') : $this->translate('no')
                 );

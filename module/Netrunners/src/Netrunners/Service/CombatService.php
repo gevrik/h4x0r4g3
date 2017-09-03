@@ -76,7 +76,7 @@ class CombatService extends BaseService
             }
             if (!$this->response) {
                 $this->getWebsocketServer()->addCombatant($profile, $npc, $resourceId);
-                $this->getWebsocketServer()->addCombatant($npc, $profile, NULL, $resourceId);
+                if (!$this->isInCombat($npc)) $this->getWebsocketServer()->addCombatant($npc, $profile, NULL, $resourceId);
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -90,7 +90,7 @@ class CombatService extends BaseService
                     $this->user->getUsername(),
                     $npc->getName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message]);
             }
         }
         return $this->response;
@@ -105,7 +105,7 @@ class CombatService extends BaseService
     {
         if (!$attacker || !$defender) return [NULL, NULL, NULL, NULL];
         // init vars
-        $skillRating = 0;
+        $skillRating = 30;
         $blade = NULL;
         $defenseRating = 0;
         $damage = 1;
@@ -157,7 +157,7 @@ class CombatService extends BaseService
                     $this->getWebsocketServer()->removeCombatant($attacker);
                     $this->flatlineProfile($defender);
                     $defenderMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You  have been flatlined by [%s] with [%s] damage</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been flatlined by [%s] with [%s] damage</pre>'),
                         $attackerName,
                         $damage
                     );
