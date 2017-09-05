@@ -939,6 +939,7 @@ class FileService extends BaseService
                     break;
                 case FileType::ID_PORTSCANNER:
                 case FileType::ID_JACKHAMMER:
+                case FileType::ID_SIPHON:
                     $this->response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
                     break;
                 case FileType::ID_CODEBREAKER:
@@ -1357,7 +1358,7 @@ class FileService extends BaseService
                 $parameterArray = [
                     'fileId' => $file->getId(),
                     'systemId' => $systemId,
-                    'contentArray' => $contentArray,
+                    'contentArray' => $contentArray
                 ];
                 $message = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start portscanning with [%s] - please wait</pre>'),
@@ -1370,10 +1371,22 @@ class FileService extends BaseService
                     'fileId' => $file->getId(),
                     'systemId' => $systemId,
                     'nodeId' => $nodeId,
-                    'contentArray' => $contentArray,
+                    'contentArray' => $contentArray
                 ];
                 $message = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start breaking into the system with [%s] - please wait</pre>'),
+                    $file->getName()
+                );
+                break;
+            case FileType::ID_SIPHON:
+                list($executeWarning, $minerId) = $this->executeWarningSiphon($contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'minerId' => $minerId,
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start siphoning into the miner program with [%s] - please wait</pre>'),
                     $file->getName()
                 );
                 break;
@@ -1382,20 +1395,21 @@ class FileService extends BaseService
             $response = $executeWarning;
         }
         else {
+            $fileType = $file->getFileType();
             $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . $file->getFileType()->getExecutionTime() . 'S'));
+            $completionDate->add(new \DateInterval('PT' . $fileType->getExecutionTime() . 'S'));
             $actionData = [
                 'command' => 'executeprogram',
                 'completion' => $completionDate,
-                'blocking' => $file->getFileType()->getBlocking(),
-                'fullblock' => $file->getFileType()->getFullblock(),
+                'blocking' => $fileType->getBlocking(),
+                'fullblock' => $fileType->getFullblock(),
                 'parameter' => $parameterArray
             ];
             $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
             $response = array(
                 'command' => 'showmessage',
                 'message' => $message,
-                'timer' => $file->getFileType()->getExecutionTime()
+                'timer' => $fileType->getExecutionTime()
             );
         }
         return $response;
@@ -2071,6 +2085,48 @@ class FileService extends BaseService
         return [$response, $systemId, $nodeId];
     }
 
+
+    public function executeWarningSiphon($contentArray)
+    {
+        $response = false;
+        $profile = $this->user->getProfile();
+        $minerString = $this->getNextParameter($contentArray, false);
+        if (!$minerString) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Please specify the miner that you want to siphon from</pre>'
+            );
+        }
+        $minerId = NULL;
+        if (!$response) {
+            // try to get target file via repo method
+            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
+            if (!$response && count($targetFiles) < 1) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
+                );
+            }
+            if (!$response) {
+                $miner = array_shift($targetFiles);
+                /** @var File $miner */
+                switch ($miner->getFileType()->getId()) {
+                    default:
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid file type for Siphon</pre>'
+                        );
+                        break;
+                    case FileType::ID_COINMINER:
+                    case FileType::ID_DATAMINER:
+                        $minerId = $miner->getId();
+                        break;
+                }
+            }
+        }
+        return [$response, $minerId];
+    }
+
     /**
      * @param File $file
      * @param System $system
@@ -2080,59 +2136,56 @@ class FileService extends BaseService
     {
         $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         /** @var NodeRepository $nodeRepo */
-        $response = false;
-        if (!$response) {
-            $fileLevel = $file->getLevel();
-            $fileIntegrity = $file->getIntegrity();
-            $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
-            $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
-            $nodes = $nodeRepo->findBySystem($system);
-            $messages = [];
-            foreach ($nodes as $node) {
-                /** @var Node $node */
-                $difficulty = $this->getNodeAttackDifficulty($node);
-                if ($difficulty) {
-                    $roll = mt_rand(1, 100);
-                    if ($roll <= $baseChance - $difficulty) {
-                        $messages[] = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-white">%-45s|%-11s|%-20s|%s</pre>',
-                            $system->getAddy(),
-                            $node->getId(),
-                            $node->getNodeType()->getName(),
-                            $node->getName()
-                        );
-                    }
+        $fileLevel = $file->getLevel();
+        $fileIntegrity = $file->getIntegrity();
+        $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
+        $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
+        $nodes = $nodeRepo->findBySystem($system);
+        $messages = [];
+        foreach ($nodes as $node) {
+            /** @var Node $node */
+            $difficulty = $this->getNodeAttackDifficulty($node);
+            if ($difficulty) {
+                $roll = mt_rand(1, 100);
+                if ($roll <= $baseChance - $difficulty) {
+                    $messages[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-45s|%-11s|%-20s|%s</pre>',
+                        $system->getAddy(),
+                        $node->getId(),
+                        $node->getNodeType()->getName(),
+                        $node->getName()
+                    );
                 }
             }
-            if (empty($messages)) {
-                $messages[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR : %s</pre>'),
-                    $system->getAddy()
-                );
-                $messages[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                    $this->translate('No vulnerable nodes detected')
-                );
-            }
-            else {
-                array_unshift($messages, sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-info">PORTSCANNER RESULTS FOR : %s</pre>'),
-                    $system->getAddy()
-                ));
-                array_unshift($messages, sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-45s|%-11s|%-20s|%s</pre>',
-                    $this->translate('SYSTEM-ADDRESS'),
-                    $this->translate('NODE-ID'),
-                    $this->translate('NODE-TYPE'),
-                    $this->translate('NODE-NAME')
-                ));
-            }
-            $response = array(
-                'command' => 'showoutputprepend',
-                'message' => $messages
-            );
-            $this->lowerIntegrityOfFile($file);
         }
+        if (empty($messages)) {
+            $messages[] = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">PORTSCANNER RESULTS FOR : %s</pre>'),
+                $system->getAddy()
+            );
+            $messages[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+                $this->translate('No vulnerable nodes detected')
+            );
+        }
+        else {
+            array_unshift($messages, sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-info">PORTSCANNER RESULTS FOR : %s</pre>'),
+                $system->getAddy()
+            ));
+            array_unshift($messages, sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-45s|%-11s|%-20s|%s</pre>',
+                $this->translate('SYSTEM-ADDRESS'),
+                $this->translate('NODE-ID'),
+                $this->translate('NODE-TYPE'),
+                $this->translate('NODE-NAME')
+            ));
+        }
+        $response = array(
+            'command' => 'showoutputprepend',
+            'message' => $messages
+        );
+        $this->lowerIntegrityOfFile($file);
         return $response;
     }
 
@@ -2185,6 +2238,79 @@ class FileService extends BaseService
             );
         }
         $this->lowerIntegrityOfFile($file);
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param File $miner
+     * @return bool|string
+     */
+    public function executeSiphon(File $file, File $miner)
+    {
+        $response = false;
+        $minerData = json_decode($miner->getData());
+        if (!isset($minerData->value)) {
+            $response = [
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No resources to siphon in that miner')
+                )
+            ];
+        }
+        if (!$response && $minerData->value < 1) {
+            $response = [
+                'command' => 'showmessageprepend',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No resources to siphon in that miner')
+                )
+            ];
+        }
+        if (!$response) {
+            $fileLevel = $file->getLevel();
+            $availableResources = $minerData->value;
+            $amountSiphoned = ($availableResources < $fileLevel) ? $availableResources : $fileLevel;
+            $minerData->value = $minerData->value - $amountSiphoned;
+            $profile = $file->getProfile();
+            switch ($miner->getFileType()->getId()) {
+                default:
+                    $message = NULL;
+                    break;
+                case FileType::ID_DATAMINER:
+                    $profile->setSnippets($profile->getSnippets() + $amountSiphoned);
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You siphon [%s] snippets from [%s]</pre>'),
+                        $amountSiphoned,
+                        $miner->getName()
+                    );
+                    break;
+                case FileType::ID_COINMINER:
+                    $profile->setCredits($profile->getCredits() + $amountSiphoned);
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You siphon [%s] credits from [%s]</pre>'),
+                        $amountSiphoned,
+                        $miner->getName()
+                    );
+                    break;
+            }
+            if (!$message) {
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">Unable to siphon at this moment</pre>'),
+                    $amountSiphoned,
+                    $miner->getName()
+                );
+            }
+            $response = array(
+                'command' => 'showmessageprepend',
+                'message' => $message
+            );
+            $miner->setData(json_encode($minerData));
+            $this->entityManager->flush($profile);
+            $this->entityManager->flush($miner);
+            $this->lowerIntegrityOfFile($file, 100, 1, true);
+        }
         return $response;
     }
 

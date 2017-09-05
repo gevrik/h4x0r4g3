@@ -104,6 +104,7 @@ class CombatService extends BaseService
     public function resolveCombatRound($attacker, $defender)
     {
         if (!$attacker || !$defender) return [NULL, NULL, NULL, NULL];
+        $ws = $this->getWebsocketServer();
         // init vars
         $skillRating = 30;
         $blade = NULL;
@@ -128,19 +129,51 @@ class CombatService extends BaseService
         // modifier for npc attacker
         if ($attacker instanceof NpcInstance) {
             $skillRating += $this->getSkillRating($attacker, Skill::ID_BLADES);
+            $blade = $attacker->getBladeModule();
+            if ($blade) {
+                $skillRating += $blade->getLevel();
+                $damage = ceil(round($blade->getIntegrity()/10));
+            }
         }
+        // defense modifier for profile defender - and check if we need to add another combatant
         if ($defender instanceof Profile) {
+            // defender auto-attack back if not in combat
+            if (!$this->isInCombat($defender)) $ws->addCombatant(
+                $defender,
+                $attacker,
+                $defender->getCurrentResourceId(),
+                ($attacker instanceof Profile) ? $attacker->getCurrentResourceId() : NULL
+            );
             $defenseRating += ($defender->getBlade()) ? $defender->getBlade()->getLevel() : 0;
+            $shield = $defender->getShield();
+            if ($shield) {
+                $defenseRating += ceil(round(($shield->getLevel() + $shield->getIntegrity()) / 2));
+            }
         }
+        // defense modifier for npc defender - and check if we need to add another combatant
         if ($defender instanceof NpcInstance) {
+            // defender auto-attack back if not in combat
+            if (!$this->isInCombat($defender)) $ws->addCombatant(
+                $defender,
+                $attacker,
+                NULL,
+                ($attacker instanceof Profile) ? $attacker->getCurrentResourceId() : NULL
+            );
             $defenseRating = $this->getSkillRating($defender, Skill::ID_BLADES);
+            $shield = $defender->getShieldModule();
+            if ($shield) {
+                $defenseRating += ceil(round(($shield->getLevel() + $shield->getIntegrity()) / 2));
+            }
         }
+        // start rolling the dice
         $roll = mt_rand(1, 100);
         if ($roll <= ($skillRating - $defenseRating)) {
-            // hit
+            /* hit */
+            // attacker is profile
             if ($attacker instanceof Profile) {
                 $this->learnFromSuccess($attacker, ['skills' => ['blades']], -50);
             }
+            // defender is profile
             if ($defender instanceof Profile) {
                 $health = $defender->getEeg();
                 $newHealth = $health - $damage;
@@ -153,8 +186,7 @@ class CombatService extends BaseService
                             $damage
                         );
                     }
-                    $this->getWebsocketServer()->removeCombatant($defender);
-                    $this->getWebsocketServer()->removeCombatant($attacker);
+                    $ws->removeCombatant($defender);
                     $this->flatlineProfile($defender);
                     $defenderMessage = sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been flatlined by [%s] with [%s] damage</pre>'),
@@ -189,6 +221,7 @@ class CombatService extends BaseService
                     $defender->setEeg($newHealth);
                 }
             }
+            // defender is npc
             if ($defender instanceof NpcInstance) {
                 $health = $defender->getCurrentEeg();
                 $newHealth = $health - $damage;
@@ -201,9 +234,8 @@ class CombatService extends BaseService
                             $damage
                         );
                     }
-                    $this->getWebsocketServer()->removeCombatant($defender);
-                    $this->getWebsocketServer()->removeCombatant($attacker);
-                    $this->flatlineNpcInstance($defender);
+                    $ws->removeCombatant($defender);
+                    $this->flatlineNpcInstance($defender, $attacker);
                     $nodeMessage = sprintf(
                         $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlines [%s]</pre>'),
                         $attackerName,
@@ -228,7 +260,8 @@ class CombatService extends BaseService
             }
         }
         else {
-            // missed
+            /* missed */
+            // attacker is profile
             if ($attacker instanceof Profile) {
                 $this->learnFromFailure($attacker, ['skills' => ['blades']], -50);
                 $attackerMessage = sprintf(
@@ -236,19 +269,20 @@ class CombatService extends BaseService
                     $defenderName
                 );
             }
+            // defender is profile
             if ($defender instanceof Profile) {
                 $defenderMessage = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] misses you</pre>'),
                     $attackerName
                 );
             }
+            // message for other players
             $nodeMessage = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] misses [%s]</pre>'),
                 $attackerName,
                 $defenderName
             );
         }
-        $this->entityManager->flush();
         return [$attackerMessage, $defenderMessage, $flyToDefender, $nodeMessage];
     }
 
@@ -266,19 +300,10 @@ class CombatService extends BaseService
 
     /**
      * @param NpcInstance $npcInstance
+     * @param NpcInstance|Profile $attacker
      */
-    private function flatlineNpcInstance(NpcInstance $npcInstance)
+    private function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
     {
-        // take care of all the skill ratings associated with that npc instance
-        $skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
-        /** @var SkillRatingRepository $skillRatingRepo */
-        $skillRatings = $skillRatingRepo->findBy([
-            'npc' => $npcInstance
-        ]);
-        foreach ($skillRatings as $skillRating) {
-            /** @var SkillRating $skillRating */
-            $this->entityManager->remove($skillRating);
-        }
         // take care of all the files associated with that npc instance
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */
@@ -290,8 +315,12 @@ class CombatService extends BaseService
             $file->setNode($npcInstance->getNode());
             $file->setSystem($npcInstance->getNode()->getSystem());
         }
+        // give snippets and credits to attacker
+        $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
+        $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
         // remove the npc instance
         $this->entityManager->remove($npcInstance);
+        $this->entityManager->flush($npcInstance);
     }
 
 }

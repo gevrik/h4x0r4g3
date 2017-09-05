@@ -467,6 +467,10 @@ class ParserService
             case 'secureconnection':
                 $response = $this->connectionService->secureConnection($resourceId, $contentArray);
                 break;
+            case 'unsecure':
+            case 'unsecureconnection':
+                $response = $this->connectionService->unsecureConnection($resourceId, $contentArray);
+                break;
             case 'setemail':
                 $response = $this->profileService->setEmail($resourceId, $contentArray);
                 break;
@@ -499,6 +503,7 @@ class ParserService
                 $response = $this->systemService->showSystemStats($resourceId);
                 break;
             case 'time':
+            case 'date':
                 $now = new \DateTime();
                 $response = array(
                     'command' => self::CMD_SHOWMESSAGE,

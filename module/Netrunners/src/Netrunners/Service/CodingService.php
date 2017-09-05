@@ -771,6 +771,7 @@ class CodingService extends BaseService
         $systemJobAmount = 0;
         $currentSystem = $profile->getCurrentNode()->getSystem();
         foreach ($alljobs as $alljobId => $jobData) {
+            if ($jobData['mode'] != 'program') continue;
             $codeNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);
             if ($codeNode->getSystem() == $currentSystem) {
                 $systemJobAmount++;

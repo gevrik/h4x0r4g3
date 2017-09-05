@@ -208,6 +208,12 @@ class WebsocketService implements MessageComponentInterface {
         foreach ($playSessionRepo->findOrphaned() as $orphanedPlaySession) {
             $this->entityManager->remove($orphanedPlaySession);
         }
+        // clear all current-resource-id properties of all profiles
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
+        foreach ($profiles as $profile) {
+            /** @var Profile $profile */
+            $profile->setCurrentResourceId(NULL);
+        }
         $this->entityManager->flush();
 
         self::$instance = $this;
@@ -368,6 +374,31 @@ class WebsocketService implements MessageComponentInterface {
         }
         if ($combatant instanceof Profile) {
             unset($this->combatants['profiles'][$combatant->getId()]);
+        }
+        // remove all combatants that also had this combatant as their target
+        foreach ($this->combatants['npcs'] as $combatantId => $combatantData) {
+            if ($combatant instanceof NpcInstance) {
+                if ($combatantData['npcTarget'] == $combatant->getId()) {
+                    unset($this->combatants['npcs'][$combatantId]);
+                }
+            }
+            if ($combatant instanceof Profile) {
+                if ($combatantData['profileTarget'] == $combatant->getId()) {
+                    unset($this->combatants['npcs'][$combatantId]);
+                }
+            }
+        }
+        foreach ($this->combatants['profiles'] as $combatantId => $combatantData) {
+            if ($combatant instanceof NpcInstance) {
+                if ($combatantData['npcTarget'] == $combatant->getId()) {
+                    unset($this->combatants['profiles'][$combatantId]);
+                }
+            }
+            if ($combatant instanceof Profile) {
+                if ($combatantData['profileTarget'] == $combatant->getId()) {
+                    unset($this->combatants['profiles'][$combatantId]);
+                }
+            }
         }
     }
 
@@ -742,8 +773,10 @@ class WebsocketService implements MessageComponentInterface {
             $currentPlaySession = $playSessionRepo->findCurrentPlaySession($profile);
             if ($currentPlaySession) {
                 $currentPlaySession->setEnd(new \DateTime());
-                $this->entityManager->flush($currentPlaySession);
             }
+            // set current resource-id to null
+            $profile->setCurrentResourceId(NULL);
+            $this->entityManager->flush();
             // inform admins
             $informer = array(
                 'command' => 'showmessageprepend',

@@ -18,7 +18,6 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
-use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
@@ -134,7 +133,18 @@ class NodeService extends BaseService
         foreach ($connections as $connection) {
             /** @var Connection $connection */
             $counter++;
-            $returnMessage[] = sprintf('<pre class="text-directory">%-12s: %s</pre>', $counter, $connection->getTargetNode()->getName());
+            $addonString = '';
+            if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                $addonString = ($connection->getisOpen()) ?
+                    $this->translate('<span class="text-muted">(codegate) (open)</span>') :
+                    $this->translate('<span class="text-addon">(codegate) (closed)</span>');
+            }
+            $returnMessage[] = sprintf(
+                '<pre class="text-directory">%-12s: %s %s</pre>',
+                $counter,
+                $connection->getTargetNode()->getName(),
+                $addonString
+            );
         }
         // get files and show them if there are any
         $files = [];

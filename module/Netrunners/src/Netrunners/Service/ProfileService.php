@@ -72,7 +72,11 @@ class ProfileService extends BaseService
 
     const SCORE_CREDITS_STRING = 'credits';
 
+    const SCORE_BANK_BALANCE_STRING = 'balance';
+
     const SCORE_SNIPPETS_STRING = 'snippets';
+
+    const SCORE_STEALTHING_STRING = 'stealthing';
 
     const DEFAULT_STARTING_CREDITS = 750;
 
@@ -134,14 +138,24 @@ class ProfileService extends BaseService
             /** @var Profile $profile */
             $returnMessage = array();
             $returnMessage[] = sprintf(
-                '<pre>%-12s: %s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
                 $this->translate(self::SCORE_CREDITS_STRING),
                 $profile->getCredits()
             );
             $returnMessage[] = sprintf(
-                '<pre>%-12s: %s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                $this->translate(self::SCORE_BANK_BALANCE_STRING),
+                ($profile->getBankBalance()) ? $profile->getBankBalance() : 0
+            );
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
                 $this->translate(self::SCORE_SNIPPETS_STRING),
                 $profile->getSnippets()
+            );
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                $this->translate(self::SCORE_STEALTHING_STRING),
+                ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') : $this->translate('<span class="text-muted">off</span>')
             );
             $this->response = array(
                 'command' => 'showoutput',

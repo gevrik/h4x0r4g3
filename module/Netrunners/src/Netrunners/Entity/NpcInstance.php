@@ -10,6 +10,7 @@
 
 namespace Netrunners\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -91,6 +92,12 @@ class NpcInstance
      * @ORM\Column(type="integer", nullable=true)
      * @var int
      */
+    protected $bypassCodegates;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     * @var int
+     */
     protected $stealthing;
 
     /**
@@ -141,6 +148,34 @@ class NpcInstance
      */
     protected $homeSystem;
 
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $bladeModule;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $blasterModule;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $shieldModule;
+
+    /**
+     * @ORM\OneToMany(targetEntity="Netrunners\Entity\SkillRating", mappedBy="npc", cascade={"remove"})
+     */
+    protected $skillRatings;
+
+
+    /**
+     * NpcInstance constructor.
+     */
+    public function __construct()
+    {
+        $this->skillRatings = new ArrayCollection();
+    }
 
     /**
      * @return int
@@ -343,6 +378,24 @@ class NpcInstance
     /**
      * @return int
      */
+    public function getBypassCodegates()
+    {
+        return $this->bypassCodegates;
+    }
+
+    /**
+     * @param int $bypassCodegates
+     * @return NpcInstance
+     */
+    public function setBypassCodegates($bypassCodegates)
+    {
+        $this->bypassCodegates = $bypassCodegates;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
     public function getStealthing()
     {
         return $this->stealthing;
@@ -397,7 +450,7 @@ class NpcInstance
     }
 
     /**
-     * @return mixed
+     * @return Profile|null
      */
     public function getProfile()
     {
@@ -520,6 +573,84 @@ class NpcInstance
     {
         $this->homeSystem = $homeSystem;
         return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBladeModule()
+    {
+        return $this->bladeModule;
+    }
+
+    /**
+     * @param mixed $bladeModule
+     * @return NpcInstance
+     */
+    public function setBladeModule($bladeModule)
+    {
+        $this->bladeModule = $bladeModule;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBlasterModule()
+    {
+        return $this->blasterModule;
+    }
+
+    /**
+     * @param mixed $blasterModule
+     * @return NpcInstance
+     */
+    public function setBlasterModule($blasterModule)
+    {
+        $this->blasterModule = $blasterModule;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getShieldModule()
+    {
+        return $this->shieldModule;
+    }
+
+    /**
+     * @param mixed $shieldModule
+     * @return NpcInstance
+     */
+    public function setShieldModule($shieldModule)
+    {
+        $this->shieldModule = $shieldModule;
+        return $this;
+    }
+
+    /**
+     * @return ArrayCollection
+     */
+    public function getSkillRatings()
+    {
+        return $this->skillRatings;
+    }
+
+    /**
+     * @param SkillRating $skillRating
+     */
+    public function addSkillRating(SkillRating $skillRating)
+    {
+        if (!$this->skillRatings->contains($skillRating)) $this->skillRatings[] = $skillRating;
+    }
+
+    /**
+     * @param SkillRating $skillRating
+     */
+    public function removeSkillRating(SkillRating $skillRating)
+    {
+        if ($this->skillRatings->contains($skillRating)) $this->skillRatings->removeElement($skillRating);
     }
 
 }

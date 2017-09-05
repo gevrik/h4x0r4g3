@@ -179,9 +179,9 @@ class CodebreakerService extends BaseService
                     $this->translate('Codebreaking attempt failed - security rating and alert level raised')
                 )
             );
-            $this->raiseProfileSecurityRating($profile, $connection->getLevel());
+            $this->raiseProfileSecurityRating($profile, $connection->getLevel()); // TODO make connections upgradeable
             $targetSystem = $connection->getSourceNode()->getSystem();
-            $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel());
+            $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel()); // TODO use system alert level in other places
             $this->writeSystemLogEntry(
                 $targetSystem,
                 'Codebreaking attempt failed',

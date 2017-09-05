@@ -214,6 +214,11 @@ class LoopService extends BaseService
                             /** @var Node $node */
                             $response = $this->fileService->executeJackhammer($resourceId, $file, $system, $node);
                             break;
+                        case FileType::ID_SIPHON:
+                            $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
+                            /** @var File $miner */
+                            $response = $this->fileService->executeSiphon($file, $miner);
+                            break;
                     }
                     break;
             }
@@ -371,6 +376,7 @@ class LoopService extends BaseService
                 );
             }
         }
+        $this->entityManager->flush();
     }
 
     /**
@@ -391,11 +397,15 @@ class LoopService extends BaseService
                 'command' => 'showmessageprepend',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Codebreaker attempt failed')
+                    $this->translate('Codebreaker attempt failed - security level raised')
                 )
             ];
+            $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+            $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
+            $this->raiseProfileSecurityRating($profile, $connection->getLevel());
+            $targetSystem = $connection->getSourceNode()->getSystem();
+            $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel());
             $wsClient->send(json_encode($response));
-
         }
         else {
             $this->getWebsocketServer()->setClientData($resourceId, 'codebreaker', $codebreakerData);
@@ -507,116 +517,6 @@ class LoopService extends BaseService
     }
 
     /**
-     * @param Npc $npc
-     * @param Node $node
-     * @param Profile|NULL $profile
-     * @param Faction|NULL $faction
-     * @param Group|NULL $group
-     * @param Node|NULL $homeNode
-     */
-    private function spawnNpcInstance(
-        Npc $npc,
-        Node $node,
-        Profile $profile = NULL,
-        Faction $faction = NULL,
-        Group $group = NULL,
-        Node $homeNode = NULL
-    )
-    {
-        $nodeLevel = $node->getLevel();
-        $npcInstance = new NpcInstance();
-        $npcInstance->setNpc($npc);
-        $npcInstance->setAdded(new \DateTime());
-        $npcInstance->setProfile($profile);
-        $npcInstance->setNode($node);
-        $credits = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-        $npcInstance->setCredits($npc->getBaseCredits() + $credits);
-        $snippets = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-        $npcInstance->setSnippets($npc->getBaseSnippets() + $snippets);
-        $npcInstance->setAggressive($npc->getAggressive());
-        $maxEeg = mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-        if ($maxEeg < 1) $maxEeg = 1;
-        $npcInstance->setMaxEeg($npc->getBaseEeg() + $maxEeg);
-        $npcInstance->setCurrentEeg($npc->getBaseEeg() + $maxEeg);
-        $npcInstance->setDescription($npc->getDescription());
-        $npcInstance->setName($npc->getName());
-        $npcInstance->setFaction($faction);
-        $npcInstance->setHomeNode($homeNode);
-        $npcInstance->setRoaming($npc->getRoaming());
-        $npcInstance->setGroup($group);
-        $npcInstance->setLevel($node->getLevel());
-        $npcInstance->setSlots($npc->getBaseSlots());
-        $npcInstance->setStealthing($npc->getStealthing());
-        $npcInstance->setSystem($node->getSystem());
-        $npcInstance->setHomeSystem($node->getSystem());
-        $this->entityManager->persist($npcInstance);
-        /* add skills */
-        $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
-        foreach ($skills as $skill) {
-            /** @var Skill $skill */
-            $rating = 0;
-            switch ($skill->getId()) {
-                default:
-                    continue;
-                case Skill::ID_STEALTH:
-                    $rating = $npc->getBaseStealth() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                    break;
-                case Skill::ID_DETECTION:
-                    $rating = $npc->getBaseDetection() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                    break;
-                case Skill::ID_BLADES:
-                    $rating = $npc->getBaseBlade() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                    break;
-                case Skill::ID_BLASTERS:
-                    $rating = $npc->getBaseBlaster() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                    break;
-                case Skill::ID_SHIELDS:
-                    $rating = $npc->getBaseShield() + mt_rand(($nodeLevel - 1) * 10, $nodeLevel * 10);
-                    break;
-            }
-            $skillRating = new SkillRating();
-            $skillRating->setNpc($npcInstance);
-            $skillRating->setProfile(NULL);
-            $skillRating->setSkill($skill);
-            $skillRating->setRating($rating);
-            $this->entityManager->persist($skillRating);
-            // add files
-            switch ($npc->getId()) {
-                default:
-                    break;
-                case Npc::ID_WILDERSPACE_INTRUDER:
-                    $dropChance = $npcInstance->getLevel();
-                    if (mt_rand(1, 100) <= $dropChance) {
-                        $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
-                        /** @var FileType $fileType */
-                        $file = new File();
-                        $file->setProfile(NULL);
-                        $file->setLevel($dropChance);
-                        $file->setCreated(new \DateTime());
-                        $file->setSystem($node->getSystem());
-                        $file->setName($fileType->getName());
-                        $file->setNpc($npcInstance);
-                        $file->setData(NULL);
-                        $file->setRunning(false);
-                        $file->setSlots(NULL);
-                        $file->setNode(NULL);
-                        $file->setCoder(NULL);
-                        $file->setExecutable($fileType->getExecutable());
-                        $file->setFileType($fileType);
-                        $file->setIntegrity($dropChance*10);
-                        $file->setMaxIntegrity($dropChance*10);
-                        $file->setMailMessage(NULL);
-                        $file->setModified(NULL);
-                        $file->setSize($fileType->getSize());
-                        $file->setVersion(1);
-                        $this->entityManager->persist($file);
-                    }
-                    break;
-            }
-        }
-    }
-
-    /**
      * Loop that regenerates eeg, willpower and security rating. Default loop time is 5 minutes.
      */
     public function loopRegeneration()
@@ -705,19 +605,23 @@ class LoopService extends BaseService
             $connection = $connections[$randConnectionIndex];
             /** @var Connection $connection */
             // now we need to check a few things if the connection is secured
-            if ($connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()) {
+            if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                if ($roamingNpc->getProfile() && !$roamingNpc->getBypassCodegates()) continue;
                 if ($currentSystem != $roamingNpc->getSystem()) {
                     $currentSystem = $roamingNpc->getSystem();
                     $currentOwner = $currentSystem->getProfile();
                     $currentFaction = $currentSystem->getFaction();
                     $currentGroup = $currentSystem->getGroup();
                 }
-                if (
-                    $roamingNpc->getProfile() != $currentOwner ||
-                    $roamingNpc->getGroup() != $currentGroup ||
-                    $roamingNpc->getFaction() != $currentFaction)
-                {
-                    continue;
+                if (!$connection->getisOpen()) {
+                    if (
+                        $roamingNpc->getProfile() != $currentOwner ||
+                        $roamingNpc->getGroup() != $currentGroup ||
+                        $roamingNpc->getFaction() != $currentFaction)
+                    {
+                        // TODO add more checks here so that some entities can bypass in enemy systems
+                        continue;
+                    }
                 }
             };
             $this->moveNpcToTargetNode($roamingNpc, $connection);
@@ -931,12 +835,12 @@ class LoopService extends BaseService
                 case FileType::ID_COINMINER:
                     $fileData = json_decode($fileInNode->getData());
                     if (!is_object($fileData)) {
-                        $fileData = json_encode($fileData);
+                        $fileData = json_encode(['value'=>0]);
                         $fileData = json_decode($fileData);
                     }
-                    $this->lowerIntegrityOfFile($fileInNode, 50);
                     // skip if the program has already collected equal to or more than its integrity allows
                     if ($fileData->value >= $fileInNode->getIntegrity()) continue;
+                    $this->lowerIntegrityOfFile($fileInNode, 50);
                     $fileData->value += $fileInNode->getLevel();
                     if ($fileData->value > $fileInNode->getIntegrity()) $fileData->value = $fileInNode->getIntegrity();
                     $fileInNode->setData(json_encode($fileData));

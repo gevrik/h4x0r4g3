@@ -20,11 +20,13 @@ use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\GameOptionInstance;
+use Netrunners\Entity\Group;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
+use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
@@ -822,6 +824,7 @@ class BaseService
         Node $targetNode = NULL
     )
     {
+        // set source- and target-node if a connection was given
         if ($connection) {
             $sourceNode = $connection->getSourceNode();
             $targetNode = $connection->getTargetNode();
@@ -850,9 +853,121 @@ class BaseService
             'message' => $messageText
         );
         $this->messageEveryoneInNode($targetNode, $message);
-        $this->entityManager->flush($npc);
         $this->checkNpcAggro($npc);
+        $this->checkNpcTriggers($npc);
+        $this->entityManager->flush($npc);
         return true;
+    }
+
+    /**
+     * @param NpcInstance $npc
+     */
+    private function checkNpcTriggers(NpcInstance $npc)
+    {
+        if (!$this->isInCombat($npc)) {
+            switch ($npc->getNpc()->getId()) {
+                default:
+                    break;
+                case Npc::ID_WORKER_PROGRAM:
+                    $this->checkWorkerTriggers($npc);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param NpcInstance $npc
+     */
+    private function checkWorkerTriggers(NpcInstance $npc)
+    {
+        $currentNode = $npc->getNode();
+        switch ($currentNode->getNodeType()->getId()) {
+            default:
+                break;
+            case NodeType::ID_DATABASE:
+                $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                /** @var FileRepository $fileRepo */
+                $miners = $fileRepo->findOneForHarvesting($npc, FileType::ID_DATAMINER);
+                $highestAmount = 0;
+                $miner = NULL;
+                $minerData = NULL;
+                foreach ($miners as $xMiner) {
+                    /** @var File $xMiner */
+                    $xMinerData = json_decode($xMiner->getData());
+                    if (isset($xMinerData->value)) {
+                        if ($xMinerData->value > $highestAmount) {
+                            $highestAmount = $xMinerData->value;
+                            $miner = $xMiner;
+                            $minerData = $xMinerData;
+                        }
+                    }
+                }
+                if ($miner && $minerData) {
+                    $availableAmount = $minerData->value;
+                    $amount = ($npc->getLevel() > $availableAmount) ? $availableAmount : $npc->getLevel();
+                    $minerData->value -= $amount;
+                    $npc->setSnippets($npc->getSnippets()+$amount);
+                    $miner->setData(json_encode($minerData));
+                    $this->entityManager->flush($miner);
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has collected some snippets from [%s]</pre>'),
+                        $npc->getName(),
+                        $miner->getName()
+                    );
+                    $this->messageEveryoneInNode($currentNode, $message);
+                }
+                break;
+            case NodeType::ID_TERMINAL:
+                $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                /** @var FileRepository $fileRepo */
+                $miners = $fileRepo->findOneForHarvesting($npc, FileType::ID_COINMINER);
+                $highestAmount = 0;
+                $miner = NULL;
+                $minerData = NULL;
+                foreach ($miners as $xMiner) {
+                    /** @var File $xMiner */
+                    $xMinerData = json_decode($xMiner->getData());
+                    if (isset($xMinerData->value)) {
+                        if ($xMinerData->value > $highestAmount) {
+                            $highestAmount = $xMinerData->value;
+                            $miner = $xMiner;
+                            $minerData = $xMinerData;
+                        }
+                    }
+                }
+                if ($miner && $minerData) {
+                    $availableAmount = $minerData->value;
+                    $amount = ($npc->getLevel() > $availableAmount) ? $availableAmount : $npc->getLevel();
+                    $minerData->value -= $amount;
+                    $npc->setCredits($npc->getCredits()+$amount);
+                    $miner->setData(json_encode($minerData));
+                    $this->entityManager->flush($miner);
+                    $message = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has collected some credits from [%s]</pre>'),
+                        $npc->getName(),
+                        $miner->getName()
+                    );
+                    $this->messageEveryoneInNode($currentNode, $message);
+                }
+                break;
+            case NodeType::ID_BANK:
+                $npcProfile = $npc->getProfile();
+                if ($npcProfile) {
+                    $flush = false;
+                    if ($npc->getCredits() >= 1) {
+                        $npcProfile->setBankBalance($npcProfile->getBankBalance() + $npc->getCredits());
+                        $npc->setCredits(0);
+                        $flush = true;
+                    }
+                    if ($npc->getSnippets() >= 1) {
+                        $npcProfile->setSnippets($npcProfile->getSnippets() + $npc->getSnippets());
+                        $npc->setSnippets(0);
+                        $flush = true;
+                    }
+                    if ($flush) $this->entityManager->flush($npcProfile);
+                }
+                break;
+        }
     }
 
     /**
@@ -1116,7 +1231,77 @@ class BaseService
     {
         $currentRating = $profile->getSecurityRating();
         $profile->setSecurityRating($currentRating + $amount);
+        $newRating = $profile->getSecurityRating();
+        if ($newRating >= Profile::SECURITY_RATING_MAX) {
+            $newRating = Profile::SECURITY_RATING_MAX;
+            $profile->setSecurityRating(Profile::SECURITY_RATING_MAX);
+        }
+        if ($newRating >= Profile::SECURITY_RATING_NETWATCH_THRESHOLD) {
+            $npcType = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_NETWATCH_INVESTIGATOR);
+            if ($profile->getSecurityRating() >= 90) {
+                $npcType = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_NETWATCH_AGENT);
+            }
+            /** @var Npc $npcType */
+            $npcInstance = $this->spawnNpcInstance(
+                $npcType,
+                $profile->getCurrentNode(),
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                ceil(round($newRating/10)),
+                true
+            );
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has connected to this node from out of nowhere looking for [%s]</pre>'),
+                $npcType->getName(),
+                $profile->getUser()->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->forceAttack($npcInstance, $profile);
+        }
         $this->entityManager->flush($profile);
+    }
+
+    // TODO credit bounties for killing people with security rating
+
+    /**
+     * @param Profile|NpcInstance $attacker
+     * @param Profile|NpcInstance $defender
+     */
+    protected function forceAttack($attacker, $defender)
+    {
+        $ws = $this->getWebsocketServer();
+        $attackerName = ($attacker instanceof Profile) ? $attacker->getUser()->getUsername() : $attacker->getName();
+        $defenderName = ($defender instanceof Profile) ? $defender->getUser()->getUsername() : $defender->getName();
+        $currentNode = ($attacker instanceof Profile) ? $attacker->getCurrentNode() : $attacker->getNode();
+        if ($attacker instanceof Profile) {
+            if ($defender instanceof Profile) {
+                $ws->addCombatant($attacker, $defender, $attacker->getCurrentResourceId(), $defender->getCurrentResourceId());
+                if ($this->isInCombat($defender)) $ws->addCombatant($defender, $attacker, $defender->getCurrentResourceId(), $attacker->getCurrentResourceId());
+            }
+            if ($defender instanceof NpcInstance) {
+                $ws->addCombatant($attacker, $defender, $attacker->getCurrentResourceId());
+                if ($this->isInCombat($defender)) $ws->addCombatant($defender, $attacker, NULL, $attacker->getCurrentResourceId());
+            }
+        }
+        if ($attacker instanceof NpcInstance) {
+            if ($defender instanceof Profile) {
+                $ws->addCombatant($attacker, $defender, NULL, $defender->getCurrentResourceId());
+                if ($this->isInCombat($defender)) $ws->addCombatant($defender, $attacker, $defender->getCurrentResourceId());
+            }
+            if ($defender instanceof NpcInstance) {
+                $ws->addCombatant($attacker, $defender);
+                if ($this->isInCombat($defender)) $ws->addCombatant($defender, $attacker);
+            }
+        }
+        // inform players in node
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
+            $attackerName,
+            $defenderName
+        );
+        $this->messageEveryoneInNode($currentNode, $message);
     }
 
     /**
@@ -1607,7 +1792,7 @@ class BaseService
             if ($this->isInCombat($npcInstance)) continue;
             if (!$this->canSee($npcInstance, $target)) continue;
             if ($target instanceof Profile) {
-                if ($npcInstance->getProfile() == $target) continue;
+                if ($npcInstance->getProfile() === $target) continue;
                 if ($target->getGroup() && $npcInstance->getGroup() == $target->getGroup()) continue;
                 if ($target->getFaction() && $npcInstance->getFaction() == $target->getFaction()) continue;
                 // set combatants
@@ -1622,7 +1807,7 @@ class BaseService
                 $this->messageEveryoneInNode($currentNode, ['command' => 'showmessageprepend', 'message' => $message]);
             }
             if ($target instanceof NpcInstance) {
-                if ($npcInstance->getProfile() == $target->getProfile()) continue;
+                if ($npcInstance->getProfile() === $target->getProfile()) continue;
                 if ($target->getGroup() && $npcInstance->getGroup() == $target->getGroup()) continue;
                 if ($target->getFaction() && $npcInstance->getFaction() == $target->getFaction()) continue;
                 if ($target->getProfile() == NULL && $target->getFaction() == NULL && $target->getGroup() == NULL && $npcInstance->getProfile() == NULL && $npcInstance->getFaction() == NULL && $npcInstance->getGroup() == NULL) continue;
@@ -1675,6 +1860,170 @@ class BaseService
             }
             if ($flush) $this->entityManager->flush($file);
         }
+    }
+
+    /**
+     * @param Npc $npc
+     * @param Node $node
+     * @param Profile|NULL $profile
+     * @param Faction|NULL $faction
+     * @param Group|NULL $group
+     * @param Node|NULL $homeNode
+     * @param null $baseLevel
+     * @param bool $flush
+     * @return NpcInstance
+     */
+    protected function spawnNpcInstance(
+        Npc $npc,
+        Node $node,
+        Profile $profile = NULL,
+        Faction $faction = NULL,
+        Group $group = NULL,
+        Node $homeNode = NULL,
+        $baseLevel = NULL,
+        $flush = false
+    )
+    {
+
+        // check if a base level was given or use the node level as the base level
+        if (!$baseLevel) {
+            $baseLevel = $node->getLevel();
+        }
+        // determine base values depending on npc type
+        switch ($npc->getId()) {
+            default:
+                $credits = 0;
+                $snippets = 0;
+                $maxEeg = mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                break;
+            case Npc::ID_KILLER_VIRUS:
+            case Npc::ID_MURPHY_VIRUS:
+                $credits = mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                $snippets = mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                $maxEeg = mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                break;
+        }
+        // sanity checks for generated values
+        if ($maxEeg < 1) $maxEeg = 1;
+        // spawn
+        $npcInstance = new NpcInstance();
+        $npcInstance->setNpc($npc);
+        $npcInstance->setAdded(new \DateTime());
+        $npcInstance->setProfile($profile);
+        $npcInstance->setNode($node);
+        $npcInstance->setCredits($npc->getBaseCredits() + $credits);
+        $npcInstance->setSnippets($npc->getBaseSnippets() + $snippets);
+        $npcInstance->setAggressive($npc->getAggressive());
+        $npcInstance->setMaxEeg($npc->getBaseEeg() + $maxEeg);
+        $npcInstance->setCurrentEeg($npc->getBaseEeg() + $maxEeg);
+        $npcInstance->setDescription($npc->getDescription());
+        $npcInstance->setName($npc->getName());
+        $npcInstance->setFaction($faction);
+        $npcInstance->setHomeNode($homeNode);
+        $npcInstance->setRoaming($npc->getRoaming());
+        $npcInstance->setGroup($group);
+        $npcInstance->setLevel($npc->getLevel() + $baseLevel);
+        $npcInstance->setSlots($npc->getBaseSlots());
+        $npcInstance->setStealthing($npc->getStealthing());
+        $npcInstance->setSystem($node->getSystem());
+        $npcInstance->setHomeSystem($node->getSystem());
+        $this->entityManager->persist($npcInstance);
+        /* add skills */
+        $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
+        foreach ($skills as $skill) {
+            /** @var Skill $skill */
+            $rating = 0;
+            switch ($skill->getId()) {
+                default:
+                    continue;
+                case Skill::ID_STEALTH:
+                    $rating = $npc->getBaseStealth() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                    break;
+                case Skill::ID_DETECTION:
+                    $rating = $npc->getBaseDetection() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                    break;
+                case Skill::ID_BLADES:
+                    $rating = $npc->getBaseBlade() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                    break;
+                case Skill::ID_BLASTERS:
+                    $rating = $npc->getBaseBlaster() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                    break;
+                case Skill::ID_SHIELDS:
+                    $rating = $npc->getBaseShield() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                    break;
+            }
+            $skillRating = new SkillRating();
+            $skillRating->setNpc($npcInstance);
+            $skillRating->setProfile(NULL);
+            $skillRating->setSkill($skill);
+            $skillRating->setRating($rating);
+            $this->entityManager->persist($skillRating);
+            $npcInstance->addSkillRating($skillRating);
+            // add files
+            switch ($npc->getId()) {
+                default:
+                    break;
+                case Npc::ID_WILDERSPACE_INTRUDER:
+                    $dropChance = $npcInstance->getLevel();
+                    if (mt_rand(1, 100) <= $dropChance) {
+                        $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
+                        /** @var FileType $fileType */
+                        $file = new File();
+                        $file->setProfile(NULL);
+                        $file->setLevel($dropChance);
+                        $file->setCreated(new \DateTime());
+                        $file->setSystem(NULL);
+                        $file->setName($fileType->getName());
+                        $file->setNpc($npcInstance);
+                        $file->setData(NULL);
+                        $file->setRunning(false);
+                        $file->setSlots(NULL);
+                        $file->setNode(NULL);
+                        $file->setCoder(NULL);
+                        $file->setExecutable($fileType->getExecutable());
+                        $file->setFileType($fileType);
+                        $file->setIntegrity($dropChance*10);
+                        $file->setMaxIntegrity($dropChance*10);
+                        $file->setMailMessage(NULL);
+                        $file->setModified(NULL);
+                        $file->setSize($fileType->getSize());
+                        $file->setVersion(1);
+                        $this->entityManager->persist($file);
+                    }
+                    break;
+                case Npc::ID_NETWATCH_INVESTIGATOR:
+                case Npc::ID_NETWATCH_AGENT:
+                    $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
+                    /** @var FileType $fileType */
+                    $file = new File();
+                    $file->setProfile(NULL);
+                    $file->setLevel($baseLevel * 10);
+                    $file->setCreated(new \DateTime());
+                    $file->setSystem(NULL);
+                    $file->setName($fileType->getName());
+                    $file->setNpc($npcInstance);
+                    $file->setData(NULL);
+                    $file->setRunning(true);
+                    $file->setSlots($baseLevel);
+                    $file->setNode(NULL);
+                    $file->setCoder(NULL);
+                    $file->setExecutable($fileType->getExecutable());
+                    $file->setFileType($fileType);
+                    $file->setIntegrity($baseLevel*10);
+                    $file->setMaxIntegrity($baseLevel*10);
+                    $file->setMailMessage(NULL);
+                    $file->setModified(NULL);
+                    $file->setSize($fileType->getSize());
+                    $file->setVersion(1);
+                    $this->entityManager->persist($file);
+                    $npcInstance->setBladeModule($file);
+                    break;
+            }
+        }
+        if ($flush) {
+            $this->entityManager->flush();
+        }
+        return $npcInstance;
     }
 
 }

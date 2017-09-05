@@ -19,6 +19,10 @@ class Profile
 
     const DEFAULT_PROFILE_LOCALE = 'en_US';
 
+    const SECURITY_RATING_MAX = 100;
+
+    const SECURITY_RATING_NETWATCH_THRESHOLD = 80;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -110,6 +114,12 @@ class Profile
      * @var int
      */
     protected $faileddMilkruns;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $currentResourceId;
 
     // ORM
 
@@ -467,6 +477,24 @@ class Profile
     public function setFaileddMilkruns($faileddMilkruns)
     {
         $this->faileddMilkruns = $faileddMilkruns;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCurrentResourceId()
+    {
+        return $this->currentResourceId;
+    }
+
+    /**
+     * @param int $currentResourceId
+     * @return Profile
+     */
+    public function setCurrentResourceId($currentResourceId)
+    {
+        $this->currentResourceId = $currentResourceId;
         return $this;
     }
 

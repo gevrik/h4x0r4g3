@@ -110,6 +110,11 @@ class NpcInstanceService extends BaseService
                 );
                 $messages[] = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-12s : %s</pre>'),
+                    $this->translate('codegates'),
+                    ($npc->getBypassCodegates()) ? $this->translate('<span class="text-danger">yes</span>') : $this->translate('no')
+                );
+                $messages[] = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-12s : %s</pre>'),
                     $this->translate('stealthing'),
                     ($npc->getStealthing()) ? $this->translate('<span class="text-danger">yes</span>') : $this->translate('no')
                 );
@@ -181,7 +186,7 @@ class NpcInstanceService extends BaseService
             }
         }
         // check if they can change the name
-        if (!$this->response && $npc && $profile != $npc->getProfile()) {
+        if (!$this->response && $npc && $profile !== $npc->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -263,7 +268,7 @@ class NpcInstanceService extends BaseService
             }
         }
         // check if they can change the entity
-        if (!$this->response && $npc && $profile != $npc->getProfile()) {
+        if (!$this->response && $npc && $profile !== $npc->getProfile()) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -279,7 +284,7 @@ class NpcInstanceService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify the property that you want to set (roaming, aggressive)')
+                    $this->translate('Please specify the property that you want to set (roaming, aggressive, codegates)')
                 )
             );
         }
@@ -335,6 +340,19 @@ class NpcInstanceService extends BaseService
                         )
                     );
                 break;
+                case 'codegates':
+                    $npc->setBypassCodegates($propertyValue);
+                    $this->entityManager->flush($npc);
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] [%s] set to [%s]</pre>'),
+                            $npc->getName(),
+                            $npcPropertyString,
+                            $propertyValueString
+                        )
+                    );
+                    break;
             }
         }
         return $this->response;

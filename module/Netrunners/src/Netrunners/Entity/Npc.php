@@ -23,9 +23,12 @@ class Npc
     const ID_SENTINEL_ICE = 5;
     const ID_WILDERSPACE_INTRUDER = 6;
     const ID_DEBUGGER_PROGRAM = 7;
+    const ID_NETWATCH_INVESTIGATOR = 8;
+    const ID_NETWATCH_AGENT = 9;
 
     const TYPE_VIRUS = 1;
     const TYPE_HELPER = 2;
+    const TYPE_NETWATCH = 3;
 
     /**
      * @ORM\Id

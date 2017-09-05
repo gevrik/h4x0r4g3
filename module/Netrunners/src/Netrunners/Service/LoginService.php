@@ -397,6 +397,7 @@ class LoginService extends BaseService
         }
         else {
             $profile = $user->getProfile();
+            $profile->setCurrentResourceId($resourceId);
             $currentNode = $profile->getCurrentNode();
             $currentSystem = $currentNode->getSystem();
             $wsClients = $ws->getClients();
@@ -439,7 +440,6 @@ class LoginService extends BaseService
             foreach ($playSessionRepo->findOrphaned($profile) as $orphanedPlaySession) {
                 $this->entityManager->remove($orphanedPlaySession);
             }
-            $this->entityManager->flush();
             // show feedback info if admin or superadmin
             if ($this->hasRole($user, Role::ROLE_ID_ADMIN)) {
                 $lastPlaySession = $playSessionRepo->findLastPlaySession($profile);
@@ -473,7 +473,6 @@ class LoginService extends BaseService
             $playSession->setIpAddy($wsClientsData[$resourceId]['ipaddy']);
             $playSession->setSocketId($resourceId);
             $this->entityManager->persist($playSession);
-            $this->entityManager->flush($playSession);
             // inform admins
             $informer = array(
                 'command' => 'showmessageprepend',
@@ -493,6 +492,8 @@ class LoginService extends BaseService
                 if (!$this->hasRole($xUser, Role::ROLE_ID_ADMIN)) continue;
                 $wsClient->send(json_encode($informer));
             }
+            // commit all changes to db
+            $this->entityManager->flush();
         }
         return [$disconnect, $response];
     }
