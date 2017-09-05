@@ -133,6 +133,7 @@ class CodebreakerService extends BaseService
                             $theString
                         )
                     );
+                    $this->lowerIntegrityOfFile($file, 100, 1, true);
                 }
             }
         }

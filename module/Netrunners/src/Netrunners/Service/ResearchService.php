@@ -12,7 +12,9 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
+use Netrunners\Repository\FileCategoryRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
 use Zend\Mvc\I18n\Translator;
@@ -32,6 +34,12 @@ class ResearchService extends BaseService
     protected $fileTypeRepo;
 
     /**
+     * @var FileCategoryRepository
+     */
+    protected $fileCategoryRepo;
+
+
+    /**
      * ResearchService constructor.
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
@@ -42,8 +50,13 @@ class ResearchService extends BaseService
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
+        $this->fileCategoryRepo = $this->entityManager->getRepository('Netrunners\Entity\FileCategory');
     }
 
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
     public function showResearchers($resourceId)
     {
         $this->initService($resourceId);
@@ -64,9 +77,10 @@ class ResearchService extends BaseService
             }
             else {
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-32s|%-1s|%s</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-32s|%-3s|%-1s|%s</pre>',
                     $this->translate('NAME'),
                     $this->translate('NODE'),
+                    $this->translate('PRG'),
                     $this->translate('R'),
                     $this->translate('DATA')
                 );
@@ -74,24 +88,49 @@ class ResearchService extends BaseService
                     /** @var File $researcher */
                     if ($researcher->getData()) {
                         $researcherData = json_decode($researcher->getData());
+                        switch ($researcherData->type) {
+                            default:
+                                $idString = '---';
+                                $typeString = '---';
+                                $progressString = '---';
+                                break;
+                            case 'category':
+                                $fileCategory = $this->entityManager->find('Netrunners\Entity\FileCategory', $researcherData->id);
+                                $idString = $fileCategory->getName();
+                                $typeString = $researcherData->type;
+                                $progressString = (isset($researcherData->progress)) ? $researcherData->progress : '---';
+                                break;
+                            case 'file-type':
+                                $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $researcherData->id);
+                                $idString = $fileType->getName();
+                                $typeString = $researcherData->type;
+                                $progressString = (isset($researcherData->progress)) ? $researcherData->progress : '---';
+                                break;
+                        }
+                        $returnMessage[] = sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-32s|%-3s|%-1s|%s</pre>',
+                            $researcher->getName(),
+                            ($researcher->getNode()) ? $researcher->getNode()->getName() : $this->translate('---'),
+                            $progressString,
+                            ($researcher->getRunning()) ? $this->translate('<span class="text-success">Y</span>') : $this->translate('<span class="text-danger">N</span>'),
+                            $typeString . ' - ' . $idString
+                        );
+                        $this->response = [
+                            'command' => 'showoutput',
+                            'message' => $returnMessage
+                        ];
                     }
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-32s|%-1s|%s</pre>',
-                        $researcher->getName(),
-                        ($researcher->getNode()) ? $researcher->getNode()->getName() : $this->translate('---'),
-                        ($researcher->getRunning()) ? $this->translate('<span class="text-success">Y</span>') : $this->translate('<span class="text-danger">N</span>'),
-                        '---'
-                    );
-                    $this->response = [
-                        'command' => 'showoutput',
-                        'message' => $returnMessage
-                    ];
                 }
             }
         }
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function researchCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -115,7 +154,7 @@ class ResearchService extends BaseService
              * get the research type - this can be category to research a random type within that category or
              * type to research a specific type
              */
-            list($contentArray, $researchType) = $this->getNextParameter($contentArray);
+            list($contentArray, $researchType) = $this->getNextParameter($contentArray, true, false, false, true);
             if (!$this->response && !$researchType) {
                 $this->response = [
                     'command' => 'showmessage',
@@ -126,13 +165,17 @@ class ResearchService extends BaseService
                 ];
             }
             if (!$this->response) {
+                $researchTypeString = '---';
+                $researchIdString = '---';
                 $data = NULL;
                 $fileType = NULL;
+                $fileCategory = NULL;
                 switch ($researchType) {
                     default:
                         break;
                     case 'type':
                         $fileTypeString = $this->getNextParameter($contentArray, false, false, true, true);
+                        if (empty($fileTypeString)) $fileTypeString = 'chat';
                         $fileType = $this->fileTypeRepo->findLikeName($fileTypeString);
                         if (!$fileType) {
                             $this->response = [
@@ -146,16 +189,37 @@ class ResearchService extends BaseService
                         if (!$this->response) {
                             /** @var FileType $fileType */
                             $data = [
-                                'type' => 'type',
-                                'id' => $fileType->getId()
+                                'type' => 'file-type',
+                                'id' => $fileType->getId(),
+                                'progress' => 0
                             ];
+                            $researchTypeString = $this->translate('file-type');
+                            $researchIdString = $this->translate($fileType->getName());
                         }
                         break;
                     case 'category':
-                        $data = [
-                            'type' => 'category',
-                            'id' => NULL
-                        ];
+                        $fileCategoryString = $this->getNextParameter($contentArray, false, false, true, true);
+                        if (empty($fileCategoryString)) $fileCategoryString = 'node';
+                        $fileCategory = $this->fileCategoryRepo->findLikeName($fileCategoryString);
+                        if (!$fileCategory) {
+                            $this->response = [
+                                'command' => 'showmessage',
+                                'message' => sprintf(
+                                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                                    $this->translate('Please specify which file-category to research')
+                                )
+                            ];
+                        }
+                        if (!$this->response) {
+                            /** @var FileCategory $fileCategory */
+                            $data = [
+                                'type' => 'category',
+                                'id' => $fileCategory->getId(),
+                                'progress' => 0
+                            ];
+                            $researchTypeString = $this->translate('category');
+                            $researchIdString = $this->translate($fileCategory->getName());
+                        }
                         break;
                 }
                 // now add the data to the researcher
@@ -166,10 +230,10 @@ class ResearchService extends BaseService
                     $this->response = [
                         'command' => 'showmessage',
                         'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] is now researching [%s%s]</pre>'),
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] is now researching [%s: %s]</pre>'),
                             $researcher->getName(),
-                            $researchType,
-                            ($fileType) ? ' ' . $fileType->getName() : ''
+                            $researchTypeString,
+                            $researchIdString
                         )
                     ];
                     // inform other players in node
@@ -178,7 +242,7 @@ class ResearchService extends BaseService
                         $this->user->getUsername(),
                         $researcher->getName()
                     );
-                    $this->messageEveryoneInNode($currentNode, $message);
+                    $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
                 }
             }
         }

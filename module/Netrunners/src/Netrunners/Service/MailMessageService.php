@@ -127,7 +127,7 @@ class MailMessageService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has entered mail-mode</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -148,7 +148,8 @@ class MailMessageService extends BaseService
             $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has exited mail-mode</pre>'),
             $this->user->getUsername()
         );
-        $this->messageEveryoneInNode($this->user->getProfile()->getCurrentNode(), $message);
+        $profile = $this->user->getProfile();
+        $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         return $this->response;
     }
 

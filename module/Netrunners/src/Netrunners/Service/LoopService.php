@@ -26,15 +26,18 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\MilkrunInstanceRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NotificationRepository;
 use Netrunners\Repository\NpcInstanceRepository;
+use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
@@ -74,6 +77,16 @@ class LoopService extends BaseService
      */
     protected $npcInstanceRepo;
 
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
+    /**
+     * @var ConnectionRepository
+     */
+    protected $connectionRepo;
+
 
     /**
      * LoopService constructor.
@@ -97,6 +110,8 @@ class LoopService extends BaseService
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
     }
 
     /**
@@ -380,6 +395,7 @@ class LoopService extends BaseService
                 )
             ];
             $wsClient->send(json_encode($response));
+
         }
         else {
             $this->getWebsocketServer()->setClientData($resourceId, 'codebreaker', $codebreakerData);
@@ -476,10 +492,10 @@ class LoopService extends BaseService
     }
 
     /**
-     * @param $system
-     * @param $node
+     * @param System $system
+     * @param Node $node
      */
-    private function spawnVirus($system, $node)
+    private function spawnVirus(System $system, Node $node)
     {
         if ($this->npcInstanceRepo->countBySystem($system) < $this->nodeRepo->countBySystem($system)) {
             $possibleSpawns = [Npc::ID_MURPHY_VIRUS, Npc::ID_KILLER_VIRUS];
@@ -601,6 +617,68 @@ class LoopService extends BaseService
     }
 
     /**
+     * Loop that regenerates eeg, willpower and security rating. Default loop time is 5 minutes.
+     */
+    public function loopRegeneration()
+    {
+        // iterate all profiles and trigger regen methods
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
+        foreach ($profiles as $profile) {
+            /** @var Profile $profile */
+            // eeg
+            if ($profile->getEeg() < 100) {
+                $this->regenerateEeg($profile);
+            }
+            // willpower
+            if ($profile->getWillpower() < 100) {
+                $this->regenerateWillpower($profile);
+            }
+            // security rating
+            if ($profile->getSecurityRating() >= 1) {
+                $this->regenerateSecurityRating($profile);
+            }
+        }
+        // commit changes to db
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param Profile $profile
+     */
+    private function regenerateEeg(Profile $profile)
+    {
+        $amount = 1;
+        if ($profile->getCurrentNode() == $profile->getHomeNode()) $amount = 100 - $profile->getEeg();
+        // TODO modify amount by programs in node or by effects from running programs
+        $profile->setEeg($profile->getEeg() + $amount);
+        if ($profile->getEeg() > 100) $profile->setEeg(100);
+    }
+
+    /**
+     * @param Profile $profile
+     */
+    private function regenerateWillpower(Profile $profile)
+    {
+        $amount = 2;
+        if ($profile->getCurrentNode() == $profile->getHomeNode()) $amount = 100 - $profile->getWillpower();
+        // TODO modify amount by programs in node or by effects from running programs
+        $profile->setWillpower($profile->getWillpower() + $amount);
+        if ($profile->getWillpower() > 100) $profile->setWillpower(100);
+    }
+
+    /**
+     * @param Profile $profile
+     */
+    private function regenerateSecurityRating(Profile $profile)
+    {
+        $amount = 0;
+        if ($profile->getCurrentNode() == $profile->getHomeNode()) $amount = 1;
+        // TODO modify amount by programs in node or by effects from running programs
+        $profile->setSecurityRating($profile->getSecurityRating() - $amount);
+        if ($profile->getSecurityRating() < 0) $profile->setSecurityRating(0);
+    }
+
+    /**
      *
      */
     public function loopNpcRoam()
@@ -673,6 +751,7 @@ class LoopService extends BaseService
             $items[$currentNodeProfileId]['snippets'] += $databaseNode->getLevel();
             $this->checkForModifyingFiles($databaseNode);
         }
+        // get all the terminal nodes (for credit generation)
         $terminalNodes = $this->nodeRepo->findByType(NodeType::ID_TERMINAL);
         $system = NULL;
         $systemOwner = NULL;
@@ -698,7 +777,121 @@ class LoopService extends BaseService
             $profile->setSnippets($profile->getSnippets() + $amountData['snippets']);
             $profile->setCredits($profile->getCredits() + $amountData['credits']);
         }
+        // researcher node upgrades work like resources too
+        $this->researchProgress();
+        // now close all open codegates
+        $this->closeOpenCodegates();
+        // commit all changes to db
         $this->entityManager->flush();
+    }
+
+    /**
+     * Runs as part of the resource loop to close all open code-gates.
+     */
+    private function closeOpenCodegates()
+    {
+        $affectedConnections = $this->connectionRepo->findBy([
+            'type' => Connection::TYPE_CODEGATE,
+            'isOpen' => true
+        ]);
+        foreach ($affectedConnections as $affectedConnection) {
+            /** @var Connection $affectedConnection */
+            $affectedConnection->setIsOpen(false);
+        }
+    }
+
+    /**
+     * Part of the resource loop. Determines research progress on all researcher programs.
+     */
+    private function researchProgress()
+    {
+        $systems = $this->systemRepo->findAll();
+        $fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
+        /** @var FileTypeRepository $fileTypeRepo */
+        $pftrRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
+        /** @var ProfileFileTypeRecipeRepository $pftrRepo */
+        foreach ($systems as $system) {
+            /** @var System $system */
+            $researchers = $this->fileRepo->findRunningFilesInSystemByType($system, true, FileType::ID_RESEARCHER);
+            foreach ($researchers as $researcher) {
+                /** @var File $researcher */
+                $researchData = json_decode($researcher->getData());
+                if (!$researchData) continue;
+                $progress = (isset($researchData->progress)) ? $researchData->progress : 0;
+                switch ($researchData->type) {
+                    default:
+                        $researchDataProgress = 0;
+                        break;
+                    case 'category':
+                        $researchDataProgress = (mt_rand(1, 100) <= $researcher->getLevel()) ? 10 : 0;
+                        //$researchDataProgress = (mt_rand(1, 100) <= 100) ? 10 : 0;
+                        break;
+                    case 'file-type':
+                        $researchDataProgress = (mt_rand(1, 100) <= $researcher->getLevel()) ? 1 : 0;
+                        //$researchDataProgress = (mt_rand(1, 100) <= 100) ? 1 : 0;
+                        break;
+                }
+                $progress += $researchDataProgress;
+                if ($progress >= 100) {
+                    $researchData->progress = 0;
+                    switch ($researchData->type) {
+                        default:
+                            break;
+                        case 'category':
+                            $fileCategory = $this->entityManager->find('Netrunners\Entity\FileCategory', $researchData->id);
+                            $possibleFileTypes = $fileTypeRepo->findByCategoryId($researchData->id);
+                            $found = NULL;
+                            foreach ($possibleFileTypes as $possibleFileType) {
+                                /** @var FileType $possibleFileType */
+                                if (!$possibleFileType->getNeedRecipe()) continue;
+                                $existingRecipe = $pftrRepo->findOneByProfileAndFileType($researcher->getProfile(), $possibleFileType);
+                                if (!$existingRecipe) {
+                                    $found = $possibleFileType;
+                                    break;
+                                }
+                            }
+                            if ($found instanceof FileType) {
+                                $message = sprintf($this->translate("You have researched the file-type [%s] - it was added to your library."), $found->getName());
+                                $this->storeNotification($researcher->getProfile(), $message, 'success');
+                                $recipe = new ProfileFileTypeRecipe();
+                                $recipe->setAdded(new \DateTime());
+                                $recipe->setFileType($found);
+                                $recipe->setProfile($researcher->getProfile());
+                                $recipe->setRuns($researcher->getLevel());
+                                $this->entityManager->persist($recipe);
+                            }
+                            else {
+                                $message = sprintf($this->translate("You have already researched all types in category [%s]! [%s] will now stop running."), $fileCategory->getName(), $researcher->getName());
+                                $this->storeNotification($researcher->getProfile(), $message, 'warning');
+                                $researcher->setRunning(false);
+                            }
+                            break;
+                        case 'file-type':
+                            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $researchData->id);
+                            /** @var FileType $fileType */
+                            $recipe = new ProfileFileTypeRecipe();
+                            $recipe->setAdded(new \DateTime());
+                            $recipe->setFileType($fileType);
+                            $recipe->setProfile($researcher->getProfile());
+                            $recipe->setRuns($researcher->getLevel());
+                            $this->entityManager->persist($recipe);
+                            $message = sprintf(
+                                $this->translate("You have researched a recipe for file-type [%s] with [%s] runs - it was added to your library."),
+                                $fileType->getName(),
+                                $recipe->getRuns()
+                            );
+                            $this->storeNotification($researcher->getProfile(), $message, 'success');
+                            break;
+                    }
+                    $this->lowerIntegrityOfFile($researcher);
+                    $researcher->setData(json_encode($researchData));
+                }
+                else {
+                    $researchData->progress = $progress;
+                    $researcher->setData(json_encode($researchData));
+                }
+            }
+        }
     }
 
     /**
@@ -741,6 +934,7 @@ class LoopService extends BaseService
                         $fileData = json_encode($fileData);
                         $fileData = json_decode($fileData);
                     }
+                    $this->lowerIntegrityOfFile($fileInNode, 50);
                     // skip if the program has already collected equal to or more than its integrity allows
                     if ($fileData->value >= $fileInNode->getIntegrity()) continue;
                     $fileData->value += $fileInNode->getLevel();

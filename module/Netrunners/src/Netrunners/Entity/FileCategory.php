@@ -32,7 +32,6 @@ class FileCategory
     const ID_EXOTIC = 11;
     const ID_STEALTH = 12;
 
-
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

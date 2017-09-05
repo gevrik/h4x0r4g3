@@ -158,7 +158,7 @@ class FactionService extends BaseService
                     $this->user->getUsername(),
                     $faction->getName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
             }
         }
         return $this->response;
@@ -166,7 +166,7 @@ class FactionService extends BaseService
 
     public function leaveFaction()
     {
-
+        // TODO implement this
     }
 
 }

@@ -330,6 +330,10 @@ class ParserService
             case 'factions':
                 $response = $this->factionService->listFactions($resourceId);
                 break;
+            case 'filecategories':
+            case 'filecats':
+                $response = $this->fileService->showFileCategories();
+                break;
             case 'filemods':
                 $response = $this->fileService->showFileMods();
                 break;
@@ -433,6 +437,9 @@ class ParserService
                 $response = $this->researchService->showResearchers($resourceId);
                 break;
             case 'parts':
+            case 'rm':
+                $response = $this->fileService->enterMode($resourceId, $userCommand, $contentArray);
+                break;
             case 'resources':
             case 'res':
                 $response = $this->profileService->showFilePartInstances($resourceId);
@@ -743,6 +750,9 @@ class ParserService
                     break;
                 case 'nodetype':
                     $response = $this->nodeService->changeNodeType($resourceId, $confirmData->contentArray);
+                    break;
+                case 'rm':
+                    $response = $this->fileService->removeFile($resourceId, $confirmData->contentArray);
                     break;
             }
         }

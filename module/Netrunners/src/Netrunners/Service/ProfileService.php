@@ -330,7 +330,7 @@ class ProfileService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is checking out their equipment</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -475,7 +475,7 @@ class ProfileService extends BaseService
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] starts stealthing</pre>'),
                     $profile->getUser()->getDisplayName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, [$profile->getId()]);
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile->getId());
             }
         }
         return $this->response;
@@ -515,7 +515,7 @@ class ProfileService extends BaseService
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] stops stealthing</pre>'),
                     $profile->getUser()->getDisplayName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, [$profile->getId()]);
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile->getId());
             }
         }
         return $this->response;
@@ -907,7 +907,7 @@ class ProfileService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has deposited some credits</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }

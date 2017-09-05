@@ -15,6 +15,16 @@ use Doctrine\ORM\EntityRepository;
 class FileCategoryRepository extends EntityRepository
 {
 
-
+    /**
+     * @param $keyword
+     * @return array
+     */
+    public function findLikeName($keyword)
+    {
+        $qb = $this->createQueryBuilder('fc');
+        $qb->where($qb->expr()->like('fc.name', $qb->expr()->literal($keyword . '%')));
+        $qb->setMaxResults(1);
+        return $qb->getQuery()->getOneOrNullResult();
+    }
 
 }

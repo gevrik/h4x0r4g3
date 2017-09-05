@@ -109,7 +109,6 @@
             }
             switch (command) {
                 default:
-                    console.log(command);
                     console.log('=== unknown command received ===');
                     break;
                 case 'getipaddy':

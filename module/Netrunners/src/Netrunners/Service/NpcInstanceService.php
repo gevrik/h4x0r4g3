@@ -219,7 +219,7 @@ class NpcInstanceService extends BaseService
                 $this->user->getUsername(),
                 $name
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }

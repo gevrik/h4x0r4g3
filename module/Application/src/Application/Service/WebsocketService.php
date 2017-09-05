@@ -46,6 +46,11 @@ class WebsocketService implements MessageComponentInterface {
     const LOOP_NPC_SPAWN = 600;
 
     /**
+     * @const LOOP_REGENERATION the amount of seconds between regenerations
+     */
+    const LOOP_REGENERATION = 300;
+
+    /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
      */
     const LOOP_NPC_ROAM = 30;
@@ -191,6 +196,10 @@ class WebsocketService implements MessageComponentInterface {
 
         $this->loop->addPeriodicTimer(self::LOOP_NPC_ROAM, function(){
             $this->loopService->loopNpcRoam();
+        });
+
+        $this->loop->addPeriodicTimer(self::LOOP_REGENERATION, function(){
+            $this->loopService->loopRegeneration();
         });
 
         // clear orphaned play-sessions

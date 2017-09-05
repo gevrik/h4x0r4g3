@@ -19,6 +19,7 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
+use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
@@ -173,6 +174,134 @@ class FileService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $command
+     * @param array $contentArray
+     * @return array|bool|false
+     */
+    public function enterMode($resourceId, $command, $contentArray = [])
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
+            switch ($command) {
+                default:
+                    break;
+                case 'rm':
+                    $file = $this->removeFileChecks($contentArray);
+                    if (!$this->response) {
+                        $this->response = [
+                            'command' => 'enterconfirmmode',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">Are you sure that you want to delete [%s] - Please confirm this action:</pre>'),
+                                $file->getName()
+                            )
+                        ];
+                    }
+                    break;
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $contentArray
+     * @return mixed|File|null
+     */
+    private function removeFileChecks($contentArray)
+    {
+        $profile = $this->user->getProfile();
+        $parameter = $this->getNextParameter($contentArray, false);
+        $file = NULL;
+        // try to get target file via repo method
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $parameter);
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
+            );
+        }
+        if (!$this->response) {
+            $file = array_shift($targetFiles);
+            /** @var File $file */
+            // check if the file belongs to the profile
+            if ($file && $file->getProfile() != $profile) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Permission denied')
+                    )
+                );
+            }
+            if (!$this->response && $file->getRunning()) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Unable to remove running file - please kill the process first')
+                    )
+                );
+            }
+            if (!$this->response && $file->getSystem()) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Unable to remove file - please unload it first')
+                    )
+                );
+            }
+        }
+        return $file;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function removeFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId);
+        $file = false;
+        if (!$this->response) {
+            $file = $this->removeFileChecks($contentArray);
+        }
+        if (!$this->response && $file) {
+            // start removing the file by removing all of its filemodinstances
+            $fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
+            /** @var FileModInstanceRepository $fileModInstanceRepo */
+            $fmInstances = $fileModInstanceRepo->findBy([
+                'file' => $file
+            ]);
+            foreach ($fmInstances as $fmInstance) {
+                $this->entityManager->remove($fmInstance);
+            }
+            $this->entityManager->remove($file);
+            $this->entityManager->flush();
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You removed [%s]</pre>'),
+                $file->getName()
+            );
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function downloadFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -246,11 +375,16 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $targetFile->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function unloadFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -315,7 +449,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $targetFile->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -398,12 +532,17 @@ class FileService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has created a text file</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
             return $this->response;
         }
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function initArmorCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -541,7 +680,7 @@ class FileService extends BaseService
                         $this->user->getUsername(),
                         $file->getName()
                     );
-                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
                 }
             }
         }
@@ -624,7 +763,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $newName
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -694,7 +833,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $file->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -730,6 +869,7 @@ class FileService extends BaseService
                 )
             );
         }
+        /** @var File $file */
         // check if file belongs to user TODO should be able to bypass this via bh program
         if (!$this->response && $file && $file->getProfile() != $profile) {
             $this->response = array(
@@ -746,6 +886,16 @@ class FileService extends BaseService
                 'command' => 'showmessage',
                 'message' => sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s is already running</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        // check if file has enough integrity
+        if (!$this->response && $file && $file->getIntegrity() < 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s has no integrity</pre>'),
                     $file->getName()
                 )
             );
@@ -825,7 +975,7 @@ class FileService extends BaseService
                     $this->response = $this->executeWilderspaceHubPortal($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_RESEARCHER:
-                    $this->response = $this->executeWilderspaceHubPortal($file, $profile->getCurrentNode());
+                    $this->response = $this->executeResearcher($file, $profile->getCurrentNode());
                     break;
                 case FileType::ID_CODEBLADE:
                 case FileType::ID_CODEBLASTER:
@@ -840,7 +990,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $file->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile->getId());
         }
         return $this->response;
     }
@@ -1694,6 +1844,11 @@ class FileService extends BaseService
         return $response;
     }
 
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
     protected function executeResearcher(File $file, Node $node)
     {
         // init response
@@ -1976,6 +2131,7 @@ class FileService extends BaseService
                 'command' => 'showoutputprepend',
                 'message' => $messages
             );
+            $this->lowerIntegrityOfFile($file);
         }
         return $response;
     }
@@ -2028,6 +2184,7 @@ class FileService extends BaseService
                 'message' => $messages
             );
         }
+        $this->lowerIntegrityOfFile($file);
         return $response;
     }
 
@@ -2118,7 +2275,7 @@ class FileService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] killed a process<s/pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -2229,14 +2386,44 @@ class FileService extends BaseService
         );
         $returnMessage = array();
         $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s|%s</pre>',
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%s</pre>',
             $this->translate('FILEMOD-NAME'),
             $this->translate('DESCRIPTION')
         );
         foreach ($fileMods as $fileMod) {
             /** @var FileMod $fileMod */
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-20s|%s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%s</pre>',
+                $fileMod->getName(),
+                $fileMod->getDescription()
+            );
+        }
+        $response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        );
+        return $response;
+    }
+
+    /**
+     * @return array
+     */
+    public function showFileCategories()
+    {
+        $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileCategory')->findBy(
+            [],
+            ['name' => 'ASC']
+        );
+        $returnMessage = array();
+        $returnMessage[] = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%s</pre>',
+            $this->translate('FILECAT-NAME'),
+            $this->translate('DESCRIPTION')
+        );
+        foreach ($fileMods as $fileMod) {
+            /** @var FileCategory $fileMod */
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%s</pre>',
                 $fileMod->getName(),
                 $fileMod->getDescription()
             );

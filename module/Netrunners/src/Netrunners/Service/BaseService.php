@@ -590,7 +590,7 @@ class BaseService
      * If a profiles is given, those profiles will be excluded as they will be considered to be the source of the message.
      * @param Node $node
      * @param $message
-     * @param array $ignoredProfileIds
+     * @param mixed $ignoredProfileIds
      */
     public function messageEveryoneInNode(Node $node, $message, $ignoredProfileIds = [])
     {
@@ -601,6 +601,7 @@ class BaseService
         $profiles = $profileRepo->findByCurrentNode($node);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */
+            if (!is_array($ignoredProfileIds)) $ignoredProfileIds = [$ignoredProfileIds];
             if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
             foreach ($wsClients as $wsClient) {
                 if (
@@ -608,7 +609,7 @@ class BaseService
                     $wsClientsData[$wsClient->resourceId]['hash'] &&
                     $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()
                 ) {
-                    if (is_array($message)) {
+                    if (!is_array($message)) {
                         $message = [
                             'command' => 'showmessageprepend',
                             'message' => $message
@@ -789,7 +790,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($sourceNode, $message, [$profile->getId()]);
+        $this->messageEveryoneInNode($sourceNode, $message, $profile->getId());
         $profile->setCurrentNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
@@ -801,7 +802,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($targetNode, $message, [$profile->getId()]);
+        $this->messageEveryoneInNode($targetNode, $message, $profile->getId());
         $this->entityManager->flush($profile);
         $this->checkNpcAggro($profile, $resourceId);
         return ($resourceId) ? $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId) : false;
@@ -1636,6 +1637,43 @@ class BaseService
                 );
                 $this->messageEveryoneInNode($currentNode, ['command' => 'showmessageprepend', 'message' => $message]);
             }
+        }
+    }
+
+    /**
+     * @param File $file
+     * @param int $chance
+     * @param int $integrityLoss
+     * @param bool $flush
+     * @param File|null $targetFile
+     * @param NpcInstance|null $targetNpc
+     * @param Node|null $targetNode
+     */
+    protected function lowerIntegrityOfFile(
+        File $file,
+        $chance = 100,
+        $integrityLoss = 1,
+        $flush = false,
+        $targetFile = NULL,
+        $targetNpc = NULL,
+        $targetNode = NULL
+    )
+    {
+        if ($chance == 100 || mt_rand(1, 100) <= $chance) {
+            $currentIntegrity = $file->getIntegrity();
+            $newIntegrity = $currentIntegrity - $integrityLoss;
+            if ($newIntegrity < 0) $newIntegrity = 0;
+            $file->setIntegrity($newIntegrity);
+            if ($newIntegrity < 1) {
+                $file->setRunning(false);
+                $message = sprintf(
+                    $this->translate("[%s][%s] has lost all of its integrity and needs to be updated"),
+                    $file->getName(),
+                    $file->getId()
+                );
+                $this->storeNotification($file->getProfile(), $message, 'warning');
+            }
+            if ($flush) $this->entityManager->flush($file);
         }
     }
 

@@ -151,10 +151,10 @@ class FileRepository extends EntityRepository
      * Returns all running programs of the given type in the given system.
      * @param System $system
      * @param bool|true $running
-     * @param null|FileType $fileType
+     * @param int $fileType
      * @return array
      */
-    public function findRunningFilesInSystemByType(System $system, $running = true, FileType $fileType = NULL)
+    public function findRunningFilesInSystemByType(System $system, $running = true, $fileType)
     {
         $qb = $this->createQueryBuilder('f');
         $qb->where('f.system = :system');
@@ -164,7 +164,8 @@ class FileRepository extends EntityRepository
         }
         if ($fileType) {
             $qb->andWhere('f.fileType = :type');
-            $qb->setParameter('type', $fileType);
+            $fileTypeObject = $this->_em->find('Netrunners\Entity\FileType', $fileType);
+            $qb->setParameter('type', $fileTypeObject);
         }
         $qb->setParameter('system', $system);
         return $qb->getQuery()->getResult();
@@ -198,7 +199,7 @@ class FileRepository extends EntityRepository
     {
         $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
         $qb = $this->createQueryBuilder('f');
-        $qb->where('f.fileType = :fileType AND f.running IS NOT NULL AND f.integrity >= 1 AND f.profile = :profile AND f.node = :node');
+        $qb->where('f.fileType = :fileType AND f.running = 1 AND f.integrity >= 1 AND f.profile = :profile AND f.node = :node');
         $qb->setParameters([
             'fileType' => $fileType,
             'profile' => $profile,

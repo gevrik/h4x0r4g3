@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Profile;
 
@@ -54,6 +55,18 @@ class FileTypeRepository extends EntityRepository
         $qb->where($qb->expr()->like('ft.name', $qb->expr()->literal($keyword . '%')));
         $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * @param $fileCategoryId
+     * @return array
+     */
+    public function findByCategoryId($fileCategoryId)
+    {
+        $qb = $this->createQueryBuilder('ft');
+        $qb->innerJoin('ft.fileCategories', 'fc', 'WITH', 'fc.id = :fileCategoryId');
+        $qb->setParameter(':fileCategoryId', $fileCategoryId);
+        return $qb->getQuery()->getResult();
     }
 
 }

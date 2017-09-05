@@ -316,9 +316,7 @@ class NodeService extends BaseService
             );
             $this->response = [
                 'command' => 'showmessage',
-                'message' => $message,
-                'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData),
-                'exitconfirmmode' => true
+                'message' => $message
             ];
             // inform other players in node
             $message = sprintf(
@@ -326,7 +324,7 @@ class NodeService extends BaseService
                 $this->user->getUsername(),
                 $node->getLevel()
             );
-            $this->messageEveryoneInNode($node, $message);
+            $this->messageEveryoneInNode($node, $message, $profile->getId());
         }
         return $this->response;
     }
@@ -493,7 +491,7 @@ class NodeService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] added a new node to the system</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($currentNode, $message);
+            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
         }
         return $this->response;
     }
@@ -620,7 +618,7 @@ class NodeService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is searching for a hidden service connection</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
         }
         return $this->response;
     }
@@ -697,7 +695,7 @@ class NodeService extends BaseService
                 $this->user->getUsername(),
                 $name
             );
-            $this->messageEveryoneInNode($currentNode, $message);
+            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
         }
         return $this->response;
     }
@@ -897,7 +895,7 @@ class NodeService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is editing the node</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($currentNode, $message);
+            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
         }
         return $this->response;
     }
@@ -1096,7 +1094,7 @@ class NodeService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The adjacent node [%s] has been removed</pre>'),
                 $currentNodeName
             );
-            $this->messageEveryoneInNode($newCurrentNode, $message);
+            $this->messageEveryoneInNode($newCurrentNode, $message, $profile->getId());
         }
         $this->connectionsChecked = [];
         return $this->response;
@@ -1125,7 +1123,7 @@ class NodeService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is looking around</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($currentNode, $message);
+            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
         }
         return $this->response;
     }

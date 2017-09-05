@@ -432,7 +432,7 @@ class LoginService extends BaseService
                 'command' => 'showmessageprepend',
                 'message' => $messageText
             );
-            $this->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $message, [$user->getProfile()->getId()]);
+            $this->messageEveryoneInNode($user->getProfile()->getCurrentNode(), $message, $user->getProfile()->getId());
             // clear orphaned play-sessions and start a new one
             $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
             /** @var PlaySessionRepository $playSessionRepo */
