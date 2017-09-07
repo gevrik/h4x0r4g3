@@ -331,6 +331,7 @@ class LoopService extends BaseService
                 $this->messageEveryoneInNode(
                     ($combatData->npcTarget) ? $target->getNode() : $target->getCurrentNode(),
                     ['command' => 'showmessageprepend', 'message' => $nodeMessage],
+                    NULL,
                     $ignoredProfiles
                 );
             }
@@ -372,6 +373,7 @@ class LoopService extends BaseService
                 $this->messageEveryoneInNode(
                     ($combatData->npcTarget) ? $target->getNode() : $target->getCurrentNode(),
                     ['command' => 'showmessageprepend', 'message' => $nodeMessage],
+                    NULL,
                     $ignoredProfiles
                 );
             }

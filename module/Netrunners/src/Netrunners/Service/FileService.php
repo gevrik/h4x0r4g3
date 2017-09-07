@@ -375,7 +375,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $targetFile->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -449,7 +449,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $targetFile->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -532,7 +532,7 @@ class FileService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has created a text file</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
             return $this->response;
         }
         return $this->response;
@@ -680,7 +680,7 @@ class FileService extends BaseService
                         $this->user->getUsername(),
                         $file->getName()
                     );
-                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
                 }
             }
         }
@@ -763,7 +763,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $newName
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -833,7 +833,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $file->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -991,7 +991,7 @@ class FileService extends BaseService
                 $this->user->getUsername(),
                 $file->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -2085,6 +2085,110 @@ class FileService extends BaseService
         return [$response, $systemId, $nodeId];
     }
 
+    public function harvestCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        $minerString = $this->getNextParameter($contentArray, false);
+        if (!$minerString) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Please specify the miner that you want to harvest</pre>'
+            );
+        }
+        $minerId = NULL;
+        if (!$this->response) {
+            // try to get target file via repo method
+            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
+            if (!$this->response && count($targetFiles) < 1) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
+                );
+            }
+            if (!$this->response) {
+                $miner = array_shift($targetFiles);
+                /** @var File $miner */
+                if ($miner->getProfile() != $profile) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>'
+                    );
+                }
+                if (!$this->response) {
+                    $minerData = json_decode($miner->getData());
+                    if (!isset($minerData->value)) {
+                        $this->response = [
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                                $this->translate('No resources to harvest in that miner')
+                            )
+                        ];
+                    }
+                    if (!$this->response && $minerData->value < 1) {
+                        $this->response = [
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                                $this->translate('No resources to harvest in that miner')
+                            )
+                        ];
+                    }
+                    if (!$this->response) {
+                        $availableResources = $minerData->value;
+                        $minerData->value = 0;
+                        switch ($miner->getFileType()->getId()) {
+                            default:
+                                $message = NULL;
+                                break;
+                            case FileType::ID_DATAMINER:
+                                $profile->setSnippets($profile->getSnippets() + $availableResources);
+                                $message = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You harvest [%s] snippets from [%s]</pre>'),
+                                    $availableResources,
+                                    $miner->getName()
+                                );
+                                break;
+                            case FileType::ID_COINMINER:
+                                $profile->setCredits($profile->getCredits() + $availableResources);
+                                $message = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You harvest [%s] credits from [%s]</pre>'),
+                                    $availableResources,
+                                    $miner->getName()
+                                );
+                                break;
+                        }
+                        if (!$message) {
+                            $message = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">Unable to harvest at this moment</pre>'),
+                                $availableResources,
+                                $miner->getName()
+                            );
+                        }
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => $message
+                        );
+                        $miner->setData(json_encode($minerData));
+                        $this->entityManager->flush($profile);
+                        $this->entityManager->flush($miner);
+                        // inform other players in node
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is harvesting [%s]</pre>'),
+                            $this->user->getUsername(),
+                            $miner->getName()
+                        );
+                        $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+                    }
+                }
+            }
+        }
+        return $this->response;
+    }
+
 
     public function executeWarningSiphon($contentArray)
     {
@@ -2401,7 +2505,7 @@ class FileService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] killed a process<s/pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }

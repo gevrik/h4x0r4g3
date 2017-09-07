@@ -158,7 +158,7 @@ class FactionService extends BaseService
                     $this->user->getUsername(),
                     $faction->getName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
             }
         }
         return $this->response;

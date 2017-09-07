@@ -138,7 +138,7 @@ class MilkrunService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has requested a milkrun</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }

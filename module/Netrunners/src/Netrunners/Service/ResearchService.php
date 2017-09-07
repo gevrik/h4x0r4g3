@@ -242,7 +242,7 @@ class ResearchService extends BaseService
                         $this->user->getUsername(),
                         $researcher->getName()
                     );
-                    $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
+                    $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
                 }
             }
         }

@@ -90,7 +90,7 @@ class CombatService extends BaseService
                     $this->user->getUsername(),
                     $npc->getName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile->getId());
+                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], NULL, $profile->getId());
             }
         }
         return $this->response;

@@ -243,6 +243,7 @@ class ParserService
                 );
                 break;
             case 'attack':
+            case 'a':
                 $response = $this->combatService->attackCommand($resourceId, $contentArray);
                 break;
             case 'clear':
@@ -360,6 +361,9 @@ class ParserService
             case 'man':
                 $response = $this->manpageService->helpCommand($resourceId, $contentArray);
                 break;
+            case 'harvest':
+                $response = $this->fileService->harvestCommand($resourceId, $contentArray);
+                break;
             case 'say':
                 $response = $this->chatService->sayChat($resourceId, $contentArray);
                 break;
@@ -388,6 +392,8 @@ class ParserService
                 $response = $this->manpageService->listManpages($resourceId);
                 break;
             case 'ls':
+            case 'l':
+            case 'look':
                 $response = $this->nodeService->showNodeInfo($resourceId);
                 break;
             case 'mail':

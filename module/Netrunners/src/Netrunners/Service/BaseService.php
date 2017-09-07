@@ -315,30 +315,54 @@ class BaseService
         $detectorSkillRating = 0;
         $stealtherSkillRating = 0;
         $stealthing = false;
+        $stealtherName = '';
+        $detectorName = '';
+        $currentNode = NULL;
         // get values depending on instance
         if ($stealther instanceof Profile) {
             $stealthing = $stealther->getStealthing();
+            if (!$stealthing) return $canSee;
+            $currentNode = $stealther->getCurrentNode();
+            $stealtherName = $stealther->getUser()->getUsername();
             $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
             $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+            // TODO add programs that modify ratings (cloak)
         }
         if ($stealther instanceof NpcInstance) {
             $stealthing = $stealther->getStealthing();
+            if (!$stealthing) return $canSee;
+            $currentNode = $stealther->getNode();
+            $stealtherName = $stealther->getName();
             $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
             $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
-            // they can see their own instances
+            // if detector is owner then they can always see their instances
             if ($detector instanceof Profile) {
                 if ($detector == $stealther->getProfile()) $stealthing = false;
             }
+            // TODO add programs that modify ratings
         }
         if ($stealther instanceof File) {
             $stealthing = $stealther->getFileType()->getStealthing();
+            if (!$stealthing) return $canSee;
+            $currentNode = $stealther->getNode();
+            $stealtherName = $stealther->getName();
             $skillRating = ceil(($stealther->getIntegrity() + $stealther->getLevel()) / 2);
             $stealtherSkillRating = $skillRating;
             $detectorSkillRating = $skillRating;
-            // they can see their own files
+            // if detector is owner then they can always see their files
             if ($detector instanceof Profile) {
                 if ($detector == $stealther->getProfile()) $stealthing = false;
             }
+            // TODO add mods that modify ratings
+        }
+        if ($detector instanceof Profile) {
+            $detectorName = ($detector->getStealthing()) ? 'something' : $detector->getUser()->getUsername();
+        }
+        if ($detector instanceof NpcInstance) {
+            $detectorName = ($detector->getStealthing()) ? 'something' : $detector->getName();
+        }
+        if ($detector instanceof File) {
+            $detectorName = ($detector->getFileType()->getStealthing()) ? 'something' : $detector->getName();
         }
         // only check if they are actively stealthing
         if ($stealthing) {
@@ -347,8 +371,21 @@ class BaseService
             // check for skill gain
             if ($canSee) {
                 if ($detector instanceof Profile) $this->learnFromSuccess($detector, ['skills' => ['detection']], -50);
+                if ($stealther instanceof Profile) {
+                    $this->learnFromFailure($stealther, ['skills' => ['stealth']], -50);
+                    $stealther->setStealthing(false);
+                    $this->entityManager->flush($stealther);
+                }
+                // message everyone in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] has detected [%s]</pre>'),
+                    $detectorName,
+                    $stealtherName
+                );
+                $this->messageEveryoneInNode($currentNode, $message);
             }
             else {
+                if ($detector instanceof Profile) $this->learnFromFailure($detector, ['skills' => ['detection']], -50);
                 if ($stealther instanceof Profile) $this->learnFromSuccess($stealther, ['skills' => ['stealth']], -50);
             }
         }
@@ -589,12 +626,14 @@ class BaseService
 
     /**
      * Sends the given message to everyone in the given node, optionally excluding the source of the message.
-     * If a profiles is given, those profiles will be excluded as they will be considered to be the source of the message.
+     * An actor can be given, if it is, the method will check if the current subject can see the actor.
+     * If profiles is given, those profiles will be excluded as they will be considered to be the source of the message.
      * @param Node $node
      * @param $message
+     * @param Profile|NpcInstance|null $actor
      * @param mixed $ignoredProfileIds
      */
-    public function messageEveryoneInNode(Node $node, $message, $ignoredProfileIds = [])
+    public function messageEveryoneInNode(Node $node, $message, $actor = NULL, $ignoredProfileIds = [])
     {
         $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         /** @var ProfileRepository $profileRepo */
@@ -605,12 +644,14 @@ class BaseService
             /** @var Profile $xprofile */
             if (!is_array($ignoredProfileIds)) $ignoredProfileIds = [$ignoredProfileIds];
             if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
+            if ($xprofile !== $actor && !$this->canSee($xprofile, $actor)) continue;
             foreach ($wsClients as $wsClient) {
                 if (
                     isset($wsClientsData[$wsClient->resourceId]) &&
                     $wsClientsData[$wsClient->resourceId]['hash'] &&
                     $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()
                 ) {
+
                     if (!is_array($message)) {
                         $message = [
                             'command' => 'showmessageprepend',
@@ -792,7 +833,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($sourceNode, $message, $profile->getId());
+        $this->messageEveryoneInNode($sourceNode, $message, $profile, $profile->getId());
         $profile->setCurrentNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
@@ -804,7 +845,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($targetNode, $message, $profile->getId());
+        $this->messageEveryoneInNode($targetNode, $message, $profile, $profile->getId());
         $this->entityManager->flush($profile);
         $this->checkNpcAggro($profile, $resourceId);
         return ($resourceId) ? $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId) : false;
@@ -840,7 +881,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($sourceNode, $message);
+        $this->messageEveryoneInNode($sourceNode, $message, $npc);
         $npc->setNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
@@ -852,9 +893,10 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($targetNode, $message);
+        $this->messageEveryoneInNode($targetNode, $message, $npc);
         $this->checkNpcAggro($npc);
-        $this->checkNpcTriggers($npc);
+        $this->checkAggro($npc);
+        if (!$this->isInCombat($npc)) $this->checkNpcTriggers($npc);
         $this->entityManager->flush($npc);
         return true;
     }
@@ -1232,6 +1274,7 @@ class BaseService
         $currentRating = $profile->getSecurityRating();
         $profile->setSecurityRating($currentRating + $amount);
         $newRating = $profile->getSecurityRating();
+        $currentNode = $profile->getCurrentNode();
         if ($newRating >= Profile::SECURITY_RATING_MAX) {
             $newRating = Profile::SECURITY_RATING_MAX;
             $profile->setSecurityRating(Profile::SECURITY_RATING_MAX);
@@ -1244,7 +1287,7 @@ class BaseService
             /** @var Npc $npcType */
             $npcInstance = $this->spawnNpcInstance(
                 $npcType,
-                $profile->getCurrentNode(),
+                $currentNode,
                 NULL,
                 NULL,
                 NULL,
@@ -1257,7 +1300,7 @@ class BaseService
                 $npcType->getName(),
                 $profile->getUser()->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message);
+            $this->messageEveryoneInNode($currentNode, $message, $profile);
             $this->forceAttack($npcInstance, $profile);
         }
         $this->entityManager->flush($profile);
@@ -1773,6 +1816,63 @@ class BaseService
         }
         if (!$value) throw new \Exception('Invalid system or value type given');
         return $value;
+    }
+
+    /**
+     * @param NpcInstance $actor
+     */
+    public function checkAggro(NpcInstance $actor)
+    {
+        if ($actor->getAggressive() && !$this->isInCombat($actor)) {
+            $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+            /** @var NpcInstanceRepository $npcInstanceRepo */
+            $currentNode = $actor->getNode();
+            $npcInstances = $npcInstanceRepo->findByNode($currentNode);
+            foreach ($npcInstances as $npcInstance) {
+                /** @var NpcInstance $npcInstance */
+                if ($npcInstance === $actor) continue;
+                if (!$this->canSee($actor, $npcInstance)) continue;
+                if ($npcInstance->getProfile() === $actor->getProfile()) continue;
+                if ($actor->getGroup() && $npcInstance->getGroup() == $actor->getGroup()) continue;
+                if ($actor->getFaction() && $npcInstance->getFaction() == $actor->getFaction()) continue;
+                if ($actor->getProfile() == NULL && $actor->getFaction() == NULL && $actor->getGroup() == NULL && $npcInstance->getProfile() == NULL && $npcInstance->getFaction() == NULL && $npcInstance->getGroup() == NULL) continue;
+                // set combatants
+                $this->getWebsocketServer()->addCombatant($actor, $npcInstance);
+                if (!$this->isInCombat($npcInstance)) $this->getWebsocketServer()->addCombatant($npcInstance, $actor);
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
+                    $actor->getName(),
+                    $npcInstance->getName()
+                );
+                $this->messageEveryoneInNode($currentNode, ['command' => 'showmessageprepend', 'message' => $message]);
+                break;
+            }
+            if (!$this->isInCombat($actor)) {
+                $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+                /** @var ProfileRepository $profileRepo */
+                $profiles = $profileRepo->findByCurrentNode($currentNode);
+                foreach ($profiles as $profile) {
+                    /** @var Profile $profile */
+                    if ($profile->getCurrentResourceId()) {
+                        if ($actor->getProfile() === $profile) continue;
+                        if ($profile->getGroup() && $actor->getGroup() == $profile->getGroup()) continue;
+                        if ($profile->getFaction() && $actor->getFaction() == $profile->getFaction()) continue;
+                        // set combatants
+                        $this->getWebsocketServer()->addCombatant($actor, $profile, NULL, $profile->getCurrentResourceId());
+                        if (!$this->isInCombat($profile)) $this->getWebsocketServer()->addCombatant($profile, $actor, $profile->getCurrentResourceId());
+                        // inform other players in node
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
+                            $actor->getName(),
+                            $profile->getUser()->getUsername()
+                        );
+                        $this->messageEveryoneInNode($currentNode, ['command' => 'showmessageprepend', 'message' => $message]);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     /**

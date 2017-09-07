@@ -197,12 +197,12 @@ class ConnectionService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
                 ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
             );
-            $this->messageEveryoneInNode($currentNode, $sourceMessage, $profile->getId());
+            $this->messageEveryoneInNode($currentNode, $sourceMessage, NULL, $profile->getId());
             $targetMessage = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
                 $currentNode->getName()
             );
-            $this->messageEveryoneInNode($targetNode, $targetMessage, $profile->getId());
+            $this->messageEveryoneInNode($targetNode, $targetMessage, NULL, $profile->getId());
         }
         return $this->response;
     }
@@ -253,7 +253,7 @@ class ConnectionService extends BaseService
                 $this->user->getUsername(),
                 $connection->getTargetNode()->getName()
             );
-            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -406,7 +406,7 @@ class ConnectionService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] added a new connection</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -508,7 +508,7 @@ class ConnectionService extends BaseService
                 $this->user->getUsername(),
                 $targetConnection->getTargetNode()->getName()
             );
-            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -599,14 +599,14 @@ class ConnectionService extends BaseService
                 $this->user->getUsername(),
                 $targetnode->getName()
             );
-            $this->messageEveryoneInNode($currentNode, $message, $profile->getId());
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
             // inform other players in target node
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unsecured the connection to [%s]</pre>'),
                 $this->user->getUsername(),
                 $currentNode->getName()
             );
-            $this->messageEveryoneInNode($targetnode, $message, $profile->getId());
+            $this->messageEveryoneInNode($targetnode, $message, $profile, $profile->getId());
         }
         return $this->response;
     }

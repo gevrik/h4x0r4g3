@@ -107,8 +107,9 @@ class CodingService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
         $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_CODING) {
+        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_CODING) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -131,7 +132,7 @@ class CodingService extends BaseService
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has entered coding mode</pre>'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile->getId());
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
         }
         return $this->response;
     }
