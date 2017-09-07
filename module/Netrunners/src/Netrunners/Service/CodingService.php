@@ -432,13 +432,17 @@ class CodingService extends BaseService
     /**
      * @param int $resourceId
      * @param $codeOptions
+     * @param $contentArray
      * @return array|bool
      */
-    public function commandCode($resourceId, $codeOptions)
+    public function commandCode($resourceId, $codeOptions, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
         $mode = $codeOptions->mode;
+        $amount = $this->getNextParameter($contentArray, false, true );
+        if (!$amount) $amount = 1;
+        if ($amount > 5) $amount = 5;
         switch ($mode) {
             default:
                 $this->response = array(
@@ -456,7 +460,7 @@ class CodingService extends BaseService
                 $this->response = $this->codeProgram($codeOptions);
                 break;
             case 'resource':
-                $this->response = $this->codeResource($codeOptions);
+                $this->response = $this->codeResource($codeOptions, $amount);
                 break;
         }
         return $this->response;
@@ -464,12 +468,14 @@ class CodingService extends BaseService
 
     /**
      * @param $codeOptions
+     * @param int $amount
      * @return array|bool
      */
-    private function codeResource($codeOptions)
+    private function codeResource($codeOptions, $amount = 1)
     {
         $profile = $this->user->getProfile();
         $type = (int)$codeOptions->fileType;
+        // check if a type has been set
         if ($type === 0) {
             $this->response = array(
                 'command' => 'showmessage',
@@ -479,7 +485,9 @@ class CodingService extends BaseService
                 )
             );
         }
+        // check if a level has been set
         $level = $codeOptions->fileLevel;
+        $totalSnippets = $level * $amount;
         if (!$this->response && $level === 0) {
             $this->response = array(
                 'command' => 'showmessage',
@@ -505,8 +513,9 @@ class CodingService extends BaseService
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code the %s</pre>'),
-                        $level,
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code %s %s</pre>'),
+                        $totalSnippets,
+                        $amount,
                         $filePart->getName()
                     )
                 );
@@ -531,31 +540,32 @@ class CodingService extends BaseService
             $completionDate = new \DateTime();
             $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE) . 'S'));
             $filePartId = $filePart->getId();
-            $this->loopService->addJob([
-                'difficulty' => $difficulty,
-                'modifier' => $modifier,
-                'completionDate' => $completionDate,
-                'typeId' => $filePartId,
-                'type' => 'resource',
-                'mode' => 'resource',
-                'skills' => $skillList,
-                'profileId' => $profile->getId(),
-                'socketId' => $this->clientData->socketId,
-                'nodeId' => $profile->getCurrentNode()->getId()
-            ]);
-
+            for ($x = 1; $x<=$amount; $x++) {
+                $this->loopService->addJob([
+                    'difficulty' => $difficulty,
+                    'modifier' => $modifier,
+                    'completionDate' => $completionDate,
+                    'typeId' => $filePartId,
+                    'type' => 'resource',
+                    'mode' => 'resource',
+                    'skills' => $skillList,
+                    'profileId' => $profile->getId(),
+                    'socketId' => $this->clientData->socketId,
+                    'nodeId' => $profile->getCurrentNode()->getId()
+                ]);
+            }
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding the %s for %s snippets</pre>'),
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding %s %s for %s snippets</pre>'),
+                    $amount,
                     $filePart->getName(),
-                    $level
+                    $totalSnippets
                 )
             );
             $currentSnippets = $profile->getSnippets();
-            $profile->setSnippets($currentSnippets - $level);
+            $profile->setSnippets($currentSnippets - $totalSnippets);
             $this->entityManager->flush($profile);
-
         }
         return $this->response;
     }

@@ -706,7 +706,7 @@ class ParserService
                 $response = $this->codingService->commandOptions($resourceId, $codeOptions);
                 break;
             case 'code':
-                return $this->codingService->commandCode($resourceId, $codeOptions);
+                return $this->codingService->commandCode($resourceId, $codeOptions, $contentArray);
             case 'jobs':
                 $response = $this->profileService->showJobs($resourceId, $jobs);
                 break;
