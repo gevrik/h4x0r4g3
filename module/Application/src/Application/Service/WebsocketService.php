@@ -458,7 +458,8 @@ class WebsocketService implements MessageComponentInterface {
                 'command' => '',
                 'contentArray' => []
             ],
-            'captchasolution' => NULL
+            'captchasolution' => NULL,
+            'invitationid' => NULL
         );
         $response = array(
             'command' => 'getipaddy',
@@ -679,6 +680,13 @@ class WebsocketService implements MessageComponentInterface {
                     break;
                 case 'solvecaptcha':
                     list($disconnect, $response) = $this->loginService->solveCaptcha($resourceId, $content);
+                    $from->send(json_encode($response));
+                    if ($disconnect) {
+                        $from->close();
+                    }
+                    break;
+                case 'enterinvitationcode':
+                    list($disconnect, $response) = $this->loginService->enterInvitationCode($resourceId, $content);
                     $from->send(json_encode($response));
                     if ($disconnect) {
                         $from->close();

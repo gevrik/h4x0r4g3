@@ -390,6 +390,9 @@ class ParserService
             case 'inventory':
                 $response = $this->profileService->showInventory($resourceId);
                 break;
+            case 'invitations':
+                $response = $this->profileService->showInvitations($resourceId);
+                break;
             case 'joinfaction':
                 $response = $this->factionService->joinFaction($resourceId);
                 break;
@@ -579,6 +582,9 @@ class ParserService
             case 'showclients':
                 $response = $this->adminService->adminShowClients($resourceId);
                 break;
+            case 'giveinvitation':
+                $response = $this->adminService->giveInvitation($resourceId, $contentArray);
+                break;
             case 'goto':
                 $response = $this->adminService->gotoNodeCommand($resourceId, $contentArray);
                 break;
@@ -605,6 +611,9 @@ class ParserService
                 break;
             case 'toggleadminmode':
                 $response = $this->adminService->adminToggleAdminMode($resourceId);
+                break;
+            case 'showusers':
+                $response = $this->adminService->adminShowUsers($resourceId);
                 break;
             case 'cybermap':
                 $response = $this->adminService->showCyberspaceMap($resourceId);

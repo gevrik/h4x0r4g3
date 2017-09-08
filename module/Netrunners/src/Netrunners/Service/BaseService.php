@@ -21,6 +21,7 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Group;
+use Netrunners\Entity\Invitation;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
@@ -443,15 +444,61 @@ class BaseService
             ]);
             /** @var Skill $skill */
             $skillRating = $this->getSkillRating($profile, $skill->getId());
+            // return true if already at max
+            if ($skillRating > 99) return true;
+            // calculate chance
             $chance = 100 - $skillRating + $modifier;
+            // return true if chance smaller than one
             if ($chance < 1) return true;
+            // roll
             if (mt_rand(1, 100) <= $chance) {
+                // calc new skill-rating, set and message
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You have gained a level in %s</pre>'),
+                    $skill->getName()
+                );
+                $this->messageProfile($profile, $message);
+                // check if the should receive skillpoints for reaching a milestone
+                if ($newSkillRating%10 == 0) {
+                    // skillrating divisible by 10, gain skillpoints
+                    $this->gainSkillpoints($profile, floor(round($newSkillRating / 10)));
+                    // check if they just mastered the skill and give them an invitation as a reward
+                    if ($newSkillRating >= 100) {
+                        $this->gainInvitation($profile);
+                    }
+                }
             }
         }
         $this->entityManager->flush($profile);
         return true;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param null|int $special
+     */
+    protected function gainInvitation(Profile $profile, $special = NULL)
+    {
+        $given = new \DateTime();
+        $code = md5($given->format('Y/m/d-H:i:s') . '-' . $profile->getId());
+        $invitation = new Invitation();
+        $invitation->setCode($code);
+        $invitation->setGiven($given);
+        $invitation->setUsed(NULL);
+        $invitation->setGivenTo($profile);
+        $invitation->setUsedBy(NULL);
+        $invitation->setSpecial($special);
+        $this->entityManager->persist($invitation);
+        $this->entityManager->flush($invitation);
+        $message = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+            ($special) ?
+                $this->translate('You have gained a special invitation (see "invitations" for a list)') :
+                $this->translate('You have gained an invitation (see "invitations" for a list)')
+        );
+        $this->messageProfile($profile, $message);
     }
 
     /**
@@ -475,10 +522,72 @@ class BaseService
             if (mt_rand(1, 100) <= $chance) {
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">You have gained a level in %s</pre>'),
+                    $skill->getName()
+                );
+                $this->messageProfile($profile, $message);
             }
         }
         $this->entityManager->flush($profile);
         return true;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $amount
+     * @param bool $flush
+     */
+    protected function gainSkillpoints(Profile $profile, $amount, $flush = false)
+    {
+        $profile->setSkillPoints($profile->getSkillPoints() + $amount);
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">You have received %s skillpoints</pre>'),
+            $amount
+        );
+        $this->messageProfile($profile, $message);
+        if ($flush) $this->entityManager->flush($profile);
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $message
+     */
+    protected function messageProfile(Profile $profile, $message = NULL)
+    {
+        $wsClient = $this->getWsClientByProfile($profile);
+        if ($wsClient) {
+            if (!$message) {
+                $message = '<pre style="white-space: pre-wrap;" class="text-danger">INVALID SYSTEM-MESSAGE RECEIVED</pre>';
+            }
+            if (is_array($message)) {
+                $command = 'showoutputprepend';
+            }
+            else {
+                $command = 'showmessageprepend';
+            }
+            $response = [
+                'command' => $command,
+                'message' => $message
+            ];
+            $wsClient->send(json_encode($response));
+        }
+    }
+
+    /**
+     * @param Profile $profile
+     * @return null|object
+     */
+    protected function getWsClientByProfile(Profile $profile)
+    {
+        $ws = $this->getWebsocketServer();
+        foreach ($ws->getClients() as $wsClientId => $wsClient) {
+            $wsClientData = $ws->getClientData($wsClient->resourceId);
+            if ($wsClientData->profileId == $profile->getId()) {
+                return $wsClient;
+            }
+        }
+        return NULL;
     }
 
     /**

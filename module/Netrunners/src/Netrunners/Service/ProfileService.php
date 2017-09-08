@@ -15,12 +15,14 @@ use Netrunners\Entity\Faction;
 use Netrunners\Entity\Feedback;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\Invitation;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\InvitationRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SkillRepository;
 use Zend\Crypt\Password\Bcrypt;
@@ -607,6 +609,63 @@ class ProfileService extends BaseService
 
     /**
      * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showInvitations($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $returnMessage = array();
+        $invitationRepo = $this->entityManager->getRepository('Netrunners\Entity\Invitation');
+        /** @var InvitationRepository $invitationRepo */
+        $invitations = $invitationRepo->findAllByProfile($profile);
+        $returnMessage[] = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-19s|%-32s|%-19s|%s</pre>',
+            $this->translate('GIVEN-DATE'),
+            $this->translate('USED-BY'),
+            $this->translate('USED-DATE'),
+            $this->translate('CODE')
+        );
+        $totalInvitations = 0;
+        $unusedInvitations = 0;
+        $usedInvitations = 0;
+        foreach ($invitations as $invitation) {
+            /** @var Invitation $invitation */
+            $totalInvitations++;
+            if ($invitation->getUsed()) {
+                $usedInvitations++;
+                $usedByString = $invitation->getUsedBy()->getUser()->getUsername();
+                $usedString = $invitation->getUsed()->format('Y/m/d H:i:s');
+            }
+            else {
+                $unusedInvitations++;
+                $usedByString = '---';
+                $usedString = '---';
+            }
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-19s|%-32s|%-19s|%s</pre>',
+                $invitation->getGiven()->format('Y/m/d H:i:s'),
+                $usedByString,
+                $usedString,
+                $invitation->getCode()
+            );
+        }
+        $returnMessage[] = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-addon">You have used %s of %s invitations (%s available)</pre>',
+            $usedInvitations,
+            $totalInvitations,
+            $unusedInvitations
+        );
+        $this->response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        );
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
      * @param $contentArray
      * @return array|bool
      */
@@ -655,6 +714,20 @@ class ProfileService extends BaseService
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Unknown skill')
+                )
+            ];
+        }
+        // we got a skill now if there is no response yet - check if the are advanced skills
+        if (
+            !$this->response &&
+            $targetSkill &&
+            ($targetSkill->getId() == Skill::ID_ADVANCED_CODING || $targetSkill->getId() == Skill::ID_ADVANCED_NETWORKING)
+        ) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Advanced skills can only be improved by practicing them')
                 )
             ];
         }

@@ -436,7 +436,9 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $databaseNode, $profile, $faction, $group, $databaseNode);
+                $npcInstance = $this->spawnNpcInstance($npc, $databaseNode, $profile, $faction, $group, $databaseNode);
+                $this->checkNpcAggro($npcInstance);
+                $this->checkAggro($npcInstance);
             }
             $firewallNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_FIREWALL);
             foreach ($firewallNodes as $firewallNode) {
@@ -450,7 +452,9 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group, $firewallNode);
+                $npcInstance = $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group, $firewallNode);
+                $this->checkNpcAggro($npcInstance);
+                $this->checkAggro($npcInstance);
             }
             $terminalNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_TERMINAL);
             foreach ($terminalNodes as $terminalNode) {
@@ -464,7 +468,9 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $terminalNode, $profile, $faction, $group, $terminalNode);
+                $npcInstance = $this->spawnNpcInstance($npc, $terminalNode, $profile, $faction, $group, $terminalNode);
+                $this->checkNpcAggro($npcInstance);
+                $this->checkAggro($npcInstance);
             }
             $recruitmentNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_RECRUITMENT);
             foreach ($recruitmentNodes as $recruitmentNode) {
@@ -477,7 +483,9 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group, $recruitmentNode);
+                $npcInstance = $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group, $recruitmentNode);
+                $this->checkNpcAggro($npcInstance);
+                $this->checkAggro($npcInstance);
             }
             $cpuNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_CPU);
             foreach ($cpuNodes as $cpuNode) {
@@ -490,14 +498,20 @@ class LoopService extends BaseService
                 $profile = $system->getProfile();
                 $faction = $system->getFaction();
                 $group = $system->getGroup();
-                $this->spawnNpcInstance($npc, $cpuNode, $profile, $faction, $group, $cpuNode);
+                $npcInstance = $this->spawnNpcInstance($npc, $cpuNode, $profile, $faction, $group, $cpuNode);
+                $this->checkNpcAggro($npcInstance);
+                $this->checkAggro($npcInstance);
             }
             $intrusionNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_INTRUSION);
             foreach ($intrusionNodes as $intrusionNode) {
                 /** @var Node $intrusionNode */
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WILDERSPACE_INTRUDER);
                 /** @var Npc $npc */
-                if (mt_rand(1, 100) <= $intrusionNode->getLevel()) $this->spawnNpcInstance($npc, $intrusionNode);
+                if (mt_rand(1, 100) <= $intrusionNode->getLevel()) {
+                    $npcInstance = $this->spawnNpcInstance($npc, $intrusionNode);
+                    $this->checkNpcAggro($npcInstance);
+                    $this->checkAggro($npcInstance);
+                }
             }
         }
         $this->entityManager->flush();

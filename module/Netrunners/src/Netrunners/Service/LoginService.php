@@ -20,6 +20,7 @@ use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Model\TextToImage;
 use Netrunners\Repository\FeedbackRepository;
+use Netrunners\Repository\InvitationRepository;
 use Netrunners\Repository\PlaySessionRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
@@ -176,6 +177,26 @@ class LoginService extends BaseService
         $disconnect = false;
         $response = false;
         if ($content == $clientData->captchasolution) {
+            $response = array(
+                'command' => 'enterinvitationcode'
+            );
+        }
+        else {
+            $disconnect = true;
+        }
+        return [$disconnect, $response];
+    }
+
+    public function enterInvitationCode($resourceId, $content)
+    {
+        $ws = $this->getWebsocketServer();
+        $disconnect = false;
+        $response = false;
+        $invitationRepo = $this->entityManager->getRepository('Netrunners\Entity\Invitation');
+        /** @var InvitationRepository $invitationRepo */
+        $invitation = $invitationRepo->findOneUnusedByCode($content);
+        if ($invitation && $content == $invitation->getCode() && !$invitation->getUsed()) {
+            $ws->setClientData($resourceId, 'invitationid', $invitation->getId());
             $response = array(
                 'command' => 'createpassword'
             );
@@ -337,6 +358,15 @@ class LoginService extends BaseService
             $profile->setCurrentNode($ioNode);
             $profile->setHomeNode($ioNode);
             $profile->setLocale(Profile::DEFAULT_PROFILE_LOCALE);
+            // handle invitation
+            if ($clientData->invitationid) {
+                $invitation = $this->entityManager->find('Netrunners\Entity\Invitation', $clientData->invitationid);
+                if ($invitation) {
+                    $invitation->setUsed(new \DateTime());
+                    $invitation->setUsedBy($profile);
+                    $ws->setClientData($resourceId, 'invitationid', NULL);
+                }
+            }
             // flush to db
             $this->entityManager->flush();
             $hash = hash('sha256', $ws->getHash() . $user->getId());

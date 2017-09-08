@@ -47,6 +47,101 @@ class AdminService extends BaseService
     }
 
     /**
+     * Give a registration invitation to a player.
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function giveInvitation($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        list($contentArray, $targetUserId) = $this->getNextParameter($contentArray, true, true);
+        if (!$targetUserId) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a user id (use "clients" to get a list)')
+                )
+            ];
+        }
+        $targetUser = false;
+        if (!$this->response) {
+            $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $targetUserId);
+        }
+        if (!$this->response && !$targetUser) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a user id (use "clients" to get a list)')
+                )
+            ];
+        }
+        $special = $this->getNextParameter($contentArray, false, true);
+        if (!$this->response) {
+            $this->gainInvitation($targetUser->getProfile(), $special);
+            $message = sprintf('<pre style="white-space: pre-wrap;" class="text-addon">DONE</pre>');
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function adminShowUsers($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $returnMessage = [];
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('unknown command')
+                )
+            ];
+        }
+        if (!$this->response) {
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-32s</pre>',
+                $this->translate('ID'),
+                $this->translate('USERNAME')
+            );
+            $users = $this->entityManager->getRepository('TmoAuth\Entity\User')->findAll();
+            foreach ($users as $user) {
+                /** @var User $user */
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-32s</pre>',
+                    $user->getId(),
+                    $user->getUsername()
+                );
+            }
+            $this->response = [
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
      * @param $resourceId
      * @return array|bool|false
      */
@@ -588,28 +683,37 @@ class AdminService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('unknown command')
-                )
-            ];
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $this->response = $this->isActionBlocked($resourceId);
+        // check if they own this system or if they are an admin
+        if (!$this->response && $currentNode->getSystem()->getProfile() !== $profile) {
+            if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+                $this->response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Unable to quick-move in systems that are not owned by you')
+                    )
+                ];
+            }
         }
+        // get target node from params
         if (!$this->response) {
+            // get id
             $targetNodeId = $this->getNextParameter($contentArray, false, true);
             if (!$targetNodeId) {
                 $this->response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Please specify the node id ("nlist [systemid]" for list)')
+                        $this->translate('Please specify the node id ("nodes" for list)')
                     )
                 ];
             }
             $targetNode = NULL;
             if (!$this->response) {
+                // get target node
                 $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
                 /** @var NodeRepository $nodeRepo */
                 $targetNode = $nodeRepo->find($targetNodeId);
@@ -623,12 +727,36 @@ class AdminService extends BaseService
                     ];
                 }
             }
+            // we have a target node
             if (!$this->response && $targetNode) {
-                $profile = $this->user->getProfile();
-                $currentNode = $profile->getCurrentNode();
-                $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $targetNode);
-                if ($currentNode->getSystem() != $targetNode->getSystem()) {
-                    $this->addAdditionalCommand('flyto', $targetNode->getSystem()->getGeocoords(), true);
+                // check if they are trying to move to the same node that they are currently in
+                if (!$this->response && $targetNode == $currentNode) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('You are already there')
+                        )
+                    ];
+                }
+                $targetSystem = $targetNode->getSystem();
+                // they can't quick-move if the target node is in a different system (unless admin role)
+                if (!$this->response && $targetSystem != $currentNode->getSystem()) {
+                    if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+                        $this->response = [
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                                $this->translate('Unable to quick-move between systems')
+                            )
+                        ];
+                    }
+                }
+                if (!$this->response) {
+                    $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $targetNode);
+                    if ($currentNode->getSystem() != $targetNode->getSystem()) {
+                        $this->addAdditionalCommand('flyto', $targetNode->getSystem()->getGeocoords(), true);
+                    }
                 }
             }
         }

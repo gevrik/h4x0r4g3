@@ -329,6 +329,7 @@ class NodeService extends BaseService
                 'command' => 'showmessage',
                 'message' => $message
             ];
+            // TODO update npc that have this home as home node
             // inform other players in node
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has upgraded the node to level [%s]</pre>'),

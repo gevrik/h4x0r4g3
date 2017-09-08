@@ -172,6 +172,10 @@
                     loginStage = 'solvecaptcha';
                     md.append('<div class="text-muted output-line">Please solve this: <img src="../temp/captcha.png" alt="captcha" /></div>');
                     break;
+                case 'enterinvitationcode':
+                    loginStage = 'enterinvitationcode';
+                    md.append('<div class="text-muted output-line">Please enter your invitation code:</div>');
+                    break;
                 case 'createpassword':
                     loginStage = 'createpassword';
                     //commandInput.attr('type', 'password');
@@ -525,6 +529,13 @@
                             case 'solvecaptcha':
                                 jsonData = {
                                     command: 'solvecaptcha',
+                                    hash: hash,
+                                    content: message
+                                };
+                                break;
+                            case 'enterinvitationcode':
+                                jsonData = {
+                                    command: 'enterinvitationcode',
                                     hash: hash,
                                     content: message
                                 };
