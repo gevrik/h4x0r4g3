@@ -902,6 +902,23 @@ class BaseService
     }
 
     /**
+     * @param Profile $profile
+     * @param System $currentSytem
+     * @return bool
+     */
+    protected function canAccess(Profile $profile, System $currentSytem)
+    {
+        $systemProfile = $currentSytem->getProfile();
+        $systemGroup = $currentSytem->getGroup();
+        $systemFaction = $currentSytem->getFaction();
+        $canAccess = true;
+        if ($systemProfile && $systemProfile !== $profile) $canAccess = false;
+        if ($systemFaction && $systemFaction !== $profile->getFaction()) $canAccess = false;
+        if ($systemGroup && $systemGroup !== $profile->getGroup()) $canAccess = false;
+        return $canAccess;
+    }
+
+    /**
      * @param NpcInstance $npc
      */
     private function checkNpcTriggers(NpcInstance $npc)

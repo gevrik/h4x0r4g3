@@ -131,6 +131,11 @@ class ParserService
      */
     protected $researchService;
 
+    /**
+     * @var GroupService
+     */
+    protected $groupService;
+
 
     /**
      * @param EntityManager $entityManager
@@ -154,6 +159,7 @@ class ParserService
      * @param NpcInstanceService $npcInstanceService
      * @param FactionService $factionService
      * @param ResearchService $researchService
+     * @param GroupService $groupService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -176,7 +182,8 @@ class ParserService
         CombatService $combatService,
         NpcInstanceService $npcInstanceService,
         FactionService $factionService,
-        ResearchService $researchService
+        ResearchService $researchService,
+        GroupService $groupService
     )
     {
         $this->entityManager = $entityManager;
@@ -200,6 +207,7 @@ class ParserService
         $this->npcInstanceService = $npcInstanceService;
         $this->factionService = $factionService;
         $this->researchService = $researchService;
+        $this->groupService = $groupService;
     }
 
     /**
@@ -279,6 +287,9 @@ class ParserService
             case 'consider':
             case 'con':
                 $response = $this->npcInstanceService->considerNpc($resourceId, $contentArray);
+                break;
+            case 'creategroup':
+                $response = $this->groupService->createGroup($resourceId, $contentArray);
                 break;
             case 'shownotifications':
                 $response = $this->notificationService->showNotifications($resourceId);

@@ -19,6 +19,7 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
+use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
@@ -1212,8 +1213,11 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         $this->response = $this->isActionBlocked($resourceId, true);
-        // check if they can change the type
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
+        // check if they can list nodes
+        if (
+            !$this->response &&
+            !$this->canAccess($profile, $currentSystem)
+        ) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -1313,6 +1317,7 @@ class NodeService extends BaseService
                     )
                 );
             }
+            /** @var System $targetSystem */
             if (!$this->response) {
                 // now check if the node id exists
                 $targetNodeId = $this->getNextParameter($contentArray, false, true);
@@ -1339,7 +1344,8 @@ class NodeService extends BaseService
                 }
             }
             if (
-                !$this->response && $targetNode &&
+                !$this->response &&
+                $targetNode &&
                 ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)
             ) {
                 $this->response = array(
@@ -1350,7 +1356,11 @@ class NodeService extends BaseService
                     )
                 );
             }
-            if (!$this->response && ($targetNode->getNodeType()->getId() == NodeType::ID_IO && $targetSystem->getProfile() != $profile)) {
+            if (
+                !$this->response &&
+                $targetNode->getNodeType()->getId() == NodeType::ID_IO &&
+                !$this->canAccess($profile, $targetSystem)
+            ) {
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -1359,7 +1369,11 @@ class NodeService extends BaseService
                     )
                 );
             }
-            if (!$this->response && $targetNode && $targetNode == $currentNode) {
+            if (
+                !$this->response &&
+                $targetNode &&
+                $targetNode == $currentNode
+            ) {
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(

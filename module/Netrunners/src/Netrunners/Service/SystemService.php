@@ -198,4 +198,14 @@ class SystemService extends BaseService
         return $this->response;
     }
 
+    public function createSystem($resourceId, $contentArray)
+    {
+        // TODO finish this
+    }
+
+    public function renameSystem($resourceId, $contentArray)
+    {
+        // TODO finish this
+    }
+
 }

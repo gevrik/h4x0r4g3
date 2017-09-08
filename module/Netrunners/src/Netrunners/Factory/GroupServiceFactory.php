@@ -1,8 +1,8 @@
 <?php
 
 /**
- * FileService Factory.
- * Factory for the FileService.
+ * GroupService Factory.
+ * GroupService Factory.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,11 +10,11 @@
 
 namespace Netrunners\Factory;
 
-use Netrunners\Service\FileService;
+use Netrunners\Service\GroupService;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
-class FileServiceFactory implements FactoryInterface
+class GroupServiceFactory implements FactoryInterface
 {
 
     /**
@@ -24,12 +24,10 @@ class FileServiceFactory implements FactoryInterface
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new FileService(
+        return new GroupService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('translator'),
-            $serviceLocator->get('Netrunners\Service\CodebreakerService'),
-            $serviceLocator->get('Netrunners\Service\FileUtilityService')
+            $serviceLocator->get('translator')
         );
     }
 

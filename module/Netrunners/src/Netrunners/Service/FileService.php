@@ -12,14 +12,11 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
-use Netrunners\Entity\FileCategory;
-use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
-use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
@@ -37,6 +34,11 @@ class FileService extends BaseService
     protected $codebreakerService;
 
     /**
+     * @var FileUtilityService
+     */
+    protected $fileUtilityService;
+
+    /**
      * @var FileRepository
      */
     protected $fileRepo;
@@ -48,130 +50,20 @@ class FileService extends BaseService
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
      * @param CodebreakerService $codebreakerService
+     * @param FileUtilityService $fileUtilityService
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator,
-        CodebreakerService $codebreakerService
+        CodebreakerService $codebreakerService,
+        FileUtilityService $fileUtilityService
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->codebreakerService = $codebreakerService;
+        $this->fileUtilityService = $fileUtilityService;
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-    }
-
-    /**
-     * Get detailed information about a file.
-     * @param $resourceId
-     * @param $contentArray
-     * @return array|bool
-     */
-    public function statFile($resourceId, $contentArray)
-    {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        $profile = $this->user->getProfile();
-        $parameter = $this->getNextParameter($contentArray, false);
-        // try to get target file via repo method
-        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
-            $profile->getCurrentNode(),
-            $profile,
-            $parameter
-        );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-            );
-        }
-        /* start logic if we do not have a response already */
-        if (!$this->response) {
-            $targetFile = array_shift($targetFiles);
-            /** @var File $targetFile */
-            $returnMessage = array();
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Name"),
-                $targetFile->getName()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %smu</pre>',
-                $this->translate("Size"),
-                $targetFile->getSize()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Level"), $targetFile->getLevel()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Version"),
-                $targetFile->getVersion()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Type"),
-                $targetFile->getFileType()->getName()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s/%s</pre>',
-                $this->translate("Integrity"),
-                $targetFile->getIntegrity(),
-                $targetFile->getMaxIntegrity()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Slots"),
-                $targetFile->getSlots()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Birth"),
-                $targetFile->getCreated()->format('Y/m/d H:i:s')
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Modified"),
-                ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : $this->translate("---")
-            );
-            $categories = '';
-            foreach ($targetFile->getFileType()->getFileCategories() as $fileCategory) {
-                /** @var FileCategory $fileCategory */
-                $categories .= $fileCategory->getName() . ' ';
-            }
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%s: %s</pre>',
-                $this->translate("Categories"),
-                $categories
-            );
-            switch ($targetFile->getFileType()->getId()) {
-                default:
-                    break;
-                case FileType::ID_COINMINER:
-                    $fileData = json_decode($targetFile->getData());
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                        $this->translate("Collected credits"),
-                        (isset($fileData->value)) ? $fileData->value : 0
-                    );
-                    break;
-                case FileType::ID_DATAMINER:
-                    $fileData = json_decode($targetFile->getData());
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                        $this->translate("Collected snippets"),
-                        (isset($fileData->value)) ? $fileData->value : 0
-                    );
-                    break;
-            }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
-        }
-        return $this->response;
     }
 
     /**
@@ -182,81 +74,7 @@ class FileService extends BaseService
      */
     public function enterMode($resourceId, $command, $contentArray = [])
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
-            switch ($command) {
-                default:
-                    break;
-                case 'rm':
-                    $file = $this->removeFileChecks($contentArray);
-                    if (!$this->response) {
-                        $this->response = [
-                            'command' => 'enterconfirmmode',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">Are you sure that you want to delete [%s] - Please confirm this action:</pre>'),
-                                $file->getName()
-                            )
-                        ];
-                    }
-                    break;
-            }
-        }
-        return $this->response;
-    }
-
-    /**
-     * @param $contentArray
-     * @return mixed|File|null
-     */
-    private function removeFileChecks($contentArray)
-    {
-        $profile = $this->user->getProfile();
-        $parameter = $this->getNextParameter($contentArray, false);
-        $file = NULL;
-        // try to get target file via repo method
-        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $parameter);
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-            );
-        }
-        if (!$this->response) {
-            $file = array_shift($targetFiles);
-            /** @var File $file */
-            // check if the file belongs to the profile
-            if ($file && $file->getProfile() != $profile) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Permission denied')
-                    )
-                );
-            }
-            if (!$this->response && $file->getRunning()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Unable to remove running file - please kill the process first')
-                    )
-                );
-            }
-            if (!$this->response && $file->getSystem()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Unable to remove file - please unload it first')
-                    )
-                );
-            }
-        }
-        return $file;
+        return $this->fileUtilityService->enterMode($resourceId, $command, $contentArray);
     }
 
     /**
@@ -266,35 +84,17 @@ class FileService extends BaseService
      */
     public function removeFile($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        $file = false;
-        if (!$this->response) {
-            $file = $this->removeFileChecks($contentArray);
-        }
-        if (!$this->response && $file) {
-            // start removing the file by removing all of its filemodinstances
-            $fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
-            /** @var FileModInstanceRepository $fileModInstanceRepo */
-            $fmInstances = $fileModInstanceRepo->findBy([
-                'file' => $file
-            ]);
-            foreach ($fmInstances as $fmInstance) {
-                $this->entityManager->remove($fmInstance);
-            }
-            $this->entityManager->remove($file);
-            $this->entityManager->flush();
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You removed [%s]</pre>'),
-                $file->getName()
-            );
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => $message
-            ];
-        }
-        return $this->response;
+        return $this->fileUtilityService->removeFile($resourceId, $contentArray);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function statFile($resourceId, $contentArray)
+    {
+        return $this->fileUtilityService->statFile($resourceId, $contentArray);
     }
 
     /**
@@ -304,80 +104,7 @@ class FileService extends BaseService
      */
     public function downloadFile($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        // init response
-        $this->response = $this->isActionBlocked($resourceId);
-        // get parameter
-        $parameter = implode(' ', $contentArray);
-        $parameter = trim($parameter);
-        // try to get target file via repo method
-        $targetFile = $this->fileRepo->findOneBy([
-            'name' => $parameter,
-            'node' => $profile->getCurrentNode()
-        ]);
-        if (!$this->response && !$targetFile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such file')
-                )
-            );
-        }
-        /** @var File $targetFile */
-        // check if the file belongs to a profile or npc - can't download then
-        if (!$this->response && $targetFile && $targetFile->getProfile() != NULL) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This file has already been downloaded by someone')
-                )
-            );
-        }
-        if (!$this->response && $targetFile && $targetFile->getNpc() != NULL) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This file has already been downloaded by an entity')
-                )
-            );
-        }
-        // check if there is enough storage to store this
-        if (!$this->response && $targetFile && !$this->canStoreFile($profile, $targetFile)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough storage to download %s - build or upgrade storage nodes</pre>'),
-                    $targetFile->getName()
-                )
-            );
-        }
-        /* all checks passed, download file */
-        if (!$this->response && $targetFile) {
-            $targetFile->setProfile($profile);
-            $targetFile->setNode(NULL);
-            $targetFile->setSystem(NULL);
-            $this->entityManager->flush($targetFile);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You download %s to your storage</pre>'),
-                    $targetFile->getName()
-                )
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] downloaded [%s]</pre>'),
-                $this->user->getUsername(),
-                $targetFile->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        return $this->fileUtilityService->downloadFile($resourceId, $contentArray);
     }
 
     /**
@@ -387,71 +114,7 @@ class FileService extends BaseService
      */
     public function unloadFile($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        // init response
-        $this->response = $this->isActionBlocked($resourceId);
-        // get parameter
-        $parameter = implode(' ', $contentArray);
-        $parameter = trim($parameter);
-        // try to get target file via repo method
-        $targetFile = $this->fileRepo->findOneBy([
-            'name' => $parameter,
-            'profile' => $profile
-        ]);
-        if (!$this->response && !$targetFile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such file')
-                )
-            );
-        }
-        /** @var File $targetFile */
-        // check if the file belongs to the profile
-        if (!$this->response && $targetFile && $targetFile->getProfile() != $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
-        }
-        // check if attempt to unload running file
-        if (!$this->response && $targetFile && $targetFile->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to unload running file')
-                )
-            );
-        }
-        /* all checks passed, unload file */
-        if (!$this->response && $targetFile) {
-            $targetFile->setProfile(NULL);
-            $targetFile->setNode($profile->getCurrentNode());
-            $targetFile->setSystem($profile->getCurrentNode()->getSystem());
-            $this->entityManager->flush($targetFile);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You unload %s to the node</pre>'),
-                    $targetFile->getName()
-                )
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unloaded [%s] into the node</pre>'),
-                $this->user->getUsername(),
-                $targetFile->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        return $this->fileUtilityService->unloadFile($resourceId, $contentArray);
     }
 
     /**
@@ -461,81 +124,7 @@ class FileService extends BaseService
      */
     public function touchFile($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        // init response
-        $this->response = $this->isActionBlocked($resourceId);
-        // get parameter
-        $parameter = implode(' ', $contentArray);
-        $parameter = trim($parameter);
-        // try to get target file via repo method
-        $targetFiles = $this->fileRepo->findFileInNodeByName(
-            $profile->getCurrentNode(),
-            $parameter
-        );
-        if (!$this->response && count($targetFiles) >= 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('A file with that name already exists in this node')
-                )
-            );
-        }
-        if (!$this->response && $profile->getSnippets() < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need 1 snippet to create an empty text file')
-                )
-            );
-        }
-        // check string val and length
-        $this->stringChecker($parameter);
-        $parameter = str_replace(' ', '_', $parameter);
-        /* start logic if we do not have a response already */
-        if (!$this->response) {
-            $currentSnippets = $profile->getSnippets();
-            $profile->setSnippets($currentSnippets - 1);
-            $newCode = new File();
-            $newCode->setProfile($profile);
-            $newCode->setCoder($profile);
-            $newCode->setLevel(1);
-            $newCode->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT));
-            $newCode->setCreated(new \DateTime());
-            $newCode->setExecutable(0);
-            $newCode->setIntegrity(100);
-            $newCode->setMaxIntegrity(100);
-            $newCode->setMailMessage(NULL);
-            $newCode->setModified(NULL);
-            $newCode->setName($parameter . '.txt');
-            $newCode->setRunning(NULL);
-            $newCode->setSize(0);
-            $newCode->setSlots(0);
-            $newCode->setSystem(NULL);
-            $newCode->setNode(NULL);
-            $newCode->setVersion(1);
-            $newCode->setData(NULL);
-            $this->entityManager->persist($newCode);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been created</pre>'),
-                    $parameter
-                )
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has created a text file</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-            return $this->response;
-        }
-        return $this->response;
+        return $this->fileUtilityService->touchFile($resourceId, $contentArray);
     }
 
     /**
@@ -545,146 +134,7 @@ class FileService extends BaseService
      */
     public function initArmorCommand($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        // get parameter
-        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
-        // try to get target file via repo method
-        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
-            $profile->getCurrentNode(),
-            $profile,
-            $parameter
-        );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
-                    $this->translate('No such file')
-                )
-            );
-        }
-        $file = array_shift($targetFiles);
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File not found')
-                )
-            );
-        }
-        if (!$this->response && $file && $file->getFileType()->getId() != FileType::ID_CODEARMOR) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You can only initialize codearmor files')
-                )
-            );
-        }
-        // now get the subtype
-        $subtype = $this->getNextParameter($contentArray, false, false, true, true);
-        if (!$this->response && !$subtype) {
-            $message = [];
-            $message[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('Please choose from the following options:')
-            );
-            $message[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                wordwrap(implode(',', FileType::$armorSubtypeLookup), 120)
-            );
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $message
-            );
-        }
-        // check if they can change the type
-        if (!$this->response && $profile != $file->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
-        }
-        // all seems fine - init
-        if (!$this->response && $file && $subtype) {
-            $fileData = json_decode($file->getData());
-            if ($fileData && $fileData->subtype) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('This codearmor has already been initialized')
-                    )
-                );
-            }
-            if (!$this->response) {
-                switch ($subtype) {
-                    default:
-                        $realType = false;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_HEAD_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_HEAD;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_SHOULDERS_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_SHOULDERS;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_UPPER_ARM_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_UPPER_ARM;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_LOWER_ARM_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_LOWER_ARM;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_HANDS_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_HANDS;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_TORSO_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_TORSO;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_LEGS_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_LEGS;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_SHOES_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_SHOES;
-                        break;
-                }
-                if (!$realType) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Invalid subtype')
-                        )
-                    );
-                }
-                else {
-                    $file->setData(json_encode(['subtype'=>$realType]));
-                    $this->entityManager->flush($file);
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have initialized [%s] to subtype [%s]</pre>'),
-                            $file->getName(),
-                            FileType::$armorSubtypeLookup[$realType]
-                        )
-                    );
-                    // inform other players in node
-                    $message = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has initialized [%s]</pre>'),
-                        $this->user->getUsername(),
-                        $file->getName()
-                    );
-                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-                }
-            }
-        }
-        return $this->response;
+        return $this->fileUtilityService->initArmorCommand($resourceId, $contentArray);
     }
 
     /**
@@ -694,78 +144,7 @@ class FileService extends BaseService
      */
     public function changeFileName($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId, true);
-        // get parameter
-        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
-        // try to get target file via repo method
-        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
-            $profile->getCurrentNode(),
-            $profile,
-            $parameter
-        );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
-                    $this->translate('No such file')
-                )
-            );
-        }
-        $file = array_shift($targetFiles);
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File not found')
-                )
-            );
-        }
-        // now get the new name
-        $newName = $this->getNextParameter($contentArray, false, false, true, true);
-        if (!$this->response && !$newName) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a new name (alpha-numeric only, 32-chars-max)')
-                )
-            );
-        }
-        // check if they can change the type
-        if (!$this->response && $profile != $file->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
-        }
-        // string check
-        $this->stringChecker($newName);
-        /* all checks passed, we can rename the file now */
-        if (!$this->response) {
-            $newName = str_replace(' ', '_', $newName);
-            $file->setName($newName);
-            $this->entityManager->flush($file);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-success">File name changed to %s</pre>', $newName)
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has edited [%s]</pre>'),
-                $this->user->getUsername(),
-                $newName
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        return $this->fileUtilityService->changeFileName($resourceId, $contentArray);
     }
 
     /**
@@ -775,67 +154,7 @@ class FileService extends BaseService
      */
     public function useCommand($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        // get parameter
-        $parameter = implode(' ', $contentArray);
-        $parameter = trim($parameter);
-        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
-            $profile->getCurrentNode(),
-            $profile,
-            $parameter
-        );
-        $file = NULL;
-        if (count($targetFiles) >= 1) {
-            $file = array_shift($targetFiles);
-        }
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such file')
-                )
-            );
-        }
-        if (!$this->response && $file && !$file->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Files must be running to use them')
-                )
-            );
-        }
-        if (!$this->response && $file) {
-            $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
-            switch ($file->getFileType()->getId()) {
-                default:
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Unable to use this type of file')
-                        )
-                    );
-                    break;
-                case FileType::ID_WILDERSPACE_HUB_PORTAL:
-                    $hubNode = $this->entityManager->find('Netrunners\Entity\Node', $serverSetting->getWildernessHubNodeId());
-                    $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $profile->getCurrentNode(), $hubNode);
-                    $this->addAdditionalCommand('flyto', $hubNode->getSystem()->getGeocoords(), true);
-                    break;
-            }
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has used [%s]</pre>'),
-                $this->user->getUsername(),
-                $file->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        return $this->fileUtilityService->useCommand($resourceId, $contentArray);
     }
 
     /**
@@ -994,6 +313,798 @@ class FileService extends BaseService
             $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile, $profile->getId());
         }
         return $this->response;
+    }
+
+    /**
+     * Executes a chat client file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeChatClient(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                $file->getName(),
+                $file->getId()
+            )
+        );
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeDataminer(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeCoinminer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeIcmpBlocker(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(), $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeBeartrap(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a firewall node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param File $file
+     * @param Node $node
+     * @param $contentArray
+     * @return array|bool|mixed
+     */
+    private function queueProgramExecution($resourceId, File $file, Node $node, $contentArray)
+    {
+        $executeWarning = false;
+        $parameterArray = [];
+        $message = '';
+        switch ($file->getFileType()->getId()) {
+            default:
+                break;
+            case FileType::ID_PORTSCANNER:
+                list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $node, $contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'systemId' => $systemId,
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start portscanning with [%s] - please wait</pre>'),
+                    $file->getName()
+                );
+                break;
+            case FileType::ID_JACKHAMMER:
+                list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $node, $contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'systemId' => $systemId,
+                    'nodeId' => $nodeId,
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start breaking into the system with [%s] - please wait</pre>'),
+                    $file->getName()
+                );
+                break;
+            case FileType::ID_SIPHON:
+                list($executeWarning, $minerId) = $this->executeWarningSiphon($contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'minerId' => $minerId,
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start siphoning into the miner program with [%s] - please wait</pre>'),
+                    $file->getName()
+                );
+                break;
+        }
+        if ($executeWarning) {
+            $response = $executeWarning;
+        }
+        else {
+            $fileType = $file->getFileType();
+            $completionDate = new \DateTime();
+            $completionDate->add(new \DateInterval('PT' . $fileType->getExecutionTime() . 'S'));
+            $actionData = [
+                'command' => 'executeprogram',
+                'completion' => $completionDate,
+                'blocking' => $fileType->getBlocking(),
+                'fullblock' => $fileType->getFullblock(),
+                'parameter' => $parameterArray
+            ];
+            $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => $message,
+                'timer' => $fileType->getExecutionTime()
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @param $contentArray
+     * @return array
+     */
+    public function executeWarningPortscanner(File $file, Node $node, $contentArray)
+    {
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        $addy = $this->getNextParameter($contentArray, false);
+        if (!$response && !$addy) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a system address to scan')
+                ),
+            );
+        }
+        $systemId = false;
+        $system = false;
+        if (!$response) {
+            $system = $systemRepo->findOneBy([
+                'addy' => $addy
+            ]);
+        }
+        if (!$response) {
+            if (!$system) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid system address')
+                    ),
+                );
+            }
+            else {
+                $systemId = $system->getId();
+            }
+        }
+        /** @var System $system */
+        $profile = $file->getProfile();
+        /** @var Profile $profile */
+        if (!$response && $system->getProfile() === $profile) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Invalid system - unable to scan own systems')),
+            );
+        }
+        return [$response, $systemId];
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @param $contentArray
+     * @return array
+     */
+    public function executeWarningJackhammer(File $file, Node $node, $contentArray)
+    {
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        list($contentArray, $addy) = $this->getNextParameter($contentArray, true);
+        if (!$addy) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a system address to break in to')
+                ),
+            );
+        }
+        $systemId = false;
+        $system = false;
+        if (!$response) {
+            $system = $systemRepo->findOneBy([
+                'addy' => $addy
+            ]);
+        }
+        if (!$response) {
+            if (!$system) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid system address')
+                    ),
+                );
+            }
+            else {
+                $systemId = $system->getId();
+            }
+        }
+        /** @var System $system */
+        $profile = $file->getProfile();
+        /** @var Profile $profile */
+        if (!$response && $system->getProfile() === $profile) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Invalid system - unable to break in to your own systems')
+                ),
+            );
+        }
+        // now check if a node id was given
+        $nodeId = $this->getNextParameter($contentArray, false, true);
+        if (!$response && !$nodeId) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify a node ID to break in to')
+                ),
+            );
+        }
+        if (!$response) {
+            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
+            /** @var Node $node */
+            if (!$this->getNodeAttackDifficulty($node)) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid node ID')
+                    ),
+                );
+            }
+        }
+        return [$response, $systemId, $nodeId];
+    }
+
+    /**
+     * @param $contentArray
+     * @return array
+     */
+    public function executeWarningSiphon($contentArray)
+    {
+        $response = false;
+        $profile = $this->user->getProfile();
+        $minerString = $this->getNextParameter($contentArray, false);
+        if (!$minerString) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Please specify the miner that you want to siphon from</pre>'
+            );
+        }
+        $minerId = NULL;
+        if (!$response) {
+            // try to get target file via repo method
+            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
+            if (!$response && count($targetFiles) < 1) {
+                $response = array(
+                    'command' => 'showmessage',
+                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
+                );
+            }
+            if (!$response) {
+                $miner = array_shift($targetFiles);
+                /** @var File $miner */
+                switch ($miner->getFileType()->getId()) {
+                    default:
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid file type for Siphon</pre>'
+                        );
+                        break;
+                    case FileType::ID_COINMINER:
+                    case FileType::ID_DATAMINER:
+                        $minerId = $miner->getId();
+                        break;
+                }
+            }
+        }
+        return [$response, $minerId];
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeCustomIde(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a coding node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeSkimmer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeBlockchainer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeIoTracer(File $file, Node $node)
+    {
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in io nodes</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * Executes an obfuscator file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeObfuscator(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                $file->getName(),
+                $file->getId()
+            )
+        );
+        return $response;
+    }
+
+    /**
+     * Executes an obfuscator file.
+     * @param File $file
+     * @return array
+     */
+    protected function executeCloak(File $file)
+    {
+        $file->setRunning(true);
+        $this->entityManager->flush($file);
+        $response = array(
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                $file->getName(),
+                $file->getId()
+            )
+        );
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeLogEncryptor(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a monitoring node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeLogDecryptor(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a monitoring node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executePhisher(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an intrusion node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeWilderspaceHubPortal(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an intrusion node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeResearcher(File $file, Node $node)
+    {
+        // init response
+        $response = false;
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a memory node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
+                    $file->getName(),
+                    $file->getId()
+                )
+            );
+        }
+        return $response;
     }
 
     /**
@@ -1340,895 +1451,12 @@ class FileService extends BaseService
 
     /**
      * @param $resourceId
-     * @param File $file
-     * @param Node $node
      * @param $contentArray
-     * @return array|bool|mixed
+     * @return array|bool|false
      */
-    private function queueProgramExecution($resourceId, File $file, Node $node, $contentArray)
-    {
-        $executeWarning = false;
-        $parameterArray = [];
-        $message = '';
-        switch ($file->getFileType()->getId()) {
-            default:
-                break;
-            case FileType::ID_PORTSCANNER:
-                list($executeWarning, $systemId) = $this->executeWarningPortscanner($file, $node, $contentArray);
-                $parameterArray = [
-                    'fileId' => $file->getId(),
-                    'systemId' => $systemId,
-                    'contentArray' => $contentArray
-                ];
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start portscanning with [%s] - please wait</pre>'),
-                    $file->getName()
-                );
-                break;
-            case FileType::ID_JACKHAMMER:
-                list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $node, $contentArray);
-                $parameterArray = [
-                    'fileId' => $file->getId(),
-                    'systemId' => $systemId,
-                    'nodeId' => $nodeId,
-                    'contentArray' => $contentArray
-                ];
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start breaking into the system with [%s] - please wait</pre>'),
-                    $file->getName()
-                );
-                break;
-            case FileType::ID_SIPHON:
-                list($executeWarning, $minerId) = $this->executeWarningSiphon($contentArray);
-                $parameterArray = [
-                    'fileId' => $file->getId(),
-                    'minerId' => $minerId,
-                    'contentArray' => $contentArray
-                ];
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start siphoning into the miner program with [%s] - please wait</pre>'),
-                    $file->getName()
-                );
-                break;
-        }
-        if ($executeWarning) {
-            $response = $executeWarning;
-        }
-        else {
-            $fileType = $file->getFileType();
-            $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . $fileType->getExecutionTime() . 'S'));
-            $actionData = [
-                'command' => 'executeprogram',
-                'completion' => $completionDate,
-                'blocking' => $fileType->getBlocking(),
-                'fullblock' => $fileType->getFullblock(),
-                'parameter' => $parameterArray
-            ];
-            $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => $message,
-                'timer' => $fileType->getExecutionTime()
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * Executes a chat client file.
-     * @param File $file
-     * @return array
-     */
-    protected function executeChatClient(File $file)
-    {
-        $file->setRunning(true);
-        $this->entityManager->flush($file);
-        $response = array(
-            'command' => 'showmessage',
-            'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                $file->getName(),
-                $file->getId()
-            )
-        );
-        return $response;
-    }
-
-    /**
-     * Executes an obfuscator file.
-     * @param File $file
-     * @return array
-     */
-    protected function executeObfuscator(File $file)
-    {
-        $file->setRunning(true);
-        $this->entityManager->flush($file);
-        $response = array(
-            'command' => 'showmessage',
-            'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                $file->getName(),
-                $file->getId()
-            )
-        );
-        return $response;
-    }
-
-    /**
-     * Executes an obfuscator file.
-     * @param File $file
-     * @return array
-     */
-    protected function executeCloak(File $file)
-    {
-        $file->setRunning(true);
-        $this->entityManager->flush($file);
-        $response = array(
-            'command' => 'showmessage',
-            'message' => sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                $file->getName(),
-                $file->getId()
-            )
-        );
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeDataminer(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a database node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeCoinminer(File $file, Node $node)
-    {
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a terminal node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeCustomIde(File $file, Node $node)
-    {
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a coding node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeSkimmer(File $file, Node $node)
-    {
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeBlockchainer(File $file, Node $node)
-    {
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a banking node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeIoTracer(File $file, Node $node)
-    {
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in io nodes</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeIcmpBlocker(File $file, Node $node)
-    {
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(), $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeLogEncryptor(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a monitoring node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeLogDecryptor(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a monitoring node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executePhisher(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an intrusion node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeWilderspaceHubPortal(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an intrusion node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeResearcher(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a memory node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @return array|bool
-     */
-    protected function executeBeartrap(File $file, Node $node)
-    {
-        // init response
-        $response = false;
-        // check if they can execute it in this node
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in a firewall node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        if (!$response) {
-            $file->setRunning(true);
-            $file->setSystem($node->getSystem());
-            $file->setNode($node);
-            $this->entityManager->flush($file);
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
-                    $file->getName(),
-                    $file->getId()
-                )
-            );
-        }
-        return $response;
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @param $contentArray
-     * @return array
-     */
-    public function executeWarningPortscanner(File $file, Node $node, $contentArray)
-    {
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
-        /** @var SystemRepository $systemRepo */
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        $addy = $this->getNextParameter($contentArray, false);
-        if (!$response && !$addy) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a system address to scan')
-                ),
-            );
-        }
-        $systemId = false;
-        $system = false;
-        if (!$response) {
-            $system = $systemRepo->findOneBy([
-                'addy' => $addy
-            ]);
-        }
-        if (!$response) {
-            if (!$system) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid system address')
-                    ),
-                );
-            }
-            else {
-                $systemId = $system->getId();
-            }
-        }
-        /** @var System $system */
-        $profile = $file->getProfile();
-        /** @var Profile $profile */
-        if (!$response && $system->getProfile() === $profile) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid system - unable to scan own systems')),
-            );
-        }
-        return [$response, $systemId];
-    }
-
-    /**
-     * @param File $file
-     * @param Node $node
-     * @param $contentArray
-     * @return array
-     */
-    public function executeWarningJackhammer(File $file, Node $node, $contentArray)
-    {
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
-        /** @var SystemRepository $systemRepo */
-        $response = false;
-        if (!$this->canExecuteInNodeType($file, $node)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can only be used in an I/O node</pre>'),
-                    $file->getName()
-                )
-            );
-        }
-        list($contentArray, $addy) = $this->getNextParameter($contentArray, true);
-        if (!$addy) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a system address to break in to')
-                ),
-            );
-        }
-        $systemId = false;
-        $system = false;
-        if (!$response) {
-            $system = $systemRepo->findOneBy([
-                'addy' => $addy
-            ]);
-        }
-        if (!$response) {
-            if (!$system) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid system address')
-                    ),
-                );
-            }
-            else {
-                $systemId = $system->getId();
-            }
-        }
-        /** @var System $system */
-        $profile = $file->getProfile();
-        /** @var Profile $profile */
-        if (!$response && $system->getProfile() === $profile) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid system - unable to break in to your own systems')
-                ),
-            );
-        }
-        // now check if a node id was given
-        $nodeId = $this->getNextParameter($contentArray, false, true);
-        if (!$response && !$nodeId) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a node ID to break in to')
-                ),
-            );
-        }
-        if (!$response) {
-            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
-            /** @var Node $node */
-            if (!$this->getNodeAttackDifficulty($node)) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid node ID')
-                    ),
-                );
-            }
-        }
-        return [$response, $systemId, $nodeId];
-    }
-
     public function harvestCommand($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        $minerString = $this->getNextParameter($contentArray, false);
-        if (!$minerString) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Please specify the miner that you want to harvest</pre>'
-            );
-        }
-        $minerId = NULL;
-        if (!$this->response) {
-            // try to get target file via repo method
-            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
-            if (!$this->response && count($targetFiles) < 1) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-                );
-            }
-            if (!$this->response) {
-                $miner = array_shift($targetFiles);
-                /** @var File $miner */
-                if ($miner->getProfile() != $profile) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>'
-                    );
-                }
-                if (!$this->response) {
-                    $minerData = json_decode($miner->getData());
-                    if (!isset($minerData->value)) {
-                        $this->response = [
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                $this->translate('No resources to harvest in that miner')
-                            )
-                        ];
-                    }
-                    if (!$this->response && $minerData->value < 1) {
-                        $this->response = [
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                $this->translate('No resources to harvest in that miner')
-                            )
-                        ];
-                    }
-                    if (!$this->response) {
-                        $availableResources = $minerData->value;
-                        $minerData->value = 0;
-                        switch ($miner->getFileType()->getId()) {
-                            default:
-                                $message = NULL;
-                                break;
-                            case FileType::ID_DATAMINER:
-                                $profile->setSnippets($profile->getSnippets() + $availableResources);
-                                $message = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You harvest [%s] snippets from [%s]</pre>'),
-                                    $availableResources,
-                                    $miner->getName()
-                                );
-                                break;
-                            case FileType::ID_COINMINER:
-                                $profile->setCredits($profile->getCredits() + $availableResources);
-                                $message = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You harvest [%s] credits from [%s]</pre>'),
-                                    $availableResources,
-                                    $miner->getName()
-                                );
-                                break;
-                        }
-                        if (!$message) {
-                            $message = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">Unable to harvest at this moment</pre>'),
-                                $availableResources,
-                                $miner->getName()
-                            );
-                        }
-                        $this->response = array(
-                            'command' => 'showmessage',
-                            'message' => $message
-                        );
-                        $miner->setData(json_encode($minerData));
-                        $this->entityManager->flush($profile);
-                        $this->entityManager->flush($miner);
-                        // inform other players in node
-                        $message = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is harvesting [%s]</pre>'),
-                            $this->user->getUsername(),
-                            $miner->getName()
-                        );
-                        $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-                    }
-                }
-            }
-        }
-        return $this->response;
-    }
-
-
-    public function executeWarningSiphon($contentArray)
-    {
-        $response = false;
-        $profile = $this->user->getProfile();
-        $minerString = $this->getNextParameter($contentArray, false);
-        if (!$minerString) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Please specify the miner that you want to siphon from</pre>'
-            );
-        }
-        $minerId = NULL;
-        if (!$response) {
-            // try to get target file via repo method
-            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
-            if (!$response && count($targetFiles) < 1) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-                );
-            }
-            if (!$response) {
-                $miner = array_shift($targetFiles);
-                /** @var File $miner */
-                switch ($miner->getFileType()->getId()) {
-                    default:
-                        $response = array(
-                            'command' => 'showmessage',
-                            'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid file type for Siphon</pre>'
-                        );
-                        break;
-                    case FileType::ID_COINMINER:
-                    case FileType::ID_DATAMINER:
-                        $minerId = $miner->getId();
-                        break;
-                }
-            }
-        }
-        return [$response, $minerId];
+        return $this->fileUtilityService->harvestCommand($resourceId, $contentArray);
     }
 
     /**
@@ -2426,88 +1654,7 @@ class FileService extends BaseService
      */
     public function killProcess($resourceId, $contentArray)
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        // get parameter
-        $parameter = $this->getNextParameter($contentArray, false, true);
-        // init response
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response && !$parameter) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify the process id to kill (ps for list)')
-                )
-            );
-        }
-        $runningFile = (!$this->response) ? $this->entityManager->find('Netrunners\Entity\File', $parameter) : NULL;
-        if (!$this->response && !$runningFile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid process id')
-                )
-            );
-        }
-        if (!$this->response && $runningFile->getProfile() != $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid process id')
-                )
-            );
-        }
-        if (!$this->response && !$runningFile->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No process with that id')
-                )
-            );
-        }
-        if (!$this->response && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That process needs to be killed in the system that it is running in')
-                )
-            );
-        }
-        if (!$this->response && $runningFile->getNode() != $profile->getCurrentNode()) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That process needs to be killed in the node that it is running in')
-                )
-            ];
-        }
-        if (!$this->response) {
-            $runningFile->setRunning(false);
-            $runningFile->setSystem(NULL);
-            $runningFile->setNode(NULL);
-            $this->entityManager->flush($runningFile);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Process with id [%s] has been killed</pre>'),
-                    $runningFile->getId()
-                )
-            ];
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] killed a process<s/pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        return $this->fileUtilityService->killProcess($resourceId, $contentArray);
     }
 
     /**
@@ -2518,52 +1665,7 @@ class FileService extends BaseService
      */
     public function listProcesses($resourceId, $contentArray)
     {
-        // TODO add more info to output
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $showAll = $this->getNextParameter($contentArray, false);
-        if ($showAll) {
-            $runningFiles = $this->fileRepo->findBy([
-                'profile' => $profile,
-                'running' => true
-            ]);
-        }
-        else {
-            $runningFiles = $this->fileRepo->findBy([
-                'system' => $profile->getCurrentNode()->getSystem(),
-                'running' => true
-            ]);
-        }
-        $returnMessage = [];
-        if (count($runningFiles) < 1) {
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                $this->translate('No running processes')
-            );
-        }
-        else {
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-12s|%-20s|%s</pre>',
-                $this->translate('PROCESS-ID'),
-                $this->translate('FILE-TYPE'),
-                $this->translate('FILE-NAME')
-            );
-            foreach ($runningFiles as $runningFile) {
-                /** @var File $runningFile */
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-12s|%-20s|%s</pre>',
-                    $runningFile->getId(),
-                    $runningFile->getFileType()->getName(),
-                    $runningFile->getName()
-                );
-            }
-        }
-        $this->response = [
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        ];
-        return $this->response;
+        return $this->fileUtilityService->listProcesses($resourceId, $contentArray);
     }
 
     /**
@@ -2571,38 +1673,7 @@ class FileService extends BaseService
      */
     public function showFileTypes()
     {
-        $fileTypes = $this->entityManager->getRepository('Netrunners\Entity\FileType')->findBy(
-            ['codable' => true],
-            ['name' => 'ASC']
-        );
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-20s|%-4s|%s</pre>',
-            $this->translate('FILETYPE-NAME'),
-            $this->translate('FILETYPE-CATEGORIES'),
-            $this->translate('SIZE'),
-            $this->translate('DESCRIPTION')
-        );
-        foreach ($fileTypes as $fileType) {
-            /** @var FileType $fileType */
-            $categories = '';
-            foreach ($fileType->getFileCategories() as $fileCategory) {
-                /** @var FileCategory $fileCategory */
-                $categories .= $fileCategory->getName() . ' ';
-            }
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-20s|%-4s|%s</pre>',
-                $fileType->getName(),
-                $categories,
-                $fileType->getSize(),
-                $fileType->getDescription()
-            );
-        }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->fileUtilityService->showFileTypes();
     }
 
     /**
@@ -2610,29 +1681,7 @@ class FileService extends BaseService
      */
     public function showFileMods()
     {
-        $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileMod')->findBy(
-            [],
-            ['name' => 'ASC']
-        );
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%s</pre>',
-            $this->translate('FILEMOD-NAME'),
-            $this->translate('DESCRIPTION')
-        );
-        foreach ($fileMods as $fileMod) {
-            /** @var FileMod $fileMod */
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%s</pre>',
-                $fileMod->getName(),
-                $fileMod->getDescription()
-            );
-        }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->fileUtilityService->showFileMods();
     }
 
     /**
@@ -2640,29 +1689,7 @@ class FileService extends BaseService
      */
     public function showFileCategories()
     {
-        $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileCategory')->findBy(
-            [],
-            ['name' => 'ASC']
-        );
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%s</pre>',
-            $this->translate('FILECAT-NAME'),
-            $this->translate('DESCRIPTION')
-        );
-        foreach ($fileMods as $fileMod) {
-            /** @var FileCategory $fileMod */
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%s</pre>',
-                $fileMod->getName(),
-                $fileMod->getDescription()
-            );
-        }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->fileUtilityService->showFileCategories();
     }
 
 }

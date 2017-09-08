@@ -12,7 +12,10 @@ namespace Netrunners\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
-/** @ORM\Entity(repositoryClass="Netrunners\Repository\GroupRepository") */
+/**
+ * @ORM\Entity(repositoryClass="Netrunners\Repository\GroupRepository")
+ * @ORM\Table(name="Player_Group")
+ */
 class Group
 {
 

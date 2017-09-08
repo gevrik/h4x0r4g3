@@ -258,7 +258,7 @@ class System
     }
 
     /**
-     * @return mixed
+     * @return Faction|null
      */
     public function getFaction()
     {

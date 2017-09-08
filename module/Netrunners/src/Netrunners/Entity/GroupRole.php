@@ -17,6 +17,16 @@ use Doctrine\ORM\Mapping as ORM;
 class GroupRole
 {
 
+    const ROLE_LEADER_ID = 1;
+    const ROLE_COUNCIL_ID = 2;
+    const ROLE_ADMIN_OFFICE_ID = 3;
+    const ROLE_COMM_OFFICE_ID = 4;
+    const ROLE_RECRUITMENT_ID = 5;
+    const ROLE_BANK_MANAGER_ID = 6;
+    const ROLE_FOUNDER_ID = 7;
+    const ROLE_MEMBER_ID = 8;
+    const ROLE_NEWBIE_ID = 9;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

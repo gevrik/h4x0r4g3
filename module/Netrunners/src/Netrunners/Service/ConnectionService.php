@@ -82,9 +82,8 @@ class ConnectionService extends BaseService
             !$this->response &&
             (
                 $connection->getType() == Connection::TYPE_CODEGATE &&
-                $profile !== $currentSystem->getProfile() &&
                 !$connection->getisOpen() &&
-                !$this->hasRole(NULL, Role::ROLE_ID_ADMIN)
+                !$this->canAccess($profile, $currentSystem)
             )
         ) {
             $this->response = array(
