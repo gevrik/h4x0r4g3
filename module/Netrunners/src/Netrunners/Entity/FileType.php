@@ -48,6 +48,7 @@ class FileType
     const ID_WILDERSPACE_HUB_PORTAL = 26;
     const ID_RESEARCHER = 27;
     const ID_SIPHON = 28;
+    const ID_BACKDOOR = 29;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -77,6 +78,7 @@ class FileType
     const STRING_WILDERSPACE_HUB_PORTAL = 'wilderspace-hub-portal';
     const STRING_RESEARCHER = 'researcher';
     const STRING_SIPHON = 'siphon';
+    const STRING_BACKDOOR = 'backdoor';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -107,6 +109,7 @@ class FileType
         self::STRING_WILDERSPACE_HUB_PORTAL => self::ID_WILDERSPACE_HUB_PORTAL,
         self::STRING_RESEARCHER => self::ID_RESEARCHER,
         self::STRING_SIPHON => self::ID_SIPHON,
+        self::STRING_BACKDOOR => self::ID_BACKDOOR,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;

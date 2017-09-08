@@ -1329,18 +1329,32 @@ class BaseService
         $targetFaction = NULL
     )
     {
-        $pfr = new ProfileFactionRating();
-        $pfr->setProfile($profile);
-        $pfr->setAdded(new \DateTime());
-        $pfr->setMilkrunInstance($milkrunInstance);
-        $pfr->setRater($rater);
-        $pfr->setSource($source);
-        $pfr->setSourceRating($sourceRating);
-        $pfr->setTargetRating($targetRating);
-        $pfr->setSourceFaction($sourceFaction);
-        $pfr->setTargetFaction($targetFaction);
-        $this->entityManager->persist($pfr);
-        $this->entityManager->flush($pfr);
+        $existingRating = false;
+        // make sure milkrun isnt added twice
+        if ($milkrunInstance) {
+            $qb = $this->entityManager->createQueryBuilder();
+            $qb->select('pfr');
+            $qb->from('Netrunners\Entity\ProfileFactionRating', 'pfr');
+            $qb->where('pfr.milkrunInstance = :milkrun');
+            $qb->setParameter('milkrun', $milkrunInstance);
+            $result = $qb->getQuery()->getOneOrNullResult();
+            if ($result) $existingRating = true;
+        }
+        // if not rating exists, create one
+        if (!$existingRating) {
+            $pfr = new ProfileFactionRating();
+            $pfr->setProfile($profile);
+            $pfr->setAdded(new \DateTime());
+            $pfr->setMilkrunInstance($milkrunInstance);
+            $pfr->setRater($rater);
+            $pfr->setSource($source);
+            $pfr->setSourceRating($sourceRating);
+            $pfr->setTargetRating($targetRating);
+            $pfr->setSourceFaction($sourceFaction);
+            $pfr->setTargetFaction($targetFaction);
+            $this->entityManager->persist($pfr);
+            $this->entityManager->flush($pfr);
+        }
         return true;
     }
 

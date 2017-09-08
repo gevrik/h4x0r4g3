@@ -22,7 +22,7 @@
 
         // input history
         commandInput.inputHistory({
-            size: 5
+            size: 20
         });
 
         $('#panel-container').on('click', '.panel-heading .close', function(e){
@@ -207,7 +207,7 @@
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
                     $('.notification-box').show();
                     $('.actiontime-box').show();
-                    playSoundById(4);
+                    if (data.playsound) playSoundById(4);
                     mymap.flyTo([data.homecoords[0], data.homecoords[1]], 15);
                     mymap.flyTo([data.geocoords[0], data.geocoords[1]], 15);
                     break;
@@ -286,15 +286,20 @@
                     showprompt();
                     break;
                 case 'stopmilkrun':
+                    stopMusicInstance();
                     playSoundById(2);
                     $('#milkrun-container').html('');
                     break;
                 case 'completemilkrun':
-                    playSoundById(data.playsound);
+                    stopMusicInstance();
+                    if (data.playsound) playSoundById(data.playsound);
                     $('#milkrun-container').html('');
-                    md.append(data.content);
-                    showprompt();
-                    break;
+                    //md.append(data.content);
+                    //showprompt();
+                    var lastPrompt = $('.output-line').last();
+                    $(data.content).insertBefore(lastPrompt);
+                    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    return true;
                 case 'getrandomgeocoords':
                     getRandomInRange(data.content, 6);
                     break;
@@ -331,6 +336,7 @@
                     if (!data.silent) showprompt();
                     break;
                 case 'startmilkrun':
+                    if (data.music) createMusicInstance(data.music);
                     $('#milkrun-container').html('').append(data.content);
                     $('.draggable').draggable({
                         handle: '.panel-heading'

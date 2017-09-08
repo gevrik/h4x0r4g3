@@ -59,7 +59,9 @@ function initSound() {
         {src: "keyfound.ogg", id: 7},
         {src: "payloadfound.ogg", id: 8},
         {src: "milkrunnextlevel.ogg", id: 9},
-        {src: "gotsnippets.ogg", id: 10}
+        {src: "gotsnippets.ogg", id: 10},
+        {src: "music/milkrun1.ogg", id: 11},
+        {src: "music/milkrun2.ogg", id: 12}
     ];
     createjs.Sound.alternateExtensions = ["mp3"];
     createjs.Sound.addEventListener("fileload", createjs.proxy(soundLoaded, this));
@@ -97,6 +99,22 @@ function playSoundById(soundId) {
     instance.addEventListener("complete", function (instance) {
         // when complete
     });
+}
+
+function createMusicInstance(soundId) {
+    console.log(soundId);
+    musicInstance = createjs.Sound.play(soundId);
+    if (musicInstance === null || musicInstance.playState === createjs.Sound.PLAY_FAILED) {
+        console.log('play-sound-by-id-error');
+        return;
+    }
+    musicInstance.addEventListener("complete", function (musicInstance) {
+        // when complete
+    });
+}
+
+function stopMusicInstance() {
+    musicInstance.stop();
 }
 
 var getGeoCoordsForIp = function (ip) {

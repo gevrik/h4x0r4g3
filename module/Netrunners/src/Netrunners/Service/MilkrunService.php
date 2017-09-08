@@ -125,13 +125,15 @@ class MilkrunService extends BaseService
             $view = new ViewModel();
             $view->setTemplate('netrunners/milkrun/game.phtml');
             $view->setVariable('mapData', $milkrunData['mapData']);
+            $music = ($this->getProfileGameOption($profile, GameOption::ID_MUSIC)) ? mt_rand(11,12) : NULL;
             $this->response = [
                 'command' => 'startmilkrun',
                 'content' => $this->viewRenderer->render($view),
                 'level' => (int)$milkrunData['currentLevel'],
                 'eeg' => (int)$milkrunData['eeg'],
                 'attack' => (int)$milkrunData['attack'],
-                'armor' => (int)$milkrunData['armor']
+                'armor' => (int)$milkrunData['armor'],
+                'music' => $music
             ];
             // inform other players in node
             $message = sprintf(

@@ -11,3 +11,4 @@ var preload;
 var editor1 = null;
 var mymap;
 var myGeoCoords = [];
+var musicInstance;
