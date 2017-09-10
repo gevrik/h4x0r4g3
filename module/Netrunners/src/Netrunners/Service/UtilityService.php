@@ -119,7 +119,7 @@ class UtilityService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $message = 'addconnection  addnode  attack  bgopacity  bug  cd  changepassword  clear  code  commands  connect  consider  deposit  dl  download  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  ls  mail  map  milkrun  newbie  nodename  nodes  nodetype  options  passwd  ps  removeconnection removenode  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  upgradenode  use  visible  vis  withdraw';
+        $message = 'addconnection  addnode  attack  bgopacity  bug  cd  changepassword  clear  code  commands  connect  consider  deposit  dl  download  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  ls  mail  map  milkrun  newbie  nodename  nodes  nodetype  options  passwd  ps  removeconnection removenode  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  upgradenode  use  visible  vis  withdraw';
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

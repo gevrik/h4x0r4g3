@@ -31,6 +31,7 @@ class FileCategory
     const ID_NODE_UPGRADE = 10;
     const ID_EXOTIC = 11;
     const ID_STEALTH = 12;
+    const ID_SPAWNER = 13;
 
     /**
      * @ORM\Id

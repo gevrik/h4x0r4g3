@@ -11,6 +11,8 @@
 namespace Netrunners\Service;
 
 use Application\Service\WebsocketService;
+use Netrunners\Entity\MilkrunAivatar;
+use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\PlaySession;
@@ -330,6 +332,26 @@ class LoginService extends BaseService
             // add default skillpoints
             $profile->setSkillPoints(ProfileService::DEFAULT_SKILL_POINTS);
             $this->entityManager->persist($profile);
+            $milkrunAivatar = $this->entityManager->find('Netrunners\Entity\MilkrunAivatar', MilkrunAivatar::ID_SCROUNGER);
+            $aivatar = new MilkrunAivatarInstance();
+            $aivatar->setName($milkrunAivatar->getName());
+            $aivatar->setProfile($profile);
+            $aivatar->setCompleted(0);
+            $aivatar->setCreated(new \DateTime());
+            $aivatar->setCurrentArmor($milkrunAivatar->getBaseArmor());
+            $aivatar->setCurrentAttack($milkrunAivatar->getBaseAttack());
+            $aivatar->setCurrentEeg($milkrunAivatar->getBaseEeg());
+            $aivatar->setMaxArmor($milkrunAivatar->getBaseArmor());
+            $aivatar->setMaxAttack($milkrunAivatar->getBaseAttack());
+            $aivatar->setMaxEeg($milkrunAivatar->getBaseEeg());
+            $aivatar->setMilkrunAivatar($milkrunAivatar);
+            $aivatar->setModified(NULL);
+            $aivatar->setPointsearned(0);
+            $aivatar->setPointsused(0);
+            $aivatar->setSpecials(NULL);
+            $aivatar->setUpgrades(0);
+            $this->entityManager->persist($aivatar);
+            $profile->setDefaultMilkrunAivatar($aivatar);
             $user->setProfile($profile);
             $defaultRole = $this->entityManager->find('TmoAuth\Entity\Role', 2);
             /** @var Role $defaultRole */

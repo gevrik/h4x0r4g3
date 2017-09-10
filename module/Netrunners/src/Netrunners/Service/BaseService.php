@@ -236,6 +236,27 @@ class BaseService
         return $total;
     }
 
+    protected function updateDivHtml(Profile $profile, $element, $content, $adds = [], $sendNow = false)
+    {
+        $response = [
+            'command' => 'updatedivhtml',
+            'content' => (string)$content,
+            'element' => $element
+        ];
+        if (!empty($adds)) {
+            foreach ($adds as $key => $value) {
+                $response[$key] = $value;
+            }
+        }
+        if ($sendNow) {
+            $wsClient = $this->getWsClientByProfile($profile);
+            $wsClient->send(json_encode($response));
+        }
+        else {
+            $this->response = $response;
+        }
+    }
+
     /**
      * Get the given system's storage value.
      * @param System $system

@@ -127,6 +127,83 @@ class FileUtilityService extends BaseService
     }
 
     /**
+     * @param int $resourceId
+     * @param $contentArray
+     * @return array|bool
+     */
+    public function updateFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId, true);
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false, false, true, true);
+        // try to get target file via repo method
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
+                    $this->translate('No such file')
+                )
+            );
+        }
+        $file = array_shift($targetFiles);
+        if (!$this->response && !$file) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('File not found')
+                )
+            );
+        }
+        /** @var File $file */
+        if (!$this->response && $file && $file->getIntegrity() >= $file->getMaxIntegrity()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('File is already at max integrity')
+                )
+            );
+        }
+        /* all checks passed, we can update the file now */
+        if (!$this->response && $file) {
+            $currentIntegrity = $file->getIntegrity();
+            $maxIntegrity = $file->getMaxIntegrity();
+            $neededIntegrity = $maxIntegrity - $currentIntegrity;
+            if ($neededIntegrity > $profile->getSnippets()) $neededIntegrity = $profile->getSnippets();
+            $file->setIntegrity($file->getIntegrity() + $neededIntegrity);
+            $this->entityManager->flush($file);
+            $profile->setSnippets($profile->getSnippets() - $neededIntegrity);
+            $this->entityManager->flush($profile);
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">[%s] updated with %s snippets</pre>',
+                    $file->getName(),
+                    $neededIntegrity
+                )
+            );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has updated [%s]</pre>'),
+                $this->user->getUsername(),
+                $file->getName()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        }
+        return $this->response;
+    }
+
+    /**
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false

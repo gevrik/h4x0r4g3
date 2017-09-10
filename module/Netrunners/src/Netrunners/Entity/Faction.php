@@ -16,6 +16,15 @@ use Doctrine\ORM\Mapping as ORM;
 class Faction
 {
 
+    const ID_AZTECHNOLOGY = 1;
+    const ID_GANGERS = 2;
+    const ID_EUROCORP = 3;
+    const ID_MAFIA = 4;
+    const ID_ASIAN_COALITION = 5;
+    const ID_YAKUZA = 6;
+    const ID_AIVATARS = 7;
+    const ID_NETWATCH = 8;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

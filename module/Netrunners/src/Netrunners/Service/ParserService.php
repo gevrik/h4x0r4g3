@@ -92,6 +92,11 @@ class ParserService
     protected $milkrunService;
 
     /**
+     * @var MilkrunAivatarService
+     */
+    protected $milkrunAivatarService;
+
+    /**
      * @var HangmanService
      */
     protected $hangmanService;
@@ -151,6 +156,7 @@ class ParserService
      * @param NotificationService $notificationService
      * @param AdminService $adminService
      * @param MilkrunService $milkrunService
+     * @param MilkrunAivatarService $milkrunAivatarService
      * @param HangmanService $hangmanService
      * @param CodebreakerService $codebreakerService
      * @param GameOptionService $gameOptionService
@@ -175,6 +181,7 @@ class ParserService
         NotificationService $notificationService,
         AdminService $adminService,
         MilkrunService $milkrunService,
+        MilkrunAivatarService $milkrunAivatarService,
         HangmanService $hangmanService,
         CodebreakerService $codebreakerService,
         GameOptionService $gameOptionService,
@@ -199,6 +206,7 @@ class ParserService
         $this->notificationService = $notificationService;
         $this->adminService = $adminService;
         $this->milkrunService = $milkrunService;
+        $this->milkrunAivatarService = $milkrunAivatarService;
         $this->hangmanService = $hangmanService;
         $this->codebreakerService = $codebreakerService;
         $this->gameOptionService = $gameOptionService;
@@ -421,6 +429,16 @@ class ParserService
                     $response = $this->systemService->showSystemMap($resourceId);
                 }
                 break;
+            case 'showmra':
+            case 'showmilkrunaivatars':
+                $response = $this->milkrunAivatarService->showMilkrunAivatars($resourceId);
+                break;
+            case 'defaultmra':
+                $response = $this->milkrunAivatarService->setDefaultMrai($resourceId, $contentArray);
+                break;
+            case 'repairmra':
+                $response = $this->milkrunAivatarService->repairMrai($resourceId);
+                break;
             case 'modchat':
             case 'mc':
                 $response = $this->chatService->moderatorChat($resourceId, $contentArray);
@@ -473,7 +491,7 @@ class ParserService
                 break;
             case self::CMD_REQUESTMILKRUN:
             case 'milkrun':
-                $response = $this->milkrunService->requestMilkrun($resourceId);
+                $response = $this->milkrunService->enterMilkrunMode($resourceId);
                 break;
             case 'milkrunclick':
                 $response = $this->milkrunService->clickTile($resourceId, $contentArray);
@@ -490,6 +508,10 @@ class ParserService
             case 'unsecure':
             case 'unsecureconnection':
                 $response = $this->connectionService->unsecureConnection($resourceId, $contentArray);
+                break;
+            case 'update':
+            case 'updatefile':
+                $response = $this->fileService->updateFile($resourceId, $contentArray);
                 break;
             case 'setemail':
                 $response = $this->profileService->setEmail($resourceId, $contentArray);
@@ -784,6 +806,9 @@ class ParserService
                     break;
                 case 'rm':
                     $response = $this->fileService->removeFile($resourceId, $confirmData->contentArray);
+                    break;
+                case 'milkrun':
+                    $response = $this->milkrunService->requestMilkrun($resourceId, $confirmData);
                     break;
             }
         }

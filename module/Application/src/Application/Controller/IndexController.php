@@ -6,6 +6,8 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\CompanyName;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
+use Netrunners\Entity\MilkrunAivatar;
+use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
@@ -801,6 +803,50 @@ class IndexController extends AbstractActionController
         $serverSetting->setChatsuboNodeId($ioNode->getId());
         $this->entityManager->flush($serverSetting);
         $console->writeLine('DONE CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
+        return true;
+    }
+
+    public function cliAddMilkrunAivatarsAction()
+    {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('CREATING MILKRUN AIVATARS', ColorInterface::GREEN);
+        $milkrunAivatar = $this->entityManager->find('Netrunners\Entity\MilkrunAivatar', MilkrunAivatar::ID_SCROUNGER);
+        if (!$milkrunAivatar) {
+            $console->writeLine('MilkrunAivatar BASE not found - table populated?', ColorInterface::LIGHT_RED);
+            return true;
+        }
+        /** @var MilkrunAivatar $milkrunAivatar */
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
+        foreach ($profiles as $profile) {
+            /** @var Profile $profile */
+            $aivatar = new MilkrunAivatarInstance();
+            $aivatar->setName($milkrunAivatar->getName());
+            $aivatar->setProfile($profile);
+            $aivatar->setCompleted(0);
+            $aivatar->setCreated(new \DateTime());
+            $aivatar->setCurrentArmor($milkrunAivatar->getBaseArmor());
+            $aivatar->setCurrentAttack($milkrunAivatar->getBaseAttack());
+            $aivatar->setCurrentEeg($milkrunAivatar->getBaseEeg());
+            $aivatar->setMaxArmor($milkrunAivatar->getBaseArmor());
+            $aivatar->setMaxAttack($milkrunAivatar->getBaseAttack());
+            $aivatar->setMaxEeg($milkrunAivatar->getBaseEeg());
+            $aivatar->setMilkrunAivatar($milkrunAivatar);
+            $aivatar->setModified(NULL);
+            $aivatar->setPointsearned(0);
+            $aivatar->setPointsused(0);
+            $aivatar->setSpecials(NULL);
+            $aivatar->setUpgrades(0);
+            $this->entityManager->persist($aivatar);
+            $profile->setDefaultMilkrunAivatar($aivatar);
+        }
+        $this->entityManager->flush();
+        $console->writeLine('DONE CREATING MILKRUN AIVATARS', ColorInterface::GREEN);
         return true;
     }
 

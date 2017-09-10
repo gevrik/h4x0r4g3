@@ -18,7 +18,7 @@ class FactionRepository extends EntityRepository
     public function findAllForMilkrun()
     {
         $qb = $this->createQueryBuilder('f');
-        $qb->where('f.joinable IS NOT NULL');
+        $qb->where('f.joinable IS NOT NULL AND f.joinable != 0');
         return $qb->getQuery()->getResult();
     }
 

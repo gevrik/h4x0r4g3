@@ -203,6 +203,11 @@ class Profile
      */
     protected $shoesArmor;
 
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\MilkrunAivatarInstance")
+     */
+    protected $defaultMilkrunAivatar;
+
 
     /**
      * Constructor for Profile.
@@ -785,6 +790,24 @@ class Profile
     public function setShoesArmor($shoesArmor)
     {
         $this->shoesArmor = $shoesArmor;
+        return $this;
+    }
+
+    /**
+     * @return MilkrunAivatarInstance|null
+     */
+    public function getDefaultMilkrunAivatar()
+    {
+        return $this->defaultMilkrunAivatar;
+    }
+
+    /**
+     * @param mixed $defaultMilkrunAivatar
+     * @return Profile
+     */
+    public function setDefaultMilkrunAivatar($defaultMilkrunAivatar)
+    {
+        $this->defaultMilkrunAivatar = $defaultMilkrunAivatar;
         return $this;
     }
 

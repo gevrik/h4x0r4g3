@@ -54,24 +54,6 @@ class MilkrunInstance
      */
     protected $expired;
 
-    /**
-     * @ORM\Column(type="integer", options={"default":20}, nullable=true)
-     * @var int
-     */
-    protected $health;
-
-    /**
-     * @ORM\Column(type="integer", options={"default":1}, nullable=true)
-     * @var int
-     */
-    protected $attack;
-
-    /**
-     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
-     * @var int
-     */
-    protected $armor;
-
     // ORM
 
     /**
@@ -93,6 +75,11 @@ class MilkrunInstance
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Milkrun")
      */
     protected $milkrun;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\MilkrunAivatarInstance")
+     */
+    protected $milkrunAivatarInstance;
 
 
     /**
@@ -203,60 +190,6 @@ class MilkrunInstance
         return $this;
     }
 
-    /**
-     * @return int
-     */
-    public function getHealth()
-    {
-        return $this->health;
-    }
-
-    /**
-     * @param int $health
-     * @return MilkrunInstance
-     */
-    public function setHealth($health)
-    {
-        $this->health = $health;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getAttack()
-    {
-        return $this->attack;
-    }
-
-    /**
-     * @param int $attack
-     * @return MilkrunInstance
-     */
-    public function setAttack($attack)
-    {
-        $this->attack = $attack;
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getArmor()
-    {
-        return $this->armor;
-    }
-
-    /**
-     * @param int $armor
-     * @return MilkrunInstance
-     */
-    public function setArmor($armor)
-    {
-        $this->armor = $armor;
-        return $this;
-    }
-
     // ORM
 
     /**
@@ -328,6 +261,24 @@ class MilkrunInstance
     public function setMilkrun($milkrun)
     {
         $this->milkrun = $milkrun;
+        return $this;
+    }
+
+    /**
+     * @return MilkrunAivatarInstance|null
+     */
+    public function getMilkrunAivatarInstance()
+    {
+        return $this->milkrunAivatarInstance;
+    }
+
+    /**
+     * @param mixed $milkrunAivatarInstance
+     * @return MilkrunInstance
+     */
+    public function setMilkrunAivatarInstance($milkrunAivatarInstance)
+    {
+        $this->milkrunAivatarInstance = $milkrunAivatarInstance;
         return $this;
     }
 

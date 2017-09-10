@@ -201,6 +201,15 @@ return array(
                         )
                     )
                 ),
+                'create-milkrun-aivatars' => array(
+                    'options' => array(
+                        'route'    => 'create-milkrun-aivatars',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-add-milkrun-aivatars'
+                        )
+                    )
+                ),
             ),
         ),
     ),

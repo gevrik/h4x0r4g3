@@ -66,6 +66,7 @@ return array(
             'Netrunners\Service\NpcInstanceService' => 'Netrunners\Factory\NpcInstanceServiceFactory',
             'Netrunners\Service\MailMessageService' => 'Netrunners\Factory\MailMessageServiceFactory',
             'Netrunners\Service\MilkrunService' => 'Netrunners\Factory\MilkrunServiceFactory',
+            'Netrunners\Service\MilkrunAivatarService' => 'Netrunners\Factory\MilkrunAivatarServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',
             'Netrunners\Service\ProfileService' => 'Netrunners\Factory\ProfileServiceFactory',
             'Netrunners\Service\ResearchService' => 'Netrunners\Factory\ResearchServiceFactory',

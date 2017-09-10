@@ -75,6 +75,12 @@ class Node
      */
     protected $created;
 
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $data;
+
     // ORM
 
     /**
@@ -253,6 +259,24 @@ class Node
     public function setCreated($created)
     {
         $this->created = $created;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getData()
+    {
+        return $this->data;
+    }
+
+    /**
+     * @param string $data
+     * @return Node
+     */
+    public function setData($data)
+    {
+        $this->data = $data;
         return $this;
     }
 

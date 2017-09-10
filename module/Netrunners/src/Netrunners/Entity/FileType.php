@@ -49,6 +49,8 @@ class FileType
     const ID_RESEARCHER = 27;
     const ID_SIPHON = 28;
     const ID_BACKDOOR = 29;
+    const ID_MEDKIT = 30;
+    const ID_GUARD_SPAWNER = 31;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -79,6 +81,8 @@ class FileType
     const STRING_RESEARCHER = 'researcher';
     const STRING_SIPHON = 'siphon';
     const STRING_BACKDOOR = 'backdoor';
+    const STRING_MEDKIT = 'medkit';
+    const STRING_GUARD_SPAWNER = 'guard-spawner';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -110,6 +114,8 @@ class FileType
         self::STRING_RESEARCHER => self::ID_RESEARCHER,
         self::STRING_SIPHON => self::ID_SIPHON,
         self::STRING_BACKDOOR => self::ID_BACKDOOR,
+        self::STRING_MEDKIT => self::ID_MEDKIT,
+        self::STRING_GUARD_SPAWNER => self::ID_GUARD_SPAWNER,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;
