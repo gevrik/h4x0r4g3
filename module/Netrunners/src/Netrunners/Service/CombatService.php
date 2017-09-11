@@ -295,6 +295,7 @@ class CombatService extends BaseService
     private function flatlineProfile(Profile $profile)
     {
         $profile->setEeg(10);
+        $profile->setSecurityRating(0);
         $this->entityManager->flush($profile);
         $currentNode = $profile->getCurrentNode();
         $homeNode = $profile->getHomeNode();
