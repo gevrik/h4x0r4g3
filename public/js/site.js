@@ -289,6 +289,7 @@
                     stopMusicInstance();
                     playSoundById(2);
                     $('#milkrun-container').html('');
+                    commandInput.focus();
                     break;
                 case 'completemilkrun':
                     stopMusicInstance();
@@ -299,6 +300,7 @@
                     var lastPrompt = $('.output-line').last();
                     $(data.content).insertBefore(lastPrompt);
                     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    commandInput.focus();
                     return true;
                 case 'getrandomgeocoords':
                     getRandomInRange(data.content, 6);

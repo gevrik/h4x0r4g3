@@ -12,6 +12,7 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\Npc;
 use Netrunners\Entity\System;
 
 class NpcInstanceRepository extends EntityRepository
@@ -66,6 +67,19 @@ class NpcInstanceRepository extends EntityRepository
         $qb->setParameter('node', $node);
         $qb->setMaxResults(1);
         return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * @param int $npcId
+     * @return array
+     */
+    public function findByNpcId($npcId)
+    {
+        $npc = $this->_em->find('Netrunners\Entity\Npc', $npcId);
+        $qb = $this->createQueryBuilder('ni');
+        $qb->where('ni.npc = :npc');
+        $qb->setParameter('npc', $npc);
+        return $qb->getQuery()->getResult();
     }
 
 }

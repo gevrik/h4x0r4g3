@@ -25,7 +25,7 @@ class FileTypeRepository extends EntityRepository
     public function findForCoding(Profile $profile)
     {
         $qb = $this->createQueryBuilder('ft');
-        $qb->where('ft.codable > 0');
+        $qb->where('ft.codable = 1');
         $qb->orderBy('ft.name', 'ASC');
         $fileTypes = $qb->getQuery()->getResult();
         $availableFileTypes = [];

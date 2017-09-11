@@ -133,7 +133,7 @@ class File
     protected $mailMessage;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance", inversedBy="files")
      */
     protected $npc;
 

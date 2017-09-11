@@ -78,6 +78,8 @@ class ProfileService extends BaseService
 
     const SCORE_SNIPPETS_STRING = 'snippets';
 
+    const SCORE_SECRATING_STRING = 'secrating';
+
     const SCORE_STEALTHING_STRING = 'stealthing';
 
     const DEFAULT_STARTING_CREDITS = 750;
@@ -153,6 +155,11 @@ class ProfileService extends BaseService
                 '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
                 $this->translate(self::SCORE_SNIPPETS_STRING),
                 $profile->getSnippets()
+            );
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                $this->translate(self::SCORE_SECRATING_STRING),
+                ($profile->getSecurityRating()) ? $profile->getSecurityRating() : 0
             );
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',

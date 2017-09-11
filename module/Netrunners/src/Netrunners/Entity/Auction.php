@@ -55,10 +55,16 @@ class Auction
     protected $expires;
 
     /**
-     * @ORM\Column(type="datetime")
+     * @ORM\Column(type="datetime", nullable=true)
      * @var \DateTime
      */
     protected $bought;
+
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $claimed;
 
     // ORM
 
@@ -81,6 +87,7 @@ class Auction
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
      */
     protected $buyer;
+
 
     /**
      * @return int
@@ -209,7 +216,27 @@ class Auction
     }
 
     /**
-     * @return mixed
+     * @return \DateTime
+     */
+    public function getClaimed()
+    {
+        return $this->claimed;
+    }
+
+    /**
+     * @param \DateTime $claimed
+     * @return Auction
+     */
+    public function setClaimed($claimed)
+    {
+        $this->claimed = $claimed;
+        return $this;
+    }
+
+    // ORM
+
+    /**
+     * @return File
      */
     public function getFile()
     {
@@ -227,7 +254,7 @@ class Auction
     }
 
     /**
-     * @return mixed
+     * @return Node
      */
     public function getNode()
     {
@@ -245,7 +272,7 @@ class Auction
     }
 
     /**
-     * @return mixed
+     * @return Profile
      */
     public function getAuctioneer()
     {
@@ -263,7 +290,7 @@ class Auction
     }
 
     /**
-     * @return mixed
+     * @return Profile|null
      */
     public function getBuyer()
     {

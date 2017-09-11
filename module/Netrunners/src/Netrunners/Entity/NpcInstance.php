@@ -168,6 +168,11 @@ class NpcInstance
      */
     protected $skillRatings;
 
+    /**
+     * @ORM\OneToMany(targetEntity="Netrunners\Entity\File", mappedBy="npc", cascade={"remove"})
+     */
+    protected $files;
+
 
     /**
      * NpcInstance constructor.
@@ -175,6 +180,7 @@ class NpcInstance
     public function __construct()
     {
         $this->skillRatings = new ArrayCollection();
+        $this->files = new ArrayCollection();
     }
 
     /**
@@ -651,6 +657,33 @@ class NpcInstance
     public function removeSkillRating(SkillRating $skillRating)
     {
         if ($this->skillRatings->contains($skillRating)) $this->skillRatings->removeElement($skillRating);
+    }
+
+    /**
+     * @return ArrayCollection
+     */
+    public function getFiles()
+    {
+        return $this->files;
+    }
+
+    /**
+     * @param File $file
+     */
+    public function addFile(File $file)
+    {
+        if (!$this->files->contains($file)) $this->files[] = $file;
+    }
+
+    /**
+     * @param File $file
+     */
+    public function removeFile(File $file)
+    {
+        if ($this->files->contains($file)) {
+            $file->setNpc(NULL);
+            $this->files->removeElement($file);
+        }
     }
 
 }

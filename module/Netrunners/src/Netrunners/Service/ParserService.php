@@ -37,6 +37,11 @@ class ParserService
     protected $translator;
 
     /**
+     * @var AuctionService
+     */
+    protected $auctionService;
+
+    /**
      * @var FileService
      */
     protected $fileService;
@@ -145,6 +150,7 @@ class ParserService
     /**
      * @param EntityManager $entityManager
      * @param Translator $translator
+     * @param AuctionService $auctionService
      * @param FileService $fileService
      * @param NodeService $nodeService
      * @param ChatService $chatService
@@ -170,6 +176,7 @@ class ParserService
     public function __construct(
         EntityManager $entityManager,
         Translator $translator,
+        AuctionService $auctionService,
         FileService $fileService,
         NodeService $nodeService,
         ChatService $chatService,
@@ -195,6 +202,7 @@ class ParserService
     {
         $this->entityManager = $entityManager;
         $this->translator = $translator;
+        $this->auctionService = $auctionService;
         $this->fileService = $fileService;
         $this->nodeService = $nodeService;
         $this->chatService = $chatService;
@@ -261,6 +269,25 @@ class ParserService
             case 'attack':
             case 'a':
                 $response = $this->combatService->attackCommand($resourceId, $contentArray);
+                break;
+            case 'auctionclaim':
+            case 'claim':
+                $response = $this->auctionService->claimAuction($resourceId, $contentArray);
+                break;
+            case 'auction':
+            case 'auctionfile':
+                $response = $this->auctionService->auctionFile($resourceId, $contentArray);
+                break;
+            case 'auctions':
+                $response = $this->auctionService->listAuctions($resourceId, $contentArray);
+                break;
+            case 'auctionbid':
+            case 'bid':
+                $response = $this->auctionService->bidOnAuction($resourceId, $contentArray);
+                break;
+            case 'auctionbuyout':
+            case 'buyout':
+                $response = $this->auctionService->buyoutAuction($resourceId, $contentArray);
                 break;
             case 'clear':
                 $response = array(
@@ -438,6 +465,9 @@ class ParserService
                 break;
             case 'repairmra':
                 $response = $this->milkrunAivatarService->repairMrai($resourceId);
+                break;
+            case 'upgrademra':
+                $response = $this->milkrunAivatarService->upgradeMra($resourceId, $contentArray);
                 break;
             case 'modchat':
             case 'mc':

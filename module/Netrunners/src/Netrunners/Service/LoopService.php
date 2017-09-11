@@ -420,6 +420,30 @@ class LoopService extends BaseService
      */
     public function loopNpcSpawn()
     {
+        // despawn all temporary entities
+        $temporaryNpcIds = [Npc::ID_NETWATCH_AGENT, Npc::ID_NETWATCH_INVESTIGATOR];
+        foreach ($temporaryNpcIds as $despawnNpcId) {
+            $despawnNpcInstances = $this->npcInstanceRepo->findByNpcId($despawnNpcId);
+            foreach ($despawnNpcInstances as $despawnNpcInstance) {
+                /** @var NpcInstance $despawnNpcInstance */
+                if ($this->isInCombat($despawnNpcInstance)) continue;
+                foreach ($despawnNpcInstance->getFiles() as $affectedFile) {
+                    $despawnNpcInstance->removeFile($affectedFile);
+                    $this->entityManager->remove($affectedFile);
+                }
+                $despawnNpcInstance->setBlasterModule(NULL);
+                $despawnNpcInstance->setBladeModule(NULL);
+                $despawnNpcInstance->setShieldModule(NULL);
+                $this->entityManager->flush();
+                $this->entityManager->remove($despawnNpcInstance);
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] disconnects from the system</pre>'),
+                    $despawnNpcInstance->getName()
+                );
+                $this->messageEveryoneInNode($despawnNpcInstance->getNode(), $message);
+            }
+        }
+        // now we iterate through systems and check if we need to spawn
         $systems = $this->systemRepo->findAll();
         foreach ($systems as $system) {
             /** @var System $system */

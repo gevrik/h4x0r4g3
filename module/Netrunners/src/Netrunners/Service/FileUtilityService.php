@@ -943,7 +943,7 @@ class FileUtilityService extends BaseService
         if (!$this->response) {
             $targetFile = array_shift($targetFiles);
             /** @var File $targetFile */
-            $returnMessage = array();
+            $returnMessage = [];
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
                 $this->translate("Name"),

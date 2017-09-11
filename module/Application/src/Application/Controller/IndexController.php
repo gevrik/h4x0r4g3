@@ -850,4 +850,9 @@ class IndexController extends AbstractActionController
         return true;
     }
 
+    public function cliHotfixNpcItemsAction()
+    {
+
+    }
+
 }

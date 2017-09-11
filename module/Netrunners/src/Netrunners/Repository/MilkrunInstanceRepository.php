@@ -24,7 +24,7 @@ class MilkrunInstanceRepository extends EntityRepository
     public function findCurrentMilkrun(Profile $profile)
     {
         $qb = $this->createQueryBuilder('mri');
-        $qb->where('mri.expires > :now AND mri.profile = :profile AND mri.completed IS NULL');
+        $qb->where('mri.expires > :now AND mri.profile = :profile AND mri.completed IS NULL AND mri.expired != 1');
         $qb->setParameters([
             'now' => new \DateTime(),
             'profile' => $profile
@@ -40,7 +40,7 @@ class MilkrunInstanceRepository extends EntityRepository
     public function findForExpiredLoop()
     {
         $qb = $this->createQueryBuilder('mri');
-        $qb->where('mri.expires < :now AND mri.expired = 0 AND mri.completed IS NULL');
+        $qb->where('mri.expires < :now AND mri.expired != 1 AND mri.completed IS NULL');
         $qb->setParameter('now', new \DateTime());
         return $qb->getQuery()->getResult();
     }

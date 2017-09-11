@@ -25,7 +25,7 @@ class ProfileFileTypeRecipeRepository extends EntityRepository
     public function findOneByProfileAndFileType(Profile $profile, FileType $fileType)
     {
         $qb = $this->createQueryBuilder('pftr');
-        $qb->where('pftr.profile = :profile AND pftr.fileType = :fileType');
+        $qb->where('pftr.profile = :profile AND pftr.fileType = :fileType AND pftr.runs >= 1');
         $qb->setParameters([
             'profile' => $profile,
             'fileType' => $fileType

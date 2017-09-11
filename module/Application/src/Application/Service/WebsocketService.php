@@ -48,7 +48,7 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @const LOOP_REGENERATION the amount of seconds between regenerations
      */
-    const LOOP_REGENERATION = 300;
+    const LOOP_REGENERATION = 120;
 
     /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks

@@ -134,6 +134,9 @@ class CombatService extends BaseService
                 $skillRating += $blade->getLevel();
                 $damage = ceil(round($blade->getIntegrity()/10));
             }
+            else {
+                $damage = $attacker->getLevel();
+            }
         }
         // defense modifier for profile defender - and check if we need to add another combatant
         if ($defender instanceof Profile) {
@@ -304,17 +307,18 @@ class CombatService extends BaseService
      */
     private function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
     {
-        // take care of all the files associated with that npc instance
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */
-        $files = $fileRepo->findByNpc($npcInstance);
-        foreach ($files as $file) {
+        foreach ($npcInstance->getFiles() as $file) {
             /** @var File $file */
-            $file->setNpc(NULL);
+            $npcInstance->removeFile($file);
             $file->setRunning(false);
             $file->setNode($npcInstance->getNode());
             $file->setSystem($npcInstance->getNode()->getSystem());
         }
+        $npcInstance->setBlasterModule(NULL);
+        $npcInstance->setBladeModule(NULL);
+        $npcInstance->setShieldModule(NULL);
+        $this->entityManager->flush();
         // give snippets and credits to attacker
         $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
         $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());

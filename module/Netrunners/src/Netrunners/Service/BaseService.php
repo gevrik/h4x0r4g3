@@ -1358,10 +1358,11 @@ class BaseService
             $qb->from('Netrunners\Entity\ProfileFactionRating', 'pfr');
             $qb->where('pfr.milkrunInstance = :milkrun');
             $qb->setParameter('milkrun', $milkrunInstance);
+            $qb->setMaxResults(1);
             $result = $qb->getQuery()->getOneOrNullResult();
             if ($result) $existingRating = true;
         }
-        // if not rating exists, create one
+        // if no rating exists, create one
         if (!$existingRating) {
             $pfr = new ProfileFactionRating();
             $pfr->setProfile($profile);
@@ -2220,66 +2221,68 @@ class BaseService
             $skillRating->setRating($rating);
             $this->entityManager->persist($skillRating);
             $npcInstance->addSkillRating($skillRating);
-            // add files
-            switch ($npc->getId()) {
-                default:
-                    break;
-                case Npc::ID_WILDERSPACE_INTRUDER:
-                    $dropChance = $npcInstance->getLevel();
-                    if (mt_rand(1, 100) <= $dropChance) {
-                        $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
-                        /** @var FileType $fileType */
-                        $file = new File();
-                        $file->setProfile(NULL);
-                        $file->setLevel($dropChance);
-                        $file->setCreated(new \DateTime());
-                        $file->setSystem(NULL);
-                        $file->setName($fileType->getName());
-                        $file->setNpc($npcInstance);
-                        $file->setData(NULL);
-                        $file->setRunning(false);
-                        $file->setSlots(NULL);
-                        $file->setNode(NULL);
-                        $file->setCoder(NULL);
-                        $file->setExecutable($fileType->getExecutable());
-                        $file->setFileType($fileType);
-                        $file->setIntegrity($dropChance*10);
-                        $file->setMaxIntegrity($dropChance*10);
-                        $file->setMailMessage(NULL);
-                        $file->setModified(NULL);
-                        $file->setSize($fileType->getSize());
-                        $file->setVersion(1);
-                        $this->entityManager->persist($file);
-                    }
-                    break;
-                case Npc::ID_NETWATCH_INVESTIGATOR:
-                case Npc::ID_NETWATCH_AGENT:
-                    $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
+        }
+        // add files
+        switch ($npc->getId()) {
+            default:
+                break;
+            case Npc::ID_WILDERSPACE_INTRUDER:
+                $dropChance = $npcInstance->getLevel();
+                if (mt_rand(1, 100) <= $dropChance) {
+                    $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
                     /** @var FileType $fileType */
                     $file = new File();
                     $file->setProfile(NULL);
-                    $file->setLevel($baseLevel * 10);
+                    $file->setLevel($dropChance);
                     $file->setCreated(new \DateTime());
                     $file->setSystem(NULL);
                     $file->setName($fileType->getName());
                     $file->setNpc($npcInstance);
                     $file->setData(NULL);
-                    $file->setRunning(true);
-                    $file->setSlots($baseLevel);
+                    $file->setRunning(false);
+                    $file->setSlots(NULL);
                     $file->setNode(NULL);
                     $file->setCoder(NULL);
                     $file->setExecutable($fileType->getExecutable());
                     $file->setFileType($fileType);
-                    $file->setIntegrity($baseLevel*10);
-                    $file->setMaxIntegrity($baseLevel*10);
+                    $file->setIntegrity($dropChance*10);
+                    $file->setMaxIntegrity($dropChance*10);
                     $file->setMailMessage(NULL);
                     $file->setModified(NULL);
                     $file->setSize($fileType->getSize());
                     $file->setVersion(1);
                     $this->entityManager->persist($file);
-                    $npcInstance->setBladeModule($file);
-                    break;
-            }
+                    $npcInstance->addFile($file);
+                }
+                break;
+            case Npc::ID_NETWATCH_INVESTIGATOR:
+            case Npc::ID_NETWATCH_AGENT:
+                $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
+                /** @var FileType $fileType */
+                $file = new File();
+                $file->setProfile(NULL);
+                $file->setLevel($baseLevel * 10);
+                $file->setCreated(new \DateTime());
+                $file->setSystem(NULL);
+                $file->setName($fileType->getName());
+                $file->setNpc($npcInstance);
+                $file->setData(NULL);
+                $file->setRunning(true);
+                $file->setSlots($baseLevel);
+                $file->setNode(NULL);
+                $file->setCoder(NULL);
+                $file->setExecutable($fileType->getExecutable());
+                $file->setFileType($fileType);
+                $file->setIntegrity($baseLevel*10);
+                $file->setMaxIntegrity($baseLevel*10);
+                $file->setMailMessage(NULL);
+                $file->setModified(NULL);
+                $file->setSize($fileType->getSize());
+                $file->setVersion(1);
+                $this->entityManager->persist($file);
+                $npcInstance->setBladeModule($file);
+                $npcInstance->addFile($file);
+                break;
         }
         if ($flush) {
             $this->entityManager->flush();

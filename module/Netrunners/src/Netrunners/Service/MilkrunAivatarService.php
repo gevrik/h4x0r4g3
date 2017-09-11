@@ -226,7 +226,7 @@ class MilkrunAivatarService extends BaseService
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">[%s] has already received all currently possible upgrades - complete more milkruns with it</pre>',
+                    '<pre style="white-space: pre-wrap;" class="text-warning">[%s] has already received all currently possible upgrades - complete more milkruns with it</pre>',
                     $aivatar->getName()
                 )
             );
@@ -238,35 +238,59 @@ class MilkrunAivatarService extends BaseService
             switch ($propertyString) {
                 default:
                     $cost = false;
+                    $method = false;
+                    $newValue = false;
                     $message = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('Please specify which property to upgrade ("eeg", "attack" or "armor")')
                     );
                     break;
                 case 'eeg':
                     $cost = 8;
+                    $method = 'setMaxEeg';
+                    $newValue = $aivatar->getMaxEeg() + 2;
                     break;
                 case 'attack':
                     $cost = 32;
+                    $method = 'setMaxAttack';
+                    $newValue = $aivatar->getMaxAttack() + 1;
                     break;
                 case 'armor':
                     $cost = 16;
+                    $method = 'setMaxArmor';
+                    $newValue = $aivatar->getMaxArmor() + 2;
                     break;
             }
             if (!$message) {
                 $availablePoints = $aivatar->getPointsearned() - $aivatar->getPointsused();
                 if ($availablePoints < $cost) {
                     $message = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] needs %s points to upgrade %s</pre>'),
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] needs %s points to upgrade %s</pre>'),
                         $aivatar->getName(),
                         $cost,
                         $propertyString
                     );
                 }
                 else {
-                    // TODO finish this
+                    if ($method && $newValue) {
+                        // upgrade property
+                        $aivatar->$method($newValue);
+                        $aivatar->setPointsused($aivatar->getPointsused()+$cost);
+                        $aivatar->setUpgrades($aivatar->getUpgrades()+1);
+                        $aivatar->setModified(new \DateTime());
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] has received an upgrade to %s</pre>'),
+                            $aivatar->getName(),
+                            $propertyString
+                        );
+                        $this->entityManager->flush($aivatar);
+                    }
                 }
             }
+            $this->response = [
+                'command' => $command,
+                'message' => $message
+            ];
         }
         return $this->response;
     }

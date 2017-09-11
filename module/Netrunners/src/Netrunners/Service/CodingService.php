@@ -24,6 +24,7 @@ use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
 use Netrunners\Repository\FileTypeRepository;
+use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use Zend\Mvc\I18n\Translator;
 
 class CodingService extends BaseService
@@ -364,6 +365,7 @@ class CodingService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
+        $profile = $this->user->getProfile();
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         // init message
@@ -410,6 +412,25 @@ class CodingService extends BaseService
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Invalid type given')
                 );
+            }
+            // check if they should not be able to code this
+            if ($entity instanceof FileType) {
+                if (!$entity->getCodable()) {
+                    $message = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Invalid type given')
+                    );
+                }
+                if ($entity->getNeedRecipe()) {
+                    $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
+                    /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+                    if (!$profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $entity)) {
+                        $message = sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('You do not have the needed recipe or the recipe does not have any runs left')
+                        );
+                    }
+                }
             }
             // add message if not already set
             if (!$message) {
