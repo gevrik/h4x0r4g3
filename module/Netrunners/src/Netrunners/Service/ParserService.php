@@ -473,6 +473,13 @@ class ParserService
             case 'mc':
                 $response = $this->chatService->moderatorChat($resourceId, $contentArray);
                 break;
+            case 'mod':
+            case 'modfile':
+                $response = $this->fileService->modFile($resourceId, $contentArray);
+                break;
+            case 'mods':
+                $response = $this->profileService->showFileModInstances($resourceId);
+                break;
             case 'motd':
                 $response = $this->getWebsocketServer()->getUtilityService()->showMotd($resourceId);
                 break;

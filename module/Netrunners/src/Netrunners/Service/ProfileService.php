@@ -20,6 +20,7 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
+use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\InvitationRepository;
@@ -108,9 +109,15 @@ class ProfileService extends BaseService
     protected $filePartInstanceRepo;
 
     /**
+     * @var FileModInstanceRepository
+     */
+    protected $fileModInstanceRepo;
+
+    /**
      * @var FileRepository
      */
     protected $fileRepo;
+
 
     /**
      * ProfileService constructor.
@@ -124,6 +131,7 @@ class ProfileService extends BaseService
         $this->skillRepo = $this->entityManager->getRepository('Netrunners\Entity\Skill');
         $this->skillRatingRepo = $this->entityManager->getRepository('Netrunners\Entity\SkillRating');
         $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
+        $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
     }
 
@@ -417,6 +425,49 @@ class ProfileService extends BaseService
                 'command' => 'showoutput',
                 'message' => $returnMessage
             );
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function showFileModInstances($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            /** @var Profile $profile */
+            $returnMessage = array();
+            $fileModInstances = $this->fileModInstanceRepo->findForPartsCommand($profile);
+            if (empty($fileModInstances)) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You have no unused file mods')
+                    )
+                );
+            }
+            else {
+                foreach ($fileModInstances as $data) {
+                    // prepare message
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-white">%-27s: %-10s level-range: %s-%s</pre>',
+                        $data['fmname'],
+                        $data['fmicount'],
+                        $data['minlevel'],
+                        $data['maxlevel']
+                    );
+                }
+                $this->response = array(
+                    'command' => 'showoutput',
+                    'message' => $returnMessage
+                );
+            }
         }
         return $this->response;
     }

@@ -14,8 +14,10 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Repository\FileModInstanceRepository;
+use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FileRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -27,6 +29,16 @@ class FileUtilityService extends BaseService
      * @var FileRepository
      */
     protected $fileRepo;
+
+    /**
+     * @var FileModInstanceRepository
+     */
+    protected $fileModInstanceRepo;
+
+    /**
+     * @var FileModRepository
+     */
+    protected $fileModRepo;
 
 
     /**
@@ -43,6 +55,8 @@ class FileUtilityService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
+        $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
     }
 
     /**
@@ -782,6 +796,160 @@ class FileUtilityService extends BaseService
      * @param $contentArray
      * @return array|bool|false
      */
+    public function modFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        // get parameter
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
+        // try to get target file via repo method
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        if (!$this->response && count($targetFiles) < 1) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
+                    $this->translate('No such file')
+                )
+            );
+        }
+        $file = array_shift($targetFiles);
+        if (!$this->response && !$file) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('File not found')
+                )
+            );
+        }
+        /** @var File $file */
+        // now get the filemodinstance
+        $fileModName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$this->response && !$fileModName) {
+            $fileType = $file->getFileType();
+            $message = [];
+            $message[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                $this->translate('Please choose from the following options:')
+            );
+            $possibleFileMods = $this->fileModRepo->listForTypeCommand($fileType);
+            $fileModListString = '';
+            foreach ($possibleFileMods as $possibleFileMod) {
+                /** @var FileMod $possibleFileMod */
+                $fileModListString .= $possibleFileMod->getName() . ' ';
+            }
+            $message[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+                wordwrap($fileModListString, 120)
+            );
+            $this->response = array(
+                'command' => 'showoutput',
+                'message' => $message
+            );
+        }
+        // check if they can change the type
+        if (!$this->response && $profile != $file->getProfile()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        // check if the file can accept more mods
+        if (!$this->response && $file && $this->fileModInstanceRepo->countByFile($file) >= $file->getSlots()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('This file can no longer be modded - max mods reached')
+                )
+            );
+        }
+        // all seems fine
+        if (!$this->response && $file && $fileModName) {
+            $fileMod = $this->fileModRepo->findLikeName($fileModName);
+            if (!$fileMod) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Unable to find given file mod type')
+                    )
+                );
+            }
+            if (!$this->response && $fileMod) {
+                // ok, now we know the file and the filemod, try to find a filemodinstance that fits the variables
+                $fileModInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileMod, $file->getLevel());
+                if (count($fileModInstances) < 1) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('You do not own a fitting file-mod of that level')
+                        )
+                    );
+                }
+                else {
+                    $fileModInstance = array_shift($fileModInstances);
+                    /** @var FileModInstance $fileModInstance */
+                    $flush = false;
+                    $successMessage = false;
+                    switch ($fileMod->getId()) {
+                        default:
+                            break;
+                        case FileMod::ID_BACKSLASH:
+                            break;
+                        case FileMod::ID_INTEGRITY_BOOSTER:
+                            $newMaxIntegrity = $file->getMaxIntegrity() + $fileModInstance->getLevel();
+                            if ($newMaxIntegrity > 100) $newMaxIntegrity = 100;
+                            $file->setMaxIntegrity($newMaxIntegrity);
+                            $fileModInstance->setFile($file);
+                            $flush = true;
+                            $successMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] has been modded with [%s] - new max-integrity: %s</pre>'),
+                                $file->getName(),
+                                $fileMod->getName(),
+                                $newMaxIntegrity
+                            );
+                            break;
+                    }
+                    if ($flush) {
+                        $this->entityManager->flush($file);
+                        $this->entityManager->flush($fileModInstance);
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => $successMessage
+                        );
+                    }
+                    else {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                                $this->translate('This mod has no effect, yet')
+                            )
+                        );
+                    }
+                }
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function removeFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -793,9 +961,7 @@ class FileUtilityService extends BaseService
         }
         if (!$this->response && $file) {
             // start removing the file by removing all of its filemodinstances
-            $fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
-            /** @var FileModInstanceRepository $fileModInstanceRepo */
-            $fmInstances = $fileModInstanceRepo->findBy([
+            $fmInstances = $this->fileModInstanceRepo->findBy([
                 'file' => $file
             ]);
             foreach ($fmInstances as $fmInstance) {
@@ -995,7 +1161,7 @@ class FileUtilityService extends BaseService
                 $categories .= $fileCategory->getName() . ' ';
             }
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%s: %s</pre>',
+                '<pre style="white-space: pre-wrap;" class="text-addon">%s: %s</pre>',
                 $this->translate("Categories"),
                 $categories
             );
@@ -1005,7 +1171,7 @@ class FileUtilityService extends BaseService
                 case FileType::ID_COINMINER:
                     $fileData = json_decode($targetFile->getData());
                     $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-addon">%-12s: %s</pre>',
                         $this->translate("Collected credits"),
                         (isset($fileData->value)) ? $fileData->value : 0
                     );
@@ -1013,11 +1179,26 @@ class FileUtilityService extends BaseService
                 case FileType::ID_DATAMINER:
                     $fileData = json_decode($targetFile->getData());
                     $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                        '<pre style="white-space: pre-wrap;" class="text-addon">%-12s: %s</pre>',
                         $this->translate("Collected snippets"),
                         (isset($fileData->value)) ? $fileData->value : 0
                     );
                     break;
+            }
+            // now show its file-mods
+            $fileModsCount = $this->fileModInstanceRepo->countByFile($targetFile);
+            if ($fileModsCount >= 1) {
+                $fileMods = $this->fileModInstanceRepo->findByFile($targetFile);
+                $installedModsString = '';
+                foreach ($fileMods as $fileMod) {
+                    /** @var FileModInstance $fileMod */
+                    $installedModsString .= $fileMod->getFileMod()->getName() . ' ';
+                }
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-addon">%s %s</pre>',
+                    $this->translate("Installed mods:"),
+                    wordwrap($installedModsString, 120)
+                );
             }
             $this->response = array(
                 'command' => 'showoutput',

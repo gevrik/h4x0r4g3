@@ -131,7 +131,7 @@ class FileModInstance
     }
 
     /**
-     * @return mixed
+     * @return FileMod
      */
     public function getFileMod()
     {

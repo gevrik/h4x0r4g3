@@ -11,6 +11,9 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileType;
+use Netrunners\Entity\FileTypeMod;
 use Netrunners\Entity\Profile;
 
 class FileModRepository extends EntityRepository
@@ -27,8 +30,32 @@ class FileModRepository extends EntityRepository
     }
 
     /**
-     * @param $keyword
+     * @param FileType $fileType
      * @return array
+     */
+    public function listForTypeCommand(FileType $fileType)
+    {
+        $result = [];
+        $fileTypeModRepo = $this->_em->getRepository('Netrunners\Entity\FileTypeMod');
+        /** @var FileTypeModRepository $fileTypeModRepo */
+        $fileMods = $this->findAll();
+        foreach ($fileMods as $fileMod) {
+            $countFtm = $fileTypeModRepo->countByFileMod($fileMod);
+            if ($countFtm < 1) {
+                $result[] = $fileMod;
+            }
+            $ftms = $fileTypeModRepo->findByFileType($fileType);
+            foreach ($ftms as $ftm) {
+                /** @var FileTypeMod $ftm */
+                $result[] = $ftm->getFileMod();
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param $keyword
+     * @return FileMod|null
      */
     public function findLikeName($keyword)
     {

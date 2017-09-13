@@ -43,6 +43,8 @@ class CodingService extends BaseService
 
     const CODING_TIME_MULTIPLIER_PROGRAM = 15;
 
+    const CODING_TIME_MULTIPLIER_MOD = 10;
+
     const CODING_TIME_MULTIPLIER_RESOURCE = 5;
 
     /**
@@ -301,7 +303,7 @@ class CodingService extends BaseService
             if ($fileType) {
                 foreach ($fileType->getFileParts() as $filePart) {
                     /** @var FilePart $filePart */
-                    $filePartInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileType, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, ($codeOptions->fileLevel) ? $codeOptions->fileLevel : 1);
                     if (empty($filePartInstances)) {
                         $partsString .= '<span class="text-danger">' . $filePart->getName() . '</span> ';
                     }
@@ -668,7 +670,7 @@ class CodingService extends BaseService
             $modifier = floor(($skillRating + $skillModifier)/2);
             $modifier = (int)$modifier;
             $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM) . 'S'));
+            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_MOD) . 'S'));
             $fileTypeId = $fileMod->getId();
             foreach ($fileMod->getFileParts() as $neededResource) {
                 /** @var FilePart $neededResource */

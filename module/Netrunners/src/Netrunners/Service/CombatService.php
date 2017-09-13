@@ -15,11 +15,9 @@ use Netrunners\Entity\File;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
-use Netrunners\Entity\SkillRating;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
-use Netrunners\Repository\SkillRatingRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 

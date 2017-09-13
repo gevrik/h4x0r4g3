@@ -128,6 +128,16 @@ class FileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function modFile($resourceId, $contentArray)
+    {
+        return $this->fileUtilityService->modFile($resourceId, $contentArray);
+    }
+
+    /**
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
