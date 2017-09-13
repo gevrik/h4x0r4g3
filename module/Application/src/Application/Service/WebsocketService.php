@@ -273,6 +273,22 @@ class WebsocketService implements MessageComponentInterface {
     }
 
     /**
+     * @return array
+     */
+    public function getJobs()
+    {
+        return $this->loopService->getJobs();
+    }
+
+    /**
+     * @param array $jobData
+     */
+    public function addJob($jobData = [])
+    {
+        $this->loopService->addJob($jobData);
+    }
+
+    /**
      * @return bool
      */
     public function isAdminMode()

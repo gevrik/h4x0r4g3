@@ -499,6 +499,9 @@ class ParserService
             case 'options':
                 $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
                 break;
+            case 'recipes':
+                $response = $this->codingService->showRecipes($resourceId);
+                break;
             case 'removeconnection':
                 $response = $this->connectionService->removeConnection($resourceId, $contentArray);
                 break;

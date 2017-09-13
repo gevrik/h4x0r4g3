@@ -54,6 +54,7 @@ return array(
             'Netrunners\Service\CombatService' => 'Netrunners\Factory\CombatServiceFactory',
             'Netrunners\Service\FactionService' => 'Netrunners\Factory\FactionServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
+            'Netrunners\Service\FileExecutionService' => 'Netrunners\Factory\FileExecutionServiceFactory',
             'Netrunners\Service\FileUtilityService' => 'Netrunners\Factory\FileUtilityServiceFactory',
             'Netrunners\Service\ConnectionService' => 'Netrunners\Factory\ConnectionServiceFactory',
             'Netrunners\Service\GameOptionService' => 'Netrunners\Factory\GameOptionServiceFactory',

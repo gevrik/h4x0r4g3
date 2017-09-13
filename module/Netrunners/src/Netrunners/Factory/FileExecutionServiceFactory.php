@@ -1,8 +1,8 @@
 <?php
 
 /**
- * CodingService Factory.
- * Factory for the CodingService.
+ * FileExecutionService Factory.
+ * FileExecutionService Factory.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,11 +10,11 @@
 
 namespace Netrunners\Factory;
 
-use Netrunners\Service\CodingService;
+use Netrunners\Service\FileExecutionService;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
-class CodingServiceFactory implements FactoryInterface
+class FileExecutionServiceFactory implements FactoryInterface
 {
 
     /**
@@ -24,10 +24,11 @@ class CodingServiceFactory implements FactoryInterface
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new CodingService(
+        return new FileExecutionService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('translator')
+            $serviceLocator->get('translator'),
+            $serviceLocator->get('Netrunners\Service\CodebreakerService')
         );
     }
 

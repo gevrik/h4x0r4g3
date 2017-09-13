@@ -28,6 +28,7 @@ class LoopServiceFactory implements FactoryInterface
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
             $serviceLocator->get('Netrunners\Service\FileService'),
+            $serviceLocator->get('Netrunners\Service\CodingService'),
             $serviceLocator->get('Netrunners\Service\CombatService'),
             $serviceLocator->get('translator')
         );

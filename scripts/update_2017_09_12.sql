@@ -1,0 +1,1 @@
+UPDATE `File` SET `maxIntegrity`=100, `integrity`=100 WHERE `maxIntegrity`>100;

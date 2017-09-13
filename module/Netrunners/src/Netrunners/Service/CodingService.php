@@ -11,13 +11,17 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\File;
 use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FilePart;
+use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\Skill;
 use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileModRepository;
@@ -46,11 +50,6 @@ class CodingService extends BaseService
     const CODING_TIME_MULTIPLIER_MOD = 10;
 
     const CODING_TIME_MULTIPLIER_RESOURCE = 5;
-
-    /**
-     * @var LoopService
-     */
-    protected $loopService;
 
     /**
      * @var FilePartInstanceRepository
@@ -82,18 +81,15 @@ class CodingService extends BaseService
      * CodingService constructor.
      * @param EntityManager $entityManager
      * @param $viewRenderer
-     * @param LoopService $loopService
      * @param Translator $translator
      */
     public function __construct(
         EntityManager $entityManager,
         $viewRenderer,
-        LoopService $loopService,
         Translator $translator
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
-        $this->loopService = $loopService;
         $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
         $this->filePartRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePart');
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
@@ -424,14 +420,7 @@ class CodingService extends BaseService
                     );
                 }
                 if ($entity->getNeedRecipe()) {
-                    $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
-                    /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
-                    if (!$profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $entity)) {
-                        $message = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('You do not have the needed recipe or the recipe does not have any runs left')
-                        );
-                    }
+                    $message = $this->checkForRecipe($profile, $entity);
                 }
             }
             // add message if not already set
@@ -451,6 +440,25 @@ class CodingService extends BaseService
         }
         // init response
         return $this->response;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param FileType $fileType
+     * @return bool|string
+     */
+    private function checkForRecipe(Profile $profile, FileType $fileType)
+    {
+        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
+        /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+        $message = false;
+        if (!$profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $fileType)) {
+            $message = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                $this->translate('You do not have the needed recipe')
+            );
+        }
+        return $message;
     }
 
     /**
@@ -565,7 +573,7 @@ class CodingService extends BaseService
             $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE) . 'S'));
             $filePartId = $filePart->getId();
             for ($x = 1; $x<=$amount; $x++) {
-                $this->loopService->addJob([
+                $this->getWebsocketServer()->addJob([
                     'difficulty' => $difficulty,
                     'modifier' => $modifier,
                     'completionDate' => $completionDate,
@@ -680,7 +688,7 @@ class CodingService extends BaseService
                 $this->entityManager->remove($filePartInstance);
             }
             // add the coding job to the loop service
-            $this->loopService->addJob([
+            $this->getWebsocketServer()->addJob([
                 'difficulty' => $difficulty,
                 'modifier' => $modifier,
                 'completionDate' => $completionDate,
@@ -760,25 +768,38 @@ class CodingService extends BaseService
         // now we check if the player has all the needed resources
         if (!$this->response) {
             /** @var FileType $fileType */
-            $neededResources = $fileType->getFileParts();
-            $missingResources = [];
-            foreach ($neededResources as $neededResource) {
-                /** @var FilePart $neededResource */
-                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
-                if (empty($filePartInstances)) {
-                    $missingResources[] = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need [%s] with at least level %s to code the [%s]</pre>'),
-                        $neededResource->getName(),
-                        $level,
-                        $fileType->getName()
-                    );
+            // check if a recipe is needed
+            if ($fileType->getNeedRecipe()) {
+                $message = $this->checkForRecipe($profile, $fileType);
+                if ($message) {
+                    $this->response = [
+                        'command' => 'showmessage',
+                        'message' => $message
+                    ];
                 }
             }
-            if (!empty($missingResources)) {
-                $this->response = array(
-                    'command' => 'showoutput',
-                    'message' => $missingResources
-                );
+            // if they have a recipe
+            if (!$this->response) {
+                $neededResources = $fileType->getFileParts();
+                $missingResources = [];
+                foreach ($neededResources as $neededResource) {
+                    /** @var FilePart $neededResource */
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
+                    if (empty($filePartInstances)) {
+                        $missingResources[] = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need [%s] with at least level %s to code the [%s]</pre>'),
+                            $neededResource->getName(),
+                            $level,
+                            $fileType->getName()
+                        );
+                    }
+                }
+                if (!empty($missingResources)) {
+                    $this->response = array(
+                        'command' => 'showoutput',
+                        'message' => $missingResources
+                    );
+                }
             }
         }
         // check if the player can store the file in his total storage
@@ -801,7 +822,7 @@ class CodingService extends BaseService
             $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
         }
         // check if the system has enough coding levels to support this job
-        $alljobs = $this->loopService->getJobs();
+        $alljobs = $this->getWebsocketServer()->getJobs();
         $systemJobAmount = 0;
         $currentSystem = $profile->getCurrentNode()->getSystem();
         foreach ($alljobs as $alljobId => $jobData) {
@@ -838,7 +859,7 @@ class CodingService extends BaseService
                 $this->entityManager->remove($filePartInstance);
             }
             // add the coding job to the loop service
-            $this->loopService->addJob([
+            $this->getWebsocketServer()->addJob([
                 'difficulty' => $difficulty,
                 'modifier' => $modifier,
                 'completionDate' => $completionDate,
@@ -936,6 +957,218 @@ class CodingService extends BaseService
                 )
             );
         }
+    }
+
+    /**
+     * @param $jobData
+     * @return array|bool
+     */
+    public function resolveCoding($jobData)
+    {
+        $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
+        if (!$profile) return false;
+        /** @var Profile $profile */
+        $response = false;
+        $modifier = $jobData['modifier'];
+        $difficulty = $jobData['difficulty'];
+        $roll = mt_rand(1, 100);
+        $chance = $modifier - $difficulty;
+        $typeId = $jobData['typeId'];
+        $recipe = false;
+        // TODO add bonus from "custom ide" program
+        if ($jobData['mode'] == 'resource') {
+            $basePart = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
+        }
+        else if ($jobData['mode'] == 'mod') {
+            $basePart = $this->entityManager->find('Netrunners\Entity\FileMod', $typeId);
+        }
+        else {
+            $basePart = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
+            /** @var FileType $basePart */
+            if ($basePart->getNeedRecipe()) {
+                $recipe = $this->getRecipe($profile, $basePart);
+                if (!$recipe) {
+                    $response = [
+                        'severity' => 'danger',
+                        'message' => sprintf(
+                            $this->translate('Coding project failed: no valid recipe for [%s]'),
+                            $basePart->getName()
+                        )
+                    ];
+                }
+            }
+        }
+        if (!$response) {
+            if ($roll <= $chance) {
+                if ($jobData['mode'] == 'resource') {
+                    // create the file part instance
+                    $newCode = new FilePartInstance();
+                    $newCode->setCoder($profile);
+                    $newCode->setFilePart($basePart);
+                    $newCode->setLevel($difficulty);
+                    $newCode->setProfile($profile);
+                    $this->entityManager->persist($newCode);
+                }
+                else if ($jobData['mode'] == 'mod') {
+                    // create the file mod instance
+                    $newCode = new FileModInstance();
+                    $newCode->setCoder($profile);
+                    $newCode->setFileMod($basePart);
+                    $newCode->setAdded(new \DateTime());
+                    $newCode->setLevel($difficulty);
+                    $newCode->setProfile($profile);
+                    $this->entityManager->persist($newCode);
+                }
+                else {
+                    $integrity = $chance - $roll;
+                    if ($integrity > 100) $integrity = 100;
+                    // programs
+                    $newFileName = $basePart->getName();
+                    $newCode = new File();
+                    $newCode->setProfile($profile);
+                    $newCode->setCoder($profile);
+                    $newCode->setLevel($difficulty);
+                    $newCode->setFileType($basePart);
+                    $newCode->setCreated(new \DateTime());
+                    $newCode->setExecutable($basePart->getExecutable());
+                    $newCode->setIntegrity($integrity);
+                    $newCode->setMaxIntegrity($integrity);
+                    $newCode->setMailMessage(NULL);
+                    $newCode->setModified(NULL);
+                    $newCode->setName($newFileName);
+                    $newCode->setRunning(NULL);
+                    $newCode->setSize($basePart->getSize());
+                    $newCode->setSlots(1);
+                    $newCode->setSystem(NULL);
+                    $newCode->setNode(NULL);
+                    $newCode->setVersion(1);
+                    $newCode->setData(NULL);
+                    $this->entityManager->persist($newCode);
+                    $canStore = $this->canStoreFile($profile, $newCode);
+                    if (!$canStore) {
+                        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);
+                        $newCode->setProfile(NULL);
+                        $newCode->setSystem($targetNode->getSystem());
+                        $newCode->setNode($targetNode);
+                    }
+                }
+                $add = '';
+                if (!$newCode->getProfile()) {
+                    $add = $this->translate('<br />The file could not be stored in storage - it has been added to the node that it was coded in');
+                }
+                $this->learnFromSuccess($profile, $jobData);
+                $completionDate = $jobData['completionDate'];
+                /** @var \DateTime $completionDate */
+                $response = [
+                    'severity' => 'success',
+                    'message' => sprintf(
+                        $this->translate('[%s] Coding project complete: %s [level: %s]%s'),
+                        $completionDate->format('Y/m/d H:i:s'),
+                        $basePart->getName(),
+                        $difficulty,
+                        $add
+                    )
+                ];
+                // modify recipe if needed
+                if ($recipe) {
+                    /** @var ProfileFileTypeRecipe $recipe */
+                    $newRuns = $recipe->getRuns()-1;
+                    if ($newRuns < 1) {
+                        $this->entityManager->remove($recipe);
+                    }
+                    else {
+                        $recipe->setRuns($recipe->getRuns()-1);
+                    }
+                }
+                $this->entityManager->flush();
+            }
+            else {
+                $message = '';
+                $this->learnFromFailure($profile, $jobData);
+                if ($basePart instanceof FileType || $basePart instanceof FileMod) {
+                    $neededParts = $basePart->getFileParts();
+                    foreach ($neededParts as $neededPart) {
+                        /** @var FilePart $neededPart */
+                        $chance = mt_rand(1, 100);
+                        if ($chance > 50) {
+                            if (empty($message)) $message .= '(';
+                            $fpi = new FilePartInstance();
+                            $fpi->setProfile($profile);
+                            $fpi->setLevel($difficulty);
+                            $fpi->setCoder($profile);
+                            $fpi->setFilePart($neededPart);
+                            $this->entityManager->persist($fpi);
+                            $message .= sprintf('[%s] ', $neededPart->getName());
+                        }
+                    }
+                    if (!empty($message)) $message .= 'were recovered)]';
+                }
+                $completionDate = $jobData['completionDate'];
+                /** @var \DateTime $completionDate */
+                $response = [
+                    'severity' => 'warning',
+                    'message' => sprintf(
+                        $this->translate("[%s] Coding project failed: %s [level: %s] %s"),
+                        $completionDate->format('Y/m/d H:i:s'),
+                        $basePart->getName(),
+                        $difficulty,
+                        $message
+                    )
+                ];
+                $this->entityManager->flush();
+                // TODO lower integrity of "custom ide"
+            }
+        }
+        return $response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showRecipes($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
+        /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+        $recipes = $profileFileTypeRecipeRepo->findBy([
+            'profile' => $profile
+        ]);
+        $returnMessage = array();
+        $returnMessage[] = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-19s|%-32s|%-4s</pre>',
+            $this->translate('ADDED'),
+            $this->translate('FILETYPE'),
+            $this->translate('RUNS')
+        );
+        foreach ($recipes as $recipe) {
+            /** @var ProfileFileTypeRecipe $recipe */
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-19s|%-32s|%-4s</pre>',
+                $recipe->getAdded()->format('Y/m/d H:i:s'),
+                $recipe->getFileType()->getName(),
+                $recipe->getRuns()
+            );
+        }
+        $this->response = [
+            'command' => 'showoutput',
+            'message' => $returnMessage
+        ];
+        return $this->response;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param FileType $fileType
+     * @return mixed
+     */
+    private function getRecipe(Profile $profile, FileType $fileType)
+    {
+        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
+        /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+        return $profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $fileType);
     }
 
 }

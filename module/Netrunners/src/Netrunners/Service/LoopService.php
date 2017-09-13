@@ -12,14 +12,8 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
-use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
-use Netrunners\Entity\FileMod;
-use Netrunners\Entity\FileModInstance;
-use Netrunners\Entity\FilePart;
-use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
-use Netrunners\Entity\Group;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
@@ -27,8 +21,6 @@ use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFileTypeRecipe;
-use Netrunners\Entity\Skill;
-use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
@@ -63,6 +55,11 @@ class LoopService extends BaseService
     protected $combatService;
 
     /**
+     * @var CodingService
+     */
+    protected $codingService;
+
+    /**
      * @var NodeRepository
      */
     protected $nodeRepo;
@@ -93,6 +90,7 @@ class LoopService extends BaseService
      * @param EntityManager $entityManager
      * @param \Zend\View\Renderer\PhpRenderer $viewRenderer
      * @param FileService $fileService
+     * @param CodingService $codingService
      * @param CombatService $combatService
      * @param Translator $translator
      */
@@ -100,12 +98,14 @@ class LoopService extends BaseService
         EntityManager $entityManager,
         $viewRenderer,
         FileService $fileService,
+        CodingService $codingService,
         CombatService $combatService,
         Translator $translator
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileService = $fileService;
+        $this->codingService = $codingService;
         $this->combatService = $combatService;
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
@@ -141,14 +141,17 @@ class LoopService extends BaseService
             // if the job is finished now
             if ($jobData['completionDate'] <= $now) {
                 // resolve the job
-                $result = $this->resolveCoding($jobId);
-                if ($result) {
-                    $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
-                    /** @var Profile $profile */
-                    $this->storeNotification($profile, $result['message'], $result['severity']);
-                }
-                // remove job from server
-                unset($this->jobs[$jobId]);
+                $jobData = (isset($this->jobs[$jobId])) ? $this->jobs[$jobId] : false;
+                if ($jobData) {
+                    $result = $this->codingService->resolveCoding($jobData);
+                    if ($result) {
+                        $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
+                        /** @var Profile $profile */
+                        $this->storeNotification($profile, $result['message'], $result['severity']);
+                    }
+                    // remove job from server
+                    unset($this->jobs[$jobId]);
+                };
             }
         }
         // now we iterate connected sockets for actions
@@ -218,6 +221,9 @@ class LoopService extends BaseService
                             $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
                             /** @var File $miner */
                             $response = $this->fileService->executeSiphon($file, $miner);
+                            break;
+                        case FileType::ID_MEDKIT:
+                            $response = $this->fileService->executeMedkit($file);
                             break;
                     }
                     break;
@@ -403,6 +409,7 @@ class LoopService extends BaseService
                 )
             ];
             $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+            /** @var Profile $profile */
             $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
             $this->raiseProfileSecurityRating($profile, $connection->getLevel());
             $targetSystem = $connection->getSourceNode()->getSystem();
@@ -888,141 +895,6 @@ class LoopService extends BaseService
             }
         }
         return true;
-    }
-
-    /**
-     * @param $jobId
-     * @return array|bool
-     */
-    private function resolveCoding($jobId)
-    {
-        $jobData = (isset($this->jobs[$jobId])) ? $this->jobs[$jobId] : false;
-        if (!$jobData) return false;
-        $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
-        if (!$profile) return false;
-        /** @var Profile $profile */
-        $modifier = $jobData['modifier'];
-        $difficulty = $jobData['difficulty'];
-        $roll = mt_rand(1, 100);
-        $chance = $modifier - $difficulty;
-        $typeId = $jobData['typeId'];
-        // TODO add bonus from "custom ide" program
-        if ($jobData['mode'] == 'resource') {
-            $basePart = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
-        }
-        else if ($jobData['mode'] == 'mod') {
-            $basePart = $this->entityManager->find('Netrunners\Entity\FileMod', $typeId);
-        }
-        else {
-            $basePart = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
-        }
-        if ($roll <= $chance) {
-            if ($jobData['mode'] == 'resource') {
-                // create the file part instance
-                $newCode = new FilePartInstance();
-                $newCode->setCoder($profile);
-                $newCode->setFilePart($basePart);
-                $newCode->setLevel($difficulty);
-                $newCode->setProfile($profile);
-                $this->entityManager->persist($newCode);
-            }
-            else if ($jobData['mode'] == 'mod') {
-                // create the file mod instance
-                $newCode = new FileModInstance();
-                $newCode->setCoder($profile);
-                $newCode->setFileMod($basePart);
-                $newCode->setAdded(new \DateTime());
-                $newCode->setLevel($difficulty);
-                $newCode->setProfile($profile);
-                $this->entityManager->persist($newCode);
-            }
-            else {
-                // programs
-                $newFileName = $basePart->getName();
-                $newCode = new File();
-                $newCode->setProfile($profile);
-                $newCode->setCoder($profile);
-                $newCode->setLevel($difficulty);
-                $newCode->setFileType($basePart);
-                $newCode->setCreated(new \DateTime());
-                $newCode->setExecutable($basePart->getExecutable());
-                $newCode->setIntegrity($chance - $roll);
-                $newCode->setMaxIntegrity($chance - $roll);
-                $newCode->setMailMessage(NULL);
-                $newCode->setModified(NULL);
-                $newCode->setName($newFileName);
-                $newCode->setRunning(NULL);
-                $newCode->setSize($basePart->getSize());
-                $newCode->setSlots(1);
-                $newCode->setSystem(NULL);
-                $newCode->setNode(NULL);
-                $newCode->setVersion(1);
-                $newCode->setData(NULL);
-                $this->entityManager->persist($newCode);
-                $canStore = $this->canStoreFile($profile, $newCode);
-                if (!$canStore) {
-                    $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);
-                    $newCode->setProfile(NULL);
-                    $newCode->setSystem($targetNode->getSystem());
-                    $newCode->setNode($targetNode);
-                }
-            }
-            $add = '';
-            if (!$newCode->getProfile()) {
-                $add = $this->translate('<br />The file could not be stored in storage - it has been added to the node that it was coded in');
-            }
-            $this->learnFromSuccess($profile, $jobData);
-            $completionDate = $jobData['completionDate'];
-            /** @var \DateTime $completionDate */
-            $response = [
-                'severity' => 'success',
-                'message' => sprintf(
-                    $this->translate('[%s] Coding project complete: %s [level: %s]%s'),
-                    $completionDate->format('Y/m/d H:i:s'),
-                    $basePart->getName(),
-                    $difficulty,
-                    $add
-                )
-            ];
-            $this->entityManager->flush();
-        }
-        else {
-            $message = '';
-            $this->learnFromFailure($profile, $jobData);
-            if ($basePart instanceof FileType || $basePart instanceof FileMod) {
-                $neededParts = $basePart->getFileParts();
-                foreach ($neededParts as $neededPart) {
-                    /** @var FilePart $neededPart */
-                    $chance = mt_rand(1, 100);
-                    if ($chance > 50) {
-                        if (empty($message)) $message .= '(';
-                        $fpi = new FilePartInstance();
-                        $fpi->setProfile($profile);
-                        $fpi->setLevel($difficulty);
-                        $fpi->setCoder($profile);
-                        $fpi->setFilePart($neededPart);
-                        $this->entityManager->persist($fpi);
-                        $message .= sprintf('[%s] ', $neededPart->getName());
-                    }
-                }
-                if (!empty($message)) $message .= 'were recovered)]';
-            }
-            $completionDate = $jobData['completionDate'];
-            /** @var \DateTime $completionDate */
-            $response = [
-                'severity' => 'warning',
-                'message' => sprintf(
-                    $this->translate("[%s] Coding project failed: %s [level: %s] %s"),
-                    $completionDate->format('Y/m/d H:i:s'),
-                    $basePart->getName(),
-                    $difficulty,
-                    $message
-                )
-            ];
-            $this->entityManager->flush();
-        }
-        // TODO lower integrity of "custom ide"
-        return $response;
     }
 
 }
