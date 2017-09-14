@@ -71,10 +71,9 @@ class AuctionService extends BaseService
 
     /**
      * @param $resourceId
-     * @param $contentArray
      * @return array|bool|false
      */
-    public function listAuctions($resourceId, $contentArray)
+    public function listAuctions($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
@@ -547,6 +546,11 @@ class AuctionService extends BaseService
         }
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function claimAuction($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -668,6 +672,164 @@ class AuctionService extends BaseService
                     )
                 );
             }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function cancelAuction($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $auctionId = $this->getNextParameter($contentArray, false, true);
+            if (!$auctionId) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Please specify the auction id')
+                    )
+                );
+            }
+            $auction = NULL;
+            if (!$this->response) {
+                $auction = $this->auctionRepo->find($auctionId);
+                if (!$auction) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Invalid auction id')
+                        )
+                    );
+                }
+            }
+            /** @var Auction $auction */
+            $now = new \DateTime();
+            if (!$this->response && $auction) {
+                if ($auction->getExpires() < $now) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('That auction has expired')
+                        )
+                    );
+                }
+                if (!$this->response && $auction->getBought() !== NULL) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('That auction is no longer active')
+                        )
+                    );
+                }
+                if (!$this->response && $auction->getNode() != $currentNode) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('You need to be in the market node that the auction was posted in')
+                        )
+                    );
+                }
+                if (!$this->response && $auction->getAuctioneer() !== $profile) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('That is not your auction')
+                        )
+                    );
+                }
+                if (!$this->response && !$auction->getBuyoutPrice() && $this->bidRepo->countByAuction($auction) >= 1) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Auctions with bids can not be cancelled')
+                        )
+                    );
+                }
+                if (!$this->response && !$this->canStoreFile($profile, $auction->getFile())) {
+                    $this->response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                            $this->translate('Unable to cancel auction - you do not have enough storage space to store the file')
+                        )
+                    );
+                }
+            }
+            if (!$this->response && $auction) {
+                /** @var Auction $auction */
+                $auctionedFile = $auction->getFile();
+                $auctionedFile->setProfile($profile);
+                $this->entityManager->remove($auction);
+                $this->entityManager->flush();
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have cancelled auction#%s</pre>'),
+                        $auction->getId()
+                    )
+                );
+            }
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function showBids($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->response) {
+            $profile = $this->user->getProfile();
+            $bids = $this->bidRepo->findActiveByProfile($profile);
+            $returnMessage = [];
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-32s|%-20s|%-3s|%-3s|%-11s|%-11s</pre>',
+                $this->translate('ID'),
+                $this->translate('NAME'),
+                $this->translate('TYPE'),
+                $this->translate('LVL'),
+                $this->translate('INT'),
+                $this->translate('HIGHEST'),
+                $this->translate('YOURS')
+            );
+            foreach ($bids as $bid) {
+                /** @var AuctionBid $bid */
+                $auction = $bid->getAuction();
+                $file = $auction->getFile();
+                $returnMessage[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-32s|%-20s|%-3s|%-3s|%-11s|%-11s</pre>',
+                    $auction->getId(),
+                    $file->getName(),
+                    $file->getFileType()->getName(),
+                    $file->getLevel(),
+                    $file->getMaxIntegrity(),
+                    $this->bidRepo->findHighBid($auction),
+                    $bid->getBid()
+                );
+            }
+            $this->response = [
+                'command' => 'showoutput',
+                'message' => $returnMessage
+            ];
         }
         return $this->response;
     }

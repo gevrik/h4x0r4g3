@@ -65,7 +65,6 @@ class ResearchService extends BaseService
         $this->response = $this->isActionBlocked($resourceId);
         if (!$this->response) {
             $researchers = $this->fileRepo->findByProfileAndType($profile, FileType::ID_RESEARCHER);
-            $returnMessage = array();
             if (count($researchers) < 1) {
                 $this->response = [
                     'command' => 'showmessage',
@@ -76,6 +75,7 @@ class ResearchService extends BaseService
                 ];
             }
             else {
+                $returnMessage = [];
                 $returnMessage[] = sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-32s|%-3s|%-1s|%s</pre>',
                     $this->translate('NAME'),
@@ -115,12 +115,12 @@ class ResearchService extends BaseService
                             ($researcher->getRunning()) ? $this->translate('<span class="text-success">Y</span>') : $this->translate('<span class="text-danger">N</span>'),
                             $typeString . ' - ' . $idString
                         );
-                        $this->response = [
-                            'command' => 'showoutput',
-                            'message' => $returnMessage
-                        ];
                     }
                 }
+                $this->response = [
+                    'command' => 'showoutput',
+                    'message' => $returnMessage
+                ];
             }
         }
         return $this->response;

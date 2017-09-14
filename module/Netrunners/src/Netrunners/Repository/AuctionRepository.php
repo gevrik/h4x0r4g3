@@ -21,6 +21,35 @@ class AuctionRepository extends EntityRepository
      * @param Node $node
      * @return array
      */
+    public function countActiveByNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('a');
+        $qb->select($qb->expr()->count('a.id'));
+        $qb->where('a.bought IS NULL AND a.node = :node AND a.expires > :now');
+        $qb->setParameters([
+            'node' => $node,
+            'now' => new \DateTime()
+        ]);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param Node $node
+     * @return array
+     */
+    public function countByNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('a');
+        $qb->select($qb->expr()->count('a.id'));
+        $qb->where('a.node = :node');
+        $qb->setParameter('node', $node);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param Node $node
+     * @return array
+     */
     public function findActiveByNode(Node $node)
     {
         $qb = $this->createQueryBuilder('a');

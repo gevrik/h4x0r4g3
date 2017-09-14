@@ -20,6 +20,7 @@ use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
+use Netrunners\Repository\AuctionRepository;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
@@ -818,6 +819,20 @@ class NodeService extends BaseService
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                         $this->translate('There is already a home node around this node')
+                    )
+                );
+            }
+        }
+        // check if this is a market
+        if (!$this->response && $nodeType->getId() == NodeType::ID_MARKET) {
+            $auctionRepo = $this->entityManager->getRepository('Netrunners\Entity\Auction');
+            /** @var AuctionRepository $auctionRepo */
+            if ($auctionRepo->countByNode($currentNode) >= 1) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Active markets can not be changed yet')
                     )
                 );
             }

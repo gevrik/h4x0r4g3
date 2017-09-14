@@ -279,15 +279,23 @@ class ParserService
                 $response = $this->auctionService->auctionFile($resourceId, $contentArray);
                 break;
             case 'auctions':
-                $response = $this->auctionService->listAuctions($resourceId, $contentArray);
+                $response = $this->auctionService->listAuctions($resourceId);
                 break;
             case 'auctionbid':
             case 'bid':
                 $response = $this->auctionService->bidOnAuction($resourceId, $contentArray);
                 break;
+            case 'auctionbids':
+            case 'bids':
+                $response = $this->auctionService->showBids($resourceId);
+                break;
             case 'auctionbuyout':
             case 'buyout':
                 $response = $this->auctionService->buyoutAuction($resourceId, $contentArray);
+                break;
+            case 'auctioncancel':
+            case 'cancelauction':
+                $response = $this->auctionService->cancelAuction($resourceId, $contentArray);
                 break;
             case 'clear':
                 $response = array(

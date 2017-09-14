@@ -130,7 +130,7 @@ class AuctionBid
     // ORM
 
     /**
-     * @return mixed
+     * @return Auction
      */
     public function getAuction()
     {
