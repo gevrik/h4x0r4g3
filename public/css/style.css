@@ -130,11 +130,57 @@ pre.text-sysmsg {
     color: #66ccff;
 }
 
+.panel-heading {
+    font-size: 9px !important;
+    cursor: pointer;
+}
+
+.contextmenu-connection {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.contextmenu-file {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.contextmenu-entity {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.context-menu-list {
+    background: #1b1b1b;
+    border: #4F5155;
+}
+
+.context-menu-item {
+    background-color: #1b1b1b;
+    color: #c8c8c8;
+}
+
+.context-menu-separator {
+    border-bottom: 1px solid #c8c8c8;
+}
+
+#map-svg {
+    background: url("../img/panel_bg.jpg");
+    background-size:cover;
+}
+
+.notification-container {
+    background: url("../img/panel_bg_alt.jpg");
+    background-size:cover;
+    overflow-y: scroll;
+}
+
 .panel-container {
-    position: fixed;
-    width: 40%;
-    top: 2em;
-    right: 2em;
+    position: absolute;
+}
+
+.map-container {
+    position: absolute;
 }
 
 .milkrun-tile {
@@ -153,10 +199,8 @@ pre.text-sysmsg {
 }
 
 .manpage-container {
+    display: none;
     position: fixed;
-    width: 40%;
-    top: 2em;
-    right: 2em;
 }
 
 .content {
@@ -180,9 +224,9 @@ pre.text-sysmsg {
     border-color: #282828;
 }
 
-.map-panel .panel-body{
-    height: 500px;
-}
+/*.map-panel .panel-body{*/
+    /*height: 500px;*/
+/*}*/
 
 .img-tesseract {
     position: fixed;
@@ -231,18 +275,14 @@ textarea {
     display: none;
     position: fixed;
     bottom: 1em;
-    right: 1em;
+    right: 0.5em;
 }
 
 .actiontime-box {
     display: none;
     position: fixed;
     bottom: 3em;
-    right: 1em;
-}
-
-.notification-container{
-    overflow-y: scroll;
+    right: 0.5em;
 }
 
 .popover {

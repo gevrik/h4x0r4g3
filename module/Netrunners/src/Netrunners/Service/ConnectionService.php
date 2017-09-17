@@ -380,7 +380,7 @@ class ConnectionService extends BaseService
             $aconnection->setTargetNode($targetNode);
             $aconnection->setSourceNode($currentNode);
             $aconnection->setCreated(new \DateTime());
-            $aconnection->setLevel(1);
+            $aconnection->setLevel($currentNode->getLevel());
             $aconnection->setIsOpen(false);
             $this->entityManager->persist($aconnection);
             $bconnection = new Connection();

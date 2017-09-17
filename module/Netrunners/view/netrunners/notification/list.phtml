@@ -1,14 +1,28 @@
-<div id="notification-container" class="notification-container">
-    <?php foreach ($this->notifications as $notification) : /** @var \Netrunners\Entity\Notification $notification */ ?>
-
-    <div class="alert alert-<?php echo $notification->getSeverity(); ?>">
-        <button type="button" class="close close-btn" data-notification-id="<?php echo $notification->getId(); ?>" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <?php echo $notification->getSubject(); ?>
+<div class="panel panel-default draggable notification-panel">
+    <div class="panel-heading">
+        <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate("notifications"); ?></h3>
     </div>
+    <div class="panel-body-notifications panel-body" style="padding: 0;">
+        <div id="notification-container" class="notification-container">
+            <?php foreach ($this->notifications as $notification) : /** @var \Netrunners\Entity\Notification $notification */ ?>
 
-    <?php endforeach; ?>
+                <div class="alert alert-<?php echo $notification->getSeverity(); ?>">
+                    <button type="button" class="close close-btn" data-notification-id="<?php echo $notification->getId(); ?>" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <?php echo $notification->getSubject(); ?>
+                </div>
 
-    <?php if (count($this->notifications)>=1) : ?>
-        <button id="btn-dismiss-all-notifications" class="btn btn-default btn-xs"><?php echo $this->translate("dismiss all"); ?></button>
-    <?php endif; ?>
+            <?php endforeach; ?>
+
+            <?php if (count($this->notifications)>=1) : ?>
+                <button id="btn-dismiss-all-notifications" class="btn btn-default btn-xs"><?php echo $this->translate("dismiss all"); ?></button>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
+<script>
+    var panelBodyNotis = $('#notification-container');
+    var notiWidth = viewportWidth*0.33;
+    var notiHeight = viewportHeight*0.425;
+    panelBodyNotis.css('height', notiHeight).css('width', notiWidth);
+</script>

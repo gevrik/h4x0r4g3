@@ -24,6 +24,8 @@ use Netrunners\Entity\Group;
 use Netrunners\Entity\Invitation;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MilkrunInstance;
+use Netrunners\Entity\Mission;
+use Netrunners\Entity\MissionArchetype;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
@@ -41,6 +43,7 @@ use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
 use Netrunners\Repository\KnownNodeRepository;
+use Netrunners\Repository\MissionRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileFactionRatingRepository;
@@ -1155,6 +1158,38 @@ class BaseService
                     }
                     if ($flush) $this->entityManager->flush($npcProfile);
                 }
+                $npcGroup = $npc->getGroup();
+                if ($npcGroup) {
+                    /** @var Group $npcGroup */
+                    $flush = false;
+                    if ($npc->getCredits() >= 1) {
+                        $npcGroup->setCredits($npcGroup->getCredits() + $npc->getCredits());
+                        $npc->setCredits(0);
+                        $flush = true;
+                    }
+                    if ($npc->getSnippets() >= 1) {
+                        $npcGroup->setSnippets($npcGroup->getSnippets() + $npc->getSnippets());
+                        $npc->setSnippets(0);
+                        $flush = true;
+                    }
+                    if ($flush) $this->entityManager->flush($npcGroup);
+                }
+                $npcFaction = $npc->getFaction();
+                if ($npcFaction) {
+                    /** @var Faction $npcFaction */
+                    $flush = false;
+                    if ($npc->getCredits() >= 1) {
+                        $npcFaction->setCredits($npcFaction->getCredits() + $npc->getCredits());
+                        $npc->setCredits(0);
+                        $flush = true;
+                    }
+                    if ($npc->getSnippets() >= 1) {
+                        $npcFaction->setSnippets($npcFaction->getSnippets() + $npc->getSnippets());
+                        $npc->setSnippets(0);
+                        $flush = true;
+                    }
+                    if ($flush) $this->entityManager->flush($npcFaction);
+                }
                 break;
         }
     }
@@ -1331,6 +1366,7 @@ class BaseService
     /**
      * @param Profile $profile
      * @param MilkrunInstance|NULL $milkrunInstance
+     * @param Mission|NULL $mission
      * @param Profile|NULL $rater
      * @param int $source
      * @param int $sourceRating
@@ -1342,6 +1378,7 @@ class BaseService
     protected function createProfileFactionRating(
         Profile $profile,
         MilkrunInstance $milkrunInstance = NULL,
+        Mission $mission = NULL,
         Profile $rater = NULL,
         $source = 0,
         $sourceRating = 0,
@@ -1368,6 +1405,7 @@ class BaseService
             $pfr->setProfile($profile);
             $pfr->setAdded(new \DateTime());
             $pfr->setMilkrunInstance($milkrunInstance);
+            $pfr->setMission($mission);
             $pfr->setRater($rater);
             $pfr->setSource($source);
             $pfr->setSourceRating($sourceRating);
@@ -1658,6 +1696,51 @@ class BaseService
     }
 
     /**
+     * @param $resourceId
+     * @return bool
+     */
+    protected function isInAction($resourceId)
+    {
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        return (empty($clientData->action)) ? false : true;
+    }
+
+    /**
+     * @param $resourceId
+     * @param bool $messageSocket
+     * @param bool $asActiveCommand
+     * @return array|bool
+     */
+    protected function cancelAction($resourceId, $messageSocket = false, $asActiveCommand = false)
+    {
+        $ws = $this->getWebsocketServer();
+        $ws->setClientData($resourceId, 'action', []);
+        if ($messageSocket) {
+            foreach ($ws->getClients() as $wsClient) {
+                /** @noinspection PhpUndefinedFieldInspection */
+                if ($wsClient->resourceId == $resourceId) {
+                    $response = [
+                        'command' => ($asActiveCommand) ? 'showmessage' : 'showmessageprepend',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
+                            $this->translate('Your current action has been cancelled')
+                        ),
+                        'cleardeadline' => true
+                    ];
+                    if ($asActiveCommand) {
+                        return $response;
+                    }
+                    else {
+                        return $wsClient->send(json_encode($response));
+                    }
+                    break;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * @param string $string
      * @param int $maxLength
      * @param int $minLength
@@ -1717,17 +1800,55 @@ class BaseService
             /** @var NodeRepository $nodeRepo */
             $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
             /** @var ConnectionRepository $connectionRepo */
+            $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+            /** @var FileRepository $fileRepo */
             $nodes = $nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
+                $nodeType = $node->getNodeType();
+                $fileNodes = [];
+                if ($node == $profile->getCurrentNode()) {
+                    $group = 99;
+                    $files = $fileRepo->findByNode($node);
+                    foreach ($files as $file) {
+                        $fileNodes[] = $file;
+                    }
+                }
+                else {
+                    $group = $nodeType->getId();
+                }
                 $mapArray['nodes'][] = [
-                    'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
-                    'type' => $group
+                    'name' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                    'type' => $group,
+                    'shapetype' => 'circle'
                 ];
+                foreach ($fileNodes as $fileNode) {
+                    /** @var File $fileNode */
+                    $fileType = $fileNode->getFileType();
+                    $mapArray['nodes'][] = [
+                        'name' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                        'type' => $fileType->getId(),
+                        'shapetype' => 'rect'
+                    ];
+                    $mapArray['links'][] = [
+                        'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                        'target' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                        'value' => 2,
+                        'type' => 'W'
+                    ];
+                }
                 $connections = $connectionRepo->findBySourceNode($node);
                 foreach ($connections as $connection) {
                     /** @var Connection $connection */
+                    $typeValue = 'A';
+                    if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                        if ($connection->getisOpen()) {
+                            $typeValue = 'Y';
+                        }
+                        else {
+                            $typeValue = 'E';
+                        }
+                    }
                     $mapArray['links'][] = [
                         'source' => (string)$connection->getSourceNode()->getId() . '_' .
                             $connection->getSourceNode()->getNodeType()->getShortName() . '_' .
@@ -1736,7 +1857,7 @@ class BaseService
                             $connection->getTargetNode()->getNodeType()->getShortName() . '_' .
                             $connection->getTargetNode()->getName(),
                         'value' => 2,
-                        'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                        'type' => $typeValue
                     ];
                 }
             }
@@ -1744,7 +1865,7 @@ class BaseService
             $view->setTemplate('netrunners/partials/map.phtml');
             $view->setVariable('json', json_encode($mapArray));
             $this->response = array(
-                'command' => 'showpanel',
+                'command' => 'showmap',
                 'content' => $this->viewRenderer->render($view)
             );
         }
@@ -1783,6 +1904,15 @@ class BaseService
                     $connections = $connectionRepo->findBySourceNode($node);
                     foreach ($connections as $connection) {
                         /** @var Connection $connection */
+                        $typeValue = 'A';
+                        if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                            if ($connection->getisOpen()) {
+                                $typeValue = 'Y';
+                            }
+                            else {
+                                $typeValue = 'E';
+                            }
+                        }
                         $mapArray['links'][] = [
                             'source' => (string)$connection->getSourceNode()->getId() . '_' .
                                 $connection->getSourceNode()->getNodeType()->getShortName() . '_' .
@@ -1791,7 +1921,7 @@ class BaseService
                                 $connection->getTargetNode()->getNodeType()->getShortName() . '_' .
                                 $connection->getTargetNode()->getName(),
                             'value' => 2,
-                            'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                            'type' => $typeValue
                         ];
                     }
                 }
@@ -1815,21 +1945,23 @@ class BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-            return $this->showSystemMap($resourceId);
-        }
+//        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+//            return $this->showSystemMap($resourceId);
+//        }
         $this->response = $this->isActionBlocked($resourceId, true);
         if (!$this->response) {
             $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
             /** @var ConnectionRepository $connectionRepo */
+            $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+            /** @var FileRepository $fileRepo */
             $profile = $this->user->getProfile();
             $currentNode = $profile->getCurrentNode();
             // if the profile or its faction or group owns this system, show them the full map
             $currentSystem = $currentNode->getSystem();
             if (
                 $profile === $currentSystem->getProfile() ||
-                $profile->getFaction() == $currentSystem->getFaction() ||
-                $profile->getGroup() == $currentSystem->getGroup()
+                ($profile->getFaction() && $profile->getFaction() == $currentSystem->getFaction()) ||
+                ($profile->getGroup() && $profile->getGroup() == $currentSystem->getGroup())
             ) {
                 return $this->showSystemMap($resourceId);
             }
@@ -1847,20 +1979,56 @@ class BaseService
             $counter = true;
             foreach ($nodes as $node) {
                 /** @var Node $node */
-                $group = ($node == $profile->getCurrentNode()) ? 99 : $node->getNodeType()->getId();
+                $nodeType = $node->getNodeType();
+                $fileNodes = [];
+                if ($node == $profile->getCurrentNode()) {
+                    $group = 99;
+                    $files = $fileRepo->findByNode($node);
+                    foreach ($files as $file) {
+                        $fileNodes[] = $file;
+                    }
+                }
+                else {
+                    $group = $nodeType->getId();
+                }
                 $mapArray['nodes'][] = [
                     'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
-                    'type' => $group
+                    'type' => $group,
+                    'shapetype' => 'circle'
                 ];
+                foreach ($fileNodes as $fileNode) {
+                    /** @var File $fileNode */
+                    $fileType = $fileNode->getFileType();
+                    $mapArray['nodes'][] = [
+                        'name' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                        'type' => $fileType->getId(),
+                        'shapetype' => 'rect'
+                    ];
+                    $mapArray['links'][] = [
+                        'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                        'target' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                        'value' => 2,
+                        'type' => 'W'
+                    ];
+                }
                 if ($counter) {
                     $connections = $connectionRepo->findBySourceNode($node);
                     foreach ($connections as $connection) {
                         /** @var Connection $connection */
+                        $typeValue = 'A';
+                        if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                            if ($connection->getisOpen()) {
+                                $typeValue = 'Y';
+                            }
+                            else {
+                                $typeValue = 'E';
+                            }
+                        }
                         $mapArray['links'][] = [
                             'source' => (string)$connection->getSourceNode()->getId() . '_' . $connection->getSourceNode()->getNodeType()->getShortName() . '_' . $connection->getSourceNode()->getName(),
                             'target' => (string)$connection->getTargetNode()->getId() . '_' . $connection->getTargetNode()->getNodeType()->getShortName() . '_' . $connection->getTargetNode()->getName(),
                             'value' => 2,
-                            'type' => ($connection->getType() == Connection::TYPE_NORMAL) ? 'A' : 'E'
+                            'type' => $typeValue
                         ];
                     }
                     $counter = false;
@@ -1870,7 +2038,7 @@ class BaseService
             $view->setTemplate('netrunners/partials/map.phtml');
             $view->setVariable('json', json_encode($mapArray));
             $this->response = array(
-                'command' => 'showpanel',
+                'command' => 'showmap',
                 'type' => 'default',
                 'content' => $this->viewRenderer->render($view)
             );
@@ -2060,6 +2228,7 @@ class BaseService
                 // set combatants
                 $this->getWebsocketServer()->addCombatant($npcInstance, $target, NULL, $resourceId);
                 if (!$this->isInCombat($target)) $this->getWebsocketServer()->addCombatant($target, $npcInstance, $resourceId);
+                if ($resourceId && $this->isInAction($resourceId)) $this->cancelAction($resourceId);
                 // inform other players in node
                 $message = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
@@ -2288,6 +2457,120 @@ class BaseService
             $this->entityManager->flush();
         }
         return $npcInstance;
+    }
+
+    protected function executeMissionFile(File $file, $resourceId)
+    {
+        $profile = $this->user->getProfile();
+        $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
+        /** @var MissionRepository $missionRepo */
+        $mission = $missionRepo->findByTargetFile($file);
+        $response = false;
+        if (!$mission) {
+            return $response;
+        }
+        if (!$response && $mission) {
+            /** @var Mission $mission */
+            switch ($mission->getMission()->getId()) {
+                default:
+                    break;
+                case MissionArchetype::ID_PLANT_BACKDOOR:
+                    if (!$response && $mission->getProfile() != $profile) {
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] can not be executed</pre>'),
+                                $file->getName()
+                            )
+                        );
+                    }
+                    if (!$response && $mission->getTargetNode() != $profile->getCurrentNode()) {
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] does not seem to have any effect in this node</pre>'),
+                                $file->getName()
+                            )
+                        );
+                    }
+                    break;
+                case MissionArchetype::ID_UPLOAD_FILE:
+                    if ($mission->getTargetNode() != $profile->getCurrentNode()) {
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] does not seem to have any effect in this node</pre>'),
+                                $file->getName()
+                            )
+                        );
+                    }
+                    break;
+                case MissionArchetype::ID_STEAL_FILE:
+                case MissionArchetype::ID_DELETE_FILE:
+                    if ($mission->getProfile() != $profile) {
+                        $response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] can not be interacted with</pre>'),
+                                $file->getName()
+                            )
+                        );
+                    }
+                    break;
+            }
+            if (!$response) {
+                $response = $this->completeMission($resourceId);
+            }
+        }
+        return $response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    protected function completeMission($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
+        /** @var MissionRepository $missionRepo */
+        $mission = $missionRepo->findCurrentMission($profile);
+        if ($mission) {
+            /** @var Mission $mission */
+            $targetFile = $mission->getTargetFile();
+            if ($targetFile) {
+                $mission->setTargetFile(NULL);
+                $this->entityManager->flush($mission);
+                $this->entityManager->remove($targetFile);
+            }
+            $mission->setCompleted(new \DateTime());
+            $level = $mission->getLevel();
+            $reward = $level * MissionService::CREDITS_MULTIPLIER;
+            $profile->setCredits($profile->getCredits()+$reward);
+            $profile->setCompletedMissions($profile->getCompletedMissions()+1);
+            $this->createProfileFactionRating(
+                $profile,
+                NULL,
+                $mission,
+                NULL,
+                ProfileFactionRating::SOURCE_ID_MISSION,
+                $level,
+                $level * -1,
+                $mission->getSourceFaction(),
+                $mission->getTargetFaction()
+            );
+            $this->entityManager->flush();
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Mission accomplished - you received %s credits</pre>'),
+                    $reward
+                )
+            ];
+        }
+        return $this->response;
     }
 
 }

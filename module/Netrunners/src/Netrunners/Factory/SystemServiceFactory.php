@@ -27,7 +27,8 @@ class SystemServiceFactory implements FactoryInterface
         return new SystemService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('translator')
+            $serviceLocator->get('translator'),
+            $serviceLocator->get('Netrunners\Service\SystemGeneratorService')
         );
     }
 

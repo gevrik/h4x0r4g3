@@ -35,6 +35,18 @@ class FileRepository extends EntityRepository
     }
 
     /**
+     * @param System $system
+     * @return array
+     */
+    public function findActiveBySystem(System $system)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.system = :system AND f.integrity > 1 AND f.running = 1');
+        $qb->setParameter('system', $system);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * Finds all files for the given npc instance.
      * @param NpcInstance $npc
      * @return array

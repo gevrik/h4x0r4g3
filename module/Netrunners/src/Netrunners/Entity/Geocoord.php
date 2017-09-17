@@ -54,6 +54,12 @@ class Geocoord
      */
     protected $data;
 
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     * @var string
+     */
+    protected $zone;
+
 
     /**
      * @return int
@@ -160,6 +166,24 @@ class Geocoord
     public function setData($data)
     {
         $this->data = $data;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getZone()
+    {
+        return $this->zone;
+    }
+
+    /**
+     * @param string $zone
+     * @return Geocoord
+     */
+    public function setZone($zone)
+    {
+        $this->zone = $zone;
         return $this;
     }
 

@@ -32,6 +32,11 @@ class FileExecutionService extends BaseService
     protected $codebreakerService;
 
     /**
+     * @var MissionService
+     */
+    protected $missionService;
+
+    /**
      * @var FileRepository
      */
     protected $fileRepo;
@@ -43,16 +48,19 @@ class FileExecutionService extends BaseService
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
      * @param CodebreakerService $codebreakerService
+     * @param MissionService $missionService
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator,
-        CodebreakerService $codebreakerService
+        CodebreakerService $codebreakerService,
+        MissionService $missionService
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->codebreakerService = $codebreakerService;
+        $this->missionService = $missionService;
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
     }
 
@@ -129,9 +137,12 @@ class FileExecutionService extends BaseService
             );
         }
         if (!$this->response && $file) {
+            // keep track of if execution was successful
+            $wasExecuted = true;
             // determine what to do depending on file type
             switch ($file->getFileType()->getId()) {
                 default:
+                    $wasExecuted = false;
                     $this->response = array(
                         'command' => 'showmessage',
                         'message' => sprintf(
@@ -159,6 +170,7 @@ class FileExecutionService extends BaseService
                 case FileType::ID_JACKHAMMER:
                 case FileType::ID_SIPHON:
                 case FileType::ID_MEDKIT:
+                case FileType::ID_PROXIFIER:
                     $this->response = $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
                     break;
                 case FileType::ID_CODEBREAKER:
@@ -203,14 +215,29 @@ class FileExecutionService extends BaseService
                 case FileType::ID_CODEARMOR:
                     $this->response = $this->equipFile($file);
                     break;
+                case FileType::ID_TEXT:
+                    $this->response = $this->executeMissionFile($file, $resourceId);
+                    if (!$this->response) {
+                        $this->response = array(
+                            'command' => 'showmessage',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s is not executable</pre>'),
+                                $file->getName()
+                            )
+                        );
+                        $wasExecuted = false;
+                    }
+                    break;
             }
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has executed [%s]</pre>'),
-                $this->user->getUsername(),
-                $file->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile, $profile->getId());
+            if ($wasExecuted) {
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] executes [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $file->getName()
+                );
+                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile, $profile->getId());
+            }
         }
         return $this->response;
     }
@@ -345,6 +372,7 @@ class FileExecutionService extends BaseService
      */
     protected function executeBeartrap(File $file, Node $node)
     {
+        // TODO make this do something
         // init response
         $response = false;
         // check if they can execute it in this node
@@ -434,6 +462,17 @@ class FileExecutionService extends BaseService
                 ];
                 $message = sprintf(
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start using [%s] on yourself</pre>'),
+                    $file->getName()
+                );
+                break;
+            case FileType::ID_PROXIFIER:
+                $executeWarning = $this->executeWarningProxifier();
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start using [%s] - please wait</pre>'),
                     $file->getName()
                 );
                 break;
@@ -673,6 +712,25 @@ class FileExecutionService extends BaseService
             $response = array(
                 'command' => 'showmessage',
                 'message' => '<pre style="white-space: pre-wrap;" class="text-warning">You are already at maximum EEG</pre>'
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @return array
+     */
+    public function executeWarningProxifier()
+    {
+        $response = false;
+        $profile = $this->user->getProfile();
+        if ($profile->getSecurityRating() < 1) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Your security rating is already at 0')
+                )
             );
         }
         return $response;
@@ -1593,6 +1651,41 @@ class FileExecutionService extends BaseService
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have used the medkit - new eeg: %s</pre>'),
                 $newEeg
+            );
+            $response = array(
+                'command' => 'showmessageprepend',
+                'message' => $message
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @return array|bool
+     */
+    public function executeProxifier(File $file)
+    {
+        $response = $this->executeWarningProxifier();
+        $profile = $file->getProfile();
+        if (!$response && $this->isInCombat($profile)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">You are busy fighting</pre>'
+            );
+        }
+        if (!$response) {
+            $amountRecovered = ceil(round($file->getLevel()/10));
+            $newSecRating = $profile->getSecurityRating() - $amountRecovered;
+            if ($newSecRating < 0) $newSecRating = 0;
+            $profile->setSecurityRating($newSecRating);
+            $this->entityManager->flush($profile);
+            $this->lowerIntegrityOfFile($file, 100, $newSecRating, true);
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have used [%s] - sec-rating lowered by %s to %s</pre>'),
+                $file->getName(),
+                $amountRecovered,
+                $profile->getSecurityRating()
             );
             $response = array(
                 'command' => 'showmessageprepend',

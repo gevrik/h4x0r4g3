@@ -7,10 +7,32 @@
         initSound();
 
         var viewportData = getViewport();
-        var viewportWidth = viewportData[0];
-        var viewportHeight = viewportData[1];
+        viewportWidth = viewportData[0];
+        viewportHeight = viewportData[1];
 
-        $('.panel-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
+        $('.panel-container')
+            .css('max-height', viewportHeight*0.425)
+            .css('height', viewportHeight*0.425)
+            .css('max-width', viewportWidth*0.33)
+            .css('width', viewportWidth*0.33)
+            .css('top', viewportHeight*0.5)
+            .css('left', viewportWidth*0.65);
+
+        $('.map-container')
+            .css('max-height', viewportHeight*0.425)
+            .css('height', viewportHeight*0.425)
+            .css('max-width', viewportWidth*0.33)
+            .css('width', viewportWidth*0.33)
+            .css('top', viewportHeight*0.005)
+            .css('left', viewportWidth*0.65);
+
+        $('.manpage-container')
+            .css('max-height', viewportHeight*0.925)
+            .css('height', viewportHeight*0.925)
+            .css('max-width', viewportWidth*0.38)
+            .css('width', viewportWidth*0.38)
+            .css('top', viewportHeight*0.005)
+            .css('left', viewportWidth*0.6);
 
         var md = $('#messages');
         var commandInput = $('#command-input');
@@ -25,12 +47,333 @@
             size: 20
         });
 
+        function cmCallback (key, options) {
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: key
+            };
+            conn.send(JSON.stringify(command));
+        }
+
+        function cmCallbackNoSend(key, options) {
+            commandInput.val(key + ' ').focus();
+        }
+
+        // context menu
+        $.contextMenu({
+            selector: '.img-tesseract',
+            zIndex: 100,
+            trigger: 'left',
+            callback: function (key, options) {
+                cmCallback(key,options);
+            },
+            items: {
+                "score": {"name": "score", "icon": "fa-star"},
+                "system": {"name": "system", "icon": "fa-info-circle"},
+                "clear": {"name": "clear", "icon": "fa-eraser"},
+                "commands": {"name": "commands", "icon": "fa-terminal"},
+                "jobs": {"name": "jobs", "icon": "fa-cogs"},
+                "ps": {"name": "ps", "icon": "fa-list-ol"},
+                "sepa": "---------",
+                "milkrun": {"name": "milkrun", "icon": "fa-comment"},
+                "mission": {"name": "mission", "icon": "fa-commenting"},
+                "sepb": "---------",
+                "sneak": {"name": "sneak", "icon": "fa-user-secret"},
+                "vis": {"name": "visible", "icon": "fa-user-o"},
+                "sep1": "---------",
+                "quit": {"name": "Quit", "icon": "fa-close", callback: function (key,options) {commandInput.focus()}},
+                "sep2": "---------",
+                "fold999": {
+                    "name": "node-actions",
+                    "items": {
+                        "editnode": {"name": "editnode"},
+                        "harvest": {"name": "harvest", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "scan": {"name": "scan", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "fold9992": {
+                            "name": "bank",
+                            "items": {
+                                "deposit": {"name": "deposit", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }},
+                                "withdraw": {"name": "withdraw", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }}
+                            }
+                        }
+                    }
+                },
+                "fold888": {
+                    "name": "coding",
+                    "items": {
+                        "code": {"name": "code"},
+                        "recipes": {"name": "recipes"},
+                        "res": {"name": "resources"}
+                    }
+                },
+                "fold1": {
+                    "name": "movement",
+                    "items": {
+                        "connect": {"name": "connect", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "home": {"name": "home"}
+                    }
+                },
+                "fold1a": {
+                    "name": "entities",
+                    "items": {
+                        "consider": {"name": "consider", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "entityname": {"name": "entityname", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "eset": {"name": "eset", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }}
+                    }
+                },
+                "fold1b": {
+                    "name": "files",
+                    "items": {
+                        "decompile": {"name": "decompile", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "download": {"name": "download", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "equipment": {"name": "equipment"},
+                        "execute": {"name": "execute", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "filecats": {"name": "filecategories"},
+                        "filemods": {"name": "filemods"},
+                        "filetypes": {"name": "filetypes"},
+                        "initarmor": {"name": "initarmor", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "inv": {"name": "inventory"},
+                        "kill": {"name": "kill", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "mod": {"name": "modfile", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "mods": {"name": "mods"},
+                        "rm": {"name": "remove", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "unload": {"name": "unload", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "update": {"name": "update", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }}
+                    }
+                },
+                "fold1c": {
+                    "name": "building",
+                    "items": {
+                        "addnode": {"name": "addnode"},
+                        "fold2": {
+                            "name": "connections",
+                            "items": {
+                                "addconnection": {"name": "addconnection", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }},
+                                "removeconnection": {"name": "removeconnection", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }},
+                                "secureconnection": {"name": "secureconnection", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }},
+                                "unsecure": {"name": "unsecure", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }}
+                            }
+                        },
+                        "fold2a": {
+                            "name": "nodes",
+                            "items": {
+                                "editnode": {"name": "editnode"},
+                                "nodename": {"name": "nodename", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }},
+                                "nodes": {"name": "nodes"},
+                                "nodetype": {"name": "nodetype", callback: function (key, options) {
+                                    cmCallbackNoSend(key,options);
+                                }},
+                                "removenode": {"name": "removenode"},
+                                "upgradenode": {"name": "upgradenode"}
+                            }
+                        }
+                    }
+                },
+                "fold1c1": {
+                    "name": "chat",
+                    "items": {
+                        "fc": {"name": "factionchat", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "gc": {"name": "globalchat", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "newbie": {"name": "newbie", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "say": {"name": "say", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }}
+                    }
+                },
+                "fold1d": {
+                    "name": "factions",
+                    "items": {
+                        "factions": {"name": "factions"},
+                        "factionratings": {"name": "factionratings"}
+                    }
+                },
+                "fold1e": {
+                    "name": "auctions",
+                    "items": {
+                        "auctionfile": {"name": "auctionfile", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "auctionbid": {"name": "auctionbid", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "auctionbids": {"name": "auctionbids"},
+                        "auctionbuyout": {"name": "auctionbuyout", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "auctioncancel": {"name": "auctioncancel", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "auctionclaim": {"name": "auctionclaim", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "auctions": {"name": "auctions"}
+                    }
+                },
+                "fold1f": {
+                    "name": "feedback",
+                    "items": {
+                        "bug": {"name": "bug"},
+                        "idea": {"name": "idea"},
+                        "typo": {"name": "typo"}
+                    }
+                },
+                "fold1w": {
+                    "name": "wilderspace",
+                    "items": {
+                        "explore": {"name": "explore"}
+                    }
+                },
+                "fold1x": {
+                    "name": "milkruns",
+                    "items": {
+                        "defaultmra": {"name": "defaultmra", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "repairmra": {"name": "defaultmra"},
+                        "showmra": {"name": "showmra"},
+                        "upgrademra": {"name": "upgrademra", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }}
+                    }
+                },
+                "fold1y": {
+                    "name": "account",
+                    "items": {
+                        "changepassword": {"name": "changepassword", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "invitations": {"name": "invitations"},
+                        "setemail": {"name": "setemail"},
+                        "setlocale": {"name": "setlocale"},
+                        "options": {"name": "changeoption", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }},
+                        "showbalance": {"name": "showbalance"},
+                        "skillpoints": {"name": "skillpoints"},
+                        "skills": {"name": "skills"}
+                    }
+                },
+                "fold1z": {
+                    "name": "interface",
+                    "items": {
+                        "bgopacity": {"name": "bgopacity", callback: function (key, options) {
+                            cmCallbackNoSend(key,options);
+                        }}
+                    }
+                }
+            }
+        });
+
+        $.contextMenu({
+            selector: '.contextmenu-connection',
+            animation: {duration: 250, show: 'fadeIn', hide: 'fadeOut'},
+            callback: function(key, options) {
+                var m = "clicked: " + key;
+                console.log(m);
+            },
+            items: {
+                "secureconnection": {name: "secure", icon: "edit"},
+                "sep1": "---------",
+                "removeconnection": {name: "remove", icon: "delete"},
+                "sep2": "---------",
+                "quit": {name: "Quit", icon: function(){
+                    return 'context-menu-icon context-menu-icon-quit';
+                }}
+            }
+        });
+
+        $('#messages').on('click', '.contextmenu-connection', function(e){
+            var connectionId = $(this).data('id');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'cd ' + connectionId
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+        $('#messages').on('click', '.contextmenu-file', function(e){
+            var fileId = $(this).data('id');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'stat ' + fileId
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+        $('#messages').on('click', '.contextmenu-entity', function(e){
+            var entityId = $(this).data('id');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'con ' + entityId
+            };
+            conn.send(JSON.stringify(command));
+        });
+
         $('#panel-container').on('click', '.panel-heading .close', function(e){
-            $('#panel-container').html('');
+            $('#panel-container').html('').hide();
             commandInput.focus();
         });
 
-        $('#panel-container').on('click', '.close-btn', function(e){
+        $('#map-container').on('click', '.panel-heading .close', function(e){
+            $('#map-container').html('').hide();
+            commandInput.focus();
+        });
+
+        $('#gamepanels').on('click', '#panel-container .close-btn', function(e){
             var command = {
                 command: 'parseInput',
                 hash: hash,
@@ -42,7 +385,7 @@
             commandInput.focus();
         });
 
-        $('#panel-container').on('click', '#btn-dismiss-all-notifications', function(e){
+        $('#gamepanels').on('click', '#panel-container #btn-dismiss-all-notifications', function(e){
             var command = {
                 command: 'parseInput',
                 hash: hash,
@@ -102,7 +445,14 @@
                 command !== 'updateinterfaceelement' &&
                 !silent &&
                 command !== 'ticker'
-            ) commandInput.attr('type', 'text').detach();
+            ) {
+                commandInput.attr('type', 'text').detach();
+            }
+            if (data.moved) {
+                $('.contextmenu-connection').removeClass('contextmenu-connection');
+                $('.contextmenu-file').removeClass('contextmenu-file');
+                $('.contextmenu-entity').removeClass('contextmenu-entity');
+            }
             prompt = (data.prompt) ? data.prompt : prompt;
             if (data.exitconfirmmode) {
                 consoleMode = 'default';
@@ -305,14 +655,25 @@
                 case 'getrandomgeocoords':
                     getRandomInRange(data.content, 6);
                     break;
+                case 'showmap':
+                    $('#map-container').html('').append(data.content).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
+                    });
+                    //$('.panel-body-map').resizable();
+                    if (!data.silent) showprompt();
+                    break;
                 case 'showpanel':
-                    $('#panel-container').html('').append(data.content);
-                    $('.draggable').draggable({
-                        handle: '.panel-heading'
+                    $('#panel-container').html('').append(data.content).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
                     });
                     if(document.getElementById('notification-container') !== null)
                     {
-                        $('#notification-container').css('max-height', viewportHeight - 50).css('height', viewportHeight - 50);
                         document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
                     }
                     $('.btn-hangman-letter').on('click', function(){
@@ -339,9 +700,11 @@
                     break;
                 case 'startmilkrun':
                     if (data.music) createMusicInstance(data.music);
-                    $('#milkrun-container').html('').append(data.content);
-                    $('.draggable').draggable({
-                        handle: '.panel-heading'
+                    $('#milkrun-container').html('').append(data.content).draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
                     });
                     var milkrunMapWidth = $('#milkrun-panel').innerWidth();
                     $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
@@ -363,16 +726,18 @@
                     if (!data.silent) showprompt();
                     break;
                 case 'openmanpagemenu':
-                    $('#manpage-container').html('').append(data.message);
-                    $('.draggable').draggable({
-                        handle: '.panel-heading'
+                    $('#manpage-container').html('').append(data.message).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
                     });
                     $('#btn-close-manpage-editor').on('click', function(){
                         if (editor1) {
                             editor1.destroy();
                             editor1 = null;
                         }
-                        $('#manpage-container').html('');
+                        $('#manpage-container').html('').hide();
                         commandInput.focus();
                     });
                     if (!silent) {
@@ -437,6 +802,10 @@
                         md.append(messageData);
                     });
                     showprompt();
+                    if (data.cleardeadline) {
+                        $('.deadline-progress').hide();
+                        clearInterval(deadlineTimer);
+                    }
                     break;
                 case 'updateprompt':
                     commandInput.val(data.message);
@@ -445,6 +814,10 @@
                     var lastPrompt = $('.output-line').last();
                     $(data.message).insertBefore(lastPrompt);
                     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    if (data.cleardeadline) {
+                        $('.deadline-progress').hide();
+                        clearInterval(deadlineTimer);
+                    }
                     return true;
                 case 'showoutputprepend':
                     var lastPrompt = $('.output-line').last();
@@ -453,6 +826,10 @@
                         $(messageData).insertBefore(lastPrompt);
                     });
                     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    if (data.cleardeadline) {
+                        $('.deadline-progress').hide();
+                        clearInterval(deadlineTimer);
+                    }
                     return true;
             }
             $('[data-toggle="tooltip"]').tooltip();
@@ -590,6 +967,7 @@
                 conn.send(JSON.stringify(jsonData));
             }
             // tab
+            //console.log(keycode);
             if(keycode === 9){
                 event.preventDefault();
                 message = $(this).val();
@@ -600,6 +978,10 @@
                     silent: true
                 };
                 conn.send(JSON.stringify(jsonData));
+            }
+            // menu on esc
+            if(keycode === 18){
+                $('.img-tesseract').click();
             }
         })
             .on('click', function(){

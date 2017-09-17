@@ -119,6 +119,18 @@ class Profile
      * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
+    protected $completedMissions;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $failedMissions;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
     protected $currentResourceId;
 
     // ORM
@@ -482,6 +494,42 @@ class Profile
     public function setFaileddMilkruns($faileddMilkruns)
     {
         $this->faileddMilkruns = $faileddMilkruns;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCompletedMissions()
+    {
+        return $this->completedMissions;
+    }
+
+    /**
+     * @param int $completedMissions
+     * @return Profile
+     */
+    public function setCompletedMissions($completedMissions)
+    {
+        $this->completedMissions = $completedMissions;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getFailedMissions()
+    {
+        return $this->failedMissions;
+    }
+
+    /**
+     * @param int $failedMissions
+     * @return Profile
+     */
+    public function setFailedMissions($failedMissions)
+    {
+        $this->failedMissions = $failedMissions;
         return $this;
     }
 

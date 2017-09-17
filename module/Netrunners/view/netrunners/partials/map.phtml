@@ -3,16 +3,15 @@
         <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h3 class="panel-title"><?php echo $this->translate("system map"); ?></h3>
     </div>
-    <div class="panel-body" style="padding: 0;">
+    <div class="panel-body-map panel-body" style="padding: 0;">
         <svg id="map-svg"></svg>
     </div>
 </div>
 <script>
 
-    var panelBody = $('.panel-body');
     var mapSvg = $('#map-svg');
-    var mapWidth = panelBody.innerWidth();
-    var mapHeight = panelBody.innerHeight();
+    var mapWidth = viewportWidth*0.329;
+    var mapHeight = viewportHeight*0.424;
 
     var xcolors = [
         'rgb(199, 199, 199)', // INVALID
@@ -99,7 +98,9 @@
         .data(nodes_data)
         .enter()
         .append("circle")
-        .attr("r", radius)
+        .attr("r", function (d) {
+            return (d.shapetype === 'circle') ? radius : Math.ceil(radius/2);
+        })
         .attr("fill", circleColour);
 
     node.append("title")
@@ -132,10 +133,19 @@
     //If the link type is "A" return green
     //If the link type is "E" return red
     function linkColour(d) {
-        if (d.type === "A") {
-            return "green";
-        } else {
-            return "red";
+        switch (d.type) {
+            default:
+                return "green";
+                break;
+            case 'Y':
+                return "yellow";
+                break;
+            case 'E':
+                return "red";
+                break;
+            case 'W':
+                return "white";
+                break;
         }
     }
 

@@ -15,17 +15,20 @@ use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\MilkrunInstance;
+use Netrunners\Entity\Mission;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\System;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\MilkrunInstanceRepository;
+use Netrunners\Repository\MissionRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NotificationRepository;
 use Netrunners\Repository\NpcInstanceRepository;
@@ -60,6 +63,11 @@ class LoopService extends BaseService
     protected $codingService;
 
     /**
+     * @var SystemService
+     */
+    protected $systemService;
+
+    /**
      * @var NodeRepository
      */
     protected $nodeRepo;
@@ -92,6 +100,7 @@ class LoopService extends BaseService
      * @param FileService $fileService
      * @param CodingService $codingService
      * @param CombatService $combatService
+     * @param SystemService $systemService
      * @param Translator $translator
      */
     public function __construct(
@@ -100,6 +109,7 @@ class LoopService extends BaseService
         FileService $fileService,
         CodingService $codingService,
         CombatService $combatService,
+        SystemService $systemService,
         Translator $translator
     )
     {
@@ -107,6 +117,7 @@ class LoopService extends BaseService
         $this->fileService = $fileService;
         $this->codingService = $codingService;
         $this->combatService = $combatService;
+        $this->systemService = $systemService;
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
@@ -225,7 +236,13 @@ class LoopService extends BaseService
                         case FileType::ID_MEDKIT:
                             $response = $this->fileService->executeMedkit($file);
                             break;
+                        case FileType::ID_PROXIFIER:
+                            $response = $this->fileService->executeProxifier($file);
+                            break;
                     }
+                    break;
+                case 'homerecall':
+                    $response = $this->systemService->homeRecallAction($resourceId);
                     break;
             }
             if ($response) {
@@ -233,8 +250,43 @@ class LoopService extends BaseService
                 $wsClient->send(json_encode($response));
             }
             $ws->setClientData($resourceId, 'action', []);
+            // check if we have to work on more commands
+            if (is_array($response) && array_key_exists('additionalCommands', $response)) {
+                foreach ($response['additionalCommands'] as $additionalCommandId => $additionalCommandData) {
+                    $additionalResponse = false;
+                    switch ($additionalCommandData['command']) {
+                        default:
+                            break;
+                        case 'map':
+                            $additionalResponse = $this->systemService->showAreaMap($resourceId);
+                            break;
+                        case 'flyto':
+                            $additionalResponse = [
+                                'command' => 'flytocoords',
+                                'content' => explode(',', $additionalCommandData['content'])
+                            ];
+                            break;
+                        case 'setopacity':
+                            $additionalResponse = [
+                                'command' => 'setbgopacity',
+                                'content' => $additionalCommandData['content']
+                            ];
+                            break;
+                        case 'getrandomgeocoords':
+                            $additionalResponse = [
+                                'command' => 'getrandomgeocoords',
+                                'content' => $additionalCommandData['content']
+                            ];
+                            break;
+                    }
+                    if (is_array($additionalResponse)) {
+                        $additionalResponse['silent'] = $additionalCommandData['silent'];
+                        $wsClient->send(json_encode($additionalResponse));
+                    }
+                }
+            }
         }
-        /** now we check for milkruns that should expire */
+        /* now we check for milkruns that should expire */
         $milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
         /** @var MilkrunInstanceRepository $milkrunInstanceRepo */
         $expiringMilkruns = $milkrunInstanceRepo->findForExpiredLoop();
@@ -274,7 +326,20 @@ class LoopService extends BaseService
                     'prompt' => $ws->getUtilityService()->showPrompt($targetClientData)
                 ];
                 $targetClient->send(json_encode($response));
-                // TODO lower rating
+                $profile = $expiringMilkrun->getProfile();
+                $profile->setFaileddMilkruns($profile->getFaileddMilkruns()+1);
+                $this->entityManager->flush($profile);
+                $this->createProfileFactionRating(
+                    $profile,
+                    $expiringMilkrun,
+                    NULL,
+                    NULL,
+                    ProfileFactionRating::SOURCE_ID_MILKRUN,
+                    $expiringMilkrun->getLevel() * -1,
+                    $expiringMilkrun->getLevel() * -1,
+                    $expiringMilkrun->getSourceFaction(),
+                    $expiringMilkrun->getTargetFaction()
+                );
             }
             else {
                 /* store notification */
@@ -283,7 +348,99 @@ class LoopService extends BaseService
                     'Your current milkrun has expired before you could complete it',
                     'warning'
                 );
-                // TODO lower rating
+                $profile = $expiringMilkrun->getProfile();
+                $profile->setFaileddMilkruns($profile->getFaileddMilkruns()+1);
+                $this->entityManager->flush($profile);
+                $this->createProfileFactionRating(
+                    $profile,
+                    $expiringMilkrun,
+                    NULL,
+                    NULL,
+                    ProfileFactionRating::SOURCE_ID_MILKRUN,
+                    $expiringMilkrun->getLevel() * -1,
+                    $expiringMilkrun->getLevel() * -1,
+                    $expiringMilkrun->getSourceFaction(),
+                    $expiringMilkrun->getTargetFaction()
+                );
+            }
+        }
+        /* now we check for missions that should expire */
+        $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
+        /** @var MissionRepository $missionRepo */
+        $expiringMissions = $missionRepo->findForExpiredLoop();
+        foreach ($expiringMissions as $expiringMission) {
+            /** @var Mission $expiringMission */
+            $expiringMission->setExpired(true);
+            $targetFile = $expiringMission->getTargetFile();
+            if ($targetFile) {
+                $expiringMission->setTargetFile(NULL);
+            }
+            $this->entityManager->flush($expiringMission);
+            if ($targetFile) {
+                $this->entityManager->remove($targetFile);
+                $this->entityManager->flush($targetFile);
+            }
+            $targetClient = NULL;
+            $targetClientData = NULL;
+            $missionProfile = $expiringMission->getProfile();
+            foreach ($ws->getClients() as $wsClient) {
+                /** @noinspection PhpUndefinedFieldInspection */
+                $clientData = $ws->getClientData($wsClient->resourceId);
+                if ($clientData['profileId'] == $missionProfile->getId()) {
+                    $targetClient = $wsClient;
+                    $targetClientData = $clientData;
+                    break;
+                }
+            }
+            if ($targetClient && $targetClientData) {
+                /* send message */
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Your current mission has expired before you could complete it')
+                );
+                $response = [
+                    'command' => 'showmessageprepend',
+                    'hash' => $targetClientData->hash,
+                    'content' => $message,
+                    'prompt' => $ws->getUtilityService()->showPrompt($targetClientData)
+                ];
+                $targetClient->send(json_encode($response));
+                $profile = $expiringMission->getProfile();
+                $profile->setFailedMissions($profile->getFailedMissions()+1);
+                $this->entityManager->flush($profile);
+                $this->createProfileFactionRating(
+                    $profile,
+                    NULL,
+                    $expiringMission,
+                    NULL,
+                    ProfileFactionRating::SOURCE_ID_MISSION,
+                    $expiringMission->getLevel() * -2,
+                    $expiringMission->getLevel() * -1,
+                    $expiringMission->getSourceFaction(),
+                    $expiringMission->getTargetFaction()
+                );
+            }
+            else {
+                /* store notification */
+                $this->storeNotification(
+                    $expiringMission->getProfile(),
+                    'Your current mission has expired before you could complete it',
+                    'warning'
+                );
+                $profile = $expiringMission->getProfile();
+                $profile->setFailedMissions($profile->getFailedMissions()+1);
+                $this->entityManager->flush($profile);
+                $this->createProfileFactionRating(
+                    $profile,
+                    NULL,
+                    $expiringMission,
+                    NULL,
+                    ProfileFactionRating::SOURCE_ID_MISSION,
+                    $expiringMission->getLevel() * -2,
+                    $expiringMission->getLevel() * -1,
+                    $expiringMission->getSourceFaction(),
+                    $expiringMission->getTargetFaction()
+                );
             }
         }
         return true;
@@ -406,7 +563,8 @@ class LoopService extends BaseService
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Codebreaker attempt failed - security level raised')
-                )
+                ),
+                'cleardeadline' => true,
             ];
             $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
             /** @var Profile $profile */
@@ -594,8 +752,10 @@ class LoopService extends BaseService
      */
     private function regenerateEeg(Profile $profile)
     {
+        $currentNode = $profile->getCurrentNode();
+        $nodeType = $currentNode->getNodeType();
         $amount = 1;
-        if ($profile->getCurrentNode() == $profile->getHomeNode()) $amount = 100 - $profile->getEeg();
+        if ($currentNode == $profile->getHomeNode() || $nodeType->getId() == NodeType::ID_HOME) $amount = 100 - $profile->getEeg();
         // TODO modify amount by programs in node or by effects from running programs
         $profile->setEeg($profile->getEeg() + $amount);
         if ($profile->getEeg() > 100) $profile->setEeg(100);
@@ -606,8 +766,10 @@ class LoopService extends BaseService
      */
     private function regenerateWillpower(Profile $profile)
     {
+        $currentNode = $profile->getCurrentNode();
+        $nodeType = $currentNode->getNodeType();
         $amount = 2;
-        if ($profile->getCurrentNode() == $profile->getHomeNode()) $amount = 100 - $profile->getWillpower();
+        if ($currentNode == $profile->getHomeNode() || $nodeType->getId() == NodeType::ID_HOME) $amount = 100 - $profile->getWillpower();
         // TODO modify amount by programs in node or by effects from running programs
         $profile->setWillpower($profile->getWillpower() + $amount);
         if ($profile->getWillpower() > 100) $profile->setWillpower(100);
@@ -618,8 +780,10 @@ class LoopService extends BaseService
      */
     private function regenerateSecurityRating(Profile $profile)
     {
+        $currentNode = $profile->getCurrentNode();
+        $nodeType = $currentNode->getNodeType();
         $amount = 0;
-        if ($profile->getCurrentNode() == $profile->getHomeNode()) $amount = 1;
+        if ($currentNode == $profile->getHomeNode() || $nodeType->getId() == NodeType::ID_HOME) $amount = 1;
         // TODO modify amount by programs in node or by effects from running programs
         $profile->setSecurityRating($profile->getSecurityRating() - $amount);
         if ($profile->getSecurityRating() < 0) $profile->setSecurityRating(0);
@@ -680,6 +844,63 @@ class LoopService extends BaseService
      */
     public function loopResources()
     {
+        $systems = $this->entityManager->getRepository('Netrunners\Entity\System')->findAll();
+        foreach ($systems as $system) {
+            /** @var System $system */
+            if ($system->getProfile()) $this->calcSystemResourcesProfile($system);
+            if ($system->getGroup()) $this->calcSystemResourcesGroup($system);
+            if ($system->getFaction()) $this->calcSystemResourcesFaction($system);
+            $this->checkForModifyingFiles($system);
+        }
+        // researcher node upgrades work like resources too
+        $this->researchProgress();
+        // now close all open codegates
+        $this->closeOpenCodegates();
+        // commit to db
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param System $system
+     */
+    private function calcSystemResourcesProfile(System $system)
+    {
+        $profile = $system->getProfile();
+        $snippetsEarned = $this->nodeRepo->getSumResourceLevelsForSystem($system, NodeType::ID_DATABASE);
+        $creditsEarned = $this->nodeRepo->getSumResourceLevelsForSystem($system, NodeType::ID_TERMINAL);
+        $profile->setSnippets($profile->getSnippets()+$snippetsEarned);
+        $profile->setCredits($profile->getCredits()+$creditsEarned);
+    }
+
+    /**
+     * @param System $system
+     */
+    private function calcSystemResourcesGroup(System $system)
+    {
+        $group = $system->getGroup();
+        $snippetsEarned = $this->nodeRepo->getSumResourceLevelsForSystem($system, NodeType::ID_DATABASE);
+        $creditsEarned = $this->nodeRepo->getSumResourceLevelsForSystem($system, NodeType::ID_TERMINAL);
+        $group->setSnippets($group->getSnippets()+$snippetsEarned);
+        $group->setCredits($group->getCredits()+$creditsEarned);
+    }
+
+    /**
+     * @param System $system
+     */
+    private function calcSystemResourcesFaction(System $system)
+    {
+        $faction = $system->getFaction();
+        $snippetsEarned = $this->nodeRepo->getSumResourceLevelsForSystem($system, NodeType::ID_DATABASE);
+        $creditsEarned = $this->nodeRepo->getSumResourceLevelsForSystem($system, NodeType::ID_TERMINAL);
+        $faction->setSnippets($faction->getSnippets()+$snippetsEarned);
+        $faction->setCredits($faction->getCredits()+$creditsEarned);
+    }
+
+    /**
+     * OLD
+     */
+    public function loopResourcesOld()
+    {
         // init var to keep track of who receives what
         $items = [];
         // get all the db nodes (for snippet generation)
@@ -690,9 +911,10 @@ class LoopService extends BaseService
         foreach ($databaseNodes as $databaseNode) {
             /** @var Node $databaseNode */
             if ($databaseNode->getSystem() != $system) {
+                // skip if the system does not have a profile
                 $system = $databaseNode->getSystem();
                 $systemOwner = $system->getProfile();
-                $currentNodeProfileId = $systemOwner->getId();
+                $currentNodeProfileId = ($systemOwner) ? $systemOwner->getId() : NULL;
             }
             if (!$systemOwner) continue;
             if ($system->getGroup()) continue;
@@ -700,7 +922,7 @@ class LoopService extends BaseService
             // add the profile id to the items if it is not already set
             $items = $this->addProfileIdToItems($items, $currentNodeProfileId);
             $items[$currentNodeProfileId]['snippets'] += $databaseNode->getLevel();
-            $this->checkForModifyingFiles($databaseNode);
+            //$this->checkForModifyingFiles($databaseNode);
         }
         // get all the terminal nodes (for credit generation)
         $terminalNodes = $this->nodeRepo->findByType(NodeType::ID_TERMINAL);
@@ -720,7 +942,7 @@ class LoopService extends BaseService
             // add the profile id to the items if it is not already set
             $items = $this->addProfileIdToItems($items, $currentNodeProfileId);
             $items[$currentNodeProfileId]['credits'] += $terminalNode->getLevel();
-            $this->checkForModifyingFiles($terminalNode);
+            //$this->checkForModifyingFiles($terminalNode);
         }
         foreach ($items as $profileId => $amountData) {
             $profile = $this->entityManager->find('Netrunners\Entity\Profile', $profileId);
@@ -864,7 +1086,7 @@ class LoopService extends BaseService
      * @param Node $node
      * @return bool
      */
-    private function checkForModifyingFiles(Node $node)
+    private function checkForModifyingFilesOld(Node $node)
     {
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */
@@ -895,6 +1117,35 @@ class LoopService extends BaseService
             }
         }
         return true;
+    }
+
+
+    private function checkForModifyingFiles(System $system)
+    {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $filesInNode = $fileRepo->findActiveBySystem($system);
+        foreach ($filesInNode as $fileInNode) {
+            /** @var File $fileInNode */
+            switch ($fileInNode->getFileType()->getId()) {
+                default:
+                    continue;
+                case FileType::ID_DATAMINER:
+                case FileType::ID_COINMINER:
+                    $fileData = json_decode($fileInNode->getData());
+                    if (!is_object($fileData)) {
+                        $fileData = json_encode(['value'=>0]);
+                        $fileData = json_decode($fileData);
+                    }
+                    // skip if the program has already collected equal to or more than its integrity allows
+                    if ($fileData->value >= $fileInNode->getIntegrity()) continue;
+                    $this->lowerIntegrityOfFile($fileInNode, 50);
+                    $fileData->value += $fileInNode->getLevel();
+                    if ($fileData->value > $fileInNode->getIntegrity()) $fileData->value = $fileInNode->getIntegrity();
+                    $fileInNode->setData(json_encode($fileData));
+                    break;
+            }
+        }
     }
 
 }

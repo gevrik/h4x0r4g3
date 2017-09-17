@@ -102,6 +102,11 @@ class ParserService
     protected $milkrunAivatarService;
 
     /**
+     * @var MissionService
+     */
+    protected $missionService;
+
+    /**
      * @var HangmanService
      */
     protected $hangmanService;
@@ -163,6 +168,7 @@ class ParserService
      * @param AdminService $adminService
      * @param MilkrunService $milkrunService
      * @param MilkrunAivatarService $milkrunAivatarService
+     * @param MissionService $missionService
      * @param HangmanService $hangmanService
      * @param CodebreakerService $codebreakerService
      * @param GameOptionService $gameOptionService
@@ -189,6 +195,7 @@ class ParserService
         AdminService $adminService,
         MilkrunService $milkrunService,
         MilkrunAivatarService $milkrunAivatarService,
+        MissionService $missionService,
         HangmanService $hangmanService,
         CodebreakerService $codebreakerService,
         GameOptionService $gameOptionService,
@@ -215,6 +222,7 @@ class ParserService
         $this->adminService = $adminService;
         $this->milkrunService = $milkrunService;
         $this->milkrunAivatarService = $milkrunAivatarService;
+        $this->missionService = $missionService;
         $this->hangmanService = $hangmanService;
         $this->codebreakerService = $codebreakerService;
         $this->gameOptionService = $gameOptionService;
@@ -304,7 +312,7 @@ class ParserService
                 );
                 break;
             case self::CMD_ADDNODE:
-                $response = $this->nodeService->addNode($resourceId);
+                $response = $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
                 break;
             case self::CMD_ADDCONNECTION:
                 $response = $this->connectionService->addConnection($resourceId, $contentArray);
@@ -314,6 +322,9 @@ class ParserService
                 break;
             case 'bgopacity':
                 $response = $this->profileService->changeBackgroundOpacity($resourceId, $contentArray);
+                break;
+            case 'cancel':
+                $response = $this->profileService->cancelCurrentAction($resourceId, true, true);
                 break;
             case 'cd':
                 $response = $this->connectionService->useConnection($resourceId, $contentArray);
@@ -336,6 +347,9 @@ class ParserService
                 break;
             case 'shownotifications':
                 $response = $this->notificationService->showNotifications($resourceId);
+                break;
+            case 'decompile':
+                $response = $this->fileService->decompileFile($resourceId, $contentArray);
                 break;
             case 'deposit':
                 $response = $this->profileService->depositCredits($resourceId, $contentArray);
@@ -477,6 +491,9 @@ class ParserService
             case 'upgrademra':
                 $response = $this->milkrunAivatarService->upgradeMra($resourceId, $contentArray);
                 break;
+            case 'missiondetails':
+                $response = $this->missionService->showMissionDetails($resourceId);
+                break;
             case 'modchat':
             case 'mc':
                 $response = $this->chatService->moderatorChat($resourceId, $contentArray);
@@ -525,6 +542,10 @@ class ParserService
             case 'parts':
             case 'rm':
                 $response = $this->fileService->enterMode($resourceId, $userCommand, $contentArray);
+                break;
+            case 'requestmission':
+            case 'mission':
+                $response = $this->missionService->enterMode($resourceId);
                 break;
             case 'resources':
             case 'res':
@@ -846,6 +867,9 @@ class ParserService
             switch ($confirmData->command) {
                 default:
                     break;
+                case 'addnode':
+                    $response = $this->nodeService->addNode($resourceId);
+                    break;
                 case 'upgradenode':
                     $response = $this->nodeService->upgradeNode($resourceId);
                     break;
@@ -857,6 +881,9 @@ class ParserService
                     break;
                 case 'milkrun':
                     $response = $this->milkrunService->requestMilkrun($resourceId, $confirmData);
+                    break;
+                case 'mission':
+                    $response = $this->missionService->requestMission($resourceId, $confirmData);
                     break;
             }
         }

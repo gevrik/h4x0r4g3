@@ -11,12 +11,14 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
 class SystemService extends BaseService
 {
 
+    const HOME_RECALL_TIMER = 10;
     const BASE_MEMORY_VALUE = 2;
     const BASE_STORAGE_VALUE = 4;
 
@@ -24,17 +26,32 @@ class SystemService extends BaseService
     const ADDY_STRING = 'address';
     const MEMORY_STRING = 'memory';
     const STORAGE_STRING = 'storage';
+    const AVG_NODE_LVL_STRING = 'avg-level';
+    const PROFILE_OWNER_STRING = 'profile';
+    const GROUP_OWNER_STRING = 'group';
+    const FACTION_OWNER_STRING = 'faction';
 
+    /**
+     * @var SystemGeneratorService
+     */
+    protected $systemGeneratorService;
 
     /**
      * SystemService constructor.
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param SystemGeneratorService $systemGeneratorService
      */
-    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        SystemGeneratorService $systemGeneratorService
+    )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->systemGeneratorService = $systemGeneratorService;
     }
 
     /**
@@ -50,22 +67,28 @@ class SystemService extends BaseService
             if (!$this->user) return true;
             $profile = $this->user->getProfile();
             $currentSystem = $profile->getCurrentNode()->getSystem();
-            $returnMessage = array();
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::SYSTEM_STRING), $currentSystem->getName());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::ADDY_STRING), $currentSystem->getAddy());
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::MEMORY_STRING), $this->getSystemMemory($currentSystem));
-            $returnMessage[] = sprintf('<pre>%-12s: %s</pre>', $this->translate(self::STORAGE_STRING), $this->getSystemStorage($currentSystem));
-            $this->response = array(
+            $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+            /** @var NodeRepository $nodeRepo */
+            $returnMessage = [];
+            $returnMessage[] = sprintf('<pre class="text-sysmsg">%-12s: %s</pre>', $this->translate(self::SYSTEM_STRING), $currentSystem->getName());
+            $returnMessage[] = sprintf('<pre class="text-white">%-12s: %s</pre>', $this->translate(self::ADDY_STRING), $currentSystem->getAddy());
+            $returnMessage[] = sprintf('<pre class="text-white">%-12s: %s</pre>', $this->translate(self::MEMORY_STRING), $this->getSystemMemory($currentSystem));
+            $returnMessage[] = sprintf('<pre class="text-white">%-12s: %s</pre>', $this->translate(self::STORAGE_STRING), $this->getSystemStorage($currentSystem));
+            $returnMessage[] = sprintf('<pre class="text-white">%-12s: %s</pre>', $this->translate(self::AVG_NODE_LVL_STRING), $nodeRepo->getAverageNodeLevelOfSystem($currentSystem));
+            if ($currentSystem->getProfile()) $returnMessage[] = sprintf('<pre class="text-addon">%-12s: %s</pre>', $this->translate(self::PROFILE_OWNER_STRING), $currentSystem->getProfile()->getUser()->getUsername());
+            if ($currentSystem->getGRoup()) $returnMessage[] = sprintf('<pre class="text-addon">%-12s: %s</pre>', $this->translate(self::GROUP_OWNER_STRING), $currentSystem->getGroup()->getName());
+            if ($currentSystem->getFaction()) $returnMessage[] = sprintf('<pre class="text-addon">%-12s: %s</pre>', $this->translate(self::FACTION_OWNER_STRING), $currentSystem->getFaction()->getName());
+            $this->response = [
                 'command' => 'showoutput',
                 'message' => $returnMessage
-            );
+            ];
         }
         return $this->response;
     }
 
     /**
      * Allows a player to recall to their home node.
-     * TODO add this as an action that takes time
+     * TODO change this to an action with 10s timer
      * @param int $resourceId
      * @return array|bool
      */
@@ -88,14 +111,54 @@ class SystemService extends BaseService
         }
         /* checks passed, we can now move the player to their home node */
         if (!$this->response) {
+            $completionDate = new \DateTime();
+            $completionDate->add(new \DateInterval('PT' . self::HOME_RECALL_TIMER . 'S'));
+            $actionData = [
+                'command' => 'homerecall',
+                'completion' => $completionDate,
+                'blocking' => true,
+                'fullblock' => true,
+                'parameter' => []
+            ];
+            $this->getWebsocketServer()->setClientData($resourceId, 'action', $actionData);
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                    $this->translate('You recall to your home node - please wait')
+                ),
+                'timer' => self::HOME_RECALL_TIMER
+            );
+        }
+        return $this->response;
+    }
+
+    public function homeRecallAction($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        // check if they are not already there
+        if ($profile->getHomeNode() == $currentNode) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are already there')
+                )
+            );
+        }
+        /* checks passed, we can now move the player to their home node */
+        if (!$this->response) {
             $homeNode = $profile->getHomeNode();
             $this->movePlayerToTargetNode(NULL, $profile, NULL, $currentNode, $homeNode);
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('You recall to your home node')
-                )
+                    $this->translate('Recalling to your home node')
+                ),
             );
             $this->addAdditionalCommand();
             if ($currentNode->getSystem() != $homeNode->getSystem()) {

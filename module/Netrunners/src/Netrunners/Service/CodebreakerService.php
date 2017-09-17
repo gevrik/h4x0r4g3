@@ -80,6 +80,33 @@ class CodebreakerService extends BaseService
                 );
             }
         }
+        if (!$this->response && $connection && $connection->getType() != Connection::TYPE_CODEGATE) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('That connection is not protected by a code-gate')
+                )
+            );
+        }
+        if (!$this->response && $connection && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('The connection is already open')
+                )
+            );
+        }
+        if (!$this->response && $connection && $file->getLevel() < ($connection->getLevel()-1)*10) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('The level of your codebreaker is too low for this codegate')
+                )
+            );
+        }
         if (!$this->response) {
             $guess = $this->getNextParameter($contentArray, false);
             if ($guess && !empty($this->clientData->codebreaker)) {
@@ -106,13 +133,46 @@ class CodebreakerService extends BaseService
                     $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
                     $word = array_shift($words);
                     $thePassword = $word->getContent();
-                    $randomString = $this->getRandomString($hashLength);
+                    $randomString = $this->getRandomString($hashLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'); // TODO add to keyspace
                     for ($index = 0; $index < mb_strlen($thePassword); $index++) {
                         if (mt_rand(1, 100) > 50) {
                             $thePassword[$index] = strtoupper($thePassword[$index]);
                         }
                         else {
                             $thePassword[$index] = strtolower($thePassword[$index]);
+                        }
+                        if (mt_rand(1, 100) > 50) {
+                            switch (strtolower($thePassword[$index])) {
+                                default:
+                                    break;
+                                case 'a':
+                                    $thePassword[$index] = '4';
+                                    break;
+                                case 'b':
+                                    $thePassword[$index] = '8';
+                                    break;
+                                case 'e':
+                                    $thePassword[$index] = '3';
+                                    break;
+                                case 'g':
+                                    $thePassword[$index] = '6';
+                                    break;
+                                case 'i':
+                                    $thePassword[$index] = '1';
+                                    break;
+                                case 'o':
+                                    $thePassword[$index] = '0';
+                                    break;
+                                case 'p':
+                                    $thePassword[$index] = '9';
+                                    break;
+                                case 's':
+                                    $thePassword[$index] = '5';
+                                    break;
+                                case 't':
+                                    $thePassword[$index] = '7';
+                                    break;
+                            }
                         }
                     }
                     $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
@@ -155,7 +215,7 @@ class CodebreakerService extends BaseService
         $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
         /** @var Connection $connection */
         if ($guess == $codebreakerData['thePassword']) {
-            $this->movePlayerToTargetNode($resourceId, $profile, $connection);
+            //$this->movePlayerToTargetNode($resourceId, $profile, $connection);
             $connection->setIsOpen(true);
             $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
             /** @var Connection $otherConnection */
@@ -166,9 +226,10 @@ class CodebreakerService extends BaseService
                 'cleardeadline' => true,
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('Codebreaking attempt success - you have bypassed the codegate')
+                    $this->translate('Codebreaking attempt success - you have opened the codegate')
                 )
             );
+            $this->addAdditionalCommand();
         }
         else {
             $this->response = array(
@@ -179,7 +240,7 @@ class CodebreakerService extends BaseService
                     $this->translate('Codebreaking attempt failed - security rating and alert level raised')
                 )
             );
-            $this->raiseProfileSecurityRating($profile, $connection->getLevel()); // TODO make connections upgradeable
+            $this->raiseProfileSecurityRating($profile, $connection->getLevel());
             $targetSystem = $connection->getSourceNode()->getSystem();
             $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel()); // TODO use system alert level in other places
             $this->writeSystemLogEntry(

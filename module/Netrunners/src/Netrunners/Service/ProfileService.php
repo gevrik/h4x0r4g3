@@ -1057,6 +1057,22 @@ class ProfileService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param bool $messageSocket
+     * @param bool $asActiveCommand
+     * @return array|bool
+     */
+    public function cancelCurrentAction($resourceId, $messageSocket = false, $asActiveCommand = false)
+    {
+        return $this->cancelAction($resourceId, $messageSocket, $asActiveCommand);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function changeBackgroundOpacity($resourceId, $contentArray)
     {
         $this->initService($resourceId);

@@ -13,6 +13,8 @@
         <!-- Le styles -->
         <?php echo $this->headLink(array('rel' => 'shortcut icon', 'type' => 'image/vnd.microsoft.icon', 'href' => $this->basePath() . '/img/favicon.ico'))
                         ->prependStylesheet($this->basePath('css/style.css'))
+                        ->prependStylesheet($this->basePath('css/jquery.contextMenu.min.css'))
+                        ->prependStylesheet($this->basePath('font-awesome/css/font-awesome.min.css'))
                         ->prependStylesheet($this->basePath('leaflet/leaflet.css'))
                         ->prependStylesheet($this->basePath('DataTables/datatables.min.css'))
                         ->prependStylesheet($this->basePath('css/jquery-ui.min.css'))
@@ -23,6 +25,7 @@
             //->prependFile($this->basePath('js/site.js'))
             ->prependFile($this->basePath('js/functions.js'))
             ->prependFile($this->basePath('js/global.js'))
+            ->prependFile($this->basePath('js/jquery.contextMenu.min.js'))
             ->prependFile($this->basePath('leaflet/leaflet.js'))
             ->prependFile($this->basePath('DataTables/datatables.min.js'))
             ->prependFile($this->basePath('js/d3.min.js'))

@@ -583,6 +583,7 @@ class MilkrunService extends BaseService
                     $profile,
                     $mri,
                     NULL,
+                    NULL,
                     ProfileFactionRating::SOURCE_ID_MILKRUN,
                     $milkrunData['level'],
                     0,
@@ -612,6 +613,7 @@ class MilkrunService extends BaseService
                 $this->createProfileFactionRating(
                     $profile,
                     $mri,
+                    NULL,
                     NULL,
                     ProfileFactionRating::SOURCE_ID_MILKRUN,
                     $milkrunData['level'] * -1,

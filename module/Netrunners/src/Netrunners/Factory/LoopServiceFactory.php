@@ -30,6 +30,7 @@ class LoopServiceFactory implements FactoryInterface
             $serviceLocator->get('Netrunners\Service\FileService'),
             $serviceLocator->get('Netrunners\Service\CodingService'),
             $serviceLocator->get('Netrunners\Service\CombatService'),
+            $serviceLocator->get('Netrunners\Service\SystemService'),
             $serviceLocator->get('translator')
         );
     }

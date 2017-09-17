@@ -24,4 +24,20 @@ class GeocoordRepository extends EntityRepository
         ]);
     }
 
+    /**
+     * @param null $zone
+     * @return mixed
+     */
+    public function findOneRandomInZone($zone = NULL)
+    {
+        $qb = $this->createQueryBuilder('g');
+        if ($zone) {
+            $qb->where('g.zone = :zone');
+            $qb->setParameter('zone', $zone);
+        }
+        $result = $qb->getQuery()->getResult();
+        shuffle($result);
+        return array_shift($result);
+    }
+
 }

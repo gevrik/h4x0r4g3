@@ -11,6 +11,8 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\System;
 
 class NodeRepository extends EntityRepository
@@ -87,6 +89,50 @@ class NodeRepository extends EntityRepository
             'system' => $system
         ]);
         return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param System $system
+     * @param $nodeTypeId
+     * @return mixed
+     */
+    public function getSumResourceLevelsForSystem(System $system, $nodeTypeId)
+    {
+        $nodeType = $this->_em->find('Netrunners\Entity\NodeType', $nodeTypeId);
+        $qb = $this->createQueryBuilder('n');
+        $qb->select('SUM(n.level) as totalAmount');
+        $qb->where('n.system = :system AND n.nodeType = :nodeType');
+        $qb->setParameters([
+            'system' => $system,
+            'nodeType' => $nodeType
+        ]);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param System $system
+     * @return Node
+     */
+    public function getRandomNodeForMission(System $system)
+    {
+        $nodes = $this->findBySystem($system);
+        array_shift($nodes);
+        array_shift($nodes);
+        $targetNodeId = mt_rand(0, count($nodes)-1);
+        return (isset($nodes[$targetNodeId])) ? $nodes[$targetNodeId] : NULL;
+    }
+
+    /**
+     * @param System $system
+     * @return mixed
+     */
+    public function getAverageNodeLevelOfSystem(System $system)
+    {
+        $qb = $this->createQueryBuilder('n');
+        $qb->select($qb->expr()->avg('n.level'));
+        $qb->where('n.system = :system');
+        $qb->setParameter('system', $system);
+        return round($qb->getQuery()->getSingleScalarResult(), 2);
     }
 
 }

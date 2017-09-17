@@ -645,6 +645,7 @@ class WebsocketService implements MessageComponentInterface {
                             $geocoord->setLng($lng);
                             $geocoord->setPlaceId($placeId);
                             $geocoord->setData(json_encode($locationData));
+                            $geocoord->setZone('global');
                             $this->entityManager->persist($geocoord);
                             if (!$needFlush) $needFlush = true;
                             if ($awaitingcoords) $possibleLocations[] = $geocoord;

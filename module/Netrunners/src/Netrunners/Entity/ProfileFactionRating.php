@@ -18,6 +18,7 @@ class ProfileFactionRating
 
     const SOURCE_ID_PLOFILE = 1;
     const SOURCE_ID_MILKRUN = 2;
+    const SOURCE_ID_MISSION = 3;
 
     /**
      * @ORM\Id
@@ -62,6 +63,11 @@ class ProfileFactionRating
      * @ORM\OneToOne(targetEntity="Netrunners\Entity\MilkrunInstance")
      */
     protected $milkrunInstance;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\Mission")
+     */
+    protected $mission;
 
     /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
@@ -202,6 +208,24 @@ class ProfileFactionRating
     public function setMilkrunInstance($milkrunInstance)
     {
         $this->milkrunInstance = $milkrunInstance;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMission()
+    {
+        return $this->mission;
+    }
+
+    /**
+     * @param mixed $mission
+     * @return ProfileFactionRating
+     */
+    public function setMission($mission)
+    {
+        $this->mission = $mission;
         return $this;
     }
 

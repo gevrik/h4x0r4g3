@@ -276,7 +276,7 @@ class System
     }
 
     /**
-     * @return mixed
+     * @return Group|null
      */
     public function getGroup()
     {

@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\CompanyName;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
+use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\MilkrunAivatar;
 use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
@@ -16,6 +17,9 @@ use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Entity\Word;
+use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\GeocoordRepository;
+use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
@@ -850,9 +854,117 @@ class IndexController extends AbstractActionController
         return true;
     }
 
-    public function cliHotfixNpcItemsAction()
+    /**
+     *
+     */
+    public function cliHarvestGeocoordsAction()
     {
+        $runs = 200;
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        $coordRepo = $this->entityManager->getRepository('Netrunners\Entity\Geocoord');
+        /** @var GeocoordRepository $coordRepo */
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('HARVESTING GEO-COORDS', ColorInterface::GREEN);
+        $zoneBoundsData = [
+            ['name'=>'global', 'latfrom'=> -80, 'latto' => 80, 'lngfrom'=> -180, 'lngto'=> 180],
+            ['name'=>'aztech', 'latfrom'=> -54, 'latto' => 71, 'lngfrom'=> -179, 'lngto'=> -29],
+            ['name'=>'euro', 'latfrom'=> -35, 'latto' => 71, 'lngfrom'=> -30, 'lngto'=> 55],
+            ['name'=>'asia', 'latfrom'=> -47, 'latto' => 71, 'lngfrom'=> -56, 'lngto'=> 180]
+        ];
+        $totalFound = 0;
+        for ($i=1;$i<=$runs;$i++) {
+            $console->writeLine('STARTING ROUND ' . $i, ColorInterface::LIGHT_BLUE);
+            $zoneid = mt_rand(0,3);
+            $lat = round(($this->jsRandom() * ($zoneBoundsData[$zoneid]['latto'] - $zoneBoundsData[$zoneid]['latfrom']) + $zoneBoundsData[$zoneid]['latfrom']) * 1, 6);
+            $lng = round(($this->jsRandom() * ($zoneBoundsData[$zoneid]['lngto'] - $zoneBoundsData[$zoneid]['lngfrom']) + $zoneBoundsData[$zoneid]['lngfrom']) * 1, 6);
+            $url = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false&address=".urlencode($lat . "," . $lng);
+            $responseData = get_object_vars(json_decode(file_get_contents($url)));
+            //var_dump($lat_long);
+            $resultArray = [];
+            foreach ($responseData['results'] as $resultId => $resultData) {
+                //var_dump($resultData);
+                foreach ($resultData->types as $typeId => $typeData) {
+                    if (
+                        $typeData === 'street_address' ||
+                        $typeData === 'intersection' ||
+                        $typeData === 'premise' ||
+                        $typeData === 'subpremise' ||
+                        $typeData === 'point_of_interest' ||
+                        $typeData === 'state' ||
+                        $typeData === 'country' ||
+                        $typeData === 'administrative_area_level_1' ||
+                        $typeData === 'administrative_area_level_2' ||
+                        $typeData === 'administrative_area_level_3' ||
+                        $typeData === 'administrative_area_level_4' ||
+                        $typeData === 'administrative_area_level_5'
+                    )
+                    {
+                        $resultArray[] = $resultData;
+                    }
+                }
+            }
+            if (!empty($resultArray)) {
+                $now = new \DateTime();
+                foreach ($resultArray as $locationData) {
+                    $lat = $locationData->geometry->location->lat;
+                    $lng = $locationData->geometry->location->lng;
+                    $placeId = $locationData->place_id;
+                    $existingGeocoord = $coordRepo->findOneUnique($lat, $lng, $placeId);
+                    if (!$existingGeocoord) {
+                        $totalFound++;
+                        $geocoord = new Geocoord();
+                        $geocoord->setAdded($now);
+                        $geocoord->setLat($lat);
+                        $geocoord->setLng($lng);
+                        $geocoord->setPlaceId($placeId);
+                        $geocoord->setData(json_encode($locationData));
+                        $geocoord->setZone($zoneBoundsData[$zoneid]['name']);
+                        $this->entityManager->persist($geocoord);
+                    }
+                }
+                $console->writeLine('PLACES SO FAR: ' . $totalFound, ColorInterface::LIGHT_MAGENTA);
+            }
+            sleep(1);
+        }
+        $this->entityManager->flush();
+        $console->writeLine('TOTAL PLACES FOUND: ' . $totalFound, ColorInterface::LIGHT_GREEN);
+    }
 
+    public function cliUpgradeConnectionsAction()
+    {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $connRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connRepo */
+        $nodes = $nodeRepo->findAll();
+        $console = $this->getServiceLocator()->get('console');
+        $console->writeLine('ITERATING NODES', ColorInterface::GREEN);
+        foreach ($nodes as $node) {
+            /** @var Node $node */
+            $connections = $connRepo->findBySourceNode($node);
+            foreach ($connections as $connection) {
+                /** @var Connection $connection */
+                if ($connection->getLevel() >= $node->getLevel()) continue;
+                $connection->setLevel($node->getLevel());
+            }
+        }
+        $this->entityManager->flush();
+        $console->writeLine('ALL CONNECTIONS UPDATED', ColorInterface::GREEN);
+    }
+
+    private function jsRandom(){
+        return mt_rand() / (mt_getrandmax() + 1);
     }
 
 }

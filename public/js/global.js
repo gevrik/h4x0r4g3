@@ -12,3 +12,4 @@ var editor1 = null;
 var mymap;
 var myGeoCoords = [];
 var musicInstance;
+var viewportWidth, viewportHeight;

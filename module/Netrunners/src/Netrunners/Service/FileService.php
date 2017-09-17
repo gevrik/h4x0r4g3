@@ -224,6 +224,15 @@ class FileService extends BaseService
     }
 
     /**
+     * @param File $file
+     * @return array|bool
+     */
+    public function executeProxifier(File $file)
+    {
+        return $this->fileExecutionService->executeProxifier($file);
+    }
+
+    /**
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
@@ -261,6 +270,16 @@ class FileService extends BaseService
     public function showFileTypes()
     {
         return $this->fileUtilityService->showFileTypes();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function decompileFile($resourceId, $contentArray)
+    {
+        return $this->fileUtilityService->decompileFile($resourceId, $contentArray);
     }
 
     /**

@@ -247,6 +247,30 @@ class FileUtilityService extends BaseService
             );
         }
         /** @var File $targetFile */
+        // check for mission
+        if (!$this->response && $targetFile && $targetFile->getFileType()->getId() == FileType::ID_TEXT) {
+            $this->response = $this->executeMissionFile($targetFile, $resourceId);
+        }
+        // can only download files that do not belong to themselves in owned systems
+        if (!$this->response && $targetFile && $targetFile->getProfile() != $profile && $targetFile->getSystem()->getProfile() !== $profile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        // check if the file is running - can't download then
+        if (!$this->response && $targetFile && $targetFile->getRunning()) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Unable to download running file')
+                )
+            );
+        }
         // check if the file belongs to a profile or npc - can't download then
         if (!$this->response && $targetFile && $targetFile->getProfile() != NULL) {
             $this->response = array(
@@ -317,7 +341,7 @@ class FileUtilityService extends BaseService
                 default:
                     break;
                 case 'rm':
-                    $file = $this->removeFileChecks($contentArray);
+                    $file = $this->removeFileChecks($contentArray, $resourceId);
                     if (!$this->response) {
                         $this->response = [
                             'command' => 'enterconfirmmode',
@@ -741,9 +765,10 @@ class FileUtilityService extends BaseService
 
     /**
      * @param $contentArray
+     * @param null $resourceId
      * @return mixed|File|null
      */
-    private function removeFileChecks($contentArray)
+    private function removeFileChecks($contentArray, $resourceId = NULL)
     {
         $profile = $this->user->getProfile();
         $parameter = $this->getNextParameter($contentArray, false);
@@ -759,8 +784,12 @@ class FileUtilityService extends BaseService
         if (!$this->response) {
             $file = array_shift($targetFiles);
             /** @var File $file */
+            // check if this file is a mission file
+            if ($file && $file->getFileType()->getId() == FileType::ID_TEXT) {
+                 $this->response = $this->executeMissionFile($file, $resourceId);
+            }
             // check if the file belongs to the profile
-            if ($file && $file->getProfile() != $profile) {
+            if (!$this->response && $file && $file->getProfile() != $profile) {
                 $this->response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -774,7 +803,7 @@ class FileUtilityService extends BaseService
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Unable to remove running file - please kill the process first')
+                        $this->translate('Command failed - program is still running')
                     )
                 );
             }
@@ -783,7 +812,7 @@ class FileUtilityService extends BaseService
                     'command' => 'showmessage',
                     'message' => sprintf(
                         '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Unable to remove file - please unload it first')
+                        $this->translate('Command failed - please unload the file first')
                     )
                 );
             }
@@ -957,7 +986,7 @@ class FileUtilityService extends BaseService
         $this->response = $this->isActionBlocked($resourceId);
         $file = false;
         if (!$this->response) {
-            $file = $this->removeFileChecks($contentArray);
+            $file = $this->removeFileChecks($contentArray, $resourceId);
         }
         if (!$this->response && $file) {
             // start removing the file by removing all of its filemodinstances
@@ -972,6 +1001,48 @@ class FileUtilityService extends BaseService
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You removed [%s]</pre>'),
                 $file->getName()
+            );
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function decompileFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        $file = false;
+        if (!$this->response) {
+            $file = $this->removeFileChecks($contentArray, $resourceId);
+        }
+        if (!$this->response && $file) {
+            $returnedSnippets = $file->getLevel();
+            // start removing the file by removing all of its filemodinstances
+            $fmInstances = $this->fileModInstanceRepo->findBy([
+                'file' => $file
+            ]);
+            foreach ($fmInstances as $fmInstance) {
+                /** @var FileModInstance $fmInstance */
+                $returnedSnippets += $fmInstance->getLevel();
+                $this->entityManager->remove($fmInstance);
+            }
+            $this->entityManager->remove($file);
+            $profile->setSnippets($profile->getSnippets()+$returnedSnippets);
+            $this->entityManager->flush();
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You decompiled [%s] and received %s snippets</pre>'),
+                $file->getName(),
+                $returnedSnippets
             );
             $this->response = [
                 'command' => 'showmessage',
@@ -1114,6 +1185,13 @@ class FileUtilityService extends BaseService
                 '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
                 $this->translate("Name"),
                 $targetFile->getName()
+            );
+            $returnMessage[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
+                $this->translate("Coder"),
+                ($targetFile->getCoder()) ?
+                    $targetFile->getCoder()->getUser()->getUsername() :
+                    $this->translate('<span class="text-muted">system-generated</span>')
             );
             $returnMessage[] = sprintf(
                 '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %smu</pre>',
@@ -1344,24 +1422,29 @@ class FileUtilityService extends BaseService
         }
         /* all checks passed, unload file */
         if (!$this->response && $targetFile) {
-            $targetFile->setProfile(NULL);
-            $targetFile->setNode($profile->getCurrentNode());
-            $targetFile->setSystem($profile->getCurrentNode()->getSystem());
-            $this->entityManager->flush($targetFile);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You unload %s to the node</pre>'),
+            if ($targetFile->getFileType()->getId() == FileType::ID_TEXT) {
+                $this->response = $this->executeMissionFile($targetFile, $resourceId);
+            }
+            if (!$this->response) {
+                $targetFile->setProfile(NULL);
+                $targetFile->setNode($profile->getCurrentNode());
+                $targetFile->setSystem($profile->getCurrentNode()->getSystem());
+                $this->entityManager->flush($targetFile);
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You unload %s to the node</pre>'),
+                        $targetFile->getName()
+                    )
+                );
+                // inform other players in node
+                $message = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unloaded [%s] into the node</pre>'),
+                    $this->user->getUsername(),
                     $targetFile->getName()
-                )
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unloaded [%s] into the node</pre>'),
-                $this->user->getUsername(),
-                $targetFile->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+                );
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+            }
         }
         return $this->response;
     }

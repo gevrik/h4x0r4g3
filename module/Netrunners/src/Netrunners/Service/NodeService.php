@@ -45,6 +45,7 @@ class NodeService extends BaseService
 
     const RAW_NODE_COST = 50;
     const MAX_NODES_MULTIPLIER = 10;
+    const MAX_NODE_LEVEL = 8;
 
     /**
      * @var ConnectionRepository
@@ -142,7 +143,8 @@ class NodeService extends BaseService
                     $this->translate('<span class="text-addon">(codegate) (closed)</span>');
             }
             $returnMessage[] = sprintf(
-                '<pre class="text-directory">%-12s: %s %s</pre>',
+                '<pre class="text-directory">%-12s: <span class="contextmenu-connection" data-id="%s">%s</span> %s</pre>',
+                $counter,
                 $counter,
                 $connection->getTargetNode()->getName(),
                 $addonString
@@ -165,8 +167,10 @@ class NodeService extends BaseService
             /** @var File $file */
             $counter++;
             $returnMessage[] = sprintf(
-                '<pre class="text-executable">%-12s: %s%s</pre>',
-                $counter, $file->getName(),
+                '<pre class="text-executable">%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span></pre>',
+                $counter,
+                $file->getName(),
+                $file->getName(),
                 ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
             );
         }
@@ -221,7 +225,8 @@ class NodeService extends BaseService
             /** @var NpcInstance $npcInstance */
             $counter++;
             $returnMessage[] = sprintf(
-                '<pre class="text-npcs">%-12s: %s %s %s %s %s</pre>',
+                '<pre class="text-npcs">%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s</pre>',
+                $counter,
                 $counter,
                 $npcInstance->getName(),
                 ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
@@ -233,7 +238,8 @@ class NodeService extends BaseService
         // prepare and return response
         $this->response = array(
             'command' => 'showoutput',
-            'message' => $returnMessage
+            'message' => $returnMessage,
+            'moved' => true
         );
         $this->addAdditionalCommand();
         return $this->response;
@@ -256,6 +262,17 @@ class NodeService extends BaseService
             switch ($command) {
                 default:
                     break;
+                case 'addnode':
+                    $this->addnodeChecks();
+                    if (!$this->response) {
+                        $this->response = [
+                            'command' => 'enterconfirmmode',
+                            'message' => sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">Are you sure that you want to add a node - please confirm this action:</pre>')
+                            )
+                        ];
+                    }
+                    break;
                 case 'upgradenode':
                     $node = $this->upgradeNodeChecks();
                     $nodeType = $node->getNodeType();
@@ -264,7 +281,7 @@ class NodeService extends BaseService
                         $this->response = [
                             'command' => 'enterconfirmmode',
                             'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need %s credits to upgrade this node - Please confirm this action:</pre>'),
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need %s credits to upgrade this node - please confirm this action:</pre>'),
                                 $upgradeCost
                             )
                         ];
@@ -319,7 +336,14 @@ class NodeService extends BaseService
             $nodeType = $node->getNodeType();
             $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
             $profile->setCredits($profile->getCredits() - $upgradeCost);
-            $node->setLevel($node->getLevel()+1);
+            $newLevel = $node->getLevel() + 1;
+            $node->setLevel($newLevel);
+            // upgrade all connections too
+            $connections = $this->connectionRepo->findBySourceNode($node);
+            foreach ($connections as $connection) {
+                /** @var Connection $connection */
+                $connection->setLevel($newLevel);
+            }
             $this->entityManager->flush();
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have upgraded [%s] to level [%s]</pre>'),
@@ -358,7 +382,7 @@ class NodeService extends BaseService
                 )
             ];
         }
-        if (!$this->response && $node->getLevel() > 3) {
+        if (!$this->response && $node->getLevel() >= self::MAX_NODE_LEVEL) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -383,28 +407,19 @@ class NodeService extends BaseService
         return $node;
     }
 
-    /**
-     * Adds a new node to the current system.
-     * @param int $resourceId
-     * @return array|bool
-     */
-    public function addNode($resourceId)
+
+    private function addnodeChecks()
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $currentNode = $profile->getCurrentNode();
-        // check if they are busy
-        $this->response = $this->isActionBlocked($resourceId);
-        // only allow owner of system to add nodes
-        if (!$this->response && $profile !== $currentNode->getSystem()->getProfile()) {
-            $this->response = array(
+        $node = $profile->getCurrentNode();
+        if (!$this->response && $node->getSystem()->getProfile() !== $profile) {
+            $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
                     $this->translate('Permission denied')
                 )
-            );
+            ];
         }
         // check if they have enough credits
         if (!$this->response && $profile->getCredits() < self::RAW_NODE_COST) {
@@ -417,7 +432,7 @@ class NodeService extends BaseService
             );
         }
         // check if the system has reached its max size
-        $currentSystem = $currentNode->getSystem();
+        $currentSystem = $node->getSystem();
         $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
         if (!$this->response && $nodeamount >= $currentSystem->getMaxSize()) {
             $this->response = array(
@@ -429,7 +444,7 @@ class NodeService extends BaseService
             );
         }
         // check if we are in a home node, you can't add nodes to a home node
-        if (!$this->response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
+        if (!$this->response && $node->getNodeType()->getId() == NodeType::ID_HOME) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -459,6 +474,22 @@ class NodeService extends BaseService
                 );
             }
         }
+    }
+
+    /**
+     * Adds a new node to the current system.
+     * @param int $resourceId
+     * @return array|bool
+     */
+    public function addNode($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        // check if they are busy
+        $this->response = $this->isActionBlocked($resourceId);
+        $this->addnodeChecks();
         /* checks passed, we can now add the node */
         if (!$this->response) {
             // take creds from user
@@ -470,7 +501,7 @@ class NodeService extends BaseService
             $node = new Node();
             $node->setCreated(new \DateTime());
             $node->setLevel(1);
-            $node->setName($nodeType->getName());
+            $node->setName($nodeType->getShortName());
             $node->setSystem($currentNode->getSystem());
             $node->setNodeType($nodeType);
             $this->entityManager->persist($node);
@@ -734,6 +765,11 @@ class NodeService extends BaseService
             $currentNode->setNodeType($nodeType);
             $currentNode->setLevel(1);
             $currentNode->setName($nodeType->getShortName());
+            $connections = $this->connectionRepo->findBySourceNode($currentNode);
+            foreach ($connections as $connection) {
+                /** @var Connection $connection */
+                $connection->setLevel(1);
+            }
             $this->entityManager->flush();
             $this->response = array(
                 'command' => 'showmessage',
@@ -1112,10 +1148,7 @@ class NodeService extends BaseService
                     $this->translate('The node has been removed')
                 )
             );
-            $this->response['additionalCommands'][] = [
-                'command' => 'ls',
-                'content' => false
-            ];
+            $this->addAdditionalCommand();
             // inform other players in node
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The adjacent node [%s] has been removed</pre>'),

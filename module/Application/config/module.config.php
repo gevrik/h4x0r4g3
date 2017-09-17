@@ -210,6 +210,24 @@ return array(
                         )
                     )
                 ),
+                'harvest-geocoords' => array(
+                    'options' => array(
+                        'route'    => 'harvest-geocoords',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-harvest-geocoords'
+                        )
+                    )
+                ),
+                'upgrade-connections' => array(
+                    'options' => array(
+                        'route'    => 'upgrade-connections',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-upgrade-connections'
+                        )
+                    )
+                ),
             ),
         ),
     ),
