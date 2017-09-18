@@ -934,7 +934,6 @@ class ParserService
      */
     public function parseFrontendInput(ConnectionInterface $from, $msgData)
     {
-        var_dump('in parse-front-input');
         /** @noinspection PhpUndefinedFieldInspection */
         $resourceId = $from->resourceId;
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);

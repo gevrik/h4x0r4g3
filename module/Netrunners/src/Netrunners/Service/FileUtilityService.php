@@ -1134,7 +1134,6 @@ class FileUtilityService extends BaseService
         $entityId
     )
     {
-        var_dump('in actual method');
         $this->initService($resourceId);
         if (!$this->user) return true;
         $file = $this->fileRepo->find($entityId);

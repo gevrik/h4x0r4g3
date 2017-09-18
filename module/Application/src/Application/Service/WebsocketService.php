@@ -716,7 +716,6 @@ class WebsocketService implements MessageComponentInterface {
                     break;
                 case 'parseFrontendInput':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                    var_dump('in websocket');
                     return $this->parserService->parseFrontendInput($from, $msgData);
                 case 'showprompt':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;

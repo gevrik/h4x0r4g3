@@ -120,7 +120,6 @@ class FileService extends BaseService
      */
     public function saveFileDescription($resourceId, $content, $entityId)
     {
-        var_dump('here');
         return $this->fileUtilityService->saveFileDescription($resourceId, $content, $entityId);
     }
 
