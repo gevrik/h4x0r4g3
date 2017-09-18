@@ -563,6 +563,7 @@
                     $('.notification-box').show();
                     $('.actiontime-box').show();
                     if (data.playsound) playSoundById(4);
+                    if (data.bgopacity) $('.content').css('background-color', 'rgba(0,0,0,' + data.bgopacity + ')');
                     mymap.flyTo([data.homecoords[0], data.homecoords[1]], 15);
                     mymap.flyTo([data.geocoords[0], data.geocoords[1]], 15);
                     break;

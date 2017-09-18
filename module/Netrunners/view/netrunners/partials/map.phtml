@@ -72,8 +72,6 @@
 
     var radius = 8;
 
-    var n = 100;
-
     var centerX, centerY;
 
     var jsonData = <?php echo $this->json; ?>;
@@ -90,7 +88,7 @@
         });
 
     var charge_force = d3.forceManyBody()
-        .strength(-200).distanceMax(75);
+        .strength(-100).distanceMax(100);
 
     var center_force = d3.forceCenter(width / 2, height / 2);
 
@@ -128,7 +126,20 @@
         .enter()
         .append("circle")
         .attr("r", function (d) {
-            return (d.shapetype === 'circle') ? radius : Math.ceil(radius/2);
+            var currentRadius;
+            switch (d.shapetype) {
+                default:
+                    currentRadius = radius;
+                    break;
+                case 'rect':
+                case 'triangle':
+                    currentRadius = Math.ceil(radius/2);
+                    break;
+            }
+            if (d.type === 99) {
+                currentRadius = Math.floor(radius*1.25)
+            }
+            return currentRadius;
         })
         .attr("fill", circleColour)
         .attr("cx", function(d) { return d.x; })

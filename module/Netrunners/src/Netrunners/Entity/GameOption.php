@@ -20,6 +20,7 @@ class GameOption
     const ID_SOUND = 1;
     const ID_MUSIC = 2;
     const ID_SURVEY = 3;
+    const ID_BGOPACITY = 4;
 
     /**
      * @ORM\Id
@@ -43,9 +44,15 @@ class GameOption
 
     /**
      * @ORM\Column(type="integer", options={"default":0}, nullable=true)
-     * @var string
+     * @var int
      */
     protected $defaultStatus;
+
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     * @var string
+     */
+    protected $defaultValue;
 
 
     /**
@@ -117,6 +124,24 @@ class GameOption
     public function setDefaultStatus($defaultStatus)
     {
         $this->defaultStatus = $defaultStatus;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDefaultValue()
+    {
+        return $this->defaultValue;
+    }
+
+    /**
+     * @param string $defaultValue
+     * @return GameOption
+     */
+    public function setDefaultValue($defaultValue)
+    {
+        $this->defaultValue = $defaultValue;
         return $this;
     }
 

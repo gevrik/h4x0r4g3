@@ -990,8 +990,44 @@ class BaseService
         );
         $this->messageEveryoneInNode($targetNode, $message, $profile, $profile->getId());
         $this->entityManager->flush($profile);
-        $this->checkNpcAggro($profile, $resourceId);
+        $this->checkNpcAggro($profile, $resourceId); // TODO solve aggro in a different way
+        $this->checkKnownNode($profile);
         return ($resourceId) ? $this->showNodeInfo($resourceId) : false;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param Node|NULL $node
+     * @return bool
+     */
+    private function checkKnownNode(Profile $profile, Node $node = NULL)
+    {
+        $currentNode = ($node) ? $node : $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        if ($profile === $currentSystem->getProfile()) return true;
+        if ($profile->getFaction() && $profile->getFaction() === $currentSystem->getFaction()) return true;
+        if ($profile->getGroup() && $profile->getGroup() === $currentSystem->getGroup()) return true;
+        $currentNodeType = $currentNode->getNodeType();
+        $knRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        /** @var KnownNodeRepository $knRepo */
+        $knownNode = $knRepo->findByProfileAndNode($profile, $currentNode);
+        /** @var KnownNode $knownNode */
+        if ($knownNode) {
+            if ($currentNodeType->getId() != $knownNode->getType()) {
+                $knownNode->setType($currentNodeType->getId());
+                $this->entityManager->flush($knownNode);
+            }
+        }
+        else {
+            $knownNode = new KnownNode();
+            $knownNode->setType($currentNodeType->getId());
+            $knownNode->setProfile($profile);
+            $knownNode->setCreated(new \DateTime());
+            $knownNode->setNode($currentNode);
+            $this->entityManager->persist($knownNode);
+            $this->entityManager->flush($knownNode);
+        }
+        return true;
     }
 
     /**
@@ -1602,6 +1638,22 @@ class BaseService
      * @param $gameOptionId
      * @return mixed
      */
+    protected function getProfileGameOptionValue(Profile $profile, $gameOptionId)
+    {
+        $gameOption = $this->entityManager->find('Netrunners\Entity\GameOption', $gameOptionId);
+        $goiRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOptionInstance');
+        $gameOptionInstance = $goiRepo->findOneBy([
+            'gameOption' => $gameOption,
+            'profile' => $profile
+        ]);
+        return ($gameOptionInstance) ? $gameOptionInstance->getValue() : $gameOption->getDefaultValue();
+    }
+
+    /**
+     * @param Profile $profile
+     * @param $gameOptionId
+     * @return mixed
+     */
     protected function getProfileGameOption(Profile $profile, $gameOptionId)
     {
         $gameOption = $this->entityManager->find('Netrunners\Entity\GameOption', $gameOptionId);
@@ -1634,15 +1686,17 @@ class BaseService
                 $currentStatus = $gameOption->getDefaultStatus();
             }
             $newStatus = ($currentStatus) ? false : true;
+            $now = new \DateTime();
             if ($gameOptionInstance) {
                 $gameOptionInstance->setStatus($newStatus);
+                $gameOptionInstance->setChanged($now);
             }
             else {
                 $gameOptionInstance = new GameOptionInstance();
                 $gameOptionInstance->setStatus($newStatus);
                 $gameOptionInstance->setProfile($profile);
                 $gameOptionInstance->setGameOption($gameOption);
-                $gameOptionInstance->setChanged(new \DateTime());
+                $gameOptionInstance->setChanged($now);
                 $this->entityManager->persist($gameOptionInstance);
             }
             $this->entityManager->flush($gameOptionInstance);
@@ -1988,15 +2042,19 @@ class BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-            return $this->showSystemMap($resourceId);
-        }
+//        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+//            return $this->showSystemMap($resourceId);
+//        }
         $this->response = $this->isActionBlocked($resourceId, true);
         if (!$this->response) {
             $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
             /** @var ConnectionRepository $connectionRepo */
             $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
             /** @var FileRepository $fileRepo */
+            $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+            /** @var NpcInstanceRepository $npcInstanceRepo */
+            $knRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+            /** @var KnownNodeRepository $knRepo */
             $profile = $this->user->getProfile();
             $currentNode = $profile->getCurrentNode();
             // if the profile or its faction or group owns this system, show them the full map
@@ -2019,16 +2077,49 @@ class BaseService
                 /** @var Connection $xconnection */
                 $nodes[] = $xconnection->getTargetNode();
             }
+            $knownNodes = $knRepo->findByProfileAndSystem($profile, $currentSystem);
+            foreach ($knownNodes as $knownNode) {
+                /** @var KnownNode $knownNode */
+                $knownNodeNode = $knownNode->getNode();
+                if (in_array($knownNodeNode, $nodes)) continue;
+                $kconnections = $connectionRepo->findBySourceNode($knownNodeNode);
+                foreach ($kconnections as $kconnection) {
+                    /** @var Connection $kconnection */
+                    $typeValue = 'A';
+                    if ($kconnection->getType() == Connection::TYPE_CODEGATE) {
+                        if ($kconnection->getisOpen()) {
+                            $typeValue = 'Y';
+                        }
+                        else {
+                            $typeValue = 'E';
+                        }
+                    }
+                    if (in_array($kconnection->getTargetNode(), $nodes)) {
+                        $mapArray['links'][] = [
+                            'source' => (string)$kconnection->getSourceNode()->getId() . '_' . $kconnection->getSourceNode()->getNodeType()->getShortName() . '_' . $kconnection->getSourceNode()->getName(),
+                            'target' => (string)$kconnection->getTargetNode()->getId() . '_' . $kconnection->getTargetNode()->getNodeType()->getShortName() . '_' . $kconnection->getTargetNode()->getName(),
+                            'value' => 2,
+                            'type' => $typeValue
+                        ];
+                    }
+                }
+                $nodes[] = $knownNodeNode;
+            }
             $counter = true;
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $nodeType = $node->getNodeType();
                 $fileNodes = [];
+                $npcNodes = [];
                 if ($node == $profile->getCurrentNode()) {
                     $group = 99;
                     $files = $fileRepo->findByNode($node);
+                    $npcs = $npcInstanceRepo->findByNode($node);
                     foreach ($files as $file) {
                         $fileNodes[] = $file;
+                    }
+                    foreach ($npcs as $npc) {
+                        $npcNodes[] = $npc;
                     }
                 }
                 else {
@@ -2054,6 +2145,22 @@ class BaseService
                         'type' => 'W'
                     ];
                 }
+                // add npcs to map
+                foreach ($npcNodes as $npcNode) {
+                    /** @var NpcInstance $npcNode */
+                    $npcType = $npcNode->getNpc();
+                    $mapArray['nodes'][] = [
+                        'name' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                        'type' => $npcType->getId(),
+                        'shapetype' => 'triangle'
+                    ];
+                    $mapArray['links'][] = [
+                        'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                        'target' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                        'value' => 2,
+                        'type' => 'Z'
+                    ];
+                }
                 if ($counter) {
                     $connections = $connectionRepo->findBySourceNode($node);
                     foreach ($connections as $connection) {
@@ -2073,6 +2180,7 @@ class BaseService
                             'value' => 2,
                             'type' => $typeValue
                         ];
+                        $this->checkKnownNode($profile, $connection->getTargetNode());
                     }
                     $counter = false;
                 }

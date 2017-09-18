@@ -31,6 +31,12 @@ class GameOptionInstance
     protected $status;
 
     /**
+     * @ORM\Column(type="string", nullable=true)
+     * @var string
+     */
+    protected $value;
+
+    /**
      * @ORM\Column(type="datetime")
      * @var \DateTime
      */
@@ -82,6 +88,24 @@ class GameOptionInstance
     public function setStatus($status)
     {
         $this->status = $status;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getValue()
+    {
+        return $this->value;
+    }
+
+    /**
+     * @param string $value
+     * @return GameOptionInstance
+     */
+    public function setValue($value)
+    {
+        $this->value = $value;
         return $this;
     }
 

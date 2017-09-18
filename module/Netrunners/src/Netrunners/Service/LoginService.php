@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Application\Service\WebsocketService;
+use Netrunners\Entity\GameOption;
 use Netrunners\Entity\MilkrunAivatar;
 use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
@@ -22,6 +23,7 @@ use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Model\TextToImage;
 use Netrunners\Repository\FeedbackRepository;
+use Netrunners\Repository\GameOptionInstanceRepository;
 use Netrunners\Repository\InvitationRepository;
 use Netrunners\Repository\PlaySessionRepository;
 use TmoAuth\Entity\Role;
@@ -468,13 +470,16 @@ class LoginService extends BaseService
             $ws->setClientData($resourceId, 'hash', $hash);
             $homeCoords = $profile->getHomeNode()->getSystem()->getGeocoords();
             $currentCoords = $currentSystem->getGeocoords();
+            // get some settings
+            $bgOpacity = $profile->getBgopacity();
             $response = array(
                 'command' => 'logincomplete',
                 'hash' => $hash,
                 'prompt' => $ws->getUtilityService()->showPrompt($clientData),
                 'silent' => true,
                 'homecoords' => explode(',', $homeCoords),
-                'geocoords' => explode(',', $currentCoords)
+                'geocoords' => explode(',', $currentCoords),
+                'bgopacity' => $bgOpacity
             );
             // message everyone in node
             $messageText = sprintf(

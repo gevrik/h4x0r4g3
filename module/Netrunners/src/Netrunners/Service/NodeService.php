@@ -19,6 +19,7 @@ use Netrunners\Entity\System;
 use Netrunners\Repository\AuctionRepository;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
@@ -936,8 +937,8 @@ class NodeService extends BaseService
             );
         }
         // check if there are still other profiles in this node
-        $profiles = $this->profileRepo->findByCurrentNode($currentNode);
-        if (!$this->response && count($profiles) > 1) {
+        $profileCount = $this->profileRepo->countByCurrentNode($currentNode);
+        if (!$this->response && $profileCount > 1) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(

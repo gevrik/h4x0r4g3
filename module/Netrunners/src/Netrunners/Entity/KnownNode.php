@@ -39,7 +39,7 @@ class KnownNode
     // ORM
 
     /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node", inversedBy="knownNodes")
      */
     protected $node;
 
@@ -104,7 +104,7 @@ class KnownNode
     }
 
     /**
-     * @return mixed
+     * @return Node
      */
     public function getNode()
     {

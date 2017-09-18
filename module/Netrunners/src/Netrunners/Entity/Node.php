@@ -10,6 +10,7 @@
 
 namespace Netrunners\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -99,6 +100,19 @@ class Node
      **/
     protected $nodeType;
 
+    /**
+     * @ORM\OneToMany(targetEntity="Netrunners\Entity\KnownNode", mappedBy="node", cascade={"remove"})
+     */
+    protected $knownNodes;
+
+
+    /**
+     * Node constructor.
+     */
+    public function __construct()
+    {
+        $this->knownNodes = new ArrayCollection();
+    }
 
     /**
      * @return int
@@ -334,6 +348,31 @@ class Node
     {
         $this->nodeType = $nodeType;
         return $this;
+    }
+    /**
+     * @return ArrayCollection
+     */
+    public function getKnownNodes()
+    {
+        return $this->knownNodes;
+    }
+
+    /**
+     * @param KnownNode $knownNode
+     */
+    public function addKnownNode(KnownNode $knownNode)
+    {
+        if (!$this->knownNodes->contains($knownNode)) $this->knownNodes[] = $knownNode;
+    }
+
+    /**
+     * @param KnownNode $knownNode
+     */
+    public function removeKnownNode(KnownNode $knownNode)
+    {
+        if ($this->knownNodes->contains($knownNode)) {
+            $this->knownNodes->removeElement($knownNode);
+        }
     }
 
 }

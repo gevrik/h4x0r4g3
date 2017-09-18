@@ -1,0 +1,2 @@
+INSERT INTO `GameOption` (`id`, `name`, `description`, `defaultStatus`) VALUES (NULL, 'bgopacity', 'Set the background opacity. Values between 0.1 and 0.9.', '0');
+UPDATE `GameOption` SET `defaultValue` = '0.6' WHERE `GameOption`.`id` = 4;

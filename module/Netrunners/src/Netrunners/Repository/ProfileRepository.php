@@ -53,6 +53,24 @@ class ProfileRepository extends EntityRepository
     }
 
     /**
+     * @param Node $node
+     * @param Profile|NULL $profile
+     * @return mixed
+     */
+    public function countByCurrentNode(Node $node, Profile $profile = NULL)
+    {
+        $qb = $this->createQueryBuilder('p');
+        $qb->select($qb->expr()->count('p.id'));
+        $qb->where('p.currentNode = :currentNode');
+        $qb->setParameter('currentNode', $node);
+        if ($profile) {
+            $qb->andWhere('p.id != :profileId');
+            $qb->setParameter('profileId', $profile->getId());
+        }
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * @param Faction $faction
      * @return mixed
      */
