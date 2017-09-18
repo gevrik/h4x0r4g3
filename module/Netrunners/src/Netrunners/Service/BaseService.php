@@ -19,6 +19,7 @@ use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
+use Netrunners\Entity\GameOption;
 use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\Invitation;
@@ -103,6 +104,11 @@ class BaseService
      * @var array|false
      */
     protected $response = false;
+
+    /**
+     * @var array
+     */
+    protected $updatedSockets = [];
 
 
     /**
@@ -765,8 +771,9 @@ class BaseService
      * @param $message
      * @param Profile|NpcInstance|null $actor
      * @param mixed $ignoredProfileIds
+     * @param bool $updateMap
      */
-    public function messageEveryoneInNode(Node $node, $message, $actor = NULL, $ignoredProfileIds = [])
+    public function messageEveryoneInNode(Node $node, $message, $actor = NULL, $ignoredProfileIds = [], $updateMap = false)
     {
         $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         /** @var ProfileRepository $profileRepo */
@@ -792,6 +799,9 @@ class BaseService
                         ];
                     }
                     $wsClient->send(json_encode($message));
+                    if ($updateMap && !array_key_exists($wsClient->resourceId, $this->updatedSockets)) {
+                        $this->updatedSockets[$wsClient->resourceId] = $wsClient;
+                    }
                 }
             }
         }
@@ -981,7 +991,7 @@ class BaseService
         $this->messageEveryoneInNode($targetNode, $message, $profile, $profile->getId());
         $this->entityManager->flush($profile);
         $this->checkNpcAggro($profile, $resourceId);
-        return ($resourceId) ? $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId) : false;
+        return ($resourceId) ? $this->showNodeInfo($resourceId) : false;
     }
 
     /**
@@ -1014,7 +1024,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($sourceNode, $message, $npc);
+        $this->messageEveryoneInNode($sourceNode, $message, $npc, [], true);
         $npc->setNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
@@ -1026,7 +1036,7 @@ class BaseService
             'command' => 'showmessageprepend',
             'message' => $messageText
         );
-        $this->messageEveryoneInNode($targetNode, $message, $npc);
+        $this->messageEveryoneInNode($targetNode, $message, $npc, [], true);
         $this->checkNpcAggro($npc);
         $this->checkAggro($npc);
         if (!$this->isInCombat($npc)) $this->checkNpcTriggers($npc);
@@ -1199,9 +1209,10 @@ class BaseService
      * Returns true if the action is blocked, false if it is not blocked.
      * @param $resourceId
      * @param bool $checkForFullBlock
+     * @param File|null $file
      * @return array|bool
      */
-    protected function isActionBlocked($resourceId, $checkForFullBlock = false)
+    protected function isActionBlocked($resourceId, $checkForFullBlock = false, File $file = NULL)
     {
         $ws = $this->getWebsocketServer();
         $clientData = $ws->getClientData($resourceId);
@@ -1215,10 +1226,17 @@ class BaseService
             $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
             $isBlocked = $this->isInCombat($user->getProfile());
             if ($isBlocked) {
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You are currently busy fighting')
-                );
+                // if a file was given, we check if it a combat file and unblock if needed
+                if ($file) {
+                    $unblockingFileTypeIds = [FileType::ID_KICKER];
+                    $isBlocked = (in_array($file->getFileType()->getId(), $unblockingFileTypeIds)) ? false : true;
+                }
+                if ($isBlocked) {
+                    $message = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You are currently busy fighting')
+                    );
+                }
             }
         }
         /* action block check follows */
@@ -1802,16 +1820,23 @@ class BaseService
             /** @var ConnectionRepository $connectionRepo */
             $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
             /** @var FileRepository $fileRepo */
+            $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+            /** @var NpcInstanceRepository $npcInstanceRepo */
             $nodes = $nodeRepo->findBySystem($currentSystem);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 $nodeType = $node->getNodeType();
                 $fileNodes = [];
+                $npcNodes = [];
                 if ($node == $profile->getCurrentNode()) {
                     $group = 99;
                     $files = $fileRepo->findByNode($node);
                     foreach ($files as $file) {
                         $fileNodes[] = $file;
+                    }
+                    $npcs = $npcInstanceRepo->findByNode($node);
+                    foreach ($npcs as $npc) {
+                        $npcNodes[] = $npc;
                     }
                 }
                 else {
@@ -1822,6 +1847,7 @@ class BaseService
                     'type' => $group,
                     'shapetype' => 'circle'
                 ];
+                // add files to map
                 foreach ($fileNodes as $fileNode) {
                     /** @var File $fileNode */
                     $fileType = $fileNode->getFileType();
@@ -1835,6 +1861,22 @@ class BaseService
                         'target' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
                         'value' => 2,
                         'type' => 'W'
+                    ];
+                }
+                // add npcs to map
+                foreach ($npcNodes as $npcNode) {
+                    /** @var NpcInstance $npcNode */
+                    $npcType = $npcNode->getNpc();
+                    $mapArray['nodes'][] = [
+                        'name' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                        'type' => $npcType->getId(),
+                        'shapetype' => 'triangle'
+                    ];
+                    $mapArray['links'][] = [
+                        'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                        'target' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                        'value' => 2,
+                        'type' => 'Z'
                     ];
                 }
                 $connections = $connectionRepo->findBySourceNode($node);
@@ -1866,7 +1908,8 @@ class BaseService
             $view->setVariable('json', json_encode($mapArray));
             $this->response = array(
                 'command' => 'showmap',
-                'content' => $this->viewRenderer->render($view)
+                'content' => $this->viewRenderer->render($view),
+                'silent' => true
             );
         }
         return $this->response;
@@ -1945,9 +1988,9 @@ class BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-//        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-//            return $this->showSystemMap($resourceId);
-//        }
+        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->showSystemMap($resourceId);
+        }
         $this->response = $this->isActionBlocked($resourceId, true);
         if (!$this->response) {
             $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
@@ -2040,7 +2083,8 @@ class BaseService
             $this->response = array(
                 'command' => 'showmap',
                 'type' => 'default',
-                'content' => $this->viewRenderer->render($view)
+                'content' => $this->viewRenderer->render($view),
+                'silent' => true
             );
         }
         return $this->response;
@@ -2571,6 +2615,170 @@ class BaseService
             ];
         }
         return $this->response;
+    }
+
+    /**
+     * Shows important information about a node.
+     * If no node is given, it will use the profile's current node.
+     * @param $resourceId
+     * @param Node|NULL $node
+     * @return array|bool|false
+     */
+    public function showNodeInfo($resourceId, Node $node = NULL)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = ($node) ? $node : $profile->getCurrentNode();
+        $returnMessage = array();
+        // add a note if the node was given (most prolly a scan command)
+        if ($node) $returnMessage[] = sprintf(
+            '<pre class="text-info">You scan into the node [%s]:</pre>',
+            $node->getName()
+        );
+        // add survey text if option is turned on
+        if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) $returnMessage[] = $this->getSurveyText($currentNode);
+        // get connections and show them if there are any
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $connections = $connectionRepo->findBySourceNode($currentNode);
+        if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', $this->translate('connections'));
+        $counter = 0;
+        foreach ($connections as $connection) {
+            /** @var Connection $connection */
+            $counter++;
+            $addonString = '';
+            if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                $addonString = ($connection->getisOpen()) ?
+                    $this->translate('<span class="text-muted">(codegate) (open)</span>') :
+                    $this->translate('<span class="text-addon">(codegate) (closed)</span>');
+            }
+            $returnMessage[] = sprintf(
+                '<pre class="text-directory">%-12s: <span class="contextmenu-connection" data-id="%s">%s</span> %s</pre>',
+                $counter,
+                $counter,
+                $connection->getTargetNode()->getName(),
+                $addonString
+            );
+        }
+        // get files and show them if there are any
+        $files = [];
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        foreach ($fileRepo->findByNode($currentNode) as $fileInstance) {
+            /** @var File $fileInstance */
+            if (!$fileInstance->getFileType()->getStealthing()) {
+                $files[] = $fileInstance;
+            }
+            else {
+                if ($this->canSee($profile, $fileInstance)) $files[] = $fileInstance;
+            }
+        }
+        if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', $this->translate('files'));
+        $counter = 0;
+        foreach ($files as $file) {
+            /** @var File $file */
+            $counter++;
+            $returnMessage[] = sprintf(
+                '<pre class="text-executable">%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span></pre>',
+                $counter,
+                $file->getName(),
+                $file->getName(),
+                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
+            );
+        }
+        // get profiles and show them if there are any
+        $profiles = [];
+        foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
+            $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
+            /** @var Profile $requestedProfile */
+            if(
+                $requestedProfile &&
+                $requestedProfile !== $profile &&
+                $requestedProfile->getCurrentNode() == $currentNode
+            )
+            {
+                if (!$requestedProfile->getStealthing()) {
+                    $profiles[] = $requestedProfile;
+                }
+                else {
+                    if ($this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
+                }
+            }
+        }
+        if (count($profiles) > 0) $returnMessage[] = sprintf('<pre class="text-users">%s:</pre>', $this->translate('users'));
+        $counter = 0;
+        foreach ($profiles as $pprofile) {
+            /** @var Profile $pprofile */
+            $counter++;
+            $returnMessage[] = sprintf(
+                '<pre class="text-users">%-12s: %s %s %s %s</pre>',
+                $counter,
+                $pprofile->getUser()->getUsername(),
+                ($pprofile->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
+                ($profile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getFaction()->getName()) : '',
+                ($profile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getGroup()->getName()) : ''
+            );
+        }
+        // get npcs and show them if there are any
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $npcInstances = $npcInstanceRepo->findByNode($currentNode);
+        $npcs = [];
+        foreach ($npcInstances as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
+            if (!$npcInstance->getStealthing()) {
+                $npcs[] = $npcInstance;
+            }
+            else {
+                if ($this->canSee($profile, $npcInstance)) $npcs[] = $npcInstance;
+            }
+        }
+        if (count($npcs) > 0)  $returnMessage[] = sprintf('<pre class="text-npcs">%s:</pre>', $this->translate('entities'));
+        $counter = 0;
+        foreach ($npcs as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
+            $counter++;
+            $returnMessage[] = sprintf(
+                '<pre class="text-npcs">%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s</pre>',
+                $counter,
+                $counter,
+                $npcInstance->getName(),
+                ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
+                ($npcInstance->getProfile()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getProfile()->getUser()->getUsername()) : '',
+                ($npcInstance->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getFaction()->getName()) : '',
+                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : ''
+            );
+        }
+        // prepare and return response
+        $this->response = array(
+            'command' => 'showoutput',
+            'message' => $returnMessage,
+            'moved' => true
+        );
+        $this->addAdditionalCommand();
+        return $this->response;
+    }
+
+    /**
+     * @param Node $currentNode
+     * @return string
+     */
+    protected function getSurveyText(Node $currentNode)
+    {
+        if (!$currentNode->getDescription()) {
+            $returnMessage = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
+                wordwrap($this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.'), 120)
+            );
+        }
+        else {
+            $returnMessage = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-survey">%s</pre>',
+                wordwrap(htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u']), 120)
+            );
+        }
+        return $returnMessage;
     }
 
 }

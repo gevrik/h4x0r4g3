@@ -23,7 +23,6 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
-use Netrunners\Service\ManpageService;
 use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Application\Service\WebsocketService;
@@ -65,19 +64,9 @@ class IndexController extends AbstractActionController
     protected $loopService;
 
     /**
-     * @var NodeService
-     */
-    protected $nodeService;
-
-    /**
      * @var LoginService
      */
     protected $loginService;
-
-    /**
-     * @var ManpageService
-     */
-    protected $manpageService;
 
 
     /**
@@ -86,27 +75,21 @@ class IndexController extends AbstractActionController
      * @param UtilityService $utilityService
      * @param ParserService $parserService
      * @param LoopService $loopService
-     * @param NodeService $nodeService
      * @param LoginService $loginService
-     * @param ManpageService $manpageService
      */
     public function __construct(
         EntityManager $entityManager,
         UtilityService $utilityService,
         ParserService $parserService,
         LoopService $loopService,
-        NodeService $nodeService,
-        LoginService $loginService,
-        ManpageService $manpageService
+        LoginService $loginService
     )
     {
         $this->entityManager = $entityManager;
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
         $this->loopService = $loopService;
-        $this->nodeService = $nodeService;
         $this->loginService = $loginService;
-        $this->manpageService = $manpageService;
     }
 
     /**
@@ -152,9 +135,7 @@ class IndexController extends AbstractActionController
                         $this->utilityService,
                         $this->parserService,
                         $this->loopService,
-                        $this->nodeService,
                         $this->loginService,
-                        $this->manpageService,
                         $loop,
                         $config['hashmod'],
                         $adminMode

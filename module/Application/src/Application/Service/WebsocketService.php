@@ -12,8 +12,6 @@ use Netrunners\Repository\GeocoordRepository;
 use Netrunners\Repository\PlaySessionRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
-use Netrunners\Service\ManpageService;
-use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\UtilityService;
 use Ratchet\MessageComponentInterface;
@@ -106,19 +104,9 @@ class WebsocketService implements MessageComponentInterface {
     protected $loopService;
 
     /**
-     * @var NodeService
-     */
-    protected $nodeService;
-
-    /**
      * @var LoginService
      */
     protected $loginService;
-
-    /**
-     * @var ManpageService
-     */
-    protected $manpageService;
 
     /**
      * @var Logger
@@ -144,9 +132,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param UtilityService $utilityService
      * @param ParserService $parserService
      * @param LoopService $loopService
-     * @param NodeService $nodeService
      * @param LoginService $loginService
-     * @param ManpageService $manpageService
      * @param LoopInterface $loop
      * @param $hash
      * @param $adminMode
@@ -156,9 +142,7 @@ class WebsocketService implements MessageComponentInterface {
         UtilityService $utilityService,
         ParserService $parserService,
         LoopService $loopService,
-        NodeService $nodeService,
         LoginService $loginService,
-        ManpageService $manpageService,
         LoopInterface $loop,
         $hash,
         $adminMode
@@ -168,9 +152,7 @@ class WebsocketService implements MessageComponentInterface {
         $this->utilityService = $utilityService;
         $this->parserService = $parserService;
         $this->loopService = $loopService;
-        $this->nodeService = $nodeService;
         $this->loginService = $loginService;
-        $this->manpageService = $manpageService;
         $this->loop = $loop;
         $this->hash = $hash;
         $this->setAdminMode($adminMode);
@@ -312,14 +294,6 @@ class WebsocketService implements MessageComponentInterface {
     public function getUtilityService()
     {
         return $this->utilityService;
-    }
-
-    /**
-     * @return NodeService
-     */
-    public function getNodeService()
-    {
-        return $this->nodeService;
     }
 
     /**
@@ -552,7 +526,7 @@ class WebsocketService implements MessageComponentInterface {
             // init vars
             $hash = $msgData->hash;
             $content = $msgData->content;
-            if ($command != 'saveManpage' && $command != 'setgeocoords' && $command != 'processlocations') {
+            if ($command != 'parseFrontendInput' && $command != 'setgeocoords' && $command != 'processlocations') {
                 $content = trim($content);
                 $content = htmLawed($content, ['safe'=>1,'elements'=>'strong']);
             }
@@ -740,18 +714,10 @@ class WebsocketService implements MessageComponentInterface {
                     $response = $this->saveFeedback($resourceId, $content, $fTitle, $fType);
                     $from->send(json_encode($response));
                     break;
-                case 'saveNodeDescription':
+                case 'parseFrontendInput':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                    $response = $this->nodeService->saveNodeDescription($resourceId, $content);
-                    $from->send(json_encode($response));
-                    break;
-                case 'saveManpage':
-                    if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                    $mpTitle = (isset($msgData->title)) ? $msgData->title : false;
-                    $mpStatus = (isset($msgData->status)) ? $msgData->status : false;
-                    $response = $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId, $mpStatus);
-                    $from->send(json_encode($response));
-                    break;
+                    var_dump('in websocket');
+                    return $this->parserService->parseFrontendInput($from, $msgData);
                 case 'showprompt':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                     return $this->utilityService->showPrompt($this->getClientData($resourceId));

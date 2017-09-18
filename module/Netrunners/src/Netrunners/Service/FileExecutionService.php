@@ -74,7 +74,6 @@ class FileExecutionService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // try to get target file via repo method
         $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
@@ -86,7 +85,7 @@ class FileExecutionService extends BaseService
         if (count($targetFiles) >= 1) {
             $file = array_shift($targetFiles);
         }
-        if (!$this->response && !$file) {
+        if (!$file) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -96,6 +95,7 @@ class FileExecutionService extends BaseService
             );
         }
         /** @var File $file */
+        $this->response = $this->isActionBlocked($resourceId, false, $file);
         // check if file belongs to user TODO should be able to bypass this via bh program
         if (!$this->response && $file && $file->getProfile() != $profile) {
             $this->response = array(
@@ -153,6 +153,11 @@ class FileExecutionService extends BaseService
                     break;
                 case FileType::ID_CHATCLIENT:
                     $this->response = $this->executeChatClient($file);
+                    break;
+                case FileType::ID_KICKER:
+                case FileType::ID_BREAKOUT:
+                case FileType::ID_SMOKESCREEN:
+                    $this->response = $this->executeCombatProgram($file);
                     break;
                 case FileType::ID_DATAMINER:
                     $this->response = $this->executeDataminer($file, $profile->getCurrentNode());
@@ -259,6 +264,55 @@ class FileExecutionService extends BaseService
                 $file->getId()
             )
         );
+        return $response;
+    }
+
+    protected function executeCombatProgram(File $file)
+    {
+        $profile = $this->user->getProfile();
+        $response = false;
+        if (!$this->isInCombat($profile)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are not in combat')
+                )
+            );
+        }
+        if (!$response) {
+            switch ($file->getFileType()->getId()) {
+                default:
+                    break;
+                case FileType::ID_KICKER:
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                            $this->translate('You try to kick your opponent')
+                        )
+                    );
+                    break;
+                case FileType::ID_BREAKOUT:
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                            $this->translate('You try to remove a negative effect from yourself')
+                        )
+                    );
+                    break;
+                case FileType::ID_SMOKESCREEN:
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                            $this->translate('You try to disengage from combat')
+                        )
+                    );
+                    break;
+            }
+        }
         return $response;
     }
 

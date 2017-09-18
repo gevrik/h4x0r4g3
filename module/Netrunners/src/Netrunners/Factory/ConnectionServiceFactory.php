@@ -27,7 +27,8 @@ class ConnectionServiceFactory implements FactoryInterface
         return new ConnectionService(
             $serviceLocator->get('Doctrine\ORM\EntityManager'),
             $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('translator')
+            $serviceLocator->get('translator'),
+            $serviceLocator->get('Netrunners\Service\NodeService')
         );
     }
 

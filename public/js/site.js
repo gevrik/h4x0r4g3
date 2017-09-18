@@ -74,6 +74,7 @@
                 "clear": {"name": "clear", "icon": "fa-eraser"},
                 "commands": {"name": "commands", "icon": "fa-terminal"},
                 "jobs": {"name": "jobs", "icon": "fa-cogs"},
+                "missiondetails": {"name": "missioninfo", "icon": "fa-cog"},
                 "ps": {"name": "ps", "icon": "fa-list-ol"},
                 "sepa": "---------",
                 "milkrun": {"name": "milkrun", "icon": "fa-comment"},
@@ -280,7 +281,7 @@
                         "defaultmra": {"name": "defaultmra", callback: function (key, options) {
                             cmCallbackNoSend(key,options);
                         }},
-                        "repairmra": {"name": "defaultmra"},
+                        "repairmra": {"name": "repairmra"},
                         "showmra": {"name": "showmra"},
                         "upgrademra": {"name": "upgrademra", callback: function (key, options) {
                             cmCallbackNoSend(key,options);
@@ -364,6 +365,10 @@
         });
 
         $('#panel-container').on('click', '.panel-heading .close', function(e){
+            if (editor1) {
+                editor1.destroy();
+                editor1 = null;
+            }
             $('#panel-container').html('').hide();
             commandInput.focus();
         });

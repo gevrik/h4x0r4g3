@@ -52,6 +52,9 @@ class FileType
     const ID_MEDKIT = 30;
     const ID_GUARD_SPAWNER = 31;
     const ID_PROXIFIER = 32;
+    const ID_KICKER = 33;
+    const ID_BREAKOUT = 34;
+    const ID_SMOKESCREEN = 35;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -85,6 +88,9 @@ class FileType
     const STRING_MEDKIT = 'medkit';
     const STRING_GUARD_SPAWNER = 'guard-spawner';
     const STRING_PROXIFIER = 'proxifier';
+    const STRING_KICKER = 'kicker';
+    const STRING_BREAKOUT = 'breakout';
+    const STRING_SMOKESCREEN = 'smokescreen';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -119,6 +125,9 @@ class FileType
         self::STRING_MEDKIT => self::ID_MEDKIT,
         self::STRING_GUARD_SPAWNER => self::ID_GUARD_SPAWNER,
         self::STRING_PROXIFIER => self::ID_PROXIFIER,
+        self::STRING_KICKER => self::ID_KICKER,
+        self::STRING_BREAKOUT => self::ID_BREAKOUT,
+        self::STRING_SMOKESCREEN => self::ID_SMOKESCREEN,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;

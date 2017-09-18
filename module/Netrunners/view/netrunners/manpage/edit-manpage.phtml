@@ -28,13 +28,22 @@
 </div>
 <script type="application/javascript">
 
-    var editorWidth = $('.panel-body').innerWidth() - 10;
+    $('.manpage-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    var editorWidth = viewportWidth*0.329 - 10;
     $('#manpage-content').css('width', editorWidth);
     $('#manpage-subject').css('width', editorWidth);
 
     $('#save-manpage').on('click', function(){
         var jsonData = {
-            command: 'saveManpage',
+            command: 'parseFrontendInput',
+            subcommand: 'savemanpage',
             hash: hash,
             content: editor1.getData(),
             title: $('#manpage-subject').val(),

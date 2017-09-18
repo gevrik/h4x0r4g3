@@ -1,10 +1,49 @@
-<div class="col-md-4">
-    <div class="panel panel-default draggable">
-        <div class="panel-heading">
-            <h3 class="panel-title">Panel title</h3>
-        </div>
-        <div class="panel-body">
-            Panel content
-        </div>
+<div class="panel panel-default draggable edit-file-description-panel">
+    <div class="panel-heading">
+        <button id="btn-close-file-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button id="save-file-desc" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
+        <h3 class="panel-title"><?php echo $this->translate("edit file content"); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <label for="description">
+            <textarea id="description" name="description" class="description" rows="10" style="border: 0;"><?php echo $this->description; ?></textarea>
+        </label>
     </div>
 </div>
+<script>
+
+    $('.panel-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    var editorWidth = viewportWidth*0.328;
+    $('#description').css('width', editorWidth);
+
+    $('#save-file-desc').on('click', function(){
+        var jsonData = {
+            command: 'parseFrontendInput',
+            subcommand: 'saveFileDescription',
+            hash: hash,
+            content: editor1.getData(),
+            entityId: <?php echo $this->entityId; ?>,
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+    });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace( 'description', {width: editorWidth, uiColor: '#3c3c3c', contentsCss: '../../../css/ckeditor.css'} );
+        editor1.editorConfig = function( config ) {
+            config.toolbar = [
+                { name: 'basicstyles', items: [ 'Bold', 'Italic' ] },
+                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent' ] },
+                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] }
+            ];
+        };
+    }
+
+</script>

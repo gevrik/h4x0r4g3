@@ -32,6 +32,7 @@ class FileCategory
     const ID_EXOTIC = 11;
     const ID_STEALTH = 12;
     const ID_SPAWNER = 13;
+    const ID_COMBAT = 14;
 
     /**
      * @ORM\Id

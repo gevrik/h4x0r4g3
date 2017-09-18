@@ -16,7 +16,6 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
-use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -25,6 +24,11 @@ class ConnectionService extends BaseService
 
     const CONNECTION_COST = 10;
     const SECURE_CONNECTION_COST = 50;
+
+    /**
+     * @var NodeService
+     */
+    protected $nodeService;
 
     /**
      * @var NodeRepository
@@ -42,10 +46,17 @@ class ConnectionService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param NodeService $nodeService
      */
-    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        NodeService $nodeService
+    )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->nodeService = $nodeService;
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
     }
@@ -137,10 +148,9 @@ class ConnectionService extends BaseService
             );
         }
         // check if there is still a connection to an io node
-        $nodeService = $this->getWebsocketServer()->getNodeService();
         if (!$this->response && $connection) {
-            $nodeService->initConnectionsChecked();
-            $stillConnectedToIo = $nodeService->nodeStillConnectedToNodeType(
+            $this->nodeService->initConnectionsChecked();
+            $stillConnectedToIo = $this->nodeService->nodeStillConnectedToNodeType(
                 $currentNode,
                 $connection,
                 [NodeType::ID_PUBLICIO, NodeType::ID_IO]
@@ -154,16 +164,16 @@ class ConnectionService extends BaseService
                     )
                 );
             }
-            $nodeService->initConnectionsChecked();
+            $this->nodeService->initConnectionsChecked();
         }
         // check the same for the target node
         $reversedConnection = NULL;
         $targetNode = NULL;
         if (!$this->response && $connection) {
-            $nodeService->initConnectionsChecked();
+            $this->nodeService->initConnectionsChecked();
             $targetNode = $connection->getTargetNode();
             $reversedConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetNode, $currentNode);
-            $stillConnectedToIo = $nodeService->nodeStillConnectedToNodeType(
+            $stillConnectedToIo = $this->nodeService->nodeStillConnectedToNodeType(
                 $targetNode,
                 $reversedConnection,
                 [NodeType::ID_PUBLICIO, NodeType::ID_IO]
@@ -177,7 +187,7 @@ class ConnectionService extends BaseService
                     )
                 );
             }
-            $nodeService->initConnectionsChecked();
+            $this->nodeService->initConnectionsChecked();
         }
         /* all seems good, we can remove the connection */
         if (!$this->response && $connection && $reversedConnection) {
@@ -245,7 +255,7 @@ class ConnectionService extends BaseService
             );
         }
         if (!$this->response) {
-            $this->response = $this->getWebsocketServer()->getNodeService()->showNodeInfo($resourceId, $connection->getTargetNode());
+            $this->response = $this->nodeService->showNodeInfo($resourceId, $connection->getTargetNode());
             // inform other players in node
             $message = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is scanning into [%s]</pre>'),

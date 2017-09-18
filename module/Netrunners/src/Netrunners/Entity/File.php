@@ -100,6 +100,12 @@ class File
      */
     protected $data;
 
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $content;
+
     // ORM
 
     /**
@@ -369,6 +375,24 @@ class File
     public function setData($data)
     {
         $this->data = $data;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getContent()
+    {
+        return $this->content;
+    }
+
+    /**
+     * @param mixed $content
+     * @return File
+     */
+    public function setContent($content)
+    {
+        $this->content = $content;
         return $this;
     }
 

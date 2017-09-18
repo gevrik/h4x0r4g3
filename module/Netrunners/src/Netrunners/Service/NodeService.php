@@ -12,12 +12,8 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
-use Netrunners\Entity\File;
-use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
-use Netrunners\Entity\NpcInstance;
-use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
 use Netrunners\Repository\AuctionRepository;
@@ -106,143 +102,6 @@ class NodeService extends BaseService
     {
         $this->connectionsChecked = [];
         return $this;
-    }
-
-    /**
-     * Shows important information about a node.
-     * If no node is given, it will use the profile's current node.
-     * @param $resourceId
-     * @param Node|NULL $node
-     * @return array|bool|false
-     */
-    public function showNodeInfo($resourceId, Node $node = NULL)
-    {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $currentNode = ($node) ? $node : $profile->getCurrentNode();
-        $returnMessage = array();
-        // add a note if the node was given (most prolly a scan command)
-        if ($node) $returnMessage[] = sprintf(
-            '<pre class="text-info">You scan into the node [%s]:</pre>',
-            $node->getName()
-        );
-        // add survey text if option is turned on
-        if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) $returnMessage[] = $this->getSurveyText($currentNode);
-        // get connections and show them if there are any
-        $connections = $this->connectionRepo->findBySourceNode($currentNode);
-        if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', self::CONNECTIONS_STRING);
-        $counter = 0;
-        foreach ($connections as $connection) {
-            /** @var Connection $connection */
-            $counter++;
-            $addonString = '';
-            if ($connection->getType() == Connection::TYPE_CODEGATE) {
-                $addonString = ($connection->getisOpen()) ?
-                    $this->translate('<span class="text-muted">(codegate) (open)</span>') :
-                    $this->translate('<span class="text-addon">(codegate) (closed)</span>');
-            }
-            $returnMessage[] = sprintf(
-                '<pre class="text-directory">%-12s: <span class="contextmenu-connection" data-id="%s">%s</span> %s</pre>',
-                $counter,
-                $counter,
-                $connection->getTargetNode()->getName(),
-                $addonString
-            );
-        }
-        // get files and show them if there are any
-        $files = [];
-        foreach ($this->fileRepo->findByNode($currentNode) as $fileInstance) {
-            /** @var File $fileInstance */
-            if (!$fileInstance->getFileType()->getStealthing()) {
-                $files[] = $fileInstance;
-            }
-            else {
-                if ($this->canSee($profile, $fileInstance)) $files[] = $fileInstance;
-            }
-        }
-        if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', $this->translate(self::FILES_STRING));
-        $counter = 0;
-        foreach ($files as $file) {
-            /** @var File $file */
-            $counter++;
-            $returnMessage[] = sprintf(
-                '<pre class="text-executable">%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span></pre>',
-                $counter,
-                $file->getName(),
-                $file->getName(),
-                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
-            );
-        }
-        // get profiles and show them if there are any
-        $profiles = [];
-        foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
-            $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
-            /** @var Profile $requestedProfile */
-            if(
-                $requestedProfile &&
-                $requestedProfile !== $profile &&
-                $requestedProfile->getCurrentNode() == $currentNode
-            )
-            {
-                if (!$requestedProfile->getStealthing()) {
-                    $profiles[] = $requestedProfile;
-                }
-                else {
-                    if ($this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
-                }
-            }
-        }
-        if (count($profiles) > 0) $returnMessage[] = sprintf('<pre class="text-users">%s:</pre>', $this->translate(self::USERS_STRING));
-        $counter = 0;
-        foreach ($profiles as $pprofile) {
-            /** @var Profile $pprofile */
-            $counter++;
-            $returnMessage[] = sprintf(
-                '<pre class="text-users">%-12s: %s %s %s %s</pre>',
-                $counter,
-                $pprofile->getUser()->getUsername(),
-                ($pprofile->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
-                ($profile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getFaction()->getName()) : '',
-                ($profile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getGroup()->getName()) : ''
-            );
-        }
-        // get npcs and show them if there are any
-        $npcInstances = $this->npcInstanceRepo->findByNode($currentNode);
-        $npcs = [];
-        foreach ($npcInstances as $npcInstance) {
-            /** @var NpcInstance $npcInstance */
-            if (!$npcInstance->getStealthing()) {
-                $npcs[] = $npcInstance;
-            }
-            else {
-                if ($this->canSee($profile, $npcInstance)) $npcs[] = $npcInstance;
-            }
-        }
-        if (count($npcs) > 0)  $returnMessage[] = sprintf('<pre class="text-npcs">%s:</pre>', $this->translate(self::NPCS_STRING));
-        $counter = 0;
-        foreach ($npcs as $npcInstance) {
-            /** @var NpcInstance $npcInstance */
-            $counter++;
-            $returnMessage[] = sprintf(
-                '<pre class="text-npcs">%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s</pre>',
-                $counter,
-                $counter,
-                $npcInstance->getName(),
-                ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
-                ($npcInstance->getProfile()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getProfile()->getUser()->getUsername()) : '',
-                ($npcInstance->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getFaction()->getName()) : '',
-                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : ''
-            );
-        }
-        // prepare and return response
-        $this->response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage,
-            'moved' => true
-        );
-        $this->addAdditionalCommand();
-        return $this->response;
     }
 
     /**
@@ -948,6 +807,7 @@ class NodeService extends BaseService
                 $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
             }
             $view->setVariable('description', $processedDescription);
+            $view->setVariable('entityId', $currentNode->getId());
             $this->response = array(
                 'command' => 'showpanel',
                 'type' => 'default',
@@ -966,14 +826,15 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @param $content
+     * @param int $entityId
      * @return bool|ConnectionInterface
      */
-    public function saveNodeDescription($resourceId, $content)
+    public function saveNodeDescription($resourceId, $content, $entityId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $currentNode = $profile->getCurrentNode();
+        $currentNode = $this->nodeRepo->find($entityId);
         // only allow owner of system to add nodes
         if ($profile !== $currentNode->getSystem()->getProfile()) {
             $this->response = array(
@@ -986,6 +847,7 @@ class NodeService extends BaseService
         }
         /* checks passed, we can now edit the node */
         if (!$this->response) {
+            $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,p,br']);
             $currentNode->setDescription($content);
             $this->entityManager->flush($currentNode);
             $this->response = array(
@@ -1227,27 +1089,6 @@ class NodeService extends BaseService
             }
         }
         return $nodeTypeFound;
-    }
-
-    /**
-     * @param Node $currentNode
-     * @return string
-     */
-    private function getSurveyText(Node $currentNode)
-    {
-        if (!$currentNode->getDescription()) {
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
-                wordwrap($this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.'), 120)
-            );
-        }
-        else {
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-survey">%s</pre>',
-                wordwrap(htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u']), 120)
-            );
-        }
-        return $returnMessage;
     }
 
     /**

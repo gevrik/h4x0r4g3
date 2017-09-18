@@ -794,6 +794,7 @@ class LoopService extends BaseService
      */
     public function loopNpcRoam()
     {
+        $this->updatedSockets = [];
         $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
         /** @var ConnectionRepository $connectionRepo */
         $roamingNpcs = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance')->findBy([
@@ -836,6 +837,13 @@ class LoopService extends BaseService
                 }
             };
             $this->moveNpcToTargetNode($roamingNpc, $connection);
+        }
+        if (!empty($this->updatedSockets)) {
+            foreach ($this->updatedSockets as $updatedSocketId => $updatedSocket) {
+                $message = $this->showAreaMap($updatedSocketId);
+                $updatedSocket->send(json_encode($message));
+            }
+            $this->updatedSockets = [];
         }
     }
 

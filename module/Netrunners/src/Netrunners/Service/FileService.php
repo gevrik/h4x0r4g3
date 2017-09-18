@@ -107,6 +107,28 @@ class FileService extends BaseService
      * @param $contentArray
      * @return array|bool|false
      */
+    public function editFileDescription($resourceId, $contentArray)
+    {
+        return $this->fileUtilityService->editFileDescription($resourceId, $contentArray);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $content
+     * @param int $entityId
+     * @return array|bool|false
+     */
+    public function saveFileDescription($resourceId, $content, $entityId)
+    {
+        var_dump('here');
+        return $this->fileUtilityService->saveFileDescription($resourceId, $content, $entityId);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function unloadFile($resourceId, $contentArray)
     {
         return $this->fileUtilityService->unloadFile($resourceId, $contentArray);

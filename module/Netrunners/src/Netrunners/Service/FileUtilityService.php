@@ -19,7 +19,9 @@ use Netrunners\Entity\FileType;
 use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\MissionRepository;
 use Zend\Mvc\I18n\Translator;
+use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
 class FileUtilityService extends BaseService
@@ -821,6 +823,73 @@ class FileUtilityService extends BaseService
     }
 
     /**
+     * Checks the given file if it can be modified.
+     * If you pass a contentArray (user-input), it will get the file from the user-input.
+     * @param array|null $contentArray
+     * @param File|null $givenFile
+     * @return mixed|File|null
+     */
+    private function editFileChecks($contentArray = NULL, File $givenFile = NULL)
+    {
+        $profile = $this->user->getProfile();
+        if ($givenFile) {
+            $file = $givenFile;
+        }
+        else {
+            $file = NULL;
+            $parameter = $this->getNextParameter($contentArray, false);
+            // try to get target file via repo method
+            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $parameter);
+            if (!$this->response && count($targetFiles) < 1) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
+                );
+            }
+        }
+        if (!$this->response) {
+            if (!$givenFile) $file = array_shift($targetFiles);
+            /** @var File $file */
+            // check if the file belongs to the profile
+            if (!$this->response && $file && $file->getProfile() != $profile) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Permission denied')
+                    )
+                );
+            }
+            if (!$this->response && $file->getSystem()) {
+                $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('Command failed - please download the file first')
+                    )
+                );
+            }
+            // check if this file is a text file
+            if (!$this->response && $file && $file->getFileType()->getId() != FileType::ID_TEXT) {
+                $this->response = $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Unable to edit this file type</pre>'
+                );
+            }
+            $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
+            /** @var MissionRepository $missionRepo */
+            // check if this file is a text file that is used in a mission
+            if (!$this->response && $file && $missionRepo->findByTargetFile($file)) {
+                $this->response = $this->response = array(
+                    'command' => 'showmessage',
+                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Unable to edit mission files</pre>'
+                );
+            }
+        }
+        return $file;
+    }
+
+    /**
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
@@ -1005,6 +1074,91 @@ class FileUtilityService extends BaseService
             $this->response = [
                 'command' => 'showmessage',
                 'message' => $message
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function editFileDescription($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $this->response = $this->isActionBlocked($resourceId, true);
+        $file = false;
+        if (!$this->response) {
+            $file = $this->editFileChecks($contentArray);
+        }
+        /* checks passed, we can now edit the file */
+        if (!$this->response && $file) {
+            /** @var File $file */
+            $view = new ViewModel();
+            $view->setTemplate('netrunners/file/edit-text.phtml');
+            $description = $file->getContent();
+            $processedDescription = '';
+            if ($description) {
+                $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
+            }
+            $view->setVariable('description', $processedDescription);
+            $view->setVariable('entityId', $file->getId());
+            $this->response = array(
+                'command' => 'showpanel',
+                'type' => 'default',
+                'content' => $this->viewRenderer->render($view)
+            );
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is editing a file</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param string $content
+     * @param $entityId
+     * @return array|bool|false
+     */
+    public function saveFileDescription(
+        $resourceId,
+        $content = '===invalid content===',
+        $entityId
+    )
+    {
+        var_dump('in actual method');
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $file = $this->fileRepo->find($entityId);
+        if (!$this->response && !$file) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('invalid file id')
+                )
+            ];
+        }
+        $file = $this->editFileChecks(NULL, $file);
+        if (!$this->response && $file) {
+            /** @var File $file */
+            $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
+            $file->setContent($content);
+            $this->entityManager->flush($file);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
+                    $this->translate('File content saved')
+                )
             ];
         }
         return $this->response;
@@ -1260,6 +1414,14 @@ class FileUtilityService extends BaseService
                         '<pre style="white-space: pre-wrap;" class="text-addon">%-12s: %s</pre>',
                         $this->translate("Collected snippets"),
                         (isset($fileData->value)) ? $fileData->value : 0
+                    );
+                    break;
+                case FileType::ID_TEXT:
+                    $fileData = $targetFile->getContent();
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-addon">%s<br/><span class="text-muted">%s</span></pre>',
+                        $this->translate("File content:"),
+                        ($fileData) ? wordwrap($fileData, 120) : $this->translate('[CONTENT IS EMPTY]')
                     );
                     break;
             }

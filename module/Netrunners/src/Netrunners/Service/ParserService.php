@@ -243,6 +243,30 @@ class ParserService
     }
 
     /**
+     * @param $content
+     * @return array
+     */
+    private function prepareData($content)
+    {
+        $contentArray = explode(' ', $content);
+        $userCommand = array_shift($contentArray);
+        $userCommand = trim($userCommand);
+        return [$contentArray, $userCommand];
+    }
+
+    /**
+     * @param $msgData
+     * @return array
+     */
+    private function prepareFrontendData($msgData)
+    {
+        $content = (isset($msgData->content)) ? $msgData->content : false;
+        $entityId = (isset($msgData->entityId)) ? $msgData->entityId : false;
+        $subcommand = (isset($msgData->subcommand)) ? $msgData->subcommand: false;
+        return [$content, $entityId, $subcommand];
+    }
+
+    /**
      * Main method that takes care of delegating commands to their corresponding service.
      * @param ConnectionInterface $from
      * @param string $content
@@ -261,10 +285,8 @@ class ParserService
         if (!$user) return true;
         $profile = $user->getProfile();
         /** @var Profile $profile */
-        $contentArray = explode(' ', $content);
-        $userCommand = array_shift($contentArray);
-        $userCommand = trim($userCommand);
-        switch ($userCommand) {
+        list($contentArray, $userCommand) = $this->prepareData($content);
+        switch (strtolower($userCommand)) {
             default:
                 $response = array(
                     'command' => self::CMD_SHOWMESSAGE,
@@ -365,6 +387,9 @@ class ParserService
             case 'download':
             case 'dl':
                 $response = $this->fileService->downloadFile($resourceId, $contentArray);
+                break;
+            case 'editfile':
+                $response = $this->fileService->editFileDescription($resourceId, $contentArray);
                 break;
             case 'editmanpage':
                 $response = $this->manpageService->editManpage($resourceId, $contentArray);
@@ -782,9 +807,7 @@ class ParserService
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
-        $contentArray = explode(' ', $content);
-        $userCommand = array_shift($contentArray);
-        $userCommand = trim($userCommand);
+        list($contentArray, $userCommand) = $this->prepareData($content);
         $mailOptions = (object)$mailOptions;
         switch ($userCommand) {
             default:
@@ -813,9 +836,7 @@ class ParserService
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
-        $contentArray = explode(' ', $content);
-        $userCommand = array_shift($contentArray);
-        $userCommand = trim($userCommand);
+        list($contentArray, $userCommand) = $this->prepareData($content);
         $codeOptions = (object)$clientData->codingOptions;
         switch ($userCommand) {
             default:
@@ -904,6 +925,52 @@ class ParserService
             $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
         }
         return $response;
+    }
+
+    /**
+     * @param ConnectionInterface $from
+     * @param $msgData
+     * @return bool
+     */
+    public function parseFrontendInput(ConnectionInterface $from, $msgData)
+    {
+        var_dump('in parse-front-input');
+        /** @noinspection PhpUndefinedFieldInspection */
+        $resourceId = $from->resourceId;
+        $clientData = $this->getWebsocketServer()->getClientData($resourceId);
+        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        if (!$user) return true;
+        list($content, $entityId, $userCommand) = $this->prepareFrontendData($msgData);
+        $silent = false;
+        $response = false;
+        switch (strtolower($userCommand)) {
+            default:
+                break;
+            case 'savefiledescription':
+                $response = $this->fileService->saveFileDescription($resourceId, $content, $entityId);
+                break;
+            case 'savenodedescription':
+                $response = $this->nodeService->saveNodeDescription($resourceId, $content, $entityId);
+                break;
+            case 'savemanpage':
+                $mpTitle = (isset($msgData->title)) ? $msgData->title : false;
+                $mpStatus = (isset($msgData->status)) ? $msgData->status : false;
+                $response = $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId, $mpStatus);
+                break;
+        }
+        if (!$response) {
+            $response = array(
+                'command' => self::CMD_SHOWMESSAGE,
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translator->translate('frontend-parse error')
+                )
+            );
+        }
+        $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
+        $response['silent'] = $silent;
+        $from->send(json_encode($response));
+        return true;
     }
 
 }

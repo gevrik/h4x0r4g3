@@ -1,6 +1,6 @@
 <div class="panel panel-default draggable edit-node-description-panel">
     <div class="panel-heading">
-        <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button id="btn-close-node-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <button id="save-node-desc" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="glyphicon glyphicon-check"></i></span></button>
         <h3 class="panel-title"><?php echo $this->translate("edit node description"); ?></h3>
     </div>
@@ -12,18 +12,36 @@
 </div>
 <script>
 
-    var editorWidth = $('.panel-body').innerWidth();
+    $('.panel-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    var editorWidth = viewportWidth*0.328;
     $('#description').css('width', editorWidth);
 
     $('#save-node-desc').on('click', function(){
-        console.log('save clicked');
         var jsonData = {
-            command: 'saveNodeDescription',
+            command: 'parseFrontendInput',
+            subcommand: 'saveNodeDescription',
             hash: hash,
-            content: $('#description').val(),
+            content: editor1.getData(),
+            entityId: <?php echo $this->entityId; ?>,
             silent: true
         };
         conn.send(JSON.stringify(jsonData));
     });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace( 'description', {width: editorWidth, uiColor: '#3c3c3c', contentsCss: '../../../css/ckeditor.css'} );
+        editor1.editorConfig = function( config ) {
+            config.toolbar = [
+                { name: 'basicstyles', items: [ 'Bold', 'Italic' ] }
+            ];
+        };
+    }
 
 </script>
