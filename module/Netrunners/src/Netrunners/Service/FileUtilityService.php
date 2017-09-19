@@ -1423,6 +1423,13 @@ class FileUtilityService extends BaseService
                         ($fileData) ? wordwrap($fileData, 120) : $this->translate('[CONTENT IS EMPTY]')
                     );
                     break;
+                case FileType::ID_CUSTOM_IDE:
+                    $returnMessage[] = sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-addon">%s <span class="text-muted">%s</span></pre>',
+                        $this->translate("Effective skill boost:"),
+                        $this->getBonusForFileLevel($targetFile)
+                    );
+                    break;
             }
             // now show its file-mods
             $fileModsCount = $this->fileModInstanceRepo->countByFile($targetFile);

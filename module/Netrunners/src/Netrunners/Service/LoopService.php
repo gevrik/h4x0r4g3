@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Mission;
@@ -612,6 +613,9 @@ class LoopService extends BaseService
         $systems = $this->systemRepo->findAll();
         foreach ($systems as $system) {
             /** @var System $system */
+            $profile = $system->getProfile();
+            $faction = $system->getFaction();
+            $group = $system->getGroup();
             if ($this->npcInstanceRepo->countBySystem($system) >= $this->nodeRepo->countBySystem($system)) continue;
             $databaseNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_DATABASE);
             foreach ($databaseNodes as $databaseNode) {
@@ -622,9 +626,6 @@ class LoopService extends BaseService
                 if ($existing) continue;
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WORKER_PROGRAM);
                 /** @var Npc $npc */
-                $profile = $system->getProfile();
-                $faction = $system->getFaction();
-                $group = $system->getGroup();
                 $npcInstance = $this->spawnNpcInstance($npc, $databaseNode, $profile, $faction, $group, $databaseNode);
                 $this->checkNpcAggro($npcInstance);
                 $this->checkAggro($npcInstance);
@@ -637,10 +638,6 @@ class LoopService extends BaseService
                 if ($existing) continue;
                 /* looks like we can spawn it */
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_BOUNCER_ICE);
-                /** @var Npc $npc */
-                $profile = $system->getProfile();
-                $faction = $system->getFaction();
-                $group = $system->getGroup();
                 $npcInstance = $this->spawnNpcInstance($npc, $firewallNode, $profile, $faction, $group, $firewallNode);
                 $this->checkNpcAggro($npcInstance);
                 $this->checkAggro($npcInstance);
@@ -653,10 +650,6 @@ class LoopService extends BaseService
                 $existing = $this->npcInstanceRepo->findOneByHomeNode($terminalNode);
                 if ($existing) continue;
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WORKER_PROGRAM);
-                /** @var Npc $npc */
-                $profile = $system->getProfile();
-                $faction = $system->getFaction();
-                $group = $system->getGroup();
                 $npcInstance = $this->spawnNpcInstance($npc, $terminalNode, $profile, $faction, $group, $terminalNode);
                 $this->checkNpcAggro($npcInstance);
                 $this->checkAggro($npcInstance);
@@ -668,10 +661,6 @@ class LoopService extends BaseService
                 $existing = $this->npcInstanceRepo->findOneByHomeNode($recruitmentNode);
                 if ($existing) continue;
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_SENTINEL_ICE);
-                /** @var Npc $npc */
-                $profile = $system->getProfile();
-                $faction = $system->getFaction();
-                $group = $system->getGroup();
                 $npcInstance = $this->spawnNpcInstance($npc, $recruitmentNode, $profile, $faction, $group, $recruitmentNode);
                 $this->checkNpcAggro($npcInstance);
                 $this->checkAggro($npcInstance);
@@ -683,10 +672,6 @@ class LoopService extends BaseService
                 $existing = $this->npcInstanceRepo->findOneByHomeNode($cpuNode);
                 if ($existing) continue;
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_DEBUGGER_PROGRAM);
-                /** @var Npc $npc */
-                $profile = $system->getProfile();
-                $faction = $system->getFaction();
-                $group = $system->getGroup();
                 $npcInstance = $this->spawnNpcInstance($npc, $cpuNode, $profile, $faction, $group, $cpuNode);
                 $this->checkNpcAggro($npcInstance);
                 $this->checkAggro($npcInstance);
@@ -695,12 +680,41 @@ class LoopService extends BaseService
             foreach ($intrusionNodes as $intrusionNode) {
                 /** @var Node $intrusionNode */
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WILDERSPACE_INTRUDER);
-                /** @var Npc $npc */
                 if (mt_rand(1, 100) <= $intrusionNode->getLevel()) {
                     $npcInstance = $this->spawnNpcInstance($npc, $intrusionNode);
                     $this->checkNpcAggro($npcInstance);
                     $this->checkAggro($npcInstance);
                 }
+            }
+        }
+        // now check for spawners
+        $spawners = $this->fileRepo->findByCategoryForLoop(FileCategory::ID_SPAWNER);
+        foreach ($spawners as $spawner) {
+            /** @var File $spawner */
+            switch ($spawner->getFileType()->getId()) {
+                default:
+                    break;
+                case FileType::ID_GUARD_SPAWNER:
+                    $fileData = $this->getFileData($spawner);
+                    if ($fileData->npcid == 0) {
+                        $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_GUARDIAN_ICE);
+                        $npcInstance = $this->spawnNpcInstance(
+                            $npc,
+                            $spawner->getNode(),
+                            $spawner->getProfile(),
+                            NULL,
+                            NULL,
+                            NULL,
+                            NULL,
+                            true
+                        );
+                        $fileData->npcid = $npcInstance->getId();
+                        $spawner->setData(json_encode($fileData));
+                        $this->lowerIntegrityOfFile($spawner, 100, 10);
+                        $this->checkNpcAggro($npcInstance);
+                        $this->checkAggro($npcInstance);
+                    }
+                    break;
             }
         }
         $this->entityManager->flush();
@@ -1127,7 +1141,9 @@ class LoopService extends BaseService
         return true;
     }
 
-
+    /**
+     * @param System $system
+     */
     private function checkForModifyingFiles(System $system)
     {
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');

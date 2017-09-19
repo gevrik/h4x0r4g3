@@ -11,11 +11,9 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\File;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
-use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
 use Zend\Mvc\I18n\Translator;
@@ -285,45 +283,6 @@ class CombatService extends BaseService
             );
         }
         return [$attackerMessage, $defenderMessage, $flyToDefender, $nodeMessage];
-    }
-
-    /**
-     * @param Profile $profile
-     */
-    private function flatlineProfile(Profile $profile)
-    {
-        $profile->setEeg(10);
-        $profile->setSecurityRating(0);
-        $this->entityManager->flush($profile);
-        $currentNode = $profile->getCurrentNode();
-        $homeNode = $profile->getHomeNode();
-        $this->movePlayerToTargetNode(NULL, $profile , NULL, $currentNode, $homeNode);
-    }
-
-    /**
-     * @param NpcInstance $npcInstance
-     * @param NpcInstance|Profile $attacker
-     */
-    private function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
-    {
-        /** @var FileRepository $fileRepo */
-        foreach ($npcInstance->getFiles() as $file) {
-            /** @var File $file */
-            $npcInstance->removeFile($file);
-            $file->setRunning(false);
-            $file->setNode($npcInstance->getNode());
-            $file->setSystem($npcInstance->getNode()->getSystem());
-        }
-        $npcInstance->setBlasterModule(NULL);
-        $npcInstance->setBladeModule(NULL);
-        $npcInstance->setShieldModule(NULL);
-        $this->entityManager->flush();
-        // give snippets and credits to attacker
-        $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
-        $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
-        // remove the npc instance
-        $this->entityManager->remove($npcInstance);
-        $this->entityManager->flush($npcInstance);
     }
 
 }

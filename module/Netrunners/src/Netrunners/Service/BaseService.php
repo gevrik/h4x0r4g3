@@ -204,6 +204,99 @@ class BaseService
     }
 
     /**
+     * @param File $file
+     * @param bool $assoc
+     * @return mixed|string
+     */
+    protected function getFileData(File $file, $assoc = false)
+    {
+        $fileData = json_decode($file->getData(), $assoc);
+        if (($assoc) ? !is_array($fileData) : !is_object($fileData)) {
+            $fileData = json_encode($this->generateFileDataByType($file->getFileType()->getId()));
+            $file->setData($fileData);
+            $this->entityManager->flush($file);
+            $fileData= json_decode($fileData, $assoc);
+        }
+        return $fileData;
+    }
+
+    /**
+     * @param $fileTypeId
+     * @return array
+     */
+    protected function generateFileDataByType($fileTypeId)
+    {
+        $result = [];
+        switch ($fileTypeId) {
+            default:
+                break;
+            case FileType::ID_GUARD_SPAWNER:
+                $result['roaming'] = 0;
+                $result['aggressive'] = 1;
+                $result['codegates'] = 0;
+                $result['npcid'] = 0;
+                break;
+            case FileType::ID_DATAMINER:
+            case FileType::ID_COINMINER:
+                $result['value'] = 0;
+                break;
+            case FileType::ID_RESEARCHER:
+                $result['progress'] = 0;
+                $result['type'] = '';
+                $result['id'] = 0;
+                break;
+        }
+        return $result;
+    }
+
+    /**
+     * @param Node $node
+     * @param bool $assoc
+     * @return object|array
+     */
+    protected function getNodeData(Node $node, $assoc = false)
+    {
+        $nodeData = json_decode($node->getData(), $assoc);
+        if (($assoc) ? !is_array($nodeData) : !is_object($nodeData)) {
+            $nodeData = json_encode($this->generateNodeDataByType($node->getNodeType()->getId()));
+            $node->setData($nodeData);
+            $this->entityManager->flush($node);
+            $nodeData = json_decode($nodeData, $assoc);
+        }
+        return $nodeData;
+    }
+
+    /**
+     * @param $nodeTypeId
+     * @return array
+     */
+    protected function generateNodeDataByType($nodeTypeId)
+    {
+        $result = [];
+        switch ($nodeTypeId) {
+            default:
+                break;
+            case NodeType::ID_FIREWALL:
+                $result['roaming'] = 1;
+                $result['aggressive'] = 1;
+                $result['codegates'] = 0;
+                break;
+            case NodeType::ID_TERMINAL:
+            case NodeType::ID_DATABASE:
+                $result['roaming'] = 1;
+                $result['aggressive'] = 0;
+                $result['codegates'] = 0;
+                break;
+            case NodeType::ID_CPU:
+                $result['roaming'] = 1;
+                $result['aggressive'] = 0;
+                $result['codegates'] = 1;
+                break;
+        }
+        return $result;
+    }
+
+    /**
      * Checks if the given profile can store the given file.
      * Returns true if the file can be stored.
      * @param Profile $profile
@@ -355,8 +448,7 @@ class BaseService
             if (!$stealthing) return $canSee;
             $currentNode = $stealther->getCurrentNode();
             $stealtherName = $stealther->getUser()->getUsername();
-            $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
-            $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+            $stealtherSkillRating = $this->getSkillRating($stealther, Skill::ID_STEALTH);
             // TODO add programs that modify ratings (cloak)
         }
         if ($stealther instanceof NpcInstance) {
@@ -364,8 +456,7 @@ class BaseService
             if (!$stealthing) return $canSee;
             $currentNode = $stealther->getNode();
             $stealtherName = $stealther->getName();
-            $stealtherSkillRating = $this->getSkillRating($stealther, SKill::ID_STEALTH);
-            $detectorSkillRating = $this->getSkillRating($detector, SKill::ID_DETECTION);
+            $stealtherSkillRating = $this->getSkillRating($stealther, Skill::ID_STEALTH);
             // if detector is owner then they can always see their instances
             if ($detector instanceof Profile) {
                 if ($detector == $stealther->getProfile()) $stealthing = false;
@@ -379,7 +470,6 @@ class BaseService
             $stealtherName = $stealther->getName();
             $skillRating = ceil(($stealther->getIntegrity() + $stealther->getLevel()) / 2);
             $stealtherSkillRating = $skillRating;
-            $detectorSkillRating = $skillRating;
             // if detector is owner then they can always see their files
             if ($detector instanceof Profile) {
                 if ($detector == $stealther->getProfile()) $stealthing = false;
@@ -387,12 +477,15 @@ class BaseService
             // TODO add mods that modify ratings
         }
         if ($detector instanceof Profile) {
+            $detectorSkillRating = $this->getSkillRating($detector, Skill::ID_DETECTION);
             $detectorName = ($detector->getStealthing()) ? 'something' : $detector->getUser()->getUsername();
         }
         if ($detector instanceof NpcInstance) {
+            $detectorSkillRating = $this->getSkillRating($detector, Skill::ID_DETECTION);
             $detectorName = ($detector->getStealthing()) ? 'something' : $detector->getName();
         }
         if ($detector instanceof File) {
+            $detectorSkillRating = $detector->getLevel();
             $detectorName = ($detector->getFileType()->getStealthing()) ? 'something' : $detector->getName();
         }
         // only check if they are actively stealthing
@@ -992,7 +1085,69 @@ class BaseService
         $this->entityManager->flush($profile);
         $this->checkNpcAggro($profile, $resourceId); // TODO solve aggro in a different way
         $this->checkKnownNode($profile);
+        $this->checkMoveFileTriggers($profile);
         return ($resourceId) ? $this->showNodeInfo($resourceId) : false;
+    }
+
+    /**
+     * @param Profile $profile
+     */
+    private function checkMoveFileTriggers(Profile $profile)
+    {
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $files = $fileRepo->findRunningInNode($profile->getCurrentNode());
+        foreach ($files as $file) {
+            /** @var File $file */
+            switch ($file->getFileType()->getId()) {
+                default:
+                    break;
+                case FileType::ID_BEARTRAP:
+                    if ($profile === $currentSystem->getProfile()) continue;
+                    if ($profile === $currentNode->getProfile()) continue;
+                    if ($profile->getGroup() && $profile->getGroup() === $currentSystem->getGroup()) continue;
+                    if ($profile->getFaction() && $profile->getFaction() === $currentSystem->getFaction()) continue;
+                    if ($this->canSee($file, $profile)) {
+                        // beartrap damages profile
+                        // TODO add stun effect
+                        $damage = ceil(round($file->getIntegrity()/10));
+                        $messageText = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for %s points of damage</pre>'),
+                            $file->getName(),
+                            $damage
+                        );
+                        $otherMessageText = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits [%s] for %s points of damage</pre>'),
+                            $file->getName(),
+                            $profile->getUser()->getUsername(),
+                            $damage
+                        );
+                        $this->messageProfile($profile, $messageText);
+                        $this->messageEveryoneInNode($currentNode, $otherMessageText, $profile, $profile->getId());
+                        $this->damageProfile($profile, $damage);
+                    }
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param Profile $profile
+     * @param int $damage
+     */
+    protected function damageProfile(Profile $profile, $damage = 0)
+    {
+        $currentHealth = $profile->getEeg();
+        $newHealth = $currentHealth - $damage;
+        if ($newHealth < 1) {
+            $this->flatlineProfile($profile);
+        }
+        else {
+            $profile->setEeg($newHealth);
+            $this->entityManager->flush($profile);
+        }
     }
 
     /**
@@ -1296,10 +1451,13 @@ class BaseService
     }
 
     /**
+     * Calculate the attack difficulty for the given node.
+     * If a file is given, we will check for additional modifiers.
      * @param Node|NULL $node
+     * @param File|NULL $file
      * @return bool|int
      */
-    protected function getNodeAttackDifficulty(Node $node = NULL)
+    protected function getNodeAttackDifficulty(Node $node = NULL, File $file = NULL)
     {
         $result = false;
         if ($node) {
@@ -1310,6 +1468,19 @@ class BaseService
                 case NodeType::ID_IO:
                     $result = $node->getLevel() * FileService::DEFAULT_DIFFICULTY_MOD;
                     break;
+            }
+            if ($result && $file) {
+                switch ($file->getFileType()->getId()) {
+                    default:
+                        break;
+                    case FileType::ID_PORTSCANNER:
+                    case FileType::ID_JACKHAMMER:
+                        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                        /** @var FileRepository $fileRepo */
+                        $icmpBlockerLevels = $fileRepo->getTotalRunningLevelInNodeByType($node, FileType::ID_ICMP_BLOCKER);
+                        $result += $icmpBlockerLevels;
+                        break;
+                }
             }
         }
         return $result;
@@ -2467,7 +2638,6 @@ class BaseService
         $flush = false
     )
     {
-
         // check if a base level was given or use the node level as the base level
         if (!$baseLevel) {
             $baseLevel = $node->getLevel();
@@ -2486,6 +2656,16 @@ class BaseService
                 $maxEeg = mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
                 break;
         }
+        // check if this is a home-node npc and check for node-data
+        $roaming = false;
+        $aggressive = false;
+        $codegates = false;
+        if ($homeNode) {
+            $nodeData = $this->getNodeData($homeNode);
+            if (isset($nodeData->roaming)) $roaming = $nodeData->roaming;
+            if (isset($nodeData->aggressive)) $aggressive = $nodeData->aggressive;
+            if (isset($nodeData->codegates)) $codegates = $nodeData->codegates;
+        }
         // sanity checks for generated values
         if ($maxEeg < 1) $maxEeg = 1;
         // spawn
@@ -2496,14 +2676,15 @@ class BaseService
         $npcInstance->setNode($node);
         $npcInstance->setCredits($npc->getBaseCredits() + $credits);
         $npcInstance->setSnippets($npc->getBaseSnippets() + $snippets);
-        $npcInstance->setAggressive($npc->getAggressive());
+        $npcInstance->setAggressive(($aggressive) ? $aggressive : $npc->getAggressive());
         $npcInstance->setMaxEeg($npc->getBaseEeg() + $maxEeg);
         $npcInstance->setCurrentEeg($npc->getBaseEeg() + $maxEeg);
         $npcInstance->setDescription($npc->getDescription());
         $npcInstance->setName($npc->getName());
         $npcInstance->setFaction($faction);
         $npcInstance->setHomeNode($homeNode);
-        $npcInstance->setRoaming($npc->getRoaming());
+        $npcInstance->setRoaming(($roaming) ? $roaming : $npc->getRoaming());
+        $npcInstance->setBypassCodegates($codegates);
         $npcInstance->setGroup($group);
         $npcInstance->setLevel($npc->getLevel() + $baseLevel);
         $npcInstance->setSlots($npc->getBaseSlots());
@@ -2887,6 +3068,60 @@ class BaseService
             );
         }
         return $returnMessage;
+    }
+
+    /**
+     * @param Profile $profile
+     */
+    protected function flatlineProfile(Profile $profile)
+    {
+        $profile->setEeg(10);
+        $profile->setSecurityRating(0);
+        $this->entityManager->flush($profile);
+        $currentNode = $profile->getCurrentNode();
+        $homeNode = $profile->getHomeNode();
+        $this->movePlayerToTargetNode(NULL, $profile , NULL, $currentNode, $homeNode);
+    }
+
+    /**
+     * @param NpcInstance $npcInstance
+     * @param NpcInstance|Profile $attacker
+     */
+    protected function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
+    {
+        /** @var FileRepository $fileRepo */
+        foreach ($npcInstance->getFiles() as $file) {
+            /** @var File $file */
+            $npcInstance->removeFile($file);
+            $file->setRunning(false);
+            $file->setNode($npcInstance->getNode());
+            $file->setSystem($npcInstance->getNode()->getSystem());
+        }
+        $npcInstance->setBlasterModule(NULL);
+        $npcInstance->setBladeModule(NULL);
+        $npcInstance->setShieldModule(NULL);
+        $this->entityManager->flush();
+        // give snippets and credits to attacker
+        $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
+        $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
+        // remove the npc instance
+        $this->entityManager->remove($npcInstance);
+        $this->entityManager->flush($npcInstance);
+    }
+
+    /**
+     * @param File|NULL $file
+     * @return float|int
+     */
+    protected function getBonusForFileLevel(File $file = NULL)
+    {
+        $bonus = 0;
+        if ($file) {
+            $level = $file->getLevel();
+            $integrity = $file->getIntegrity();
+            $bonus = ($level/100) * $integrity;
+        }
+        return ceil(round($bonus));
     }
 
 }

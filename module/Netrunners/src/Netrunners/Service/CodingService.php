@@ -27,6 +27,7 @@ use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FilePartRepository;
+use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use Zend\Mvc\I18n\Translator;
@@ -76,6 +77,11 @@ class CodingService extends BaseService
      */
     protected $fileModRepo;
 
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
 
     /**
      * CodingService constructor.
@@ -95,6 +101,7 @@ class CodingService extends BaseService
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
         $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
     }
 
     /**
@@ -975,7 +982,11 @@ class CodingService extends BaseService
         $chance = $modifier - $difficulty;
         $typeId = $jobData['typeId'];
         $recipe = false;
-        // TODO add bonus from "custom ide" program
+        // get bonus from custom-ide-file in node
+        $ideFile = $this->fileRepo->findOneRunningInNodeByTypeAndProfile($profile->getCurrentNode(), $profile, FileType::ID_CUSTOM_IDE);
+        if ($ideFile) {
+            $chance += $this->getBonusForFileLevel($ideFile);
+        }
         if ($jobData['mode'] == 'resource') {
             $basePart = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
         }
@@ -1115,8 +1126,8 @@ class CodingService extends BaseService
                         $message
                     )
                 ];
+                if ($ideFile) $this->lowerIntegrityOfFile($ideFile);
                 $this->entityManager->flush();
-                // TODO lower integrity of "custom ide"
             }
         }
         return $response;

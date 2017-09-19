@@ -19,7 +19,6 @@ use Netrunners\Entity\System;
 use Netrunners\Repository\AuctionRepository;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
-use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
@@ -878,6 +877,171 @@ class NodeService extends BaseService
             if ($connection->getTargetNode()->getNodeType()->getId() == $type) $amount++;
         }
         return $amount;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function ninfoCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        if (!$this->response && $currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied') // TODO make this hackable
+                )
+            );
+        }
+        if (!$this->response) {
+            $nodeData = $this->getNodeData($currentNode, true);
+            $response = [];
+            $response[] = sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+                $this->translate('NODE PROPERTIES:')
+            );
+            foreach ($nodeData as $label => $value) {
+                $response[] = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-white">%-12s: <span class="text-%s">%s</span></pre>',
+                    $label,
+                    ($value) ? 'success' : 'danger',
+                    ($value) ? $this->translate('on') : $this->translate('off')
+                );
+            }
+            $this->response = [
+                'command' => 'showoutput',
+                'message' => $response
+            ];
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function nset($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $this->response = $this->isActionBlocked($resourceId);
+        $currentNode = $profile->getCurrentNode();
+        $nodeType = $currentNode->getNodeType();
+        $currentSystem = $currentNode->getSystem();
+        list($contentArray, $nodeProperty) = $this->getNextParameter($contentArray, true, false, false, true);
+        $propertyValue = $this->getNextParameter($contentArray, false, false, false, true);
+        if (!$this->response && $currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        if (!$this->response && !$nodeProperty) {
+            $this->response = $this->listNodePropertiesByNodeType($nodeType->getId());
+        }
+        if (!$this->response && $nodeProperty && !$propertyValue) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Please specify the property value (on/off)')
+                )
+            );
+        }
+        if (!$this->response && $nodeProperty && $propertyValue) {
+            // all set, we can set the property
+            $this->setNodeProperty($currentNode, $nodeProperty, $propertyValue);
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param int $nodeTypeId
+     * @return array
+     */
+    private function listNodePropertiesByNodeType($nodeTypeId)
+    {
+        $response = [
+            'command' => 'showmessage',
+            'message' => sprintf(
+                '<pre style="white-space: pre-wrap;" class="text-white"><span class="text-sysmsg">%s</span> %s</pre>',
+                $this->translate('Possible properties for this node-type:'),
+                wordwrap(implode(' ', $this->getNodePropertiesByType($nodeTypeId)), 120)
+            )];
+        return $response;
+    }
+
+    /**
+     * @param int $nodeTypeId
+     * @return array
+     */
+    private function getNodePropertiesByType($nodeTypeId)
+    {
+        switch ($nodeTypeId) {
+            default:
+                $result = [];
+                break;
+            case NodeType::ID_FIREWALL:
+            case NodeType::ID_TERMINAL:
+            case NodeType::ID_DATABASE:
+            case NodeType::ID_CPU:
+                $result = [
+                    'roaming',
+                    'aggressive',
+                    'codegates'
+                ];
+                break;
+        }
+        return $result;
+    }
+
+    /**
+     * @param Node $node
+     * @param $property
+     * @param $valueString
+     */
+    private function setNodeProperty(Node $node, $property, $valueString)
+    {
+        $nodeType = $node->getNodeType();
+        $possibleNodeProperties = $this->getNodePropertiesByType($nodeType->getId());
+        if (!in_array($property, $possibleNodeProperties)) {
+            $this->response = $this->listNodePropertiesByNodeType($nodeType->getId());
+        }
+        if (!$this->response) {
+            switch ($valueString) {
+                default:
+                    $value = 0;
+                    $valueString = 'off';
+                    break;
+                case 'on':
+                    $value = 1;
+                    break;
+            }
+            $nodeData = $this->getNodeData($node);
+            $nodeData->$property = $value;
+            $node->setData(json_encode($nodeData));
+            $this->entityManager->flush($node);
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] set to [%s]</pre>'),
+                    $property,
+                    $valueString
+                )
+            );
+        }
     }
 
     /**

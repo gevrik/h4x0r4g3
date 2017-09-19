@@ -55,6 +55,8 @@ class FileType
     const ID_KICKER = 33;
     const ID_BREAKOUT = 34;
     const ID_SMOKESCREEN = 35;
+    const ID_VENOM = 36;
+    const ID_ANTIDOTE = 37;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -91,6 +93,8 @@ class FileType
     const STRING_KICKER = 'kicker';
     const STRING_BREAKOUT = 'breakout';
     const STRING_SMOKESCREEN = 'smokescreen';
+    const STRING_VENOM = 'venom';
+    const STRING_ANTIDOTE = 'antidote';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -128,6 +132,8 @@ class FileType
         self::STRING_KICKER => self::ID_KICKER,
         self::STRING_BREAKOUT => self::ID_BREAKOUT,
         self::STRING_SMOKESCREEN => self::ID_SMOKESCREEN,
+        self::STRING_VENOM => self::ID_VENOM,
+        self::STRING_ANTIDOTE => self::ID_ANTIDOTE,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;

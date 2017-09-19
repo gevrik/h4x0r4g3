@@ -165,6 +165,9 @@ class FileExecutionService extends BaseService
                 case FileType::ID_COINMINER:
                     $this->response = $this->executeCoinminer($file, $profile->getCurrentNode());
                     break;
+                case FileType::ID_GUARD_SPAWNER:
+                    $this->response = $this->executeGuardSpawner($file, $profile->getCurrentNode());
+                    break;
                 case FileType::ID_ICMP_BLOCKER:
                     $this->response = $this->executeIcmpBlocker($file, $profile->getCurrentNode());
                     break;
@@ -267,6 +270,10 @@ class FileExecutionService extends BaseService
         return $response;
     }
 
+    /**
+     * @param File $file
+     * @return array|bool
+     */
     protected function executeCombatProgram(File $file)
     {
         $profile = $this->user->getProfile();
@@ -308,6 +315,24 @@ class FileExecutionService extends BaseService
                         'message' => sprintf(
                             '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
                             $this->translate('You try to disengage from combat')
+                        )
+                    );
+                    break;
+                case FileType::ID_VENOM:
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                            $this->translate('You try to apply a damage-over-time effect on your opponent')
+                        )
+                    );
+                    break;
+                case FileType::ID_ANTIDOTE:
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                            $this->translate('You try to rid yourself of a damage-over-time')
                         )
                     );
                     break;
@@ -380,6 +405,55 @@ class FileExecutionService extends BaseService
                     $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s</pre>'),
                     $file->getName(),
                     $file->getId()
+                )
+            );
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return array|bool
+     */
+    protected function executeGuardSpawner(File $file, Node $node)
+    {
+        $profile = $this->user->getProfile();
+        $response = false;
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">%s can not be used in this type of node</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response && $profile !== $profile->getCurrentNode()->getSystem()->getProfile()) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>'),
+                    $file->getName()
+                )
+            );
+        }
+        if (!$response) {
+            $file->setRunning(true);
+            $file->setSystem($node->getSystem());
+            $file->setNode($node);
+            $this->entityManager->flush($file);
+            $addonText = '';
+            if (ceil(round($file->getLevel()/10)) > $node->getLevel()) {
+                $addonText = $this->translate('<span class="text-attention">[NOTICE: SPAWNED ENTITY-LEVEL RESTRICTED BY NODE-LEVEL]</span>');
+            }
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been started as process %s %s</pre>'),
+                    $file->getName(),
+                    $file->getId(),
+                    $addonText
                 )
             );
         }
@@ -697,7 +771,7 @@ class FileExecutionService extends BaseService
         if (!$response) {
             $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
             /** @var Node $node */
-            if (!$this->getNodeAttackDifficulty($node)) {
+            if (!$this->getNodeAttackDifficulty($node, $file)) {
                 $response = array(
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -1505,7 +1579,7 @@ class FileExecutionService extends BaseService
         $messages = [];
         foreach ($nodes as $node) {
             /** @var Node $node */
-            $difficulty = $this->getNodeAttackDifficulty($node);
+            $difficulty = $this->getNodeAttackDifficulty($node, $file);
             if ($difficulty) {
                 $roll = mt_rand(1, 100);
                 if ($roll <= $baseChance - $difficulty) {
@@ -1564,7 +1638,8 @@ class FileExecutionService extends BaseService
         $fileIntegrity = $file->getIntegrity();
         $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
         $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
-        $difficulty = $node->getLevel() * FileService::DEFAULT_DIFFICULTY_MOD;
+        $difficulty = $this->getNodeAttackDifficulty($node, $file);
+        if (!$difficulty) $difficulty = 0;
         $messages = [];
         $roll = mt_rand(1, 100);
         if ($roll <= $baseChance - $difficulty) {

@@ -12,6 +12,7 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NpcInstance;
@@ -222,6 +223,53 @@ class FileRepository extends EntityRepository
     }
 
     /**
+     * @param Node $node
+     * @param int $fileTypeId
+     * @return mixed
+     */
+    public function findRunningInNodeByType(Node $node, $fileTypeId)
+    {
+        $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.fileType = :fileType AND f.running = 1 AND f.integrity >= 1 AND f.node = :node');
+        $qb->setParameters([
+            'fileType' => $fileType,
+            'node' => $node
+        ]);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Node $node
+     * @return mixed
+     */
+    public function findRunningInNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.running = 1 AND f.integrity >= 1 AND f.node = :node');
+        $qb->setParameter('node', $node);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Node $node
+     * @param $fileTypeId
+     * @return mixed
+     */
+    public function getTotalRunningLevelInNodeByType(Node $node, $fileTypeId)
+    {
+        $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->select('SUM(f.level)');
+        $qb->where('f.fileType = :fileType AND f.running = 1 AND f.integrity >= 1 AND f.node = :node');
+        $qb->setParameters([
+            'fileType' => $fileType,
+            'node' => $node
+        ]);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * @param Profile $profile
      * @param $fileTypeId
      * @return array
@@ -253,6 +301,40 @@ class FileRepository extends EntityRepository
             'fileType' => $fileType,
             'node' => $npc->getNode()
         ]);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param $fileCategoryId
+     * @return array
+     */
+    public function findByCategory($fileCategoryId)
+    {
+        $fileCategoryRepo = $this->_em->getRepository('Netrunners\Entity\FileCategory');
+        /** @var FileCategoryRepository $fileCategoryRepo */
+        $fileCategory = $fileCategoryRepo->find($fileCategoryId);
+        // now create query
+        $qb = $this->createQueryBuilder('f');
+        $qb->leftJoin('f.fileType', 'ft');
+        $qb->where(':fileCategory MEMBER OF ft.fileCategories');
+        $qb->setParameter('fileCategory', $fileCategory);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param $fileCategoryId
+     * @return array
+     */
+    public function findByCategoryForLoop($fileCategoryId)
+    {
+        $fileCategoryRepo = $this->_em->getRepository('Netrunners\Entity\FileCategory');
+        /** @var FileCategoryRepository $fileCategoryRepo */
+        $fileCategory = $fileCategoryRepo->find($fileCategoryId);
+        // now create query
+        $qb = $this->createQueryBuilder('f');
+        $qb->leftJoin('f.fileType', 'ft');
+        $qb->where(':fileCategory MEMBER OF ft.fileCategories AND f.integrity >= 1 AND f.running = 1');
+        $qb->setParameter('fileCategory', $fileCategory);
         return $qb->getQuery()->getResult();
     }
 

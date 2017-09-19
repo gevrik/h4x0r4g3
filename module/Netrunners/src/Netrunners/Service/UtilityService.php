@@ -39,9 +39,10 @@ class UtilityService extends BaseService
         // init prompt string
         $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
+        $sneaking = ($profile->getStealthing()) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
         $fullPromptString = '[<span class="eeg">' . $profile->getEeg() . '/100</span>][<span class="willpower">' .
             $profile->getWillpower() . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
-            '][' . $currentNode->getNodeType()->getShortName() . '][' . $currentNode->getLevel() . ']</span> ';
+            '][' . $currentNode->getNodeType()->getShortName() . '][' . $currentNode->getLevel() . ']</span>' . $sneaking .  ' ';
         return $fullPromptString;
     }
 
@@ -119,7 +120,7 @@ class UtilityService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  bgopacity  bug  cancel  cd  changepassword  clear  code  commands  connect  consider  decompile  defaultmra  deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  ls  mail  map  milkrun  mission  missiondetails  mod modfile  mods  newbie  nodename  nodes  nodetype  options  passwd  ps  recipes  removeconnection removenode  repairmra  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  withdraw';
+        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  bgopacity  bug  cancel  cd  changepassword  clear  code  commands  connect  consider  decompile  defaultmra  deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  ls  mail  map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  options  passwd  ps  recipes  removeconnection removenode  repairmra  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  withdraw';
         $returnMessage = sprintf(
             '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
             wordwrap($message, 120)

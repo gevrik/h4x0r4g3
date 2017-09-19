@@ -537,6 +537,9 @@ class ParserService
             case 'newbie':
                 $response = $this->chatService->newbieChat($resourceId, $contentArray);
                 break;
+            case 'ninfo':
+                $response = $this->nodeService->ninfoCommand($resourceId);
+                break;
             case 'nodename':
                 $response = $this->nodeService->changeNodeName($resourceId, $contentArray);
                 break;
@@ -545,6 +548,9 @@ class ParserService
                 break;
             case 'nodetype':
                 $response = $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
+                break;
+            case 'nset':
+                $response = $this->nodeService->nset($resourceId, $contentArray);
                 break;
             case 'options':
                 $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
