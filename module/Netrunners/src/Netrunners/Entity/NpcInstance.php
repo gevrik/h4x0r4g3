@@ -173,6 +173,11 @@ class NpcInstance
      */
     protected $files;
 
+    /**
+     * @ORM\OneToMany(targetEntity="Netrunners\Entity\ProfileEffect", mappedBy="npcInstance", cascade={"remove"})
+     */
+    protected $effects;
+
 
     /**
      * NpcInstance constructor.
@@ -181,6 +186,7 @@ class NpcInstance
     {
         $this->skillRatings = new ArrayCollection();
         $this->files = new ArrayCollection();
+        $this->effects = new ArrayCollection();
     }
 
     /**
@@ -683,6 +689,32 @@ class NpcInstance
         if ($this->files->contains($file)) {
             $file->setNpc(NULL);
             $this->files->removeElement($file);
+        }
+    }
+
+    /**
+     * @return ArrayCollection
+     */
+    public function getEffects()
+    {
+        return $this->files;
+    }
+
+    /**
+     * @param ProfileEffect $profileEffect
+     */
+    public function addEffect(ProfileEffect $profileEffect)
+    {
+        if (!$this->effects->contains($profileEffect)) $this->effects[] = $profileEffect;
+    }
+
+    /**
+     * @param ProfileEffect $profileEffect
+     */
+    public function removeEffect(ProfileEffect $profileEffect)
+    {
+        if ($this->effects->contains($profileEffect)) {
+            $this->effects->removeElement($profileEffect);
         }
     }
 

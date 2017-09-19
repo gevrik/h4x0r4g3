@@ -15,6 +15,7 @@ use Netrunners\Entity\Auction;
 use Netrunners\Entity\AuctionBid;
 use Netrunners\Entity\File;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\AuctionBidRepository;
 use Netrunners\Repository\AuctionRepository;
@@ -541,7 +542,7 @@ class AuctionService extends BaseService
             $this->storeNotification(
                 $bidder,
                 $message,
-                'info'
+                Notification::SEVERITY_INFO
             );
         }
     }

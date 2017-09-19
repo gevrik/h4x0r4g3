@@ -31,7 +31,19 @@ class ProfileEffect
     protected $expires;
 
     /**
-     * @ORM\Column(type="integer")
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $dimishUntil;
+
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $immuneUntil;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
      * @var int
      */
     protected $rating;
@@ -44,7 +56,7 @@ class ProfileEffect
     protected $profile;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance")
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance", inversedBy="effects")
      **/
     protected $npcInstance;
 
@@ -52,6 +64,7 @@ class ProfileEffect
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Effect")
      **/
     protected $effect;
+
 
     /**
      * @return int
@@ -106,6 +119,44 @@ class ProfileEffect
         $this->rating = $rating;
         return $this;
     }
+
+    /**
+     * @return \DateTime
+     */
+    public function getDimishUntil()
+    {
+        return $this->dimishUntil;
+    }
+
+    /**
+     * @param \DateTime $dimishUntil
+     * @return ProfileEffect
+     */
+    public function setDimishUntil($dimishUntil)
+    {
+        $this->dimishUntil = $dimishUntil;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getImmuneUntil()
+    {
+        return $this->immuneUntil;
+    }
+
+    /**
+     * @param \DateTime $immuneUntil
+     * @return ProfileEffect
+     */
+    public function setImmuneUntil($immuneUntil)
+    {
+        $this->immuneUntil = $immuneUntil;
+        return $this;
+    }
+
+    // ORM
 
     /**
      * @return mixed

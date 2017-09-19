@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
+use Netrunners\Entity\Notification;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\WordRepository;
 use Zend\Mvc\I18n\Translator;
@@ -246,7 +247,7 @@ class CodebreakerService extends BaseService
             $this->writeSystemLogEntry(
                 $targetSystem,
                 'Codebreaking attempt failed',
-                'warning',
+                Notification::SEVERITY_WARNING,
                 NULL,
                 NULL,
                 $connection->getSourceNode()

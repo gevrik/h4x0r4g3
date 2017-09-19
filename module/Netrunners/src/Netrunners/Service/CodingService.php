@@ -20,6 +20,7 @@ use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\Skill;
@@ -1000,7 +1001,7 @@ class CodingService extends BaseService
                 $recipe = $this->getRecipe($profile, $basePart);
                 if (!$recipe) {
                     $response = [
-                        'severity' => 'danger',
+                        'severity' => Notification::SEVERITY_DANGER,
                         'message' => sprintf(
                             $this->translate('Coding project failed: no valid recipe for [%s]'),
                             $basePart->getName()
@@ -1071,7 +1072,7 @@ class CodingService extends BaseService
                 $completionDate = $jobData['completionDate'];
                 /** @var \DateTime $completionDate */
                 $response = [
-                    'severity' => 'success',
+                    'severity' => Notification::SEVERITY_SUCCESS,
                     'message' => sprintf(
                         $this->translate('[%s] Coding project complete: %s [level: %s]%s'),
                         $completionDate->format('Y/m/d H:i:s'),
@@ -1117,7 +1118,7 @@ class CodingService extends BaseService
                 $completionDate = $jobData['completionDate'];
                 /** @var \DateTime $completionDate */
                 $response = [
-                    'severity' => 'warning',
+                    'severity' => Notification::SEVERITY_WARNING,
                     'message' => sprintf(
                         $this->translate("[%s] Coding project failed: %s [level: %s] %s"),
                         $completionDate->format('Y/m/d H:i:s'),

@@ -781,7 +781,6 @@
                 case 'showmessage':
                     //getRandomInRange(0, 6);
                     md.append(data.message);
-                    showprompt();
                     if (data.deadline) {
                         $('.deadline-progress').show();
                         $('.deadliner').attr('data-maxseconds', data.deadline).attr('data-seconds', 0).css('width', '100%');
@@ -800,6 +799,12 @@
                     if (data.cleardeadline) {
                         $('.deadline-progress').hide();
                         clearInterval(deadlineTimer);
+                    }
+                    if (data.disconnectx) {
+                        conn.close();
+                    }
+                    else {
+                        showprompt();
                     }
                     break;
                 case 'showoutput':

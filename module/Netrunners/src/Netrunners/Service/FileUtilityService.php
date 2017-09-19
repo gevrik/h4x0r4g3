@@ -254,7 +254,15 @@ class FileUtilityService extends BaseService
             $this->response = $this->executeMissionFile($targetFile, $resourceId);
         }
         // can only download files that do not belong to themselves in owned systems
-        if (!$this->response && $targetFile && $targetFile->getProfile() != $profile && $targetFile->getSystem()->getProfile() !== $profile) {
+        if (!$this->response && $targetFile) {
+            $targetFileSystem = $targetFile->getSystem();
+            $targetFileNode = $targetFile->getNode();
+            if (
+                $targetFile->getProfile() !== $profile &&
+                $targetFileSystem->getProfile() !== $profile &&
+                ($targetFileNode->getProfile() && $targetFileNode->getProfile() !== $profile) &&
+                ($targetFileSystem->getProfile() != NULL && $targetFileSystem->getFaction() != NULL && $targetFileSystem->getGroup() != NULL)
+            )
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -669,7 +677,7 @@ class FileUtilityService extends BaseService
                 )
             );
         }
-        if (!$this->response && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
+        if (!$this->response && $runningFile->getSystem() && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -678,7 +686,7 @@ class FileUtilityService extends BaseService
                 )
             );
         }
-        if (!$this->response && $runningFile->getNode() != $profile->getCurrentNode()) {
+        if (!$this->response && $runningFile->getNode() && $runningFile->getNode() != $profile->getCurrentNode()) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(

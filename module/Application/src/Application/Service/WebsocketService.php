@@ -355,9 +355,12 @@ class WebsocketService implements MessageComponentInterface {
     }
 
     /**
+     * Removes a combatant from the game.
+     * If endCombat is true, it also removes all of the combatants that had this combatant as their target.
      * @param $combatant
+     * @param bool $endCombat
      */
-    public function removeCombatant($combatant)
+    public function removeCombatant($combatant, $endCombat = true)
     {
         if ($combatant instanceof NpcInstance) {
             unset($this->combatants['npcs'][$combatant->getId()]);
@@ -365,28 +368,30 @@ class WebsocketService implements MessageComponentInterface {
         if ($combatant instanceof Profile) {
             unset($this->combatants['profiles'][$combatant->getId()]);
         }
-        // remove all combatants that also had this combatant as their target
-        foreach ($this->combatants['npcs'] as $combatantId => $combatantData) {
-            if ($combatant instanceof NpcInstance) {
-                if ($combatantData['npcTarget'] == $combatant->getId()) {
-                    unset($this->combatants['npcs'][$combatantId]);
+        if ($endCombat) {
+            // remove all combatants that also had this combatant as their target
+            foreach ($this->combatants['npcs'] as $combatantId => $combatantData) {
+                if ($combatant instanceof NpcInstance) {
+                    if ($combatantData['npcTarget'] == $combatant->getId()) {
+                        unset($this->combatants['npcs'][$combatantId]);
+                    }
+                }
+                if ($combatant instanceof Profile) {
+                    if ($combatantData['profileTarget'] == $combatant->getId()) {
+                        unset($this->combatants['npcs'][$combatantId]);
+                    }
                 }
             }
-            if ($combatant instanceof Profile) {
-                if ($combatantData['profileTarget'] == $combatant->getId()) {
-                    unset($this->combatants['npcs'][$combatantId]);
+            foreach ($this->combatants['profiles'] as $combatantId => $combatantData) {
+                if ($combatant instanceof NpcInstance) {
+                    if ($combatantData['npcTarget'] == $combatant->getId()) {
+                        unset($this->combatants['profiles'][$combatantId]);
+                    }
                 }
-            }
-        }
-        foreach ($this->combatants['profiles'] as $combatantId => $combatantData) {
-            if ($combatant instanceof NpcInstance) {
-                if ($combatantData['npcTarget'] == $combatant->getId()) {
-                    unset($this->combatants['profiles'][$combatantId]);
-                }
-            }
-            if ($combatant instanceof Profile) {
-                if ($combatantData['profileTarget'] == $combatant->getId()) {
-                    unset($this->combatants['profiles'][$combatantId]);
+                if ($combatant instanceof Profile) {
+                    if ($combatantData['profileTarget'] == $combatant->getId()) {
+                        unset($this->combatants['profiles'][$combatantId]);
+                    }
                 }
             }
         }
@@ -398,6 +403,30 @@ class WebsocketService implements MessageComponentInterface {
     public function getCombatants()
     {
         return $this->combatants;
+    }
+
+    /**
+     * @param $profileId
+     * @param bool $asObject
+     * @return null|object|array
+     */
+    public function getProfileCombatData($profileId, $asObject = true)
+    {
+        $result = (array_key_exists($profileId, $this->combatants['profiles'])) ? $this->combatants['profiles'][$profileId] : NULL;
+        if ($result && $asObject) $result = (object)$result;
+        return $result;
+    }
+
+    /**
+     * @param $npcId
+     * @param bool $asObject
+     * @return null|object|array
+     */
+    public function getNpcCombatData($npcId, $asObject = true)
+    {
+        $result = (array_key_exists($npcId, $this->combatants['npcs'])) ? $this->combatants['npcs'][$npcId] : NULL;
+        if ($result && $asObject) $result = (object)$result;
+        return $result;
     }
 
     /**
@@ -444,6 +473,7 @@ class WebsocketService implements MessageComponentInterface {
             'milkrun' => [],
             'hangman' => [],
             'codebreaker' => [],
+            'combatFileCooldown' => new \DateTime(),
             'confirm' => [
                 'command' => '',
                 'contentArray' => []

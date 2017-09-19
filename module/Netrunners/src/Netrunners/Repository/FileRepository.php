@@ -287,6 +287,23 @@ class FileRepository extends EntityRepository
     }
 
     /**
+     * @param Profile $profile
+     * @param $fileTypeId
+     * @return array
+     */
+    public function findRunningByProfileAndType(Profile $profile, $fileTypeId)
+    {
+        $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.fileType = :fileType AND f.profile = :profile AND f.running = 1 AND f.integrity >= 1');
+        $qb->setParameters([
+            'fileType' => $fileType,
+            'profile' => $profile
+        ]);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * @param NpcInstance $npc
      * @param $fileTypeId
      * @return array

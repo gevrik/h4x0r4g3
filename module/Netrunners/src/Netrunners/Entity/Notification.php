@@ -16,6 +16,11 @@ use Doctrine\ORM\Mapping as ORM;
 class Notification
 {
 
+    const SEVERITY_DANGER = 'danger';
+    const SEVERITY_WARNING = 'warning';
+    const SEVERITY_INFO = 'info';
+    const SEVERITY_SUCCESS = 'success';
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")

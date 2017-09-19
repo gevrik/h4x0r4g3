@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
+use Netrunners\Entity\Effect;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FilePart;
@@ -33,6 +34,7 @@ use Netrunners\Entity\Notification;
 use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileEffect;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
@@ -47,6 +49,7 @@ use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\MissionRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
+use Netrunners\Repository\ProfileEffectRepository;
 use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
@@ -434,6 +437,8 @@ class BaseService
      */
     protected function canSee($detector, $stealther)
     {
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
         // init vars
         $canSee = true;
         $detectorSkillRating = 0;
@@ -449,7 +454,13 @@ class BaseService
             $currentNode = $stealther->getCurrentNode();
             $stealtherName = $stealther->getUser()->getUsername();
             $stealtherSkillRating = $this->getSkillRating($stealther, Skill::ID_STEALTH);
-            // TODO add programs that modify ratings (cloak)
+            // add cloaks
+            $cloaks = $fileRepo->findRunningByProfileAndType($stealther, FileType::ID_CLOAK);
+            foreach ($cloaks as $cloak) {
+                /** @var File $cloak */
+                $stealtherSkillRating += $this->getBonusForFileLevel($cloak);
+                $this->lowerIntegrityOfFile($cloak, 50, 1, true);
+            }
         }
         if ($stealther instanceof NpcInstance) {
             $stealthing = $stealther->getStealthing();
@@ -674,9 +685,10 @@ class BaseService
 
     /**
      * @param Profile $profile
-     * @param $message
+     * @param null $message
+     * @param bool $noPrepend
      */
-    protected function messageProfile(Profile $profile, $message = NULL)
+    protected function messageProfile(Profile $profile, $message = NULL, $noPrepend = false)
     {
         $wsClient = $this->getWsClientByProfile($profile);
         if ($wsClient) {
@@ -684,10 +696,10 @@ class BaseService
                 $message = '<pre style="white-space: pre-wrap;" class="text-danger">INVALID SYSTEM-MESSAGE RECEIVED</pre>';
             }
             if (is_array($message)) {
-                $command = 'showoutputprepend';
+                $command = ($noPrepend) ? 'showoutput' : 'showoutputprepend';
             }
             else {
-                $command = 'showmessageprepend';
+                $command = ($noPrepend) ? 'showmessage' : 'showmessageprepend';
             }
             $response = [
                 'command' => $command,
@@ -761,8 +773,9 @@ class BaseService
         ]);
         $npc = NULL;
         if ($searchByNumber) {
-            if (isset($npcs[$parameter - 1])) {
-                $npc = $npcs[$parameter - 1];
+            $arrayKey = $parameter - 1;
+            if (isset($npcs[$arrayKey])) {
+                $npc = $npcs[$arrayKey];
             }
         }
         else {
@@ -775,6 +788,42 @@ class BaseService
             }
         }
         return $npc;
+    }
+
+    /**
+     * @param $parameter
+     * @return Profile|null
+     */
+    protected function findProfileByNameOrNumberInCurrentNode($parameter)
+    {
+        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        /** @var ProfileRepository $profileRepo */
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $userProfile = $this->user->getProfile();
+        $profiles = $profileRepo->findByNodeOrderedByResourceId($userProfile->getCurrentNode(), $userProfile);
+        $profile = NULL;
+        // search by number
+        if ($searchByNumber) {
+            $arrayKey = $parameter - 1;
+            if (isset($profiles[$arrayKey])) {
+                $profile = $profiles[$arrayKey];
+                /** @var Profile $profile */
+            }
+        }
+        else {
+            // search by name
+            foreach ($profiles as $xprofile) {
+                /** @var Profile $xprofile */
+                if (mb_strrpos($xprofile->getUser()->getUsername(), $parameter) !== false) {
+                    $profile = $xprofile;
+                    break;
+                }
+            }
+        }
+        return $profile;
     }
 
     /**
@@ -1085,14 +1134,15 @@ class BaseService
         $this->entityManager->flush($profile);
         $this->checkNpcAggro($profile, $resourceId); // TODO solve aggro in a different way
         $this->checkKnownNode($profile);
-        $this->checkMoveFileTriggers($profile);
+        $this->checkMoveFileTriggers($profile, $sourceNode);
         return ($resourceId) ? $this->showNodeInfo($resourceId) : false;
     }
 
     /**
      * @param Profile $profile
+     * @param Node|NULL $previousNode
      */
-    private function checkMoveFileTriggers(Profile $profile)
+    private function checkMoveFileTriggers(Profile $profile, Node $previousNode = NULL)
     {
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
@@ -1109,25 +1159,55 @@ class BaseService
                     if ($profile === $currentNode->getProfile()) continue;
                     if ($profile->getGroup() && $profile->getGroup() === $currentSystem->getGroup()) continue;
                     if ($profile->getFaction() && $profile->getFaction() === $currentSystem->getFaction()) continue;
-                    if ($this->canSee($file, $profile)) {
-                        // beartrap damages profile
-                        // TODO add stun effect
-                        $damage = ceil(round($file->getIntegrity()/10));
+                    if (!$this->canSee($file, $profile)) continue;
+                    // beartrap damages profile
+                    // TODO add stun effect
+                    $damage = ceil(round($file->getIntegrity()/10));
+                    $messageText = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for %s points of damage</pre>'),
+                        $file->getName(),
+                        $damage
+                    );
+                    $otherMessageText = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits [%s] for %s points of damage</pre>'),
+                        $file->getName(),
+                        $profile->getUser()->getUsername(),
+                        $damage
+                    );
+                    $this->messageProfile($profile, $messageText);
+                    $this->messageEveryoneInNode($currentNode, $otherMessageText, $profile, $profile->getId());
+                    $this->damageProfile($profile, $damage);
+                    break;
+                case FileType::ID_IO_TRACER:
+                    // tracers will not work on their owner or stuff that they are unable to see
+                    $fileProfile = $file->getProfile();
+                    if ($profile === $fileProfile) continue;
+                    if (!$this->canSee($file, $profile)) continue;
+                    $system = $previousNode->getSystem();
+                    if ($system == $file->getSystem()) continue;
+                    $rating = ceil(round(($file->getLevel() + $this->getBonusForFileLevel($file))/2));
+                    $difficulty = $this->getSkillRating($profile, Skill::ID_STEALTH);
+                    // check for obfuscator
+                    $obfuscators = $fileRepo->findRunningByProfileAndType($profile, FileType::ID_OBFUSCATOR);
+                    foreach ($obfuscators as $obfuscator) {
+                        $difficulty += $this->getBonusForFileLevel($obfuscator);
+                        $this->lowerIntegrityOfFile($obfuscator, 50, 1, true);
+                    }
+                    // roll
+                    if (mt_rand(1, 100) <= $rating - $difficulty) {
                         $messageText = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for %s points of damage</pre>'),
-                            $file->getName(),
-                            $damage
-                        );
-                        $otherMessageText = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits [%s] for %s points of damage</pre>'),
+                            $this->translate('[%s] has detected [%s] connecting from %s'),
                             $file->getName(),
                             $profile->getUser()->getUsername(),
-                            $damage
+                            $system->getAddy()
                         );
-                        $this->messageProfile($profile, $messageText);
-                        $this->messageEveryoneInNode($currentNode, $otherMessageText, $profile, $profile->getId());
-                        $this->damageProfile($profile, $damage);
+                        $this->storeNotification(
+                            $fileProfile,
+                            $messageText,
+                            Notification::SEVERITY_INFO
+                        );
                     }
+                    $this->lowerIntegrityOfFile($file, 50, 1, true);
                     break;
             }
         }
@@ -1415,12 +1495,16 @@ class BaseService
         /* combat block check follows - combat never fully blocks */
         if (!$checkForFullBlock) {
             $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            $isBlocked = $this->isInCombat($user->getProfile());
+            $profile = $user->getProfile();
+            $isBlocked = $this->isInCombat($profile);
+            $fileUnblock = false;
             if ($isBlocked) {
                 // if a file was given, we check if it a combat file and unblock if needed
                 if ($file) {
                     $unblockingFileTypeIds = [FileType::ID_KICKER];
                     $isBlocked = (in_array($file->getFileType()->getId(), $unblockingFileTypeIds)) ? false : true;
+                    // set fileunblock tracker to true if this unblocked them
+                    if (!$isBlocked) $fileUnblock = true;
                 }
                 if ($isBlocked) {
                     $message = sprintf(
@@ -1428,6 +1512,14 @@ class BaseService
                         $this->translate('You are currently busy fighting')
                     );
                 }
+            }
+            // now check if they are under effects - like stunned - and only if they werent unblocked by the current file type
+            if (!$isBlocked && !$fileUnblock && $this->isUnderEffect($profile, Effect::ID_STUNNED)) {
+                $isBlocked = true;
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are currently stunned')
+                );
             }
         }
         /* action block check follows */
@@ -1576,7 +1668,7 @@ class BaseService
      * @param string $severity
      * @return bool
      */
-    protected function storeNotification(Profile $profile, $subject = 'INVALID', $severity = 'danger')
+    protected function storeNotification(Profile $profile, $subject = 'INVALID', $severity = Notification::SEVERITY_DANGER)
     {
         $notification = new Notification();
         $notification->setProfile($profile);
@@ -1784,7 +1876,7 @@ class BaseService
     public function writeSystemLogEntry(
         System $system,
         $subject = '',
-        $severity = 'info',
+        $severity = Notification::SEVERITY_INFO,
         $details = NULL,
         File $file = NULL,
         Node $node = NULL,
@@ -1958,6 +2050,9 @@ class BaseService
     {
         $ws = $this->getWebsocketServer();
         $ws->setClientData($resourceId, 'action', []);
+        $clientData = $ws->getClientData($resourceId);
+        $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+        if ($asActiveCommand) $ws->removeCombatant($profile, false);
         if ($messageSocket) {
             foreach ($ws->getClients() as $wsClient) {
                 /** @noinspection PhpUndefinedFieldInspection */
@@ -2610,7 +2705,7 @@ class BaseService
                     $file->getName(),
                     $file->getId()
                 );
-                $this->storeNotification($file->getProfile(), $message, 'warning');
+                $this->storeNotification($file->getProfile(), $message, Notification::SEVERITY_WARNING);
             }
             if ($flush) $this->entityManager->flush($file);
         }
@@ -3122,6 +3217,342 @@ class BaseService
             $bonus = ($level/100) * $integrity;
         }
         return ceil(round($bonus));
+    }
+
+    /**
+     * @param File $file
+     * @param array $data
+     * @return bool|float|mixed
+     */
+    protected function checkFileTriggers(File $file, $data = [])
+    {
+        $profile = $this->user->getProfile();
+        $fileType = $file->getFileType();
+        switch ($fileType->getId()) {
+            default:
+                break;
+            case FileType::ID_SKIMMER:
+                if ($file->getProfile() == $profile) return false;
+                if (!$this->canSee($file, $profile)) return false;
+                $fileNode = $file->getNode();
+                if (!$fileNode) return false;
+                $depositAmount = $data['value'];
+                if ($depositAmount < 100) return false;
+                $rating = $this->getBonusForFileLevel($file);
+                $difficulty = $fileNode->getLevel() * 10;
+                // get blockchainers and add to difficulty
+                $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                /** @var FileRepository $fileRepo */
+                $blockchainers = $fileRepo->findRunningInNodeByType($fileNode, FileType::ID_BLOCKCHAINER);
+                foreach ($blockchainers as $blockchainer) {
+                    /** @var File $blockchainer */
+                    if (!$this->canSee($blockchainer, $file)) continue;
+                    $difficulty += $this->getBonusForFileLevel($blockchainer);
+                }
+                // roll the dice
+                if (mt_rand(1, 100) <= $rating - $difficulty) {
+                    // success
+                    $skimAmount = ceil(round($depositAmount/100));
+                    $fileProfile = $file->getProfile();
+                    $fileProfile->setBankBalance($fileProfile->getBankBalance()+$skimAmount);
+                    $this->entityManager->flush($fileProfile);
+                    $this->lowerIntegrityOfFile($file, 100, 1, true);
+                    return $skimAmount;
+                }
+                break;
+        }
+        return false;
+    }
+
+    /**
+     * @param Profile|NULL $profile
+     * @param NpcInstance|NULL $npc
+     * @param Profile|NpcInstance|null $actor
+     * @param int|null $effectId
+     * @param int|null $duration
+     * @param mixed|null $rating
+     * @return array|bool
+     */
+    protected function addEffect(
+        Profile $profile = NULL,
+        NpcInstance $npc = NULL,
+        $actor = NULL,
+        $effectId = NULL,
+        $duration = NULL,
+        $rating = NULL
+    )
+    {
+        $actorMessage = false;
+        $profileMessage = false;
+        if (!$effectId) return [$actorMessage, $profileMessage];
+        $effect = $this->entityManager->find('Netrunners\Entity\Effect', $effectId);
+        if ($effect) {
+            /** @var Effect $effect */
+            $now = new \DateTime();
+            $peRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileEffect');
+            /** @var ProfileEffectRepository $peRepo */
+            $effectInstance = NULL;
+            if ($profile) $effectInstance = $peRepo->findOneByProfileAndEffect($profile, $effectId);
+            if ($npc) $effectInstance = $peRepo->findOneByNpcAndEffect($npc, $effectId);
+            // now we can start the effect logic
+            $immune = false;
+            $diminishing = false;
+            // if we could find an instance, we need to determine if there are diminishing-returns or immunity
+            if ($effectInstance) {
+                /** @var ProfileEffect $effectInstance */
+                if ($effectInstance->getExpires() > $now) {
+                    if ($actor instanceof Profile) {
+                        if ($actor == $profile) {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are still under the effect of [%s]</pre>'),
+                                $effect->getName()
+                            );
+                        }
+                        else {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is still under the effect of [%s]</pre>'),
+                                ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
+                                $effect->getName()
+                            );
+                        }
+                    }
+                    $immune = true;
+                }
+                if (!$immune && $effectInstance->getDimishUntil() > $now) {
+                    if ($actor instanceof Profile) {
+                        if ($actor == $profile) {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You have recently been under the effect of [%s] - receiving dimishing returns</pre>'),
+                                $effect->getName()
+                            );
+                        }
+                        else {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] has recently been under the effect of [%s] - receiving dimishing returns</pre>'),
+                                ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
+                                $effect->getName()
+                            );
+                        }
+                    }
+                    $diminishing = true;
+                }
+                if (!$immune && !$diminishing && $effectInstance->getImmuneUntil() > $now) {
+                    if ($actor instanceof Profile) {
+                        if ($actor == $profile) {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You have recently been under the effect of [%s] and are currently immune</pre>'),
+                                $effect->getName()
+                            );
+                        }
+                        else {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] has recently been under the effect of [%s] and is currently immune</pre>'),
+                                ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
+                                $effect->getName()
+                            );
+                        }
+                    }
+                    $immune = true;
+                }
+                if (!$immune) {
+                    if ($diminishing) {
+                        if (!$rating && $effect->getDefaultRating()) {
+                            $rating = $effect->getDefaultRating() / $effect->getDiminishValue();
+                        }
+                        else {
+                            $rating = $rating / $effect->getDiminishValue();
+                        }
+                        $rating = ceil(round($rating));
+                        $completionDate = $effectInstance->getDimishUntil();
+                        $dimDate = $effectInstance->getDimishUntil();
+                        if ($effect->getImmuneTimer()) {
+                            if ($effectInstance->getImmuneUntil()) {
+                                $immDate = $effectInstance->getImmuneUntil();
+                            }
+                            else {
+                                $immDate = new \DateTime();
+                                $immSeconds = $effect->getImmuneTimer();
+                                $immDate->add(new \DateInterval('PT' . $immSeconds . 'S'));
+                            }
+                        }
+                        else {
+                            $immDate = NULL;
+                        }
+                        if ($profile) {
+                            $profileMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s] with diminishing returns</pre>'),
+                                $effect->getName()
+                            );
+                        }
+                    }
+                    else {
+                        $completionDate = new \DateTime();
+                        $completionSeconds = ($duration) ? $duration : $effect->getExpireTimer();
+                        $completionDate->add(new \DateInterval('PT' . $completionSeconds . 'S'));
+                        if ($effect->getDimishTimer()) {
+                            $dimDate = new \DateTime();
+                            $dimSeconds = $effect->getDimishTimer();
+                            $dimDate->add(new \DateInterval('PT' . $dimSeconds . 'S'));
+                        }
+                        else {
+                            $dimDate = NULL;
+                        }
+                        if ($effect->getImmuneTimer()) {
+                            $immDate = new \DateTime();
+                            $immSeconds = $effect->getImmuneTimer();
+                            $immDate->add(new \DateInterval('PT' . $immSeconds . 'S'));
+                        }
+                        else {
+                            $immDate = NULL;
+                        }
+                        if ($profile) {
+                            $profileMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                                $effect->getName()
+                            );
+                        }
+                        if ($actor instanceof Profile) {
+                            if ($actor == $profile) {
+                                $actorMessage = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                                    $effect->getName()
+                                );
+                            }
+                            else {
+                                $actorMessage = sprintf(
+                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is now under the effect of [%s]</pre>'),
+                                    ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
+                                    $effect->getName()
+                                );
+                            }
+                        }
+                    }
+                    $effectInstance->setProfile($profile);
+                    $effectInstance->setNpcInstance($npc);
+                    $effectInstance->setEffect($effect);
+                    $effectInstance->setRating(($rating) ? $rating : $effect->getDefaultRating());
+                    $effectInstance->setExpires($completionDate);
+                    $effectInstance->setDimishUntil($dimDate);
+                    $effectInstance->setImmuneUntil($immDate);
+                }
+                else {
+                    if ($actor instanceof Profile) {
+                        if ($actor == $profile) {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are currently immune to [%s]</pre>'),
+                                $effect->getName()
+                            );
+                        }
+                        else {
+                            $actorMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is currently immune to [%s]</pre>'),
+                                ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
+                                $effect->getName()
+                            );
+                        }
+                    }
+                }
+            }
+            else {
+                $completionDate = new \DateTime();
+                $completionSeconds = ($duration) ? $duration : $effect->getExpireTimer();
+                $completionDate->add(new \DateInterval('PT' . $completionSeconds . 'S'));
+                if ($effect->getDimishTimer()) {
+                    $dimDate = new \DateTime();
+                    $dimSeconds = $effect->getDimishTimer();
+                    $dimDate->add(new \DateInterval('PT' . $dimSeconds . 'S'));
+                }
+                else {
+                    $dimDate = NULL;
+                }
+                if ($effect->getImmuneTimer()) {
+                    $immDate = new \DateTime();
+                    $immSeconds = $effect->getImmuneTimer();
+                    $immDate->add(new \DateInterval('PT' . $immSeconds . 'S'));
+                }
+                else {
+                    $immDate = NULL;
+                }
+                $effectInstance = new ProfileEffect();
+                $effectInstance->setProfile($profile);
+                $effectInstance->setNpcInstance($npc);
+                $effectInstance->setEffect($effect);
+                $effectInstance->setRating(($rating) ? $rating : $effect->getDefaultRating());
+                $effectInstance->setExpires($completionDate);
+                $effectInstance->setDimishUntil($dimDate);
+                $effectInstance->setImmuneUntil($immDate);
+                $this->entityManager->persist($effectInstance);
+                if ($actor instanceof Profile) {
+                    if ($actor == $profile) {
+                        $actorMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                            $effect->getName()
+                        );
+                    }
+                    else {
+                        $actorMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is now under the effect of [%s]</pre>'),
+                            ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
+                            $effect->getName()
+                        );
+                    }
+                }
+                if ($profile) {
+                    $profileMessage = sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                        $effect->getName()
+                    );
+                }
+            }
+            $this->entityManager->flush($effectInstance);
+        }
+        return [$actorMessage, $profileMessage];
+    }
+
+    /**
+     * @param $subject
+     * @param $effectId
+     * @return bool
+     */
+    protected function isUnderEffect($subject, $effectId)
+    {
+        $result = false;
+        $peRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileEffect');
+        /** @var ProfileEffectRepository $peRepo */
+        $effectInstance = NULL;
+        if ($subject instanceof Profile) {
+            $effectInstance = $peRepo->findOneByProfileAndEffect($subject, $effectId);
+        }
+        if ($subject instanceof NpcInstance) {
+            $effectInstance = $peRepo->findOneByNpcAndEffect($subject, $effectId);
+        }
+        if ($effectInstance) {
+            /** @var ProfileEffect $effectInstance */
+            $now = new \DateTime();
+            if ($effectInstance->getExpires() > $now) {
+                $result = true;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param $subject
+     * @param $effectId
+     * @return ProfileEffect|null
+     */
+    protected function getEffectInstance($subject, $effectId)
+    {
+        $peRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileEffect');
+        /** @var ProfileEffectRepository $peRepo */
+        $effectInstance = NULL;
+        if ($subject instanceof Profile) {
+            $effectInstance = $peRepo->findOneByProfileAndEffect($subject, $effectId);
+        }
+        if ($subject instanceof NpcInstance) {
+            $effectInstance = $peRepo->findOneByNpcAndEffect($subject, $effectId);
+        }
+        return $effectInstance;
     }
 
 }

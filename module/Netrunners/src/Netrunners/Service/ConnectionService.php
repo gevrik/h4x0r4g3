@@ -233,7 +233,7 @@ class ConnectionService extends BaseService
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
-        if (!$connection) {
+        if (!$this->response && !$connection) {
             $this->response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -263,6 +263,175 @@ class ConnectionService extends BaseService
                 $connection->getTargetNode()->getName()
             );
             $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function closeConnection($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $this->response = $this->isActionBlocked($resourceId);
+        /* connections can be given by name or number, so we need to handle both */
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false);
+        $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
+        if (!$this->response && !$connection) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such connection')
+                )
+            );
+        }
+        if (
+            !$this->response && $connection->getType() != Connection::TYPE_CODEGATE
+        ) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('That is not a codegate')
+                )
+            );
+        }
+        if (
+            !$this->response && $connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()
+        ) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('That codegate is not open')
+                )
+            );
+        }
+        // all good - can close
+        if (!$this->response) {
+            $connection->setIsOpen(false);
+            $this->entityManager->flush($connection);
+            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
+            $targetConnection->setIsOpen(false);
+            $this->entityManager->flush($targetConnection);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have closed the connection to [%s]</pre>'),
+                    $connection->getTargetNode()->getName()
+                )
+            ];
+            $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has closed the connection to [%s]</pre>'),
+                $this->user->getUsername(),
+                $connection->getTargetNode()->getName()
+            );
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId(), true);
+            // inform other players in target node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">Someone has opened the connection to [%s]</pre>'),
+                $currentNode->getName()
+            );
+            $this->messageEveryoneInNode($connection->getTargetNode(), $message, NULL, [], true);
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function openConnection($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $this->response = $this->isActionBlocked($resourceId);
+        /* connections can be given by name or number, so we need to handle both */
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false);
+        $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
+        if (!$this->response && !$connection) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('No such connection')
+                )
+            );
+        }
+        if (
+            !$this->response && $connection->getType() != Connection::TYPE_CODEGATE
+        ) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('That is not a codegate')
+                )
+            );
+        }
+        if (
+            !$this->response && $profile !== $currentNode->getSystem()->getProfile()
+        ) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Permission denied')
+                )
+            );
+        }
+        if (
+            !$this->response && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()
+        ) {
+            $this->response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('That codegate is already open')
+                )
+            );
+        }
+        // all good - can open
+        if (!$this->response) {
+            $connection->setIsOpen(true);
+            $this->entityManager->flush($connection);
+            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
+            $targetConnection->setIsOpen(true);
+            $this->entityManager->flush($targetConnection);
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have opened the connection to [%s]</pre>'),
+                    $connection->getTargetNode()->getName()
+                )
+            ];
+            $this->addAdditionalCommand();
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has opened the connection to [%s]</pre>'),
+                $this->user->getUsername(),
+                $connection->getTargetNode()->getName()
+            );
+            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId(), true);
+            // inform other players in target node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">Someone has opened the connection to [%s]</pre>'),
+                $currentNode->getName()
+            );
+            $this->messageEveryoneInNode($connection->getTargetNode(), $message, NULL, [], true);
         }
         return $this->response;
     }

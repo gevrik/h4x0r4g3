@@ -298,6 +298,7 @@ class ParserService
                 break;
             case 'attack':
             case 'a':
+            case 'kill':
                 $response = $this->combatService->attackCommand($resourceId, $contentArray);
                 break;
             case 'auctionclaim':
@@ -350,6 +351,9 @@ class ParserService
                 break;
             case 'cd':
                 $response = $this->connectionService->useConnection($resourceId, $contentArray);
+                break;
+            case 'close':
+                $response = $this->connectionService->closeConnection($resourceId, $contentArray);
                 break;
             case 'code':
                 $response = $this->codingService->enterCodeMode($resourceId);
@@ -478,7 +482,8 @@ class ParserService
             case 'joinfaction':
                 $response = $this->factionService->joinFaction($resourceId);
                 break;
-            case 'kill':
+            case 'killprocess':
+            case 'killp':
                 $response = $this->fileService->killProcess($resourceId, $contentArray);
                 break;
             case 'jobs':
@@ -486,6 +491,9 @@ class ParserService
                 break;
             case 'listmanpages':
                 $response = $this->manpageService->listManpages($resourceId);
+                break;
+            case 'logout':
+                $response = $this->profileService->logoutCommand($resourceId);
                 break;
             case 'ls':
             case 'l':
@@ -552,6 +560,9 @@ class ParserService
             case 'nset':
                 $response = $this->nodeService->nset($resourceId, $contentArray);
                 break;
+            case 'open':
+                $response = $this->connectionService->openConnection($resourceId, $contentArray);
+                break;
             case 'options':
                 $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
                 break;
@@ -604,6 +615,9 @@ class ParserService
                 break;
             case 'secureconnection':
                 $response = $this->connectionService->secureConnection($resourceId, $contentArray);
+                break;
+            case 'slay':
+                $response = $this->combatService->slayCommand($resourceId, $contentArray);
                 break;
             case 'unsecure':
             case 'unsecureconnection':

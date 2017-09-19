@@ -934,6 +934,11 @@ class ProfileService extends BaseService
         return $this->response;
     }
 
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
     public function changePassword($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -1004,8 +1009,9 @@ class ProfileService extends BaseService
         if (!$this->user) return true;
         $this->response = $this->isActionBlocked($resourceId, true);
         $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
         // check if they are in a banking node
-        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_BANK) {
+        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -1035,10 +1041,32 @@ class ProfileService extends BaseService
                 )
             ];
         }
+        // check if valid amount
+        if (!$this->response && $amount && $amount <= 0) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Nice try...')
+                )
+            ];
+        }
         /* all seems good, deposit */
         if (!$this->response && $amount) {
+            // check for skimmer
+            $skimmerFiles = $this->fileRepo->findRunningInNodeByType($currentNode, FileType::ID_SKIMMER);
+            $remainingAmount = $amount;
+            $triggerData = ['value' => $remainingAmount];
+            foreach ($skimmerFiles as $skimmerFile) {
+                /** @var File $skimmerFile */
+                $skimAmount = $this->checkFileTriggers($skimmerFile, $triggerData);
+                if ($skimAmount === false) continue;
+                $remainingAmount -= $skimAmount;
+                $triggerData['value'] = $remainingAmount;
+            }
+            // now add/substract
             $profile->setCredits($profile->getCredits() - $amount);
-            $profile->setBankBalance($profile->getBankBalance() + $amount);
+            $profile->setBankBalance($profile->getBankBalance() + $remainingAmount);
             $this->entityManager->flush($profile);
             $this->response = [
                 'command' => 'showmessage',
@@ -1115,13 +1143,14 @@ class ProfileService extends BaseService
         if (!$this->user) return true;
         $this->response = $this->isActionBlocked($resourceId, true);
         $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
         // check if they are in a banking node
-        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_BANK) {
+        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
             $this->response = [
                 'command' => 'showmessage',
                 'message' => sprintf(
                     '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to be in a banking node to deposit credits')
+                    $this->translate('You need to be in a banking node to withdraw credits')
                 )
             ];
         }
@@ -1146,6 +1175,16 @@ class ProfileService extends BaseService
                 )
             ];
         }
+        // check if valid amount
+        if (!$this->response && $amount && $amount <= 0) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('Nice try...')
+                )
+            ];
+        }
         /* all seems good, withdraw */
         if (!$this->response && $amount) {
             $profile->setCredits($profile->getCredits() + $amount);
@@ -1158,6 +1197,12 @@ class ProfileService extends BaseService
                     $amount
                 )
             ];
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has withdrawn some credits</pre>'),
+                $this->user->getUsername()
+            );
+            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
         }
         return $this->response;
     }
@@ -1228,6 +1273,28 @@ class ProfileService extends BaseService
                 'command' => 'showpanel',
                 'content' => $this->viewRenderer->render($view)
             );
+        }
+        return $this->response;
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function logoutCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $this->response = $this->isActionBlocked($resourceId);
+        if (!$this->response) {
+            $this->response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+                    $this->translate('Disconnecting from NeoCortex Network - have a nice day and see you soon')
+                ),
+                'disconnectx' => true
+            ];
         }
         return $this->response;
     }

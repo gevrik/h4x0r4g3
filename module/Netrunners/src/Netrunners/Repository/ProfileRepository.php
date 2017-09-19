@@ -52,6 +52,20 @@ class ProfileRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+
+    public function findByNodeOrderedByResourceId(Node $node, Profile $profile = NULL)
+    {
+        $qb = $this->createQueryBuilder('p');
+        $qb->where('p.currentNode = :node AND p.currentResourceId IS NOT NULL');
+        $qb->setParameter('node', $node);
+        if ($profile) {
+            $qb->andWhere('p!= :profile');
+            $qb->setParameter('profile', $profile);
+        }
+        $qb->orderBy('p.currentResourceId', 'ASC');
+        return $qb->getQuery()->getResult();
+    }
+
     /**
      * @param Node $node
      * @param Profile|NULL $profile

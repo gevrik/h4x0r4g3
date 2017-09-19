@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\MailMessage;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Repository\MailMessageRepository;
 use Zend\Mvc\I18n\Translator;
@@ -238,7 +239,7 @@ class MailMessageService extends BaseService
         if (!$mail) {
             $this->response = array(
                 'command' => 'showmessage',
-                'type' => 'danger',
+                'type' => Notification::SEVERITY_DANGER,
                 'message' => 'Invalid mail number'
             );
         }

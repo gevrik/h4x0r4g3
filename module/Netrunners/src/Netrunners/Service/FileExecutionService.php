@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
@@ -157,6 +158,9 @@ class FileExecutionService extends BaseService
                 case FileType::ID_KICKER:
                 case FileType::ID_BREAKOUT:
                 case FileType::ID_SMOKESCREEN:
+                case FileType::ID_VENOM:
+                case FileType::ID_ANTIDOTE:
+                case FileType::ID_STIMULANT:
                     $this->response = $this->executeCombatProgram($file);
                     break;
                 case FileType::ID_DATAMINER:
@@ -244,7 +248,7 @@ class FileExecutionService extends BaseService
                     $this->user->getUsername(),
                     $file->getName()
                 );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], $profile, $profile->getId());
+                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
             }
         }
         return $this->response;
@@ -278,7 +282,7 @@ class FileExecutionService extends BaseService
     {
         $profile = $this->user->getProfile();
         $response = false;
-        if (!$this->isInCombat($profile)) {
+        if (!$this->isInCombat($profile)) { // TODO some of these should be executable outside of combat - like breakout
             $response = array(
                 'command' => 'showmessage',
                 'message' => sprintf(
@@ -287,55 +291,351 @@ class FileExecutionService extends BaseService
                 )
             );
         }
+        $now = new \DateTime();
+        if (!$response && $this->clientData->combatFileCooldown > $now) {
+            $response = array(
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You have to wait before executing another combat program')
+                )
+            );
+        }
         if (!$response) {
             switch ($file->getFileType()->getId()) {
                 default:
                     break;
                 case FileType::ID_KICKER:
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
-                            $this->translate('You try to kick your opponent')
-                        )
-                    );
+                    $response = $this->executeKicker($file);
                     break;
                 case FileType::ID_BREAKOUT:
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
-                            $this->translate('You try to remove a negative effect from yourself')
-                        )
-                    );
+                    $response = $this->executeBreakout($file);
                     break;
                 case FileType::ID_SMOKESCREEN:
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
-                            $this->translate('You try to disengage from combat')
-                        )
-                    );
+                    $response = $this->executeSmokeScreen($file);
                     break;
                 case FileType::ID_VENOM:
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
-                            $this->translate('You try to apply a damage-over-time effect on your opponent')
-                        )
-                    );
+                    $response = $this->executeVenom($file);
                     break;
                 case FileType::ID_ANTIDOTE:
+                    $response = $this->executeAntidote($file);
+                    break;
+                case FileType::ID_PUNCHER:
                     $response = array(
                         'command' => 'showmessage',
                         'message' => sprintf(
                             '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
-                            $this->translate('You try to rid yourself of a damage-over-time')
+                            $this->translate('You try to punch your opponent')
                         )
                     );
                     break;
+                case FileType::ID_STIMULANT:
+                    $response = array(
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+                            $this->translate('You try to heal yourself')
+                        )
+                    );
+                    break;
+            }
+            // set global combat cooldown
+            $now->add(new \DateInterval('PT2S'));
+            $this->clientData->combatFileCooldown = $now;
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @return array
+     */
+    public function executeSmokeScreen(File $file)
+    {
+        $profile = $file->getProfile();
+        $rating = $this->getBonusForFileLevel($file);
+        if (mt_rand(1, 100) <= $rating) {
+            $this->getWebsocketServer()->removeCombatant($profile);
+            $profile->setStealthing(true);
+            $this->entityManager->flush($profile);
+            // TODO add a temporary stealth boost effect
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You execute [%s] and disengage from combat</pre>'),
+                    $file->getName()
+                )
+            ];
+            $responseOther = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] executes [%s] and disengages from combat</pre>'),
+                $file->getName()
+            );
+            $this->messageEveryoneInNode($file->getNode(), $responseOther, $profile, $profile->getId(), true);
+        }
+        else {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You execute [%s] but fail to cause any effect</pre>'),
+                    $file->getName()
+                )
+            ];
+            $responseOther = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] executes [%s] but fails to cause any effect</pre>'),
+                $file->getName()
+            );
+            $this->messageEveryoneInNode($file->getNode(), $responseOther, NULL, $profile->getId());
+        }
+        $this->lowerIntegrityOfFile($file, 100, 1, true);
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @return array
+     */
+    public function executeBreakout(File $file)
+    {
+        $now = new \DateTime();
+        $profile = $file->getProfile();
+        $rating = $this->getBonusForFileLevel($file);
+        $response = false;
+        if (!$this->isUnderEffect($profile, Effect::ID_STUNNED)) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are not stunned')
+                )
+            ];
+        }
+        $effectInstance = NULL;
+        if (!$response) {
+            $effectInstance = $this->getEffectInstance($profile, Effect::ID_STUNNED);
+            if ($effectInstance->getExpires() < $now) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You are not stunned')
+                    )
+                ];
+            }
+        }
+        if (!$response && $effectInstance) {
+            if (mt_rand(1, 100) <= $rating) {
+                $effectInstance->setExpires($now);
+                $this->entityManager->flush($effectInstance);
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You execute [%s] and shake-off the stun</pre>'),
+                        $file->getName()
+                    )
+                ];
+                $responseOther = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] executes [%s] and shakes-off the stun</pre>'),
+                    $file->getName()
+                );
+                $this->messageEveryoneInNode($file->getNode(), $responseOther, $profile, $profile->getId());
+            }
+            else {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You execute [%s] but fail to break the stun</pre>'),
+                        $file->getName()
+                    )
+                ];
+                $responseOther = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] executes [%s] but fails to break the stun</pre>'),
+                    $file->getName()
+                );
+                $this->messageEveryoneInNode($file->getNode(), $responseOther, NULL, $profile->getId());
+            }
+            $this->lowerIntegrityOfFile($file, 100, 1, true);
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @return array
+     */
+    public function executeAntidote(File $file)
+    {
+        $now = new \DateTime();
+        $profile = $file->getProfile();
+        $rating = $this->getBonusForFileLevel($file);
+        $response = false;
+        if (!$this->isUnderEffect($profile, Effect::ID_DAMAGE_OVER_TIME)) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                    $this->translate('You are not affected by any damage-over-time effects')
+                )
+            ];
+        }
+        $effectInstance = NULL;
+        if (!$response) {
+            $effectInstance = $this->getEffectInstance($profile, Effect::ID_STUNNED);
+            if ($effectInstance->getExpires() < $now) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
+                        $this->translate('You are not affected by any damage-over-time effects')
+                    )
+                ];
+            }
+        }
+        if (!$response && $effectInstance) {
+            if (mt_rand(1, 100) <= $rating) {
+                $effectInstance->setExpires($now);
+                $this->entityManager->flush($effectInstance);
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You execute [%s] and shake-off the damage-over-time effect</pre>'),
+                        $file->getName()
+                    )
+                ];
+                $responseOther = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] executes [%s] and shakes-off the damage-over-time effect</pre>'),
+                    $file->getName()
+                );
+                $this->messageEveryoneInNode($file->getNode(), $responseOther, $profile, $profile->getId());
+            }
+            else {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You fail to execute [%s]</pre>'),
+                        $file->getName()
+                    )
+                ];
+                $responseOther = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] fails to execute [%s]</pre>'),
+                    $file->getName()
+                );
+                $this->messageEveryoneInNode($file->getNode(), $responseOther, NULL, $profile->getId());
+            }
+            $this->lowerIntegrityOfFile($file, 100, 1, true);
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @return array|bool
+     */
+    protected function executeKicker(File $file)
+    {
+        $profile = $file->getProfile();
+        $ws = $this->getWebsocketServer();
+        $combatData = $ws->getProfileCombatData($profile->getId());
+        if (!$combatData) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You are no longer in combat - unable to execute [%s]</pre>'),
+                    $file->getName()
+                )
+            ];
+        }
+        else {
+            $target = (isset($combatData->profileTarget)) ? $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget) : $this->entityManager->find('Netrunners\Entity\NpcInstance', $combatData->npcTarget);
+            if (!$target) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Your target is no longer valid - unable to execute [%s]</pre>'),
+                        $file->getName()
+                    )
+                ];
+            }
+            else {
+                if (mt_rand(1, 100) <= $this->getBonusForFileLevel($file)) {
+                    if ($target instanceof Profile) {
+                        list($actorMessage, $targetMessage) = $this->addEffect($target, NULL, $profile, Effect::ID_STUNNED);
+                    }
+                    else {
+                        list($actorMessage, $targetMessage) = $this->addEffect(NULL, $target, $profile, Effect::ID_STUNNED);
+                    }
+                    $response = [
+                        'command' => 'showmessage',
+                        'message' => $actorMessage
+                    ];
+                    if ($targetMessage) $this->messageProfile($target, $targetMessage);
+                }
+                else {
+                    $response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] has no effect</pre>'),
+                            $file->getName()
+                        )
+                    ];
+                }
+                $this->lowerIntegrityOfFile($file, 100, 1, true);
+            }
+        }
+        return $response;
+    }
+
+    /**
+     * @param File $file
+     * @return array
+     */
+    protected function executeVenom(File $file)
+    {
+        $profile = $file->getProfile();
+        $ws = $this->getWebsocketServer();
+        $combatData = $ws->getProfileCombatData($profile->getId());
+        if (!$combatData) {
+            $response = [
+                'command' => 'showmessage',
+                'message' => sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You are no longer in combat - unable to execute [%s]</pre>'),
+                    $file->getName()
+                )
+            ];
+        }
+        else {
+            $target = (isset($combatData->profileTarget)) ? $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget) : $this->entityManager->find('Netrunners\Entity\NpcInstance', $combatData->npcTarget);
+            if (!$target) {
+                $response = [
+                    'command' => 'showmessage',
+                    'message' => sprintf(
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Your target is no longer valid - unable to execute [%s]</pre>'),
+                        $file->getName()
+                    )
+                ];
+            }
+            else {
+                if (mt_rand(1, 100) <= $this->getBonusForFileLevel($file)) {
+                    if ($target instanceof Profile) {
+                        list($actorMessage, $targetMessage) = $this->addEffect($target, NULL, $profile, Effect::ID_DAMAGE_OVER_TIME);
+                    }
+                    else {
+                        list($actorMessage, $targetMessage) = $this->addEffect(NULL, $target, $profile, Effect::ID_DAMAGE_OVER_TIME);
+                    }
+                    $response = [
+                        'command' => 'showmessage',
+                        'message' => $actorMessage
+                    ];
+                    if ($targetMessage) $this->messageProfile($target, $targetMessage);
+                }
+                else {
+                    $response = [
+                        'command' => 'showmessage',
+                        'message' => sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] has no effect</pre>'),
+                            $file->getName()
+                        )
+                    ];
+                }
             }
         }
         return $response;

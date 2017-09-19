@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
+use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
@@ -19,6 +20,7 @@ use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Mission;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
@@ -347,7 +349,7 @@ class LoopService extends BaseService
                 $this->storeNotification(
                     $expiringMilkrun->getProfile(),
                     'Your current milkrun has expired before you could complete it',
-                    'warning'
+                    Notification::SEVERITY_WARNING
                 );
                 $profile = $expiringMilkrun->getProfile();
                 $profile->setFaileddMilkruns($profile->getFaileddMilkruns()+1);
@@ -426,7 +428,7 @@ class LoopService extends BaseService
                 $this->storeNotification(
                     $expiringMission->getProfile(),
                     'Your current mission has expired before you could complete it',
-                    'warning'
+                    Notification::SEVERITY_WARNING
                 );
                 $profile = $expiringMission->getProfile();
                 $profile->setFailedMissions($profile->getFailedMissions()+1);
@@ -458,6 +460,9 @@ class LoopService extends BaseService
         foreach ($combatants['profiles'] as $profileId => $combatData) {
             $profile = $this->entityManager->find('Netrunners\Entity\Profile', $profileId);
             /** @var Profile $profile */
+            // skip if they are stunned
+            if ($this->isUnderEffect($profile, Effect::ID_STUNNED)) continue;
+            // get combat data
             $combatData = (object)$combatData;
             $wsClient = NULL;
             $targetWsClient = NULL;
@@ -503,6 +508,9 @@ class LoopService extends BaseService
         foreach ($combatants['npcs'] as $npcId => $combatData) {
             $npc = $this->entityManager->find('Netrunners\Entity\NpcInstance', $npcId);
             /** @var NpcInstance $npc */
+            // skip if they are stunned
+            if ($this->isUnderEffect($npc, Effect::ID_STUNNED)) continue;
+            // get combat data
             $combatData = (object)$combatData;
             $wsClient = NULL;
             foreach ($ws->getClients() as $wsClientId => $xClient) {
@@ -1047,7 +1055,7 @@ class LoopService extends BaseService
                             }
                             if ($found instanceof FileType) {
                                 $message = sprintf($this->translate("You have researched the file-type [%s] - it was added to your library."), $found->getName());
-                                $this->storeNotification($researcher->getProfile(), $message, 'success');
+                                $this->storeNotification($researcher->getProfile(), $message, Notification::SEVERITY_SUCCESS);
                                 $recipe = new ProfileFileTypeRecipe();
                                 $recipe->setAdded(new \DateTime());
                                 $recipe->setFileType($found);
@@ -1057,7 +1065,7 @@ class LoopService extends BaseService
                             }
                             else {
                                 $message = sprintf($this->translate("You have already researched all types in category [%s]! [%s] will now stop running."), $fileCategory->getName(), $researcher->getName());
-                                $this->storeNotification($researcher->getProfile(), $message, 'warning');
+                                $this->storeNotification($researcher->getProfile(), $message, Notification::SEVERITY_WARNING);
                                 $researcher->setRunning(false);
                             }
                             break;
@@ -1075,7 +1083,7 @@ class LoopService extends BaseService
                                 $fileType->getName(),
                                 $recipe->getRuns()
                             );
-                            $this->storeNotification($researcher->getProfile(), $message, 'success');
+                            $this->storeNotification($researcher->getProfile(), $message, Notification::SEVERITY_SUCCESS);
                             break;
                     }
                     $this->lowerIntegrityOfFile($researcher);
