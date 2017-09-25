@@ -10,56 +10,107 @@
 
 namespace Netrunners\Service;
 
+use Netrunners\Entity\File;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Word;
+use Netrunners\Model\GameClientResponse;
+use Netrunners\Repository\SystemRepository;
 use Netrunners\Repository\WordRepository;
 use Zend\View\Model\ViewModel;
 
 class HangmanService extends BaseService
 {
 
-    const LENGTH_MODIFIER = 2;
+    const LENGTH_MODIFIER = 4;
+    const BASE_GUESSES = 4;
 
     /**
      * @param $resourceId
-     * @return array|bool
+     * @param File $file
+     * @param $contentArray
+     * @return bool|GameClientResponse
      */
-    public function startHangmanGame($resourceId)
+    public function startHangmanGame($resourceId, File $file, $contentArray)
     {
         $ws = $this->getWebsocketServer();
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
-            /** @var WordRepository $wordRepo */
-            $words = $wordRepo->getRandomWordsByLength();
-            $word = array_shift($words);
-            if (!$word) return true;
-            /** @var Word $word */
-            $theWord = strtolower($word->getContent());
-            $hangman = [
-                'word' => $theWord,
-                'attempts' => 5,
-                'known' => str_repeat('*', strlen($theWord)),
-                'letters' => []
-            ];
-            $ws->setClientData($resourceId, 'hangman', $hangman);
-            $view = new ViewModel();
-            $view->setTemplate('netrunners/word/hangman-game.phtml');
-            $view->setVariable('hangman', (object)$hangman);
-            $this->response = array(
-                'command' => 'showpanel',
-                'type' => 'default',
-                'content' => $this->viewRenderer->render($view)
-            );
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $node = NULL;
+
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        /** @var SystemRepository $systemRepo */
+        if (!$this->canExecuteInNodeType($file, $currentNode)) {
+            $message = sprintf(
+                $this->translate('%s can only be used in an I/O node'),
+                $file->getName()
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        list($contentArray, $addy) = $this->getNextParameter($contentArray, true);
+        if (!$addy) {
+            $message = $this->translate('Please specify a system address to break in to');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $system = $systemRepo->findOneBy([
+            'addy' => $addy
+        ]);
+        if (!$system) {
+            $message = $this->translate('Invalid system address');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($system->getProfile() === $profile) {
+            $message = $this->translate('Invalid system - unable to break in to your own systems');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now check if a node id was given
+        $nodeId = $this->getNextParameter($contentArray, false, true);
+        if (!$nodeId) {
+            $message = $this->translate('Please specify a node ID to break in to');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
+        /** @var Node $node */
+        if (!$node) {
+            $message = $this->translate('Invalid node ID');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // start the mini-game
+        $attempts = ceil(round($this->getBonusForFileLevel($file)/10)) + self::BASE_GUESSES;
+        $wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
+        /** @var WordRepository $wordRepo */
+        $wordLength = $node->getLevel() + self::LENGTH_MODIFIER;
+        $words = $wordRepo->getRandomWordsByLength(1, $wordLength);
+        $word = array_shift($words);
+        if (!$word) return true;
+        /** @var Word $word */
+        $theWord = strtolower($word->getContent());
+        $hangman = [
+            'word' => $theWord,
+            'attempts' => $attempts,
+            'known' => str_repeat('*', strlen($theWord)),
+            'letters' => [],
+            'nodeid' => $node->getId(),
+            'fileid' => $file->getId()
+        ];
+        $ws->setClientData($resourceId, 'hangman', $hangman);
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/word/hangman-game.phtml');
+        $view->setVariable('hangman', (object)$hangman);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL)->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        $this->lowerIntegrityOfFile($file, 100, 1, true);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function letterClicked($resourceId, $contentArray)
     {
@@ -94,36 +145,49 @@ class HangmanService extends BaseService
         $view = new ViewModel();
         $view->setTemplate('netrunners/word/hangman-game.phtml');
         $view->setVariable('hangman', (object)$hangmanData);
-        $this->response = array(
-            'command' => 'showpanel',
-            'type' => 'default',
-            'content' => $this->viewRenderer->render($view)
-        );
-        return $this->response;
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL)->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return bool
+     * @return bool|GameClientResponse
      */
     public function solutionAttempt($resourceId, $contentArray)
     {
         $ws = $this->getWebsocketServer();
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $guess = $this->getNextParameter($contentArray, false);
-        if (!$guess) return true;
+        $guess = $this->getNextParameter($contentArray, false, false, false, true);
+        if (!$guess) return false;
         $hangmanData = $this->clientData->hangman;
-        if ($hangmanData['word'] == $guess) {
+        $ws->setClientData($resourceId, 'hangman', []);
+        $nodeId = $hangmanData['nodeid'];
+        $fileId = $hangmanData['fileid'];
+        $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
+        $file = $this->entityManager->find('Netrunners\Entity\File', $fileId);
+        if ($node && $file && $hangmanData['word'] == $guess) {
             // player has guessed correctly
-            var_dump('correct!');
+            $this->movePlayerToTargetNodeNew($resourceId, $profile, NULL, $profile->getCurrentNode(), $node);
+            $flyResponse = new GameClientResponse($resourceId);
+            $flyResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
+            $flyResponse->addOption(GameClientResponse::OPT_CONTENT, explode(',',$node->getSystem()->getGeocoords()));
+            $flyResponse->send();
+            $this->updateMap($resourceId);
+            $message = $this->translate('You break in to the target system');
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+            $closePanelResponse = new GameClientResponse($resourceId);
+            $closePanelResponse->setCommand(GameClientResponse::COMMAND_CLOSEPANEL)->setSilent(true)->send();
+            $this->gameClientResponse->send();
+            return $this->showNodeInfoNew($resourceId, NULL, true);
         }
         else {
-            var_dump('false!');
+            $message = $this->translate('You fail to break in to the target system');
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
 }

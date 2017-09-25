@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Manpage;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ManpageRepository;
 use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
@@ -45,19 +46,16 @@ class ManpageService extends BaseService
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function helpCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $showInConsole = false;
         $manpage = NULL;
-        $command = 'showmessage';
-        $message = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-            $this->translate('Sorry, there is no manpage on that topic')
-        );
+        $command = GameClientResponse::COMMAND_SHOWOUTPUT;
+        $message = $this->translate('Sorry, there is no manpage on that topic');
         $title = $this->translate('NEOCORTEX HELP SYSTEM');
         list($contentArray, $part) = $this->getNextParameter($contentArray, true);
         switch ($part) {
@@ -93,16 +91,11 @@ class ManpageService extends BaseService
                 $manpages = $this->manpageRepo->findByKeyword($keyword);
                 if (!empty($manpages)) {
                     if (count($manpages) > 1) {
-                        $command = 'showoutput';
-                        $message = [];
-                        $message[] = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                            $this->translate('Multiple manpages matched the keyword:')
-                        );
+                        $message[] = $this->translate('<span class="text-sysmsg">Multiple manpages matched the keyword:</span>');
                         foreach ($manpages as $manpage) {
                             /** @var Manpage $manpage */
                             $message[] = sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%s</pre>',
+                                '<span class="text-white">%-11s|%s</span>',
                                 $manpage->getId(),
                                 $manpage->getSubject()
                             );
@@ -132,138 +125,93 @@ class ManpageService extends BaseService
                 $view->setVariable('manpage', $manpage);
                 $view->setVariable('title', $title);
             }
-            $command = 'openmanpagemenu';
+            $command = GameClientResponse::COMMAND_OPENMANPAGEMENU;
             $message = $this->viewRenderer->render($view);
         }
-        $this->response = [
-            'command' => $command,
-            'message' => $message
-        ];
-        return $this->response;
+        $this->gameClientResponse->setCommand($command)->addMessage($message, GameClientResponse::CLASS_MUTED);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function listManpages($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('unknown command')
-                )
-            ];
+            return $this->gameClientResponse->addMessage($this->translate('unknown command'))->send();
         }
-        if (!$this->response) {
-            $manpages = $this->manpageRepo->findAll();
-            $messages = [];
-            foreach ($manpages as $manpage) {
-                /** @var Manpage $manpage */
-                $messages[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-11s|%s</pre>',
-                    $manpage->getId(),
-                    Manpage::$lookup[$manpage->getStatus()],
-                    $manpage->getSubject()
-                );
-            }
-            $this->response = [
-                'command' => 'showoutput',
-                'message' => $messages
-            ];
+        $manpages = $this->manpageRepo->findAll();
+        foreach ($manpages as $manpage) {
+            /** @var Manpage $manpage */
+            $message = sprintf(
+                '%-11s|%-11s|%s',
+                $manpage->getId(),
+                Manpage::$lookup[$manpage->getStatus()],
+                $manpage->getSubject()
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function addManpage($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('unknown command')
-                )
-            ];
+            return $this->gameClientResponse->addMessage($this->translate('unknown command'))->send();
         }
-        if (!$this->response) {
-            $parameter = $this->getNextParameter($contentArray, false, false, true, true);
-            $subject = ($parameter) ? $parameter : 'new manpage title';
-            $content = 'new manpage content';
-            $manpage = new Manpage();
-            $manpage->setAuthor($this->user->getProfile());
-            $manpage->setUpdatedDateTime(NULL);
-            $manpage->setCreatedDateTime(new \DateTime());
-            $manpage->setParent(NULL);
-            $manpage->setContent($content);
-            $manpage->setSubject($subject);
-            $manpage->setStatus(Manpage::STATUS_INVALID);
-            $this->entityManager->persist($manpage);
-            $this->entityManager->flush($manpage);
-            $this->response = $this->editManpage($resourceId, [$manpage->getId()]);
-        }
-        return $this->response;
+        $parameter = $this->getNextParameter($contentArray, false, false, true, true);
+        $subject = ($parameter) ? $parameter : 'new manpage title';
+        $content = 'new manpage content';
+        $manpage = new Manpage();
+        $manpage->setAuthor($this->user->getProfile());
+        $manpage->setUpdatedDateTime(NULL);
+        $manpage->setCreatedDateTime(new \DateTime());
+        $manpage->setParent(NULL);
+        $manpage->setContent($content);
+        $manpage->setSubject($subject);
+        $manpage->setStatus(Manpage::STATUS_INVALID);
+        $this->entityManager->persist($manpage);
+        $this->entityManager->flush($manpage);
+        return $this->editManpage($resourceId, [$manpage->getId()]);
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function editManpage($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('unknown command')
-                )
-            ];
+            return $this->gameClientResponse->addMessage($this->translate('unknown command'))->send();
         }
-        if (!$this->response) {
-            $manpageId = $this->getNextParameter($contentArray, false, true);
-            if (!$this->response && !$manpageId) {
-                $this->response = $this->listManpages($resourceId);
-            }
-            $manpage = NULL;
-            if (!$this->response && $manpageId) {
-                $manpage = $this->manpageRepo->find($manpageId);
-                if (!$manpage) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Invalid manpage id')
-                        )
-                    );
-                }
-            }
-            if (!$this->response && $manpage) {
-                $view = new ViewModel();
-                $view->setTemplate('netrunners/manpage/edit-manpage.phtml');
-                $view->setVariable('manpage', $manpage);
-                $view->setVariable('showstatusdropdown', $this->hasRole(NULL, Role::ROLE_ID_ADMIN));
-                $this->response = array(
-                    'command' => 'openmanpagemenu',
-                    'message' => $this->viewRenderer->render($view)
-                );
-            }
+        $manpageId = $this->getNextParameter($contentArray, false, true);
+        if (!$manpageId) {
+            return $this->listManpages($resourceId);
         }
-        return $this->response;
+        $manpage = $this->manpageRepo->find($manpageId);
+        if (!$manpage) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid manpage id'))->send();
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/manpage/edit-manpage.phtml');
+        $view->setVariable('manpage', $manpage);
+        $view->setVariable('showstatusdropdown', $this->hasRole(NULL, Role::ROLE_ID_ADMIN));
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_OPENMANPAGEMENU);
+        $this->gameClientResponse->addMessage($this->viewRenderer->render($view), GameClientResponse::CLASS_MUTED);
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -272,7 +220,7 @@ class ManpageService extends BaseService
      * @param string $mpTitle
      * @param $entityId
      * @param int $status
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function saveManpage(
         $resourceId,
@@ -283,49 +231,26 @@ class ManpageService extends BaseService
     )
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('unknown command')
-                )
-            ];
+            return $this->gameClientResponse->addMessage($this->translate('unknown command'))->send();
         }
-        if (!$this->response) {
-            $manpage = $this->manpageRepo->find($entityId);
-            if (!$this->response && !$manpage) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('invalid manpage id')
-                    )
-                ];
-            }
-            if (!$this->response && $manpage) {
-                /** @var Manpage $manpage */
-                $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
-                $mpTitle = htmLawed($mpTitle, ['safe'=>1,'elements'=>'strong']);
-                $manpage->setSubject($mpTitle);
-                $manpage->setContent($content);
-                $manpage->setStatus($status);
-                $manpage->setAuthor($this->user->getProfile());
-                $manpage->setUpdatedDateTime(new \DateTime());
-                // change status
-                $manpage->setStatus($this->getNewStatus($manpage));
-                $this->entityManager->flush($manpage);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('Manpage saved')
-                    )
-                ];
-            }
+        $manpage = $this->manpageRepo->find($entityId);
+        if (!$manpage) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid manpage id'))->send();
         }
-        return $this->response;
+        /** @var Manpage $manpage */
+        $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
+        $mpTitle = htmLawed($mpTitle, ['safe'=>1,'elements'=>'strong']);
+        $manpage->setSubject($mpTitle);
+        $manpage->setContent($content);
+        $manpage->setStatus($status);
+        $manpage->setAuthor($this->user->getProfile());
+        $manpage->setUpdatedDateTime(new \DateTime());
+        // change status
+        $manpage->setStatus($this->getNewStatus($manpage));
+        $this->entityManager->flush($manpage);
+        return $this->gameClientResponse->addMessage($this->translate('Manpage saved'), GameClientResponse::CLASS_SUCCESS)->send();
     }
 
     /**

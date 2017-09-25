@@ -130,6 +130,10 @@ pre.text-sysmsg {
     color: #66ccff;
 }
 
+.text-tell {
+    color: #99ff99;
+}
+
 .panel-heading {
     font-size: 9px !important;
     cursor: pointer;

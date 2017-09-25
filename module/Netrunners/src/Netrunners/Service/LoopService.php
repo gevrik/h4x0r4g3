@@ -27,6 +27,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\System;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
@@ -180,7 +181,7 @@ class LoopService extends BaseService
             if (!$clientData->hash) continue;
             // first we get amount of notifications and actiontime
             $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            if (!$user) return true;
+            if (!$user) continue;
             /** @var User $user */
             $profile = $user->getProfile();
             /** @var Profile $profile */
@@ -202,12 +203,13 @@ class LoopService extends BaseService
             );
             $wsClient->send(json_encode($response));
             // now handle pending actions
-            $response = false;
+            $gameClientResponse = false;
             $clientData = $ws->getClientData($resourceId);
             if (empty($clientData->action)) continue;
             $actionData = (object)$clientData->action;
             $completionDate = $actionData->completion;
             if ($now < $completionDate) continue;
+            $ws->clearClientActionData($resourceId);
             switch ($actionData->command) {
                 default:
                     break;
@@ -221,7 +223,7 @@ class LoopService extends BaseService
                         case FileType::ID_PORTSCANNER:
                             $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             /** @var System $system */
-                            $response = $this->fileService->executePortscanner($file, $system);
+                            $gameClientResponse = $this->fileService->executePortscanner($file, $system);
                             break;
                         case FileType::ID_JACKHAMMER:
                             $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
@@ -229,64 +231,27 @@ class LoopService extends BaseService
                             $nodeId = $parameter->nodeId;
                             $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
                             /** @var Node $node */
-                            $response = $this->fileService->executeJackhammer($resourceId, $file, $system, $node);
+                            $gameClientResponse = $this->fileService->executeJackhammer($resourceId, $file, $system, $node);
                             break;
                         case FileType::ID_SIPHON:
                             $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
                             /** @var File $miner */
-                            $response = $this->fileService->executeSiphon($file, $miner);
+                            $gameClientResponse = $this->fileService->executeSiphon($file, $miner);
                             break;
                         case FileType::ID_MEDKIT:
-                            $response = $this->fileService->executeMedkit($file);
+                            $gameClientResponse = $this->fileService->executeMedkit($file);
                             break;
                         case FileType::ID_PROXIFIER:
-                            $response = $this->fileService->executeProxifier($file);
+                            $gameClientResponse = $this->fileService->executeProxifier($file);
                             break;
                     }
                     break;
                 case 'homerecall':
-                    $response = $this->systemService->homeRecallAction($resourceId);
+                    $gameClientResponse = $this->systemService->homeRecallAction($resourceId, false);
                     break;
             }
-            if ($response) {
-                $response['prompt'] = $ws->getUtilityService()->showPrompt($clientData);
-                $wsClient->send(json_encode($response));
-            }
-            $ws->setClientData($resourceId, 'action', []);
-            // check if we have to work on more commands
-            if (is_array($response) && array_key_exists('additionalCommands', $response)) {
-                foreach ($response['additionalCommands'] as $additionalCommandId => $additionalCommandData) {
-                    $additionalResponse = false;
-                    switch ($additionalCommandData['command']) {
-                        default:
-                            break;
-                        case 'map':
-                            $additionalResponse = $this->systemService->showAreaMap($resourceId);
-                            break;
-                        case 'flyto':
-                            $additionalResponse = [
-                                'command' => 'flytocoords',
-                                'content' => explode(',', $additionalCommandData['content'])
-                            ];
-                            break;
-                        case 'setopacity':
-                            $additionalResponse = [
-                                'command' => 'setbgopacity',
-                                'content' => $additionalCommandData['content']
-                            ];
-                            break;
-                        case 'getrandomgeocoords':
-                            $additionalResponse = [
-                                'command' => 'getrandomgeocoords',
-                                'content' => $additionalCommandData['content']
-                            ];
-                            break;
-                    }
-                    if (is_array($additionalResponse)) {
-                        $additionalResponse['silent'] = $additionalCommandData['silent'];
-                        $wsClient->send(json_encode($additionalResponse));
-                    }
-                }
+            if ($gameClientResponse) {
+                $gameClientResponse->send();
             }
         }
         /* now we check for milkruns that should expire */
@@ -310,25 +275,14 @@ class LoopService extends BaseService
                 }
             }
             if ($targetClient && $targetClientData) {
+                /** @noinspection PhpUndefinedFieldInspection */
+                $resourceId = $targetClient->resourceId;
                 /* send message */
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Your current milkrun has expired before you could complete it')
-                );
-                $response = [
-                    'command' => 'stopmilkrun',
-                    'hash' => $targetClientData->hash,
-                    'content' => 'default',
-                    'silent' => true
-                ];
-                $targetClient->send(json_encode($response));
-                $response = [
-                    'command' => 'showmessageprepend',
-                    'hash' => $targetClientData->hash,
-                    'content' => $message,
-                    'prompt' => $ws->getUtilityService()->showPrompt($targetClientData)
-                ];
-                $targetClient->send(json_encode($response));
+                $message = $this->translate('Your current milkrun has expired before you could complete it');
+                $response = new GameClientResponse($resourceId);
+                $response->setCommand(GameClientResponse::COMMAND_STOPMILKRUN)->setSilent(true);
+                $response->send();
+                $response->reset()->addMessage($message);
                 $profile = $expiringMilkrun->getProfile();
                 $profile->setFaileddMilkruns($profile->getFaileddMilkruns()+1);
                 $this->entityManager->flush($profile);
@@ -343,6 +297,7 @@ class LoopService extends BaseService
                     $expiringMilkrun->getSourceFaction(),
                     $expiringMilkrun->getTargetFaction()
                 );
+                $response->send();
             }
             else {
                 /* store notification */
@@ -397,17 +352,11 @@ class LoopService extends BaseService
             }
             if ($targetClient && $targetClientData) {
                 /* send message */
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Your current mission has expired before you could complete it')
-                );
-                $response = [
-                    'command' => 'showmessageprepend',
-                    'hash' => $targetClientData->hash,
-                    'content' => $message,
-                    'prompt' => $ws->getUtilityService()->showPrompt($targetClientData)
-                ];
-                $targetClient->send(json_encode($response));
+                $message = $this->translate('Your current mission has expired before you could complete it');
+                /** @noinspection PhpUndefinedFieldInspection */
+                $responseMission = new GameClientResponse($targetClient->resourceId);
+                $responseMission->addMessage($message);
+                $responseMission->send();
                 $profile = $expiringMission->getProfile();
                 $profile->setFailedMissions($profile->getFailedMissions()+1);
                 $this->entityManager->flush($profile);

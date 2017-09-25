@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Notification;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\NotificationRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
@@ -39,25 +40,21 @@ class NotificationService extends BaseService
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function showNotifications($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $unreadNotifications = $this->notificationRepo->findUnreadByProfile($profile);
         $view = new ViewModel();
         $view->setTemplate('netrunners/notification/list.phtml');
         $view->setVariable('notifications', $unreadNotifications);
-        $this->response = array(
-            'command' => 'showpanel',
-            'type' => 'default',
-            'content' => $this->viewRenderer->render($view),
-            'silent' => true
-        );
-        return $this->response;
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL)->setSilent(true);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -69,7 +66,7 @@ class NotificationService extends BaseService
     public function dismissNotification($resourceId, $entityId, $all = false)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         if ($all) {
             $notifications = $this->notificationRepo->findUnreadByProfile($profile);
@@ -86,7 +83,7 @@ class NotificationService extends BaseService
                 $this->entityManager->flush();
             }
         }
-        return true;
+        return false;
     }
 
 }

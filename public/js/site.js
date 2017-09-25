@@ -465,6 +465,7 @@
             switch (command) {
                 default:
                     console.log('=== unknown command received ===');
+                    console.log(e.data);
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
@@ -505,6 +506,10 @@
                 case 'cd':
                     md.append(data.message);
                     showprompt();
+                    break;
+                case 'closepanel':
+                    $('#panel-container').html('').hide();
+                    commandInput.focus();
                     break;
                 case 'flytocoords':
                     mymap.flyTo([data.content[0], data.content[1]], 15);
@@ -812,14 +817,29 @@
                     $.each(messageArray, function(i, messageData){
                         md.append(messageData);
                     });
-                    showprompt();
+                    if (!data.silent) showprompt();
+                    if (data.deadline) {
+                        $('.deadline-progress').show();
+                        $('.deadliner').attr('data-maxseconds', data.deadline).attr('data-seconds', 0).css('width', '100%');
+                        var deadlineTimer = setInterval(function(){
+                            var newSeconds = Number($('.deadliner').attr('data-seconds')) + 1;
+                            $('.deadliner').attr('data-seconds', newSeconds);
+                            var onePercent = 100 / $('.deadliner').attr('data-maxseconds');
+                            var remainingSeconds = Number($('.deadliner').attr('data-maxseconds')) - Number($('.deadliner').attr('data-seconds'));
+                            $('.deadliner').css('width', (remainingSeconds * onePercent) + '%');
+                            if (remainingSeconds === 0) {
+                                $('.deadline-progress').hide();
+                                clearInterval(deadlineTimer);
+                            }
+                        }, 1000);
+                    }
                     if (data.cleardeadline) {
                         $('.deadline-progress').hide();
                         clearInterval(deadlineTimer);
                     }
                     break;
                 case 'updateprompt':
-                    commandInput.val(data.message);
+                    commandInput.val(data.content);
                     break;
                 case 'showmessageprepend':
                     var lastPrompt = $('.output-line').last();
@@ -838,6 +858,7 @@
                     });
                     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
                     if (data.cleardeadline) {
+                        console.log('here');
                         $('.deadline-progress').hide();
                         clearInterval(deadlineTimer);
                     }

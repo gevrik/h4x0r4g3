@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\NodeType;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FactionRepository;
 use Netrunners\Repository\ProfileRepository;
 use Zend\Mvc\I18n\Translator;
@@ -51,117 +52,97 @@ class FactionService extends BaseService
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return array|bool|false|\Netrunners\Model\GameClientResponse
      */
     public function listFactions($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $messages = [];
-            $factions = $this->factionRepo->findAll();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-7s|%-6s</pre>',
-                $this->translate('NAME'),
-                $this->translate('MEMBERS'),
-                $this->translate('RATING')
-            );
-            foreach ($factions as $faction) {
-                /** @var Faction $faction */
-                $messages[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-%s">%-32s|%-7s|%-6s</pre>',
-                    ($this->user->getProfile()->getFaction() == $faction) ? 'newbie' : 'white',
-                    $faction->getName(),
-                    $this->profileRepo->countByFaction($faction),
-                    $this->getProfileFactionRating($this->user->getProfile(), $faction)
-                );
-            }
-            $this->response = [
-                'command' => 'showoutput',
-                'message' => $messages
-            ];
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $factions = $this->factionRepo->findAll();
+        $message = sprintf(
+            '%-32s|%-7s|%-6s',
+            $this->translate('NAME'),
+            $this->translate('MEMBERS'),
+            $this->translate('RATING')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        foreach ($factions as $faction) {
+            /** @var Faction $faction */
+            $message = sprintf(
+                '<span class="text-%s">%-32s|%-7s|%-6s</span>',
+                ($this->user->getProfile()->getFaction() == $faction) ? 'newbie' : 'white',
+                $faction->getName(),
+                $this->profileRepo->countByFaction($faction),
+                $this->getProfileFactionRating($this->user->getProfile(), $faction)
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        }
+        return $this->gameClientResponse->send();
     }
 
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     */
     public function joinFaction($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            // check if they are already in a faction
-            if (!$this->response && $profile->getFaction()) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You are already a member of a faction - you need to leave that faction before you can join another one')
-                    )
-                ];
-            }
-            $faction = NULL;
-            // check if they are in a recruitment node
-            if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_RECRUITMENT) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You must be in a recruitment node of the faction that you want to join')
-                    )
-                ];
-            }
-            // check if they are currently blocked from joining a faction
-            if (!$this->response && $profile->getFactionJoinBlockDate() > new \DateTime()) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You must wait until [%s] before you can join another faction - use "time" to get the current server time</pre>'),
-                        $profile->getFactionJoinBlockDate()->format('Y/m/d H:i:s')
-                    )
-                ];
-            }
-            if (!$this->response) {
-                $faction = $profile->getCurrentNode()->getSystem()->getFaction();
-                /** @var Faction $faction */
-            }
-            // check if the faction is joinable or invite-only
-            if (!$this->response && $faction && !$faction->getJoinable()) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('This faction is invite-only')
-                    )
-                ];
-            }
-            // check if it is open recruitment or if they need to write an application
-            if (!$this->response && $faction && !$faction->getOpenRecruitment()) {
-                // TODO need to write application to join faction
-            }
-            /* checks passed, we can join the faction */
-            if (!$this->response && $faction) {
-                $profile->setFaction($faction);
-                $this->entityManager->flush($profile);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You have joined [%s]</pre>'),
-                        $faction->getName()
-                    )
-                ];
-                // inform other players in node
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has joined [%s]</pre>'),
-                    $this->user->getUsername(),
-                    $faction->getName()
-                );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        // check if they are already in a faction
+        if ($profile->getFaction()) {
+            $message = $this->translate('You are already a member of a faction - you need to leave that faction before you can join another one');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $faction = NULL;
+        // check if they are in a recruitment node
+        if ($profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_RECRUITMENT) {
+            $message = $this->translate('You must be in a recruitment node of the faction that you want to join');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // check if they are currently blocked from joining a faction
+        if ($profile->getFactionJoinBlockDate() > new \DateTime()) {
+            $message = sprintf(
+                $this->translate('You must wait until [%s] before you can join another faction - use "time" to get the current server time'),
+                $profile->getFactionJoinBlockDate()->format('Y/m/d H:i:s')
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $faction = $profile->getCurrentNode()->getSystem()->getFaction();
+        /** @var Faction $faction */
+        // check if the faction is joinable or invite-only
+        if (!$faction->getJoinable()) {
+            $message = $this->translate('This faction is invite-only');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // check if it is open recruitment or if they need to write an application
+        if (!$faction->getOpenRecruitment()) {
+            // TODO need to write application to join faction
+        }
+        /* checks passed, we can join the faction */
+        $profile->setFaction($faction);
+        $this->entityManager->flush($profile);
+        $message = sprintf(
+            $this->translate('You have joined [%s]'),
+            $faction->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has joined [%s]'),
+            $this->user->getUsername(),
+            $faction->getName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     public function leaveFaction()

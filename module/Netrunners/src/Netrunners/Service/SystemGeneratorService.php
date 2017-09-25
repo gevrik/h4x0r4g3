@@ -16,7 +16,6 @@ use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Geocoord;
-use Netrunners\Entity\Mission;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Npc;

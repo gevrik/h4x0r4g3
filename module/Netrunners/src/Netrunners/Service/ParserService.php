@@ -13,7 +13,7 @@ namespace Netrunners\Service;
 use Application\Service\WebsocketService;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Feedback;
-use Netrunners\Entity\Profile;
+use Netrunners\Model\GameClientResponse;
 use Ratchet\ConnectionInterface;
 use Zend\Mvc\I18n\Translator;
 
@@ -273,18 +273,15 @@ class ParserService
      * @param bool $entityId
      * @param bool $jobs
      * @param bool $silent
-     * @return bool
+     * @return bool|GameClientResponse
      */
     public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false, $silent = false)
     {
         /** @noinspection PhpUndefinedFieldInspection */
         $resourceId = $from->resourceId;
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
-        $response = false;
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
         list($contentArray, $userCommand) = $this->prepareData($content);
         switch (strtolower($userCommand)) {
             default:
@@ -299,35 +296,27 @@ class ParserService
             case 'attack':
             case 'a':
             case 'kill':
-                $response = $this->combatService->attackCommand($resourceId, $contentArray);
-                break;
+                return $this->combatService->attackCommand($resourceId, $contentArray);
             case 'auctionclaim':
             case 'claim':
-                $response = $this->auctionService->claimAuction($resourceId, $contentArray);
-                break;
+                return $this->auctionService->claimAuction($resourceId, $contentArray);
             case 'auction':
             case 'auctionfile':
-                $response = $this->auctionService->auctionFile($resourceId, $contentArray);
-                break;
+                return $this->auctionService->auctionFile($resourceId, $contentArray);
             case 'auctions':
-                $response = $this->auctionService->listAuctions($resourceId);
-                break;
+                return $this->auctionService->listAuctions($resourceId);
             case 'auctionbid':
             case 'bid':
-                $response = $this->auctionService->bidOnAuction($resourceId, $contentArray);
-                break;
+                return $this->auctionService->bidOnAuction($resourceId, $contentArray);
             case 'auctionbids':
             case 'bids':
-                $response = $this->auctionService->showBids($resourceId);
-                break;
+                return $this->auctionService->showBids($resourceId);
             case 'auctionbuyout':
             case 'buyout':
-                $response = $this->auctionService->buyoutAuction($resourceId, $contentArray);
-                break;
+                return $this->auctionService->buyoutAuction($resourceId, $contentArray);
             case 'auctioncancel':
             case 'cancelauction':
-                $response = $this->auctionService->cancelAuction($resourceId, $contentArray);
-                break;
+                return $this->auctionService->cancelAuction($resourceId, $contentArray);
             case 'clear':
                 $response = array(
                     'command' => 'clear',
@@ -335,329 +324,244 @@ class ParserService
                 );
                 break;
             case self::CMD_ADDNODE:
-                $response = $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
-                break;
+                return $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
             case self::CMD_ADDCONNECTION:
-                $response = $this->connectionService->addConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->addConnection($resourceId, $contentArray);
             case 'addmanpage':
-                $response = $this->manpageService->addManpage($resourceId, $contentArray);
-                break;
+                return $this->manpageService->addManpage($resourceId, $contentArray);
             case 'bgopacity':
-                $response = $this->profileService->changeBackgroundOpacity($resourceId, $contentArray);
-                break;
+                return $this->profileService->changeBackgroundOpacity($resourceId, $contentArray);
             case 'cancel':
-                $response = $this->profileService->cancelCurrentAction($resourceId, true, true);
-                break;
+                return $this->profileService->cancelCurrentAction($resourceId, true, true);
             case 'cd':
-                $response = $this->connectionService->useConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->useConnection($resourceId, $contentArray);
             case 'close':
-                $response = $this->connectionService->closeConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->closeConnection($resourceId, $contentArray);
             case 'code':
-                $response = $this->codingService->enterCodeMode($resourceId);
-                break;
+                return $this->codingService->enterCodeMode($resourceId);
             case 'commands':
-                $response = $this->getWebsocketServer()->getUtilityService()->showCommands($resourceId);
-                break;
+                return $this->getWebsocketServer()->getUtilityService()->showCommands($resourceId);
             case 'connect':
-                $response = $this->nodeService->systemConnect($resourceId, $contentArray);
-                break;
+                return $this->nodeService->systemConnect($resourceId, $contentArray);
             case 'consider':
             case 'con':
-                $response = $this->npcInstanceService->considerNpc($resourceId, $contentArray);
-                break;
+                return $this->npcInstanceService->considerNpc($resourceId, $contentArray);
             case 'creategroup':
-                $response = $this->groupService->createGroup($resourceId, $contentArray);
-                break;
+                return $this->groupService->createGroup($resourceId, $contentArray);
+            case 'createpasskey':
+            case 'passkey':
+                return $this->fileService->createPasskeyCommand($resourceId);
             case 'shownotifications':
-                $response = $this->notificationService->showNotifications($resourceId);
-                break;
+                return $this->notificationService->showNotifications($resourceId);
             case 'decompile':
-                $response = $this->fileService->decompileFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->decompileFile($resourceId, $contentArray);
             case 'deposit':
-                $response = $this->profileService->depositCredits($resourceId, $contentArray);
-                break;
+                return $this->profileService->depositCredits($resourceId, $contentArray);
             case 'dismissnotification':
             case 'dn':
-                $this->notificationService->dismissNotification($resourceId, $entityId);
-                break;
+                return $this->notificationService->dismissNotification($resourceId, $entityId);
             case 'dismissallnotifications':
             case 'dan':
-                $this->notificationService->dismissNotification($resourceId, $entityId, true);
-                break;
+                return $this->notificationService->dismissNotification($resourceId, $entityId, true);
             case 'download':
             case 'dl':
-                $response = $this->fileService->downloadFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->downloadFile($resourceId, $contentArray);
             case 'editfile':
-                $response = $this->fileService->editFileDescription($resourceId, $contentArray);
-                break;
+                return $this->fileService->editFileDescription($resourceId, $contentArray);
             case 'editmanpage':
-                $response = $this->manpageService->editManpage($resourceId, $contentArray);
-                break;
+                return $this->manpageService->editManpage($resourceId, $contentArray);
             case 'editnode':
-                $response = $this->nodeService->editNodeDescription($resourceId);
-                break;
+                return $this->nodeService->editNodeDescription($resourceId);
             case 'entityname':
-                $response = $this->npcInstanceService->changeNpcName($resourceId, $contentArray);
-                break;
+                return $this->npcInstanceService->changeNpcName($resourceId, $contentArray);
             case 'equipment':
             case 'eq':
-                $response = $this->profileService->showEquipment($resourceId);
-                break;
+                return $this->profileService->showEquipment($resourceId);
             case 'eset':
-                $response = $this->npcInstanceService->esetCommand($resourceId, $contentArray);
-                break;
+                return $this->npcInstanceService->esetCommand($resourceId, $contentArray);
             case 'exe':
             case 'execute':
-                $response = $this->fileService->executeFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->executeFile($resourceId, $contentArray);
             case 'explore':
-                $response = $this->nodeService->exploreCommand($resourceId);
-                break;
+                return $this->nodeService->exploreCommand($resourceId);
             case 'factionchat':
             case 'fc':
-                $response = $this->chatService->factionChat($resourceId, $contentArray);
-                break;
+                return $this->chatService->factionChat($resourceId, $contentArray);
             case 'factionratings':
-                $response = $this->profileService->showFactionRatings($resourceId);
-                break;
+                return $this->profileService->showFactionRatings($resourceId);
             case 'factions':
-                $response = $this->factionService->listFactions($resourceId);
-                break;
+                return $this->factionService->listFactions($resourceId);
             case 'filecategories':
             case 'filecats':
-                $response = $this->fileService->showFileCategories();
-                break;
+                return $this->fileService->showFileCategories($resourceId);
             case 'filemods':
-                $response = $this->fileService->showFileMods();
-                break;
+                return $this->fileService->showFileMods($resourceId);
             case 'fn':
             case 'filename':
-                $response = $this->fileService->changeFileName($resourceId, $contentArray);
-                break;
+            return $this->fileService->changeFileName($resourceId, $contentArray);
             case 'filetypes':
-                $response = $this->fileService->showFileTypes();
-                break;
+                return $this->fileService->showFileTypes($resourceId);
             case 'gc':
-                $response = $this->chatService->globalChat($resourceId, $contentArray);
-                break;
-            case 'hangman':
-                $response = $this->hangmanService->startHangmanGame($resourceId);
-                break;
+                return $this->chatService->globalChat($resourceId, $contentArray);
             case 'hangmanletterclick':
-                $response = $this->hangmanService->letterClicked($resourceId, $contentArray);
-                break;
+                return $this->hangmanService->letterClicked($resourceId, $contentArray);
             case 'hangmansolution':
-                $response = $this->hangmanService->solutionAttempt($resourceId, $contentArray);
-                break;
+                return $this->hangmanService->solutionAttempt($resourceId, $contentArray);
             case 'help':
             case 'man':
-                $response = $this->manpageService->helpCommand($resourceId, $contentArray);
-                break;
+                return $this->manpageService->helpCommand($resourceId, $contentArray);
             case 'harvest':
-                $response = $this->fileService->harvestCommand($resourceId, $contentArray);
-                break;
+                return $this->fileService->harvestCommand($resourceId, $contentArray);
             case 'say':
-                $response = $this->chatService->sayChat($resourceId, $contentArray);
-                break;
+                return $this->chatService->sayChat($resourceId, $contentArray);
             case 'home':
             case 'homerecall':
-                $response = $this->systemService->homeRecall($resourceId);
-                break;
+                return $this->systemService->homeRecall($resourceId);
             case 'initarmor':
-                $response = $this->fileService->initArmorCommand($resourceId, $contentArray);
-                break;
+                return $this->fileService->initArmorCommand($resourceId, $contentArray);
             case 'i':
             case 'inv':
             case 'inventory':
-                $response = $this->profileService->showInventory($resourceId);
-                break;
+                return $this->profileService->showInventory($resourceId);
             case 'invitations':
-                $response = $this->profileService->showInvitations($resourceId);
-                break;
+                return $this->profileService->showInvitations($resourceId);
             case 'joinfaction':
-                $response = $this->factionService->joinFaction($resourceId);
-                break;
+                return $this->factionService->joinFaction($resourceId);
             case 'killprocess':
             case 'killp':
-                $response = $this->fileService->killProcess($resourceId, $contentArray);
-                break;
+                return $this->fileService->killProcess($resourceId, $contentArray);
             case 'jobs':
-                $response = $this->profileService->showJobs($resourceId, $jobs);
-                break;
+                return $this->profileService->showJobs($resourceId, $jobs);
             case 'listmanpages':
-                $response = $this->manpageService->listManpages($resourceId);
-                break;
+                return $this->manpageService->listManpages($resourceId);
+            case 'listpasskeys':
+            case 'passkeys':
+                return $this->fileService->listPasskeysCommand($resourceId);
             case 'logout':
-                $response = $this->profileService->logoutCommand($resourceId);
-                break;
+                return $this->profileService->logoutCommand($resourceId);
             case 'ls':
             case 'l':
             case 'look':
-                $response = $this->nodeService->showNodeInfo($resourceId);
-                break;
+                return $this->nodeService->showNodeInfoNew($resourceId, NULL, true);
             case 'mail':
-                $response = $this->mailMessageService->enterMailMode($resourceId);
-                break;
+                return $this->mailMessageService->enterMailMode($resourceId);
             case 'map':
-                if ($profile->getCurrentNode()->getSystem()->getProfile() !== $profile) {
-                    $response = $this->systemService->showAreaMap($resourceId);
-                }
-                else {
-                    $response = $this->systemService->showSystemMap($resourceId);
-                }
-                break;
+                return $this->systemService->updateMap($resourceId, $user->getProfile(), false);
+//                if ($profile->getCurrentNode()->getSystem()->getProfile() !== $profile) {
+//                    return $this->systemService->showAreaMap($resourceId);
+//                }
+//                else {
+//                    return $this->systemService->showSystemMap($resourceId);
+//                }
             case 'showmra':
             case 'showmilkrunaivatars':
-                $response = $this->milkrunAivatarService->showMilkrunAivatars($resourceId);
-                break;
+                return $this->milkrunAivatarService->showMilkrunAivatars($resourceId);
             case 'defaultmra':
-                $response = $this->milkrunAivatarService->setDefaultMrai($resourceId, $contentArray);
-                break;
+                return $this->milkrunAivatarService->setDefaultMrai($resourceId, $contentArray);
             case 'repairmra':
-                $response = $this->milkrunAivatarService->repairMrai($resourceId);
-                break;
+                return $this->milkrunAivatarService->repairMrai($resourceId);
             case 'upgrademra':
-                $response = $this->milkrunAivatarService->upgradeMra($resourceId, $contentArray);
-                break;
+                return $this->milkrunAivatarService->upgradeMra($resourceId, $contentArray);
             case 'missiondetails':
-                $response = $this->missionService->showMissionDetails($resourceId);
-                break;
+                return $this->missionService->showMissionDetails($resourceId);
             case 'modchat':
             case 'mc':
-                $response = $this->chatService->moderatorChat($resourceId, $contentArray);
-                break;
+                return $this->chatService->moderatorChat($resourceId, $contentArray);
             case 'mod':
             case 'modfile':
-                $response = $this->fileService->modFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->modFile($resourceId, $contentArray);
             case 'mods':
-                $response = $this->profileService->showFileModInstances($resourceId);
-                break;
+                return $this->profileService->showFileModInstances($resourceId);
             case 'motd':
-                $response = $this->getWebsocketServer()->getUtilityService()->showMotd($resourceId);
-                break;
+                return $this->getWebsocketServer()->getUtilityService()->showMotd($resourceId);
             case 'new':
             case 'newbie':
-                $response = $this->chatService->newbieChat($resourceId, $contentArray);
-                break;
+                return $this->chatService->newbieChat($resourceId, $contentArray);
             case 'ninfo':
-                $response = $this->nodeService->ninfoCommand($resourceId);
-                break;
+                return $this->nodeService->ninfoCommand($resourceId);
             case 'nodename':
-                $response = $this->nodeService->changeNodeName($resourceId, $contentArray);
-                break;
+                return $this->nodeService->changeNodeName($resourceId, $contentArray);
             case 'nodes':
-                $response = $this->nodeService->listNodes($resourceId);
-                break;
+                return $this->nodeService->listNodes($resourceId);
             case 'nodetype':
-                $response = $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
-                break;
+                return $this->nodeService->enterMode($resourceId, $userCommand, $contentArray);
             case 'nset':
-                $response = $this->nodeService->nset($resourceId, $contentArray);
-                break;
+                return $this->nodeService->nset($resourceId, $contentArray);
             case 'open':
-                $response = $this->connectionService->openConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->openConnection($resourceId, $contentArray);
             case 'options':
-                $response = $this->gameOptionService->optionsCommand($resourceId, $contentArray);
-                break;
+                return $this->gameOptionService->optionsCommand($resourceId, $contentArray);
             case 'recipes':
-                $response = $this->codingService->showRecipes($resourceId);
-                break;
+                return $this->codingService->showRecipes($resourceId);
             case 'removeconnection':
-                $response = $this->connectionService->removeConnection($resourceId, $contentArray);
-                break;
+            case 'rmconnection':
+                return $this->connectionService->removeConnection($resourceId, $contentArray);
             case 'removenode':
-                $response = $this->nodeService->removeNode($resourceId);
-                break;
+            case 'rmnode':
+                return $this->nodeService->removeNode($resourceId);
+            case 'removepasskey':
+            case 'rmpasskey':
+                return $this->fileService->removePasskeyCommand($resourceId, $contentArray);
             case 'research':
-                $response = $this->researchService->researchCommand($resourceId, $contentArray);
-                break;
+                return $this->researchService->researchCommand($resourceId, $contentArray);
             case 'showresearch':
-                $response = $this->researchService->showResearchers($resourceId);
-                break;
+                return $this->researchService->showResearchers($resourceId);
             case 'parts':
             case 'rm':
-                $response = $this->fileService->enterMode($resourceId, $userCommand, $contentArray);
-                break;
+                return $this->fileService->enterMode($resourceId, $userCommand, $contentArray);
             case 'requestmission':
             case 'mission':
-                $response = $this->missionService->enterMode($resourceId);
-                break;
+                return $this->missionService->enterMode($resourceId);
             case 'resources':
             case 'res':
-                $response = $this->profileService->showFilePartInstances($resourceId);
-                break;
+                return $this->profileService->showFilePartInstances($resourceId);
             case 'passwd':
             case 'changepassword':
-                $response = $this->profileService->changePassword($resourceId, $contentArray);
-                break;
+                return $this->profileService->changePassword($resourceId, $contentArray);
             case 'ps':
-                $response = $this->fileService->listProcesses($resourceId, $contentArray);
-                break;
+                return $this->fileService->listProcesses($resourceId, $contentArray);
             case self::CMD_REQUESTMILKRUN:
             case 'milkrun':
-                $response = $this->milkrunService->enterMilkrunMode($resourceId);
-                break;
+                return $this->milkrunService->enterMilkrunMode($resourceId);
             case 'milkrunclick':
-                $response = $this->milkrunService->clickTile($resourceId, $contentArray);
-                break;
+                return $this->milkrunService->clickTile($resourceId, $contentArray);
             case 'scan':
-                $response = $this->connectionService->scanConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->scanConnection($resourceId, $contentArray);
             case self::CMD_SCORE:
-                $response = $this->profileService->showScore($resourceId);
-                break;
+                return $this->profileService->showScore($resourceId);
             case 'secureconnection':
-                $response = $this->connectionService->secureConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->secureConnection($resourceId, $contentArray);
             case 'slay':
-                $response = $this->combatService->slayCommand($resourceId, $contentArray);
-                break;
+                return $this->combatService->slayCommand($resourceId, $contentArray);
             case 'unsecure':
             case 'unsecureconnection':
-                $response = $this->connectionService->unsecureConnection($resourceId, $contentArray);
-                break;
+                return $this->connectionService->unsecureConnection($resourceId, $contentArray);
             case 'update':
             case 'updatefile':
-                $response = $this->fileService->updateFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->updateFile($resourceId, $contentArray);
             case 'setemail':
-                $response = $this->profileService->setEmail($resourceId, $contentArray);
-                break;
+                return $this->profileService->setEmail($resourceId, $contentArray);
             case 'setlocale':
-                $response = $this->profileService->setProfileLocale($resourceId, $contentArray);
-                break;
+                return $this->profileService->setProfileLocale($resourceId, $contentArray);
             case 'skillpoints':
-                $response = $this->profileService->spendSkillPoints($resourceId, $contentArray);
-                break;
+                return $this->profileService->spendSkillPoints($resourceId, $contentArray);
             case 'skills':
-                $response = $this->profileService->showSkills($resourceId);
-                break;
+                return $this->profileService->showSkills($resourceId);
             case 'showbalance':
-                $response = $this->profileService->showBankBalance($resourceId);
-                break;
+                return $this->profileService->showBankBalance($resourceId);
             case 'showunreadmails':
-                $response = $this->mailMessageService->displayAmountUnreadMails($resourceId);
-                break;
+                return $this->mailMessageService->displayAmountUnreadMails($resourceId);
             case 'sneak':
             case 'stealth':
-                $response = $this->profileService->startStealthing($resourceId);
-                break;
+                return $this->profileService->startStealthing($resourceId);
             case 'stat':
-                $response = $this->fileService->statFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->statFile($resourceId, $contentArray);
             case 'survey':
-                $response = $this->nodeService->surveyNode($resourceId);
-                break;
+                return $this->nodeService->surveyNode($resourceId);
             case 'system':
-                $response = $this->systemService->showSystemStats($resourceId);
-                break;
+                return $this->systemService->showSystemStats($resourceId);
+            case 'tell':
+                return $this->chatService->tellChat($resourceId, $contentArray);
             case 'time':
             case 'date':
                 $now = new \DateTime();
@@ -670,96 +574,70 @@ class ParserService
                 );
                 break;
             case 'touch':
-                $response = $this->fileService->touchFile($resourceId, $contentArray);
-                break;
+                return $this->fileService->touchFile($resourceId, $contentArray);
             case 'typo':
-                $response = $this->profileService->openSubmitFeedbackPanel($resourceId);
-                break;
+                return $this->profileService->openSubmitFeedbackPanel($resourceId);
             case 'idea':
-                $response = $this->profileService->openSubmitFeedbackPanel($resourceId, Feedback::TYPE_IDEA_ID);
-                break;
+                return $this->profileService->openSubmitFeedbackPanel($resourceId, Feedback::TYPE_IDEA_ID);
             case 'bug':
-                $response = $this->profileService->openSubmitFeedbackPanel($resourceId, Feedback::TYPE_BUG_ID);
-                break;
+                return $this->profileService->openSubmitFeedbackPanel($resourceId, Feedback::TYPE_BUG_ID);
             case 'unload':
             case 'ul':
-                $response = $this->fileService->unloadFile($resourceId, $contentArray);
-                break;
+            case 'upload':
+                return $this->fileService->unloadFile($resourceId, $contentArray);
             case 'updatesystemcoords':
-                $response = $this->systemService->changeGeocoords($resourceId, $contentArray);
-                break;
+                return $this->systemService->changeGeocoords($resourceId, $contentArray);
             case 'upgradenode':
-                $response = $this->nodeService->enterMode($resourceId, $userCommand);
-                break;
+                return $this->nodeService->enterMode($resourceId, $userCommand);
             case 'use':
-                $response = $this->fileService->useCommand($resourceId, $contentArray);
-                break;
+                return $this->fileService->useCommand($resourceId, $contentArray);
             case 'visible':
             case 'vis':
-                $response = $this->profileService->stopStealthing($resourceId);
-                break;
+                return $this->profileService->stopStealthing($resourceId);
             case 'withdraw':
-                $response = $this->profileService->withdrawCredits($resourceId, $contentArray);
-                break;
+                return $this->profileService->withdrawCredits($resourceId, $contentArray);
             /** ADMIN STUFF */
             case 'banip':
-                $response = $this->adminService->banIp($resourceId, $contentArray);
-                break;
+                return $this->adminService->banIp($resourceId, $contentArray);
             case 'unbanip':
-                $response = $this->adminService->unbanIp($resourceId, $contentArray);
-                break;
+                return $this->adminService->unbanIp($resourceId, $contentArray);
             case 'banuser':
-                $response = $this->adminService->banUser($resourceId, $contentArray);
-                break;
+                return $this->adminService->banUser($resourceId, $contentArray);
             case 'unbanuser':
-                $response = $this->adminService->unbanUser($resourceId, $contentArray);
-                break;
+                return $this->adminService->unbanUser($resourceId, $contentArray);
             case 'clients':
             case 'showclients':
-                $response = $this->adminService->adminShowClients($resourceId);
-                break;
+                return $this->adminService->adminShowClients($resourceId);
             case 'giveinvitation':
-                $response = $this->adminService->giveInvitation($resourceId, $contentArray);
-                break;
+                return $this->adminService->giveInvitation($resourceId, $contentArray);
             case 'goto':
-                $response = $this->adminService->gotoNodeCommand($resourceId, $contentArray);
-                break;
+                return $this->adminService->gotoNodeCommand($resourceId, $contentArray);
             case 'grantrole':
-                $response = $this->adminService->grantRoleCommand($resourceId, $contentArray);
-                break;
+                return $this->adminService->grantRoleCommand($resourceId, $contentArray);
             case 'removerole':
-                $response = $this->adminService->removeRoleCommand($resourceId, $contentArray);
-                break;
+                return $this->adminService->removeRoleCommand($resourceId, $contentArray);
             case 'kickclient':
-                $response = $this->adminService->kickClient($resourceId, $contentArray);
-                break;
+                return $this->adminService->kickClient($resourceId, $contentArray);
             case 'nlist':
-                $response = $this->adminService->nListCommand($resourceId, $contentArray);
-                break;
+                return $this->adminService->nListCommand($resourceId, $contentArray);
             case 'setsnippets':
-                $response = $this->adminService->adminSetSnippets($resourceId, $contentArray);
-                break;
+                return $this->adminService->adminSetSnippets($resourceId, $contentArray);
             case 'setcredits':
-                $response = $this->adminService->adminSetCredits($resourceId, $contentArray);
-                break;
+                return $this->adminService->adminSetCredits($resourceId, $contentArray);
             case 'syslist':
-                $response = $this->adminService->sysListCommand($resourceId);
-                break;
+                return $this->adminService->sysListCommand($resourceId);
             case 'toggleadminmode':
-                $response = $this->adminService->adminToggleAdminMode($resourceId);
-                break;
+                return $this->adminService->adminToggleAdminMode($resourceId);
             case 'showusers':
-                $response = $this->adminService->adminShowUsers($resourceId);
-                break;
+                return $this->adminService->adminShowUsers($resourceId);
             case 'cybermap':
-                $response = $this->adminService->showCyberspaceMap($resourceId);
-                break;
+                return $this->adminService->showCyberspaceMap($resourceId);
             case 'setmotd':
-                $response = $this->adminService->adminSetMotd($resourceId, $contentArray);
-                break;
+                return $this->adminService->adminSetMotd($resourceId, $contentArray);
         }
         if (!is_array($response)) {
             if (!$silent) {
+                var_dump($response);
                 $response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
@@ -791,6 +669,9 @@ class ParserService
                             'content' => explode(',', $additionalCommandData['content'])
                         ];
                         break;
+                    case 'ls':
+                        $additionalResponse = $this->nodeService->showNodeInfo($resourceId);
+                        break;
                     case 'setopacity':
                         $additionalResponse = [
                             'command' => 'setbgopacity',
@@ -800,6 +681,12 @@ class ParserService
                     case 'getrandomgeocoords':
                         $additionalResponse = [
                             'command' => 'getrandomgeocoords',
+                            'content' => $additionalCommandData['content']
+                        ];
+                        break;
+                    case 'closepanel':
+                        $additionalResponse = [
+                            'command' => 'closepanel',
                             'content' => $additionalCommandData['content']
                         ];
                         break;
@@ -892,7 +779,7 @@ class ParserService
     /**
      * @param ConnectionInterface $from
      * @param string $content
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function parseConfirmInput(ConnectionInterface $from, $content = '')
     {
@@ -900,9 +787,9 @@ class ParserService
         $resourceId = $from->resourceId;
         $clientData = $this->getWebsocketServer()->getClientData($resourceId);
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
+        if (!$user) return false;
         $confirmData = (object)$clientData->confirm;
-        if (!isset($confirmData->command)) return true;
+        if (!isset($confirmData->command)) return false;
         $response = false;
         if ($content == 'yes' || $content == 'y' || $content == 'confirm') {
             switch ($confirmData->command) {
@@ -929,22 +816,15 @@ class ParserService
             }
         }
         $this->getWebsocketServer()->setConfirm($resourceId, '');
-        if (!is_array($response)) {
-            $response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                    $this->translator->translate('You cancel your action')
-                ),
-                'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData),
-                'exitconfirmmode' => true
-            ];
+        if (!$response) {
+            $response = new GameClientResponse($resourceId);
+            $response->addMessage($this->translator->translate('You cancel your action'), GameClientResponse::CLASS_WHITE);
+            $response->addOption(GameClientResponse::OPT_EXITCONFIRMMODE, true);
         }
         else {
-            $response['exitconfirmmode'] = true;
-            $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
+            $response->addOption(GameClientResponse::OPT_EXITCONFIRMMODE, true);
         }
-        return $response;
+        return $response->send();
     }
 
     /**

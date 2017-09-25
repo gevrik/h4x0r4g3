@@ -33,6 +33,8 @@ class FileCategory
     const ID_STEALTH = 12;
     const ID_SPAWNER = 13;
     const ID_COMBAT = 14;
+    const ID_PASSKEY = 15;
+    const ID_TEXT = 16;
 
     /**
      * @ORM\Id
@@ -53,6 +55,12 @@ class FileCategory
      * @var string
      */
     protected $description;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $researchable;
 
 
     /**
@@ -106,6 +114,24 @@ class FileCategory
     public function setDescription($description)
     {
         $this->description = $description;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getResearchable()
+    {
+        return $this->researchable;
+    }
+
+    /**
+     * @param int $researchable
+     * @return FileCategory
+     */
+    public function setResearchable($researchable)
+    {
+        $this->researchable = $researchable;
         return $this;
     }
 

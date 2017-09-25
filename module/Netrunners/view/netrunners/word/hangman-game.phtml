@@ -1,25 +1,33 @@
-<div class="row text-center">
-    <div class="jumbotron"><h1><?php echo $this->hangman->known; ?></h1></div>
-    <div class="well-sm"><?php echo $this->hangman->attempts; ?> letters left</div>
-</div>
-<div class="row text-center">
-    <?php foreach (range('a', 'z') as $letter) : ?>
-        <div class="col-md-1">
-            <?php if (array_key_exists($letter, $this->hangman->letters)) : ?>
-                <?php if ($this->hangman->letters[$letter] === true) : ?>
-                    <div class="btn btn-success btn-hangman-letter" data-letter="<?php echo $letter; ?>"><?php echo strtoupper($letter); ?></div>
-                <?php else : ?>
-                    <div class="btn btn-warning btn-hangman-letter" data-letter="<?php echo $letter; ?>"><?php echo strtoupper($letter); ?></div>
-                <?php endif; ?>
-            <?php else : ?>
-                <div class="btn btn-default btn-hangman-letter" data-letter="<?php echo $letter; ?>"><?php echo strtoupper($letter); ?></div>
-            <?php endif; ?>
-        </div>
-    <?php endforeach; ?>
-    <div class="col-md-8">
-        <input id="hangman-solution" class="hangman-solution" type="text" name="hangman-solution" value="" placeholder="solution" />
+<div class="panel panel-default draggable hangman-panel">
+    <div class="panel-heading">
+        <button id="btn-close-hangman" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate("FIND THE PASSWORD"); ?></h3>
     </div>
-    <div class="col-md-2">
-        <div id="btn-hangman-solve" class="btn btn-primary btn-sm">solve</div>
+    <div class="panel-body" style="padding: 0;">
+        <div class="row-fluid text-center">
+            <div class="jumbotron"><h1><?php echo $this->hangman->known; ?></h1></div>
+            <div class="well-sm"><?php echo $this->hangman->attempts; ?> guesses left</div>
+        </div>
+        <div class="row-fluid text-center">
+            <?php foreach (range('a', 'z') as $letter) : ?>
+                <div class="col-md-1">
+                    <?php if (array_key_exists($letter, $this->hangman->letters)) : ?>
+                        <?php if ($this->hangman->letters[$letter] === true) : ?>
+                            <div class="btn btn-success btn-hangman-letter" data-letter="<?php echo $letter; ?>"><?php echo strtoupper($letter); ?></div>
+                        <?php else : ?>
+                            <div class="btn btn-warning btn-hangman-letter" data-letter="<?php echo $letter; ?>"><?php echo strtoupper($letter); ?></div>
+                        <?php endif; ?>
+                    <?php else : ?>
+                        <div class="btn btn-default btn-hangman-letter" data-letter="<?php echo $letter; ?>"><?php echo strtoupper($letter); ?></div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+            <div class="col-md-8">
+                <input id="hangman-solution" class="hangman-solution" type="text" name="hangman-solution" value="" placeholder="solution" />
+            </div>
+            <div class="col-md-2">
+                <div id="btn-hangman-solve" class="btn btn-primary btn-sm">solve</div>
+            </div>
+        </div>
     </div>
 </div>

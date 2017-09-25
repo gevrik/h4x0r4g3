@@ -16,6 +16,7 @@ use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\AuctionRepository;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
@@ -23,7 +24,6 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
-use Ratchet\ConnectionInterface;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -108,295 +108,253 @@ class NodeService extends BaseService
      * @param $resourceId
      * @param $command
      * @param array $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function enterMode($resourceId, $command, $contentArray = [])
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
-            switch ($command) {
-                default:
-                    break;
-                case 'addnode':
-                    $this->addnodeChecks();
-                    if (!$this->response) {
-                        $this->response = [
-                            'command' => 'enterconfirmmode',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">Are you sure that you want to add a node - please confirm this action:</pre>')
-                            )
-                        ];
-                    }
-                    break;
-                case 'upgradenode':
-                    $node = $this->upgradeNodeChecks();
-                    $nodeType = $node->getNodeType();
-                    $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
-                    if (!$this->response) {
-                        $this->response = [
-                            'command' => 'enterconfirmmode',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need %s credits to upgrade this node - please confirm this action:</pre>'),
-                                $upgradeCost
-                            )
-                        ];
-                    }
-                    break;
-                case 'nodetype':
-                    $nodeType = $this->changeNodeTypeChecks($contentArray);
-                    if (!$this->response) {
-                        $currentNode = $profile->getCurrentNode();
-                        if ($currentNode->getLevel() > 1) {
-                            $this->response = [
-                                'command' => 'enterconfirmmode',
-                                'message' => sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need [%s] credits to change the node type - <span class="text-danger">the current node [%s] will be reset to level 1</span></pre>'),
-                                    $nodeType->getCost(),
-                                    $currentNode->getNodeType()->getName()
-                                )
-                            ];
-                        }
-                        else {
-                            $this->response = [
-                                'command' => 'enterconfirmmode',
-                                'message' => sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">You need [%s] credits to change the node type - the current node type is [%s]</span></pre>'),
-                                    $nodeType->getCost(),
-                                    $currentNode->getNodeType()->getName()
-                                )
-                            ];
-                        }
-                    }
-                    break;
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
+        switch ($command) {
+            default:
+                break;
+            case 'addnode':
+                $checkResult = $this->addnodeChecks();
+                if ($checkResult) {
+                    var_dump($checkResult);
+                    return $this->gameClientResponse->addMessage($checkResult)->send();
+                }
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                $message = $this->translate('Are you sure that you want to add a node - please confirm this action:');
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+            case 'upgradenode':
+                $checkResult = $this->upgradeNodeChecks();
+                if (!$checkResult instanceof Node) {
+                    return $this->gameClientResponse->addMessage($checkResult)->send();
+                }
+                $nodeType = $checkResult->getNodeType();
+                $upgradeCost = $nodeType->getCost() * pow($checkResult->getLevel(), $checkResult->getLevel() + 1);
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                $message = sprintf(
+                    $this->translate('You need %s credits to upgrade this node - please confirm this action:'),
+                    $upgradeCost
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+            case 'nodetype':
+                $checkResult = $this->changeNodeTypeChecks($contentArray);
+                if (!$checkResult instanceof NodeType) {
+                    if ($checkResult instanceof GameClientResponse) {
+                        return $checkResult->send();
+                    }
+                    return $this->gameClientResponse->addMessage($checkResult)->send();
+                }
+                $currentNode = $profile->getCurrentNode();
+                if ($currentNode->getLevel() > 1) {
+                    $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                    $message = sprintf(
+                        $this->translate('You need [%s] credits to change the node type - <span class="text-danger">the current node [%s] will be reset to level 1</span>'),
+                        $checkResult->getCost(),
+                        $currentNode->getNodeType()->getName()
+                    );
+                    $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                }
+                else {
+                    $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                    $message = sprintf(
+                        $this->translate('You need [%s] credits to change the node type - the current node type is [%s]'),
+                        $checkResult->getCost(),
+                        $currentNode->getNodeType()->getName()
+                    );
+                    $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                }
+                break;
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function upgradeNode($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        $node = false;
-        if (!$this->response) {
-            $node = $this->upgradeNodeChecks();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        if (!$this->response && $node) {
-            $nodeType = $node->getNodeType();
-            $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
-            $profile->setCredits($profile->getCredits() - $upgradeCost);
-            $newLevel = $node->getLevel() + 1;
-            $node->setLevel($newLevel);
-            // upgrade all connections too
-            $connections = $this->connectionRepo->findBySourceNode($node);
-            foreach ($connections as $connection) {
-                /** @var Connection $connection */
-                $connection->setLevel($newLevel);
-            }
-            $this->entityManager->flush();
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have upgraded [%s] to level [%s]</pre>'),
-                $node->getName(),
-                $node->getLevel()
-            );
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => $message
-            ];
-            // TODO update npc that have this home as home node
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has upgraded the node to level [%s]</pre>'),
-                $this->user->getUsername(),
-                $node->getLevel()
-            );
-            $this->messageEveryoneInNode($node, $message, $profile, $profile->getId());
+        $checkResult = $this->upgradeNodeChecks();
+        if (!$checkResult instanceof Node) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
-        return $this->response;
+        $nodeType = $checkResult->getNodeType();
+        $upgradeCost = $nodeType->getCost() * pow($checkResult->getLevel(), $checkResult->getLevel() + 1);
+        $profile->setCredits($profile->getCredits() - $upgradeCost);
+        $newLevel = $checkResult->getLevel() + 1;
+        $checkResult->setLevel($newLevel);
+        // upgrade all connections too
+        $connections = $this->connectionRepo->findBySourceNode($checkResult);
+        foreach ($connections as $connection) {
+            /** @var Connection $connection */
+            $connection->setLevel($newLevel);
+        }
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You have upgraded [%s] to level [%s]'),
+            $checkResult->getName(),
+            $checkResult->getLevel()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // TODO update npc that have this home as home node
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has upgraded the node to level [%s]'),
+            $this->user->getUsername(),
+            $checkResult->getLevel()
+        );
+        $this->messageEveryoneInNodeNew($checkResult, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @return Node|NULL
+     * @return Node|NULL|string
      */
     private function upgradeNodeChecks()
     {
         $profile = $this->user->getProfile();
         $node = $profile->getCurrentNode();
-        if (!$this->response && $node->getSystem()->getProfile() !== $profile) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            ];
+        if ($node->getSystem()->getProfile() !== $profile) {
+            return $this->translate('Permission denied');
         }
-        if (!$this->response && $node->getLevel() >= self::MAX_NODE_LEVEL) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This node is already at max level')
-                )
-            ];
+        if ($node->getLevel() >= self::MAX_NODE_LEVEL) {
+            return $this->translate('This node is already at max level');
         }
         $nodeType = $node->getNodeType();
         $upgradeCost = $nodeType->getCost() * pow($node->getLevel(), $node->getLevel() + 1);
-        if (!$this->response) {
-            if ($upgradeCost > $profile->getCredits()) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to upgrade this node</pre>'),
-                        $upgradeCost
-                    )
-                ];
-            }
+        if ($upgradeCost > $profile->getCredits()) {
+            return sprintf(
+                $this->translate('You need %s credits to upgrade this node'),
+                $upgradeCost
+            );
         }
         return $node;
     }
 
-
+    /**
+     * @return bool|string
+     */
     private function addnodeChecks()
     {
         $profile = $this->user->getProfile();
         $node = $profile->getCurrentNode();
-        if (!$this->response && $node->getSystem()->getProfile() !== $profile) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            ];
+        if ($node->getSystem()->getProfile() !== $profile) {
+            return $this->translate('Permission denied');
         }
         // check if they have enough credits
-        if (!$this->response && $profile->getCredits() < self::RAW_NODE_COST) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>'),
-                    self::RAW_NODE_COST
-                )
+        if ($profile->getCredits() < self::RAW_NODE_COST) {
+            return sprintf(
+                $this->translate('You need %s credits to add a node to the system'),
+                self::RAW_NODE_COST
             );
         }
         // check if the system has reached its max size
         $currentSystem = $node->getSystem();
         $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
-        if (!$this->response && $nodeamount >= $currentSystem->getMaxSize()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('System has reached its maximum size')
-                )
-            );
+        if ($nodeamount >= $currentSystem->getMaxSize()) {
+            return $this->translate('System has reached its maximum size');
         }
         // check if we are in a home node, you can't add nodes to a home node
-        if (!$this->response && $node->getNodeType()->getId() == NodeType::ID_HOME) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You can not add nodes to a home node')
-                )
-            );
+        if ($node->getNodeType()->getId() == NodeType::ID_HOME) {
+            return $this->translate('You can not add nodes to a home node');
         }
         // check if there are enough cpus to support the new node
-        if (!$this->response) {
-            $cpus = $this->nodeRepo->findBySystemAndType($currentSystem, NodeType::ID_CPU);
-            $amountCpus = count($cpus);
-            $cpuRating = 0;
-            foreach ($cpus as $cpu) {
-                /** @var Node $cpu */
-                $cpuRating += $cpu->getLevel();
-            }
-            $maxNodes = $cpuRating * self::MAX_NODES_MULTIPLIER;
-            $amountNodes = $this->nodeRepo->countBySystem($currentSystem) - $amountCpus;
-            if ($amountNodes >= $maxNodes) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You do not have enough CPU rating to add another node to this system - upgrade CPU nodes or add new CPU nodes')
-                    )
-                );
-            }
+        $cpus = $this->nodeRepo->findBySystemAndType($currentSystem, NodeType::ID_CPU);
+        $amountCpus = count($cpus);
+        $cpuRating = 0;
+        foreach ($cpus as $cpu) {
+            /** @var Node $cpu */
+            $cpuRating += $cpu->getLevel();
         }
+        $maxNodes = $cpuRating * self::MAX_NODES_MULTIPLIER;
+        $amountNodes = $this->nodeRepo->countBySystem($currentSystem) - $amountCpus;
+        if ($amountNodes >= $maxNodes) {
+            return $this->translate('You do not have enough CPU rating to add another node to this system - upgrade CPU nodes or add new CPU nodes');
+        }
+        return false;
     }
 
     /**
-     * Adds a new node to the current system.
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function addNode($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         // check if they are busy
-        $this->response = $this->isActionBlocked($resourceId);
-        $this->addnodeChecks();
-        /* checks passed, we can now add the node */
-        if (!$this->response) {
-            // take creds from user
-            $newCredits = $profile->getCredits() - self::RAW_NODE_COST;
-            $profile->setCredits($newCredits);
-            // create the new node
-            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
-            /** @var NodeType $nodeType */
-            $node = new Node();
-            $node->setCreated(new \DateTime());
-            $node->setLevel(1);
-            $node->setName($nodeType->getShortName());
-            $node->setSystem($currentNode->getSystem());
-            $node->setNodeType($nodeType);
-            $this->entityManager->persist($node);
-            $sourceConnection = new Connection();
-            $sourceConnection->setType(Connection::TYPE_NORMAL);
-            $sourceConnection->setLevel(1);
-            $sourceConnection->setCreated(new \DateTime());
-            $sourceConnection->setSourceNode($currentNode);
-            $sourceConnection->setTargetNode($node);
-            $sourceConnection->setIsOpen(false);
-            $this->entityManager->persist($sourceConnection);
-            $targetConnection = new Connection();
-            $targetConnection->setType(Connection::TYPE_NORMAL);
-            $targetConnection->setLevel(1);
-            $targetConnection->setCreated(new \DateTime());
-            $targetConnection->setSourceNode($node);
-            $targetConnection->setTargetNode($currentNode);
-            $targetConnection->setIsOpen(false);
-            $this->entityManager->persist($targetConnection);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have added a new node to the system for %s credits</pre>'),
-                    self::RAW_NODE_COST
-                )
-            );
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] added a new node to the system</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $checkResult = $this->addnodeChecks();
+        if ($checkResult) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
+        }
+        /* checks passed, we can now add the node */
+        // take creds from user
+        $newCredits = $profile->getCredits() - self::RAW_NODE_COST;
+        $profile->setCredits($newCredits);
+        // create the new node
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
+        /** @var NodeType $nodeType */
+        $node = new Node();
+        $node->setCreated(new \DateTime());
+        $node->setLevel(1);
+        $node->setName($nodeType->getShortName());
+        $node->setSystem($currentNode->getSystem());
+        $node->setNodeType($nodeType);
+        $this->entityManager->persist($node);
+        $sourceConnection = new Connection();
+        $sourceConnection->setType(Connection::TYPE_NORMAL);
+        $sourceConnection->setLevel(1);
+        $sourceConnection->setCreated(new \DateTime());
+        $sourceConnection->setSourceNode($currentNode);
+        $sourceConnection->setTargetNode($node);
+        $sourceConnection->setIsOpen(false);
+        $this->entityManager->persist($sourceConnection);
+        $targetConnection = new Connection();
+        $targetConnection->setType(Connection::TYPE_NORMAL);
+        $targetConnection->setLevel(1);
+        $targetConnection->setCreated(new \DateTime());
+        $targetConnection->setSourceNode($node);
+        $targetConnection->setTargetNode($currentNode);
+        $targetConnection->setIsOpen(false);
+        $this->entityManager->persist($targetConnection);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You have added a new node to the system for %s credits'),
+            self::RAW_NODE_COST
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] added a new node to the system'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -412,118 +370,92 @@ class NodeService extends BaseService
         $currentSystem = $currentNode->getSystem();
         $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
         $this->response = $this->isActionBlocked($resourceId);
-
+        // TODO finish this
         return $this->response;
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function exploreCommand($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response && $currentSystem->getId() != $this->getServerSetting(self::SETTING_WILDERNESS_SYSTEM_ID)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You must be in Wilderspace to explore')
-                )
-            );
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($currentSystem->getId() != $this->getServerSetting(self::SETTING_WILDERNESS_SYSTEM_ID)) {
+            $message = $this->translate('You must be in Wilderspace to explore');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if they can explore here - node might be claimed by another player
-        if (!$this->response && $currentNode->getProfile() && $currentNode->getProfile() != $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to explore in nodes that other users have claimed')
-                )
-            );
+        if ($currentNode->getProfile() && $currentNode->getProfile() != $profile) {
+            $message = $this->translate('Unable to explore in nodes that other users have claimed');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if they can explore - node might already be at max level (dead-end) - level 10 nodes in wilderspace are the homes of true AI
-        if (!$this->response && $currentNode->getLevel() >= 10) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to explore in max level nodes')
-                )
-            );
+        if ($currentNode->getLevel() >= 10) {
+            $message = $this->translate('Unable to explore in max level nodes');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* all checks passed, we can explore */
-        if (!$this->response) {
-            // exploration is difficult, uses advanced coding and advanced networking for its skill check
-            $advancedCoding = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
-            $advancedNetworking = $this->getSkillRating($profile, Skill::ID_ADVANCED_NETWORKING);
-            $chance = floor(($advancedCoding + $advancedNetworking) / 2);
-            // node level makes it harder
-            $chance -= ($currentNode->getLevel() * 10);
-            if (mt_rand(1, 100) > $chance) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You fail to find any hidden connections')
-                    )
-                );
-            }
-            else {
-                // player has found a hidden connection
-                $excludedNodeTypes = [NodeType::ID_CPU, NodeType::ID_HOME, NodeType::ID_IO, NodeType::ID_PUBLICIO, NodeType::ID_RECRUITMENT];
-                $exploredNodeType = $this->getRandomNodeType($excludedNodeTypes);
-                $exploredNode =  new Node();
-                $exploredNode->setSystem($currentSystem);
-                $exploredNode->setProfile(NULL);
-                $exploredNode->setCreated(new \DateTime());
-                $exploredNode->setDescription($exploredNodeType->getDescription());
-                $newLevel = (mt_rand(1, 100) > 90) ? $currentNode->getLevel() + 1 : $currentNode->getLevel();
-                $exploredNode->setLevel($newLevel);
-                $exploredNode->setName($exploredNodeType->getName());
-                $exploredNode->setNodeType($exploredNodeType);
-                $exploredNode->setNomob(false);
-                $exploredNode->setNopvp(false);
-                $this->entityManager->persist($exploredNode);
-                $sourceConnection = new Connection();
-                $sourceConnection->setType(Connection::TYPE_NORMAL);
-                $sourceConnection->setLevel($newLevel);
-                $sourceConnection->setCreated(new \DateTime());
-                $sourceConnection->setSourceNode($currentNode);
-                $sourceConnection->setTargetNode($exploredNode);
-                $sourceConnection->setIsOpen(false);
-                $this->entityManager->persist($sourceConnection);
-                $targetConnection = new Connection();
-                $targetConnection->setType(Connection::TYPE_NORMAL);
-                $targetConnection->setLevel(1);
-                $targetConnection->setCreated(new \DateTime());
-                $targetConnection->setSourceNode($exploredNode);
-                $targetConnection->setTargetNode($currentNode);
-                $targetConnection->setIsOpen(false);
-                $this->entityManager->persist($targetConnection);
-                $this->entityManager->flush();
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('You have found a hidden service')
-                    )
-                );
-                $this->addAdditionalCommand();
-            }
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is searching for a hidden service connection</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        // exploration is difficult, uses advanced coding and advanced networking for its skill check
+        $advancedCoding = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+        $advancedNetworking = $this->getSkillRating($profile, Skill::ID_ADVANCED_NETWORKING);
+        $chance = floor(($advancedCoding + $advancedNetworking) / 2);
+        // node level makes it harder
+        $chance -= ($currentNode->getLevel() * 10);
+        if (mt_rand(1, 100) > $chance) {
+            return $this->gameClientResponse->addMessage($this->translate('You fail to find any hidden connections'))->send(); // TODO make this take time
         }
-        return $this->response;
+        else {
+            // player has found a hidden connection
+            $excludedNodeTypes = [NodeType::ID_CPU, NodeType::ID_HOME, NodeType::ID_IO, NodeType::ID_PUBLICIO, NodeType::ID_RECRUITMENT];
+            $exploredNodeType = $this->getRandomNodeType($excludedNodeTypes);
+            $exploredNode =  new Node();
+            $exploredNode->setSystem($currentSystem);
+            $exploredNode->setProfile(NULL);
+            $exploredNode->setCreated(new \DateTime());
+            $exploredNode->setDescription($exploredNodeType->getDescription());
+            $newLevel = (mt_rand(1, 100) > 90) ? $currentNode->getLevel() + 1 : $currentNode->getLevel();
+            $exploredNode->setLevel($newLevel);
+            $exploredNode->setName($exploredNodeType->getName());
+            $exploredNode->setNodeType($exploredNodeType);
+            $exploredNode->setNomob(false);
+            $exploredNode->setNopvp(false);
+            $this->entityManager->persist($exploredNode);
+            $sourceConnection = new Connection();
+            $sourceConnection->setType(Connection::TYPE_NORMAL);
+            $sourceConnection->setLevel($newLevel);
+            $sourceConnection->setCreated(new \DateTime());
+            $sourceConnection->setSourceNode($currentNode);
+            $sourceConnection->setTargetNode($exploredNode);
+            $sourceConnection->setIsOpen(false);
+            $this->entityManager->persist($sourceConnection);
+            $targetConnection = new Connection();
+            $targetConnection->setType(Connection::TYPE_NORMAL);
+            $targetConnection->setLevel(1);
+            $targetConnection->setCreated(new \DateTime());
+            $targetConnection->setSourceNode($exploredNode);
+            $targetConnection->setTargetNode($currentNode);
+            $targetConnection->setIsOpen(false);
+            $this->entityManager->persist($targetConnection);
+            $this->entityManager->flush();
+            $this->gameClientResponse->addMessage($this->translate('You have found a hidden service'), GameClientResponse::CLASS_SUCCESS);
+            $this->updateMap($resourceId);
+        }
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is searching for a hidden service connection'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -542,9 +474,9 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function changeNodeName($resourceId, $contentArray)
     {
@@ -553,60 +485,52 @@ class NodeService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         /* node types can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
-        if (!$this->response && !$parameter) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a new name for the node (alpha-numeric-only, 32-chars-max)')
-                )
-            );
+        if (!$parameter) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('Please specify a new name for the node (alpha-numeric-only, 32-chars-max)'))
+                ->send();
         }
         // check if they can change the type
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if only alphanumeric
-        $this->stringChecker($parameter);
-        if (!$this->response) {
-            // turn spaces in name to underscores
-            $name = str_replace(' ', '_', $parameter);
-            $currentNode->setName($name);
-            $this->entityManager->flush($currentNode);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Node name changed to %s</pre>'),
-                    $name
-                )
-            );
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has changed the node name to [%s]</pre>'),
-                $this->user->getUsername(),
-                $name
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        $checkResult = $this->stringChecker($parameter);
+        if ($checkResult) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
-        return $this->response;
+        // turn spaces in name to underscores
+        $name = str_replace(' ', '_', $parameter);
+        $currentNode->setName($name);
+        $this->entityManager->flush($currentNode);
+        $message = sprintf(
+            $this->translate('Node name changed to %s'),
+            $name
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has changed the node name to [%s]</pre>'),
+            $this->user->getUsername(),
+            $name
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function changeNodeType($resourceId, $contentArray)
     {
@@ -614,37 +538,42 @@ class NodeService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId);
-        /* node types can be given by name or number, so we need to handle both */
-        $nodeType = $this->changeNodeTypeChecks($contentArray);
-        if (!$this->response) {
-            // TODO a lot more stuff needs to be done depending on the existing node-type
-            $currentCredits = $profile->getCredits();
-            $profile->setCredits($currentCredits - $nodeType->getCost());
-            $currentNode->setNodeType($nodeType);
-            $currentNode->setLevel(1);
-            $currentNode->setName($nodeType->getShortName());
-            $connections = $this->connectionRepo->findBySourceNode($currentNode);
-            foreach ($connections as $connection) {
-                /** @var Connection $connection */
-                $connection->setLevel(1);
-            }
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Node type changed to %s</pre>'),
-                    $nodeType->getName()
-                )
-            );
-            $this->addAdditionalCommand();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        /* node types can be given by name or number, so we need to handle both */
+        $checkResult = $this->changeNodeTypeChecks($contentArray);
+        if (!$checkResult instanceof NodeType) {
+            if ($checkResult instanceof GameClientResponse) {
+                return $checkResult->send();
+            }
+            return $this->gameClientResponse->addMessage($checkResult)->send();
+        }
+        // TODO a lot more stuff needs to be done depending on the existing node-type
+        $currentCredits = $profile->getCredits();
+        $profile->setCredits($currentCredits - $checkResult->getCost());
+        $currentNode->setNodeType($checkResult);
+        $currentNode->setLevel(1);
+        $currentNode->setName($checkResult->getShortName());
+        $connections = $this->connectionRepo->findBySourceNode($currentNode);
+        foreach ($connections as $connection) {
+            /** @var Connection $connection */
+            $connection->setLevel(1);
+        }
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('Node type changed to %s'),
+            $checkResult->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $contentArray
-     * @return NodeType
+     * @return NodeType|null|object|string
      */
     private function changeNodeTypeChecks($contentArray)
     {
@@ -653,37 +582,27 @@ class NodeService extends BaseService
         $currentSystem = $currentNode->getSystem();
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
-        if (!$this->response && !$parameter) {
-            $returnMessage = array();
+        if (!$parameter) {
+            $gameResponse = new GameClientResponse($profile->getCurrentResourceId());
             $nodeTypes = $this->entityManager->getRepository('Netrunners\Entity\NodeType')->findAll();
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('Please choose a node type:')
-            );
+            $returnMessage = $this->translate('Please choose a node type:');
+            $gameResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
             foreach ($nodeTypes as $nodeType) {
                 /** @var NodeType $nodeType */
                 if ($nodeType->getId() == NodeType::ID_RAW) continue;
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-2s|%-18s|%sc</pre>',
+                $returnMessage = sprintf(
+                    '%-2s|%-18s|%sc',
                     $nodeType->getId(),
                     $nodeType->getName(),
                     $nodeType->getCost()
                 );
+                $gameResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
             }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+            return $gameResponse;
         }
         // check if they can change the type
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->translate('Permission denied');
         }
         $searchByNumber = false;
         if (is_numeric($parameter)) {
@@ -697,88 +616,57 @@ class NodeService extends BaseService
                 'name' => $parameter
             ]);
         }
-        if (!$this->response && !$nodeType) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such node type')
-                )
-            );
+        if (!$nodeType) {
+            return $this->translate('No such node type');
         }
         // check a few combinations that are not valid
-        if (!$this->response && $nodeType->getId() == NodeType::ID_HOME) {
+        if ($nodeType->getId() == NodeType::ID_HOME) {
             if ($this->countTargetNodesOfType($currentNode, NodeType::ID_HOME) > 0) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('There is already a home node around this node')
-                    )
-                );
+                return $this->translate('There is already a home node around this node');
             }
         }
         // check if this is a market
-        if (!$this->response && $nodeType->getId() == NodeType::ID_MARKET) {
+        if ($nodeType->getId() == NodeType::ID_MARKET) {
             $auctionRepo = $this->entityManager->getRepository('Netrunners\Entity\Auction');
             /** @var AuctionRepository $auctionRepo */
             if ($auctionRepo->countByNode($currentNode) >= 1) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Active markets can not be changed yet')
-                    )
-                );
+                return $this->translate('Active markets can not be changed yet');
             }
         }
+        // check if this is an io-node
+        if ($nodeType->getId() == NodeType::ID_IO || $nodeType->getId() == NodeType::ID_PUBLICIO) {
+            return $this->translate('Unable to remove I/O nodes');
+        }
         // check if they have enough credits
-        if (!$this->response && $profile->getCredits() < $nodeType->getCost()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a node to the system</pre>'),
-                    $nodeType->getCost()
-                )
+        if ($profile->getCredits() < $nodeType->getCost()) {
+            return sprintf(
+                $this->translate('You need %s credits to add a node to the system'),
+                $nodeType->getCost()
             );
         }
         // check if it is a recruitment node but not a faction or group system
         if (
-            !$this->response &&
             $nodeType->getId() == NodeType::ID_RECRUITMENT &&
             (!$currentSystem->getGroup() || !$currentSystem->getFaction())
         )
         {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Recruitment nodes can only be created in group or faction systems')
-                )
-            );
+            return $this->translate('Recruitment nodes can only be created in group or faction systems');
         }
         // check if this is a cpu node and the last one...
         $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
         if (
-            !$this->response &&
             $currentNode->getNodeType()->getId() == NodeType::ID_CPU &&
             (int)$cpuCount < 2
         )
         {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove the last CPU node of this system')
-                )
-            );
+            return $this->translate('Unable to remove the last CPU node of this system');
         }
         return $nodeType;
     }
 
     /**
      * @param $resourceId
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function editNodeDescription($resourceId)
     {
@@ -786,79 +674,58 @@ class NodeService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId, true);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // only allow owner of system to add nodes
-        if (!$this->response && $profile !== $currentNode->getSystem()->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentNode->getSystem()->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* checks passed, we can now edit the node */
-        if (!$this->response) {
-            $view = new ViewModel();
-            $view->setTemplate('netrunners/node/edit-description.phtml');
-            $description = $currentNode->getDescription();
-            $processedDescription = '';
-            if ($description) {
-                $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
-            }
-            $view->setVariable('description', $processedDescription);
-            $view->setVariable('entityId', $currentNode->getId());
-            $this->response = array(
-                'command' => 'showpanel',
-                'type' => 'default',
-                'content' => $this->viewRenderer->render($view)
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is editing the node</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/node/edit-description.phtml');
+        $description = $currentNode->getDescription();
+        $processedDescription = '';
+        if ($description) {
+            $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
         }
-        return $this->response;
+        $view->setVariable('description', $processedDescription);
+        $view->setVariable('entityId', $currentNode->getId());
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is editing the node'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $content
-     * @param int $entityId
-     * @return bool|ConnectionInterface
+     * @param $entityId
+     * @return bool|GameClientResponse
      */
     public function saveNodeDescription($resourceId, $content, $entityId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $this->nodeRepo->find($entityId);
         // only allow owner of system to add nodes
         if ($profile !== $currentNode->getSystem()->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* checks passed, we can now edit the node */
-        if (!$this->response) {
-            $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,p,br']);
-            $currentNode->setDescription($content);
-            $this->entityManager->flush($currentNode);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('Node description saved')
-                )
-            );
-        }
-        return $this->response;
+        $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,p,br']);
+        $currentNode->setDescription($content);
+        $this->entityManager->flush($currentNode);
+        return $this->gameClientResponse
+            ->addMessage($this->translate('Node description saved'), GameClientResponse::CLASS_SUCCESS)
+            ->send();
     }
 
     /**
@@ -881,106 +748,83 @@ class NodeService extends BaseService
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function ninfoCommand($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        if (!$this->response && $currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied') // TODO make this hackable
-                )
-            );
+        if ($currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
-        if (!$this->response) {
-            $nodeData = $this->getNodeData($currentNode, true);
-            $response = [];
-            $response[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('NODE PROPERTIES:')
+        $nodeData = $this->getNodeData($currentNode, true);
+        $this->gameClientResponse->addMessage($this->translate('NODE PROPERTIES:'), GameClientResponse::CLASS_SYSMSG);
+        foreach ($nodeData as $label => $value) {
+            $response = sprintf(
+                '%-12s: <span class="text-%s">%s</span>',
+                $label,
+                ($value) ? 'success' : 'danger',
+                ($value) ? $this->translate('on') : $this->translate('off')
             );
-            foreach ($nodeData as $label => $value) {
-                $response[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-12s: <span class="text-%s">%s</span></pre>',
-                    $label,
-                    ($value) ? 'success' : 'danger',
-                    ($value) ? $this->translate('on') : $this->translate('off')
-                );
-            }
-            $this->response = [
-                'command' => 'showoutput',
-                'message' => $response
-            ];
+            $this->gameClientResponse->addMessage($response, GameClientResponse::CLASS_WHITE);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function nset($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $currentNode = $profile->getCurrentNode();
         $nodeType = $currentNode->getNodeType();
         $currentSystem = $currentNode->getSystem();
         list($contentArray, $nodeProperty) = $this->getNextParameter($contentArray, true, false, false, true);
         $propertyValue = $this->getNextParameter($contentArray, false, false, false, true);
-        if (!$this->response && $currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
+            $message = $this->translate('Permission denied');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        if (!$this->response && !$nodeProperty) {
-            $this->response = $this->listNodePropertiesByNodeType($nodeType->getId());
+        if (!$nodeProperty) {
+            $message = $this->listNodePropertiesByNodeType($nodeType->getId());
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         }
-        if (!$this->response && $nodeProperty && !$propertyValue) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify the property value (on/off)')
-                )
-            );
+        if ($nodeProperty && !$propertyValue) {
+            $message = $this->translate('Please specify the property value (on/off)');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        if (!$this->response && $nodeProperty && $propertyValue) {
-            // all set, we can set the property
-            $this->setNodeProperty($currentNode, $nodeProperty, $propertyValue);
-        }
-        return $this->response;
+        // all set, we can set the property
+        $message = $this->setNodeProperty($currentNode, $nodeProperty, $propertyValue);
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE)->send();
     }
 
     /**
-     * @param int $nodeTypeId
-     * @return array
+     * @param $nodeTypeId
+     * @return string
      */
     private function listNodePropertiesByNodeType($nodeTypeId)
     {
-        $response = [
-            'command' => 'showmessage',
-            'message' => sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white"><span class="text-sysmsg">%s</span> %s</pre>',
-                $this->translate('Possible properties for this node-type:'),
-                wordwrap(implode(' ', $this->getNodePropertiesByType($nodeTypeId)), 120)
-            )];
-        return $response;
+        return sprintf(
+            '<span class="text-sysmsg">%s</span> %s',
+            $this->translate('Possible properties for this node-type:'),
+            wordwrap(implode(' ', $this->getNodePropertiesByType($nodeTypeId)), 120)
+        );
     }
 
     /**
@@ -1011,208 +855,155 @@ class NodeService extends BaseService
      * @param Node $node
      * @param $property
      * @param $valueString
+     * @return string
      */
     private function setNodeProperty(Node $node, $property, $valueString)
     {
         $nodeType = $node->getNodeType();
         $possibleNodeProperties = $this->getNodePropertiesByType($nodeType->getId());
         if (!in_array($property, $possibleNodeProperties)) {
-            $this->response = $this->listNodePropertiesByNodeType($nodeType->getId());
+            return $this->listNodePropertiesByNodeType($nodeType->getId());
         }
-        if (!$this->response) {
-            switch ($valueString) {
-                default:
-                    $value = 0;
-                    $valueString = 'off';
-                    break;
-                case 'on':
-                    $value = 1;
-                    break;
-            }
-            $nodeData = $this->getNodeData($node);
-            $nodeData->$property = $value;
-            $node->setData(json_encode($nodeData));
-            $this->entityManager->flush($node);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] set to [%s]</pre>'),
-                    $property,
-                    $valueString
-                )
-            );
+        switch ($valueString) {
+            default:
+                $value = 0;
+                $valueString = 'off';
+                break;
+            case 'on':
+                $value = 1;
+                break;
         }
+        $nodeData = $this->getNodeData($node);
+        $nodeData->$property = $value;
+        $node->setData(json_encode($nodeData));
+        $this->entityManager->flush($node);
+        return sprintf(
+            $this->translate('[%s] set to [%s]'),
+            $property,
+            $valueString
+        );
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function removeNode($resourceId)
     {
-        // TODO needs a full rework - as a lot of stuff needs to happen on node removal
+        // TODO needs some work - as a lot of stuff needs to happen on node removal
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they are allowed to remove nodes
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if there are still connections to this node
         $connections = $this->connectionRepo->findBySourceNode($currentNode);
-        if (!$this->response && count($connections) > 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove node with more than one connection')
-                )
-            );
+        if (count($connections) > 1) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to remove node with more than one connection'))->send();
         }
         // check if there are still files in this node
         $fileCount = $this->fileRepo->countByNode($currentNode);
-        if (!$this->response && $fileCount > 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove node which still contains files')
-                )
-            );
+        if ($fileCount > 0) {
+            $message = $this->translate('Unable to remove node which still contains files');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if there are still npcs in this node
         $npcCount = $this->npcInstanceRepo->countByNode($currentNode);
-        if (!$this->response && $npcCount > 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove node which still contains entities')
-                )
-            );
+        if ($npcCount > 0) {
+            $message = $this->translate('Unable to remove node which still contains entities');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if there are still other profiles in this node
         $profileCount = $this->profileRepo->countByCurrentNode($currentNode);
-        if (!$this->response && $profileCount > 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove node which still contains other users')
-                )
-            );
+        if ($profileCount > 1) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to remove node which still contains other users'))->send();
         }
         // check if this is the home node of someone
         $homeProfiles = $this->profileRepo->findBy([
             'homeNode' => $currentNode
         ]);
-        if (!$this->response && count($homeProfiles) > 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove a node which is another user\'s home node')
-                )
-            );
+        if (count($homeProfiles) > 0) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to remove a node which is another user\'s home node'))->send();
         }
         // check if this is the home node of some npc
         $homeNpcs = $this->npcInstanceRepo->findBy([
             'homeNode' => $currentNode
         ]);
-        if (!$this->response && count($homeNpcs) > 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove a node which is still an entity\'s home node')
-                )
-            );
+        if (count($homeNpcs) > 0) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to remove a node which is still an entity\'s home node'))->send();
         }
         // check if this is a cpu node and the last one...
         $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
         if (
-            !$this->response &&
             $currentNode->getNodeType()->getId() == NodeType::ID_CPU &&
             (int)$cpuCount < 2
         )
         {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to remove the last CPU node of this system')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('Unable to remove the last CPU node of this system'))->send();
+        }
+        // check if this is an io-node
+        if ($currentNode->getNodeType()->getId() == NodeType::ID_IO || $currentNode->getNodeType()->getId() == NodeType::ID_PUBLICIO)
+        {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to remove I/O nodes'))->send();
         }
         // TODO sanity checks for storage/memory/etc - lots of things
         /* all checks passed, we can now remove the node */
-        if (!$this->response) {
-            $newCurrentNode = NULL;
-            $connection = array_shift($connections);
-            /** @var Connection $connection */
-            $newCurrentNode = $connection->getTargetNode();
-            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
-            /** @var Connection $targetConnection */
-            $this->entityManager->remove($targetConnection);
-            $this->entityManager->remove($connection);
-            $this->movePlayerToTargetNode($resourceId, $profile, NULL, $currentNode, $newCurrentNode);
-            $currentNodeName = $currentNode->getName();
-            $this->entityManager->remove($currentNode);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('The node has been removed')
-                )
-            );
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The adjacent node [%s] has been removed</pre>'),
-                $currentNodeName
-            );
-            $this->messageEveryoneInNode($newCurrentNode, $message, $profile, $profile->getId());
-        }
+        $newCurrentNode = NULL;
+        $connection = array_shift($connections);
+        /** @var Connection $connection */
+        $newCurrentNode = $connection->getTargetNode();
+        $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($newCurrentNode, $currentNode);
+        /** @var Connection $targetConnection */
+        $this->entityManager->remove($targetConnection);
+        $this->entityManager->remove($connection);
+        $this->movePlayerToTargetNodeNew($resourceId, $profile, NULL, $currentNode, $newCurrentNode);
+        $currentNodeName = $currentNode->getName();
+        $this->entityManager->remove($currentNode);
+        $this->entityManager->flush();
+        $message = $this->translate('The node has been removed');
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('The adjacent node [%s] has been removed'),
+            $currentNodeName
+        );
+        $this->messageEveryoneInNodeNew($newCurrentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         $this->connectionsChecked = [];
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function surveyNode($resourceId)
     {
         $this->initService($resourceId);
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            if (!$this->user) return true;
-            $profile = $this->user->getProfile();
-            $currentNode = $profile->getCurrentNode();
-            $returnMessage = array();
-            $returnMessage[] = $this->getSurveyText($currentNode);
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is looking around</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $returnMessage = $this->getSurveyText($currentNode);
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_DIRECTORY);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is looking around'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -1257,201 +1048,130 @@ class NodeService extends BaseService
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function listNodes($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId, true);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they can list nodes
-        if (
-            !$this->response &&
-            !$this->canAccess($profile, $currentSystem)
-        ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if (!$this->canAccess($profile, $currentSystem)) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
-        if (!$this->response) {
-            $returnMessage = array();
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%-20s|%-3s|%s</pre>',
-                $this->translate('ID'),
-                $this->translate('TYPE'),
-                $this->translate('LVL'),
-                $this->translate('NAME')
+        $returnMessage = sprintf(
+            '%-11s|%-20s|%-3s|%s',
+            $this->translate('ID'),
+            $this->translate('TYPE'),
+            $this->translate('LVL'),
+            $this->translate('NAME')
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
+        $nodes = $this->nodeRepo->findBySystem($currentSystem);
+        foreach ($nodes as $node) {
+            /** @var Node $node */
+            $returnMessage = sprintf(
+                '%-11s|%-20s|%-3s|%s',
+                $node->getId(),
+                $node->getNodeType()->getName(),
+                $node->getLevel(),
+                $node->getName()
             );
-            $nodes = $this->nodeRepo->findBySystem($currentSystem);
-            foreach ($nodes as $node) {
-                /** @var Node $node */
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%-20s|%-3s|%s</pre>',
-                    $node->getId(),
-                    $node->getNodeType()->getName(),
-                    $node->getLevel(),
-                    $node->getName()
-                );
-            }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function systemConnect($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they are in an io-node
-        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $currentNode->getNodeType()->getId() != NodeType::ID_IO) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You must be in an I/O node to connect to another system')
-                )
-            );
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $currentNode->getNodeType()->getId() != NodeType::ID_IO) {
+            return $this->gameClientResponse->addMessage($this->translate('You must be in an I/O node to connect to another system'))->send();
         }
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
-        if (!$this->response && !$parameter) {
-            $returnMessage = array();
+        if (!$parameter) {
             $publicIoNodes = $this->nodeRepo->findByType(NodeType::ID_PUBLICIO);
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-40s|%-12s|%-20s</pre>',
+            $returnMessage = sprintf(
+                '%-32s|%-40s|%-12s|%-20s',
                 $this->translate('SYSTEM'),
                 $this->translate('ADDRESS'),
                 $this->translate('ID'),
                 $this->translate('NAME')
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
             foreach ($publicIoNodes as $publicIoNode) {
                 /** @var Node $publicIoNode */
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-40s|%-12s|%-20s</pre>',
+                $returnMessage = sprintf(
+                    '%-32s|%-40s|%-12s|%-20s',
                     $publicIoNode->getSystem()->getName(),
                     $publicIoNode->getSystem()->getAddy(),
                     $publicIoNode->getId(),
                     $publicIoNode->getName()
                 );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
             }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+            return $this->gameClientResponse->send();
         }
-        if (!$this->response) {
-            $addy = $parameter;
-            // check if the target system exists
-            $targetSystem = $this->systemRepo->findByAddy($addy);
-            $targetNode = NULL;
-            if (!$this->response && !$targetSystem) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid system address')
-                    )
-                );
-            }
-            /** @var System $targetSystem */
-            if (!$this->response) {
-                // now check if the node id exists
-                $targetNodeId = $this->getNextParameter($contentArray, false, true);
-                if (!$targetNodeId) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Please specify the target node id')
-                        )
-                    );
-                }
-                if (!$this->response) {
-                    $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
-                    if (!$targetNode) {
-                        $this->response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                $this->translate('Invalid target node id')
-                            )
-                        );
-                    }
-                }
-            }
-            if (
-                !$this->response &&
-                $targetNode &&
-                ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO)
-            ) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid node id')
-                    )
-                );
-            }
-            if (
-                !$this->response &&
-                $targetNode->getNodeType()->getId() == NodeType::ID_IO &&
-                !$this->canAccess($profile, $targetSystem)
-            ) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid node id')
-                    )
-                );
-            }
-            if (
-                !$this->response &&
-                $targetNode &&
-                $targetNode == $currentNode
-            ) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You are already there')
-                    )
-                );
-            }
-            if (!$this->response && $targetNode) {
-                /** @var Node $targetNode */
-                $this->movePlayerToTargetNode(NULL, $profile, NULL, $currentNode, $targetNode);
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('You have connected to the target system')
-                    )
-                );
-                $this->addAdditionalCommand();
-                $this->addAdditionalCommand('flyto', $targetNode->getSystem()->getGeocoords(), true);
-            }
+        $addy = $parameter;
+        // check if the target system exists
+        $targetSystem = $this->systemRepo->findByAddy($addy);
+        $targetNode = NULL;
+        if (!$targetSystem) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid system address'))->send();
         }
-        return $this->response;
+        /** @var System $targetSystem */
+        // now check if the node id exists
+        $targetNodeId = $this->getNextParameter($contentArray, false, true);
+        if (!$targetNodeId) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify the target node id'))->send();
+        }
+        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+        if (!$targetNode) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid target node id'))->send();
+        }
+        if ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
+        }
+        if (
+            $targetNode->getNodeType()->getId() == NodeType::ID_IO &&
+            !$this->canAccess($profile, $targetSystem)
+        ) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
+        }
+        if ($targetNode == $currentNode) {
+            return $this->gameClientResponse->addMessage($this->translate('You are already there'))->send();
+        }
+        /** @var Node $targetNode */
+        $this->movePlayerToTargetNodeNew(NULL, $profile, NULL, $currentNode, $targetNode);
+        $this->gameClientResponse->addMessage($this->translate('You have connected to the target system'), GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        $flytoResponse = new GameClientResponse($resourceId);
+        $flytoResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
+        $flytoResponse->addOption(GameClientResponse::OPT_CONTENT, explode(',',$targetNode->getSystem()->getGeocoords()));
+        $flytoResponse->send();
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)->send();
+        return $this->showNodeInfoNew($resourceId, NULL, true);
     }
 
 }

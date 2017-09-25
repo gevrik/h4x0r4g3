@@ -14,7 +14,9 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Notification;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\WordRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -33,6 +35,12 @@ class CodebreakerService extends BaseService
     protected $connectionRepo;
 
     /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
+
+    /**
      * CodebreakerService constructor.
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
@@ -43,13 +51,14 @@ class CodebreakerService extends BaseService
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
         $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
     }
 
     /**
      * @param $resourceId
      * @param File $file
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function startCodebreaker($resourceId, File $file, $contentArray)
     {
@@ -58,153 +67,73 @@ class CodebreakerService extends BaseService
         if (!$this->user) return true;
         if (!$file) return true;
         $profile = $this->user->getProfile();
-        $connection = false;
         list($contentArray, $connectionParameter) = $this->getNextParameter($contentArray);
-        if (!$this->response && !$connectionParameter) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a connection by name or number')
-                )
-            );
+        if (!$connectionParameter) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a connection by name or number'))->send();
         }
-        if (!$this->response) {
-            $connection = $this->findConnectionByNameOrNumber($connectionParameter, $profile->getCurrentNode());
-            if (!$connection) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Unable to find connection')
-                    )
-                );
+        $connection = $this->findConnectionByNameOrNumber($connectionParameter, $profile->getCurrentNode());
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to find connection'))->send();
+        }
+        if ($connection && $connection->getType() != Connection::TYPE_CODEGATE) {
+            return $this->gameClientResponse->addMessage($this->translate('That connection is not protected by a code-gate'))->send();
+        }
+        if ($connection && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
+            return $this->gameClientResponse->addMessage($this->translate('The connection is already open'))->send();
+        }
+        if ($connection && $file->getLevel() < ($connection->getLevel()-1)*10) {
+            return $this->gameClientResponse->addMessage($this->translate('The level of your codebreaker is too low for this codegate'))->send();
+        }
+        // check if there are hostile npc in the node
+        if ($this->npcInstanceRepo->countByHostileToProfileInNode($profile) >= 1) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to use codebreaker when there are hostile entities in the node'))->send();
+        }
+        // first checks passed - start logic
+        $guess = $this->getNextParameter($contentArray, false);
+        if ($guess && !empty($this->clientData->codebreaker)) {
+            /* mini game logic solve attempt */
+            return $this->solveCodebreaker($resourceId, $guess);
+        }
+        else {
+            if (!empty($this->clientData->codebreaker)) {
+                return $this->gameClientResponse->addMessage($this->translate('Codebreaker attempt already running'))->send();
             }
-        }
-        if (!$this->response && $connection && $connection->getType() != Connection::TYPE_CODEGATE) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That connection is not protected by a code-gate')
-                )
-            );
-        }
-        if (!$this->response && $connection && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('The connection is already open')
-                )
-            );
-        }
-        if (!$this->response && $connection && $file->getLevel() < ($connection->getLevel()-1)*10) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('The level of your codebreaker is too low for this codegate')
-                )
-            );
-        }
-        if (!$this->response) {
-            $guess = $this->getNextParameter($contentArray, false);
-            if ($guess && !empty($this->clientData->codebreaker)) {
-                /* mini game logic solve attempt */
-                $this->response = $this->solveCodebreaker($resourceId, $guess);
+            $isBlocked = $this->isActionBlockedNew($resourceId);
+            if ($isBlocked) {
+                return $this->gameClientResponse->addMessage($isBlocked)->send();
             }
-            else {
-                if (!empty($this->clientData->codebreaker) && !$this->response) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Codebreaker attempt already running')
-                        )
-                    );
-                }
-                if (!$this->response) {
-                    $this->response = $this->isActionBlocked($resourceId);
-                }
-                if (!$this->response) {
-                    /* mini game logic start */
-                    $wordLength = 4 + $connection->getLevel();
-                    $hashLength = 8 * $connection->getLevel();
-                    $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
-                    $word = array_shift($words);
-                    $thePassword = $word->getContent();
-                    $randomString = $this->getRandomString($hashLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'); // TODO add to keyspace
-                    for ($index = 0; $index < mb_strlen($thePassword); $index++) {
-                        if (mt_rand(1, 100) > 50) {
-                            $thePassword[$index] = strtoupper($thePassword[$index]);
-                        }
-                        else {
-                            $thePassword[$index] = strtolower($thePassword[$index]);
-                        }
-                        if (mt_rand(1, 100) > 50) {
-                            switch (strtolower($thePassword[$index])) {
-                                default:
-                                    break;
-                                case 'a':
-                                    $thePassword[$index] = '4';
-                                    break;
-                                case 'b':
-                                    $thePassword[$index] = '8';
-                                    break;
-                                case 'e':
-                                    $thePassword[$index] = '3';
-                                    break;
-                                case 'g':
-                                    $thePassword[$index] = '6';
-                                    break;
-                                case 'i':
-                                    $thePassword[$index] = '1';
-                                    break;
-                                case 'o':
-                                    $thePassword[$index] = '0';
-                                    break;
-                                case 'p':
-                                    $thePassword[$index] = '9';
-                                    break;
-                                case 's':
-                                    $thePassword[$index] = '5';
-                                    break;
-                                case 't':
-                                    $thePassword[$index] = '7';
-                                    break;
-                            }
-                        }
-                    }
-                    $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
-                    $deadline = new \DateTime();
-                    $deadline->add(new \DateInterval('PT30S'));
-                    $ws->setClientData($resourceId, 'codebreaker', [
-                        'thePassword' => $thePassword,
-                        'theString' => $theString,
-                        'deadline' => 30,
-                        'fileId' => $file->getId(),
-                        'connectionId' => $connection->getId()
-                    ]);
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'deadline' => 30,
-                        'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-directory">find the password: %s</pre>'),
-                            $theString
-                        )
-                    );
-                    $this->lowerIntegrityOfFile($file, 100, 1, true);
-                }
-            }
+            /* mini game logic start */
+            $wordLength = 4 + $connection->getLevel();
+            $hashLength = 8 * $connection->getLevel();
+            $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
+            $word = array_shift($words);
+            $thePassword = $word->getContent();
+            $randomString = $this->getRandomString($hashLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'); // TODO add to keyspace
+            $thePassword = $this->leetifyString($thePassword);
+            $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
+            $deadline = new \DateTime();
+            $deadline->add(new \DateInterval('PT30S'));
+            $ws->setClientData($resourceId, 'codebreaker', [
+                'thePassword' => $thePassword,
+                'theString' => $theString,
+                'deadline' => 30,
+                'fileId' => $file->getId(),
+                'connectionId' => $connection->getId()
+            ]);
+            $message = sprintf(
+                $this->translate('find the password: %s'),
+                $theString
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_DIRECTORY);
+            $this->lowerIntegrityOfFile($file, 100, 1, true);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $guess
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     private function solveCodebreaker($resourceId, $guess)
     {
@@ -222,25 +151,15 @@ class CodebreakerService extends BaseService
             /** @var Connection $otherConnection */
             $otherConnection->setIsOpen(true);
             $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'cleardeadline' => true,
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('Codebreaking attempt success - you have opened the codegate')
-                )
-            );
-            $this->addAdditionalCommand();
+            $this->updateMap($resourceId);
+            $this->gameClientResponse
+                ->addMessage(
+                    $this->translate('Codebreaking attempt success - you have opened the codegate'),
+                    GameClientResponse::CLASS_SUCCESS
+                );
         }
         else {
-            $this->response = array(
-                'command' => 'showmessage',
-                'cleardeadline' => true,
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Codebreaking attempt failed - security rating and alert level raised')
-                )
-            );
+            $this->gameClientResponse->addMessage($this->translate('Codebreaking attempt failed - security rating and alert level raised'));
             $this->raiseProfileSecurityRating($profile, $connection->getLevel());
             $targetSystem = $connection->getSourceNode()->getSystem();
             $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel()); // TODO use system alert level in other places
@@ -254,7 +173,7 @@ class CodebreakerService extends BaseService
             );
         }
         $ws->setClientData($resourceId, 'codebreaker', []);
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
 }

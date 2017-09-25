@@ -13,10 +13,36 @@ namespace Netrunners\Repository;
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Npc;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
 class NpcInstanceRepository extends EntityRepository
 {
+
+    /**
+     * @param Profile $profile
+     * @return mixed
+     */
+    public function countByHostileToProfileInNode(Profile $profile)
+    {
+        $currentNode = $profile->getCurrentNode();
+        $faction = ($profile->getFaction()) ? $profile->getFaction() : NULL;
+        $group = ($profile->getGroup()) ? $profile->getGroup() : NULL;
+        $qb = $this->createQueryBuilder('n');
+        $qb->select($qb->expr()->count('n.id'));
+        $qb->where('n.profile != :profile AND n.node = :node');
+        $qb->setParameter('profile', $profile);
+        $qb->setParameter('node', $currentNode);
+        if ($faction) {
+            $qb->andWhere('n.faction != :faction');
+            $qb->setParameter('faction', $faction);
+        }
+        if ($group) {
+            $qb->andWhere('n.group != :group');
+            $qb->setParameter('group', $group);
+        }
+        return $qb->getQuery()->getSingleScalarResult();
+    }
 
     /**
      * @param System $system

@@ -20,6 +20,7 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
@@ -136,270 +137,265 @@ class ProfileService extends BaseService
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|\Netrunners\Model\GameClientResponse
      */
     public function showScore($resourceId)
     {
         // init service
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            /** @var Profile $profile */
-            $returnMessage = array();
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate(self::SCORE_CREDITS_STRING),
-                $profile->getCredits()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate(self::SCORE_BANK_BALANCE_STRING),
-                ($profile->getBankBalance()) ? $profile->getBankBalance() : 0
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate(self::SCORE_SNIPPETS_STRING),
-                $profile->getSnippets()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate(self::SCORE_SECRATING_STRING),
-                ($profile->getSecurityRating()) ? $profile->getSecurityRating() : 0
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate(self::SCORE_STEALTHING_STRING),
-                ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') : $this->translate('<span class="text-muted">off</span>')
-            );
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
-    }
-
-    /**
-     * @param int $resourceId
-     * @return array|bool
-     */
-    public function showSkills($resourceId)
-    {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            $returnMessage = [];
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-20s: %s</pre>',
-                $this->translate('SKILLPOINTS'),
-                $profile->getSkillPoints()
-            );
-            $skills = $this->skillRepo->findAll();
-            foreach ($skills as $skill) {
-                /** @var Skill $skill */
-                $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $skill);
-                $skillRating = $skillRatingObject->getRating();
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-20s: %-7s</pre>',
-                    $skill->getName(),
-                    $skillRating
-                );
-            }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
-        }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        /** @var Profile $profile */
+        $returnMessage = array();
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate(self::SCORE_CREDITS_STRING),
+            $profile->getCredits()
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate(self::SCORE_BANK_BALANCE_STRING),
+            ($profile->getBankBalance()) ? $profile->getBankBalance() : 0
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate(self::SCORE_SNIPPETS_STRING),
+            $profile->getSnippets()
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate(self::SCORE_SECRATING_STRING),
+            ($profile->getSecurityRating()) ? $profile->getSecurityRating() : 0
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate(self::SCORE_STEALTHING_STRING),
+            ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') : $this->translate('<span class="text-muted">off</span>')
+        );
+        $this->gameClientResponse->addMessages($returnMessage);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
+     */
+    public function showSkills($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        $headerMessage = sprintf(
+            '%-20s: %s',
+            $this->translate('SKILLPOINTS'),
+            $profile->getSkillPoints()
+        );
+        $this->gameClientResponse->addMessages($headerMessage, GameClientResponse::CLASS_SYSMSG);
+        $returnMessage = [];
+        $skills = $this->skillRepo->findAll();
+        foreach ($skills as $skill) {
+            /** @var Skill $skill */
+            $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $skill);
+            $skillRating = $skillRatingObject->getRating();
+            $returnMessage[] = sprintf(
+                '%-20s: %-7s',
+                $skill->getName(),
+                $skillRating
+            );
+        }
+        $this->gameClientResponse->addMessages($returnMessage);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function showEquipment($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            $messages = [];
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('You are currently using these equipment module files:')
-            );
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('blade'),
-                ($profile->getBlade()) ? $profile->getBlade()->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($profile->getBlade()) ? $profile->getBlade()->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($profile->getBlade()) ? $profile->getBlade()->getIntegrity() : $this->translate('---'),
-                ($profile->getBlade()) ? $profile->getBlade()->getMaxIntegrity() : $this->translate('---')
-            );
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('blaster'),
-                ($profile->getBlaster()) ? $profile->getBlaster()->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($profile->getBlaster()) ? $profile->getBlaster()->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($profile->getBlaster()) ? $profile->getBlaster()->getIntegrity() : $this->translate('---'),
-                ($profile->getBlaster()) ? $profile->getBlaster()->getMaxIntegrity() : $this->translate('---')
-            );
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('shield'),
-                ($profile->getShield()) ? $profile->getShield()->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($profile->getShield()) ? $profile->getShield()->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($profile->getShield()) ? $profile->getShield()->getIntegrity() : $this->translate('---'),
-                ($profile->getShield()) ? $profile->getShield()->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getHeadArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('head'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getShoulderArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('shoulders'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getUpperArmArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('upper-arms'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getLowerArmArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('lower-arms'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getHandArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('hands'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getTorsoArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('torso'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getLegArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('legs'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $armor = $profile->getShoesArmor();
-            $messages[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]</pre>',
-                $this->translate('shoes'),
-                ($armor) ? $armor->getName() : $this->translate('---'),
-                $this->translate('level'),
-                ($armor) ? $armor->getLevel() : $this->translate('---'),
-                $this->translate('integrity'),
-                ($armor) ? $armor->getIntegrity() : $this->translate('---'),
-                ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
-            );
-            $this->response = [
-                'command' => 'showoutput',
-                'message' => $messages
-            ];
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is checking out their equipment</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        $message = sprintf(
+            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
+            $this->translate('You are currently using these equipment module files:')
+        );
+        $this->gameClientResponse->addMessages($message, GameClientResponse::CLASS_SYSMSG);
+        $messages = [];
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('blade'),
+            ($profile->getBlade()) ? $profile->getBlade()->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($profile->getBlade()) ? $profile->getBlade()->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($profile->getBlade()) ? $profile->getBlade()->getIntegrity() : $this->translate('---'),
+            ($profile->getBlade()) ? $profile->getBlade()->getMaxIntegrity() : $this->translate('---')
+        );
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('blaster'),
+            ($profile->getBlaster()) ? $profile->getBlaster()->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($profile->getBlaster()) ? $profile->getBlaster()->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($profile->getBlaster()) ? $profile->getBlaster()->getIntegrity() : $this->translate('---'),
+            ($profile->getBlaster()) ? $profile->getBlaster()->getMaxIntegrity() : $this->translate('---')
+        );
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('shield'),
+            ($profile->getShield()) ? $profile->getShield()->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($profile->getShield()) ? $profile->getShield()->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($profile->getShield()) ? $profile->getShield()->getIntegrity() : $this->translate('---'),
+            ($profile->getShield()) ? $profile->getShield()->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getHeadArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('head'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getShoulderArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('shoulders'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getUpperArmArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('upper-arms'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getLowerArmArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('lower-arms'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getHandArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('hands'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getTorsoArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('torso'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getLegArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('legs'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $armor = $profile->getShoesArmor();
+        $messages[] = sprintf(
+            '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
+            $this->translate('shoes'),
+            ($armor) ? $armor->getName() : $this->translate('---'),
+            $this->translate('level'),
+            ($armor) ? $armor->getLevel() : $this->translate('---'),
+            $this->translate('integrity'),
+            ($armor) ? $armor->getIntegrity() : $this->translate('---'),
+            ($armor) ? $armor->getMaxIntegrity() : $this->translate('---')
+        );
+        $this->gameClientResponse->addMessages($messages);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is checking out their equipment'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $jobs
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function showJobs($resourceId, $jobs)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $userJobs = [];
         foreach ($jobs as $jobId => $jobData) {
             if ($jobData['socketId'] == $this->clientData->socketId) {
                 $userJobs[] = $jobData;
             }
         }
-        $returnMessage = array();
+        $returnMessage = [];
         if (empty($userJobs)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
-                    $this->translate('No running jobs')
-                )
-            );
+            $this->gameClientResponse->addMessage($this->translate('No running jobs'));
         }
         else {
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-4s|%-10s|%-32|%-20s|%s</pre>',
+            $headerMessage = sprintf(
+                '%-4s|%-10s|%-32|%-20s|%s',
                 $this->translate('ID'),
                 $this->translate('TYPE'),
                 $this->translate('NAME'),
                 $this->translate('TIME'),
                 $this->translate('DIFFICULTY')
             );
+            $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
             foreach ($userJobs as $jobId => $jobData) {
                 $type = $jobData['type'];
                 $typeId = $jobData['typeId'];
@@ -413,7 +409,7 @@ class ProfileService extends BaseService
                     $newCode = $this->entityManager->find('Netrunners\Entity\FilePart', $typeId);
                 }
                 $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-4s|%-10s|%-32|%-20s|%s</pre>',
+                    '%-4s|%-10s|%-32|%-20s|%s',
                     $jobId,
                     $type,
                     $newCode->getName(),
@@ -421,193 +417,155 @@ class ProfileService extends BaseService
                     $difficulty
                 );
             }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+            $this->gameClientResponse->addMessages($returnMessage);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function showFileModInstances($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            /** @var Profile $profile */
-            $returnMessage = array();
-            $fileModInstances = $this->fileModInstanceRepo->findForPartsCommand($profile);
-            if (empty($fileModInstances)) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You have no unused file mods')
-                    )
-                );
-            }
-            else {
-                foreach ($fileModInstances as $data) {
-                    // prepare message
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-27s: %-10s level-range: %s-%s</pre>',
-                        $data['fmname'],
-                        $data['fmicount'],
-                        $data['minlevel'],
-                        $data['maxlevel']
-                    );
-                }
-                $this->response = array(
-                    'command' => 'showoutput',
-                    'message' => $returnMessage
-                );
-            }
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        /** @var Profile $profile */
+        $returnMessage = [];
+        $fileModInstances = $this->fileModInstanceRepo->findForPartsCommand($profile);
+        if (empty($fileModInstances)) {
+            $this->gameClientResponse->addMessage($this->translate('You have no unused file mods'));
+        }
+        else {
+            foreach ($fileModInstances as $data) {
+                // prepare message
+                $returnMessage[] = sprintf(
+                    '%-27s: %-10s level-range: %s-%s',
+                    $data['fmname'],
+                    $data['fmicount'],
+                    $data['minlevel'],
+                    $data['maxlevel']
+                );
+            }
+            $this->gameClientResponse->addMessages($returnMessage);
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function showFilePartInstances($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            /** @var Profile $profile */
-            $returnMessage = array();
-            $filePartInstances = $this->filePartInstanceRepo->findForPartsCommand($profile);
-            if (empty($filePartInstances)) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You have no file parts')
-                    )
-                );
-            }
-            else {
-                foreach ($filePartInstances as $data) {
-                    // prepare message
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">%-27s: %-10s level-range: %s-%s</pre>',
-                        $data['fpname'],
-                        $data['fpicount'],
-                        $data['minlevel'],
-                        $data['maxlevel']
-                    );
-                }
-                $this->response = array(
-                    'command' => 'showoutput',
-                    'message' => $returnMessage
-                );
-            }
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        /** @var Profile $profile */
+        $returnMessage = [];
+        $filePartInstances = $this->filePartInstanceRepo->findForPartsCommand($profile);
+        if (empty($filePartInstances)) {
+            $this->gameClientResponse->addMessage($this->translate('You have no file parts'));
+        }
+        else {
+            foreach ($filePartInstances as $data) {
+                // prepare message
+                $returnMessage[] = sprintf(
+                    '%-27s: %-10s level-range: %s-%s',
+                    $data['fpname'],
+                    $data['fpicount'],
+                    $data['minlevel'],
+                    $data['maxlevel']
+                );
+            }
+            $this->gameClientResponse->addMessages($returnMessage);
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function startStealthing($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            if ($profile->getStealthing()) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You are already stealthing...')
-                    )
-                ];
-            }
-            if (!$this->response) {
-                $profile->setStealthing(true);
-                $this->entityManager->flush($profile);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('You start stealthing...')
-                    )
-                ];
-                $xmessage = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] starts stealthing</pre>'),
-                    $profile->getUser()->getDisplayName()
-                );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile, $profile->getId());
-            }
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        if ($profile->getStealthing()) {
+            $message = $this->translate('You are already stealthing...');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $profile->setStealthing(true);
+        $this->entityManager->flush($profile);
+        $message = $this->translate('You start stealthing...');
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $xmessage = sprintf(
+            $this->translate('[%s] starts stealthing'),
+            $profile->getUser()->getDisplayName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $xmessage, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function stopStealthing($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            if (!$profile->getStealthing()) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('You are not stealthing...')
-                    )
-                ];
-            }
-            if (!$this->response) {
-                $profile->setStealthing(false);
-                $this->entityManager->flush($profile);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('You stop stealthing...')
-                    )
-                ];
-                $xmessage = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] stops stealthing</pre>'),
-                    $profile->getUser()->getDisplayName()
-                );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $xmessage, $profile, $profile->getId());
-            }
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        if (!$profile->getStealthing()) {
+            $message = $this->translate('You are not stealthing...');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $profile->setStealthing(false);
+        $this->entityManager->flush($profile);
+        $this->gameClientResponse->addMessage($this->translate('You stop stealthing...'), GameClientResponse::CLASS_SUCCESS);
+        $xmessage = sprintf(
+            $this->translate('[%s] stops stealthing'),
+            $profile->getUser()->getDisplayName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $xmessage, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function showInventory($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
-        $returnMessage = array();
+        $returnMessage = [];
         $files = $this->fileRepo->findByProfile($profile);
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-6s|%-32s|%-33s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%-3s</span>|%-3s|%-3s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|%-12s|%-32s|%-32s</pre>',
+        $headerMessage = sprintf(
+            '%-6s|%-32s|%-33s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%-3s</span>|%-3s|%-3s|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|<span data-toggle="tooltip" data-placement="top" data-original-title="%s">%s</span>|%-12s|%-32s|%-32s',
             $this->translate('ID'),
             $this->translate('TYPE'),
             $this->translate('NAME'),
@@ -623,6 +581,7 @@ class ProfileService extends BaseService
             $this->translate('SYSTEM'),
             $this->translate('NODE')
         );
+        $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         foreach ($files as $file) {
             /** @var File $file */
             $subtypeString = $this->translate('---');
@@ -637,7 +596,7 @@ class ProfileService extends BaseService
                 }
             }
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-6s|%-32s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-12s|%-32s|%-32s</pre>',
+                '%-6s|%-32s|%-33s|%-3s|%-3s|%-3s|%s|%s|%-12s|%-32s|%-32s',
                 $file->getId(),
                 $file->getFileType()->getName(),
                 $file->getName(),
@@ -651,40 +610,43 @@ class ProfileService extends BaseService
                 ($file->getNode()) ? $file->getNode()->getName() : ''
             );
         }
-        $returnMessage[] = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">mem: %s/%s sto: %s/%s</pre>'),
+        $this->gameClientResponse->addMessages($returnMessage);
+        $addonMessage = sprintf(
+            $this->translate('mem: %s/%s sto: %s/%s'),
             $this->getUsedMemory($profile),
             $this->getTotalMemory($profile),
             $this->getUsedStorage($profile),
             $this->getTotalStorage($profile)
         );
-        $this->response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $this->response;
+        $this->gameClientResponse->addMessage($addonMessage, GameClientResponse::CLASS_ADDON);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function showInvitations($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
-        $returnMessage = array();
+        $returnMessage = [];
         $invitationRepo = $this->entityManager->getRepository('Netrunners\Entity\Invitation');
         /** @var InvitationRepository $invitationRepo */
         $invitations = $invitationRepo->findAllByProfile($profile);
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-19s|%-32s|%-19s|%s</pre>',
+        $headerMessage = sprintf(
+            '%-19s|%-32s|%-19s|%s',
             $this->translate('GIVEN-DATE'),
             $this->translate('USED-BY'),
             $this->translate('USED-DATE'),
             $this->translate('CODE')
         );
+        $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         $totalInvitations = 0;
         $unusedInvitations = 0;
         $usedInvitations = 0;
@@ -702,387 +664,320 @@ class ProfileService extends BaseService
                 $usedString = '---';
             }
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-19s|%-32s|%-19s|%s</pre>',
+                '%-19s|%-32s|%-19s|%s',
                 $invitation->getGiven()->format('Y/m/d H:i:s'),
                 $usedByString,
                 $usedString,
                 $invitation->getCode()
             );
         }
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-addon">You have used %s of %s invitations (%s available)</pre>',
+        $this->gameClientResponse->addMessages($returnMessage);
+        $addonMessage = sprintf(
+            $this->translate('You have used %s of %s invitations (%s available)'),
             $usedInvitations,
             $totalInvitations,
             $unusedInvitations
         );
-        $this->response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $this->response;
+        $this->gameClientResponse->addMessage($addonMessage, GameClientResponse::CLASS_ADDON);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function spendSkillPoints($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId, true);
-        $message = [];
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get skill input name
         list($contentArray, $skillNameParam) = $this->getNextParameter($contentArray);
         // if none given, show a list of all skill input names
-        if (!$this->response && !$skillNameParam) {
-            $message[] = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">Please specify the skill that you want to improve (%s skillpoints available) :</pre>'),
+        if (!$skillNameParam) {
+            $message = sprintf(
+                $this->translate('Please specify the skill that you want to improve (%s skillpoints available) :'),
                 $profile->getSkillPoints()
             );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
             $skillsString = '';
             foreach ($this->skillRepo->findAll() as $skill) {
                 /** @var Skill $skill */
                 $skillsString .= $this->getInputNameOfSkill($skill) . ' ';
             }
             $skillsString = wordwrap($skillsString, 120);
-            $message[] = sprintf('<pre style="white-space: pre-wrap;" class="text-white">%s</pre>', $skillsString);
-            $this->response = [
-                'command' => 'showoutput',
-                'message' => $message
-            ];
+            $this->gameClientResponse->addMessage($skillsString, GameClientResponse::CLASS_WHITE);
+            return $this->gameClientResponse->send();
         }
         // init target skill
         $targetSkill = NULL;
         // now try to get the actual skill
-        if (!$this->response) {
-            foreach ($this->skillRepo->findAll() as $skill) {
-                /** @var Skill $skill */
-                if ($this->getInputNameOfSkill($skill) == $skillNameParam) {
-                    $targetSkill = $skill;
-                    break;
-                }
+        foreach ($this->skillRepo->findAll() as $skill) {
+            /** @var Skill $skill */
+            if ($this->getInputNameOfSkill($skill) == $skillNameParam) {
+                $targetSkill = $skill;
+                break;
             }
         }
-        if (!$this->response && !$targetSkill) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unknown skill')
-                )
-            ];
+        if (!$targetSkill) {
+            return $this->gameClientResponse->addMessage($this->translate('Unknown skill'))->send();
         }
         // we got a skill now if there is no response yet - check if the are advanced skills
-        if (
-            !$this->response &&
-            $targetSkill &&
-            ($targetSkill->getId() == Skill::ID_ADVANCED_CODING || $targetSkill->getId() == Skill::ID_ADVANCED_NETWORKING)
-        ) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Advanced skills can only be improved by practicing them')
-                )
-            ];
+        if ($targetSkill->getId() == Skill::ID_ADVANCED_CODING || $targetSkill->getId() == Skill::ID_ADVANCED_NETWORKING) {
+            $message = $this->translate('Advanced skills can only be improved by practicing them');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // get the amount of skillpoints the player wants to invest
         $skillPointAmount = $this->getNextParameter($contentArray, false, true);
         // check if they want to spend at least 1 sp
-        if (!$this->response && $skillPointAmount < 1) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify how many skill points you want to invest')
-                )
-            ];
+        if ($skillPointAmount < 1) {
+            $message = $this->translate('Please specify how many skill points you want to invest');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // now check if they want to spend more than they have
-        if (!$this->response && $skillPointAmount > $profile->getSkillPoints()) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You can only spend up to %s skillpoints</pre>'),
-                    $profile->getSkillPoints()
-                )
-            ];
+        if ($skillPointAmount > $profile->getSkillPoints()) {
+            $message = sprintf(
+                $this->translate('You can only spend up to %s skillpoints'),
+                $profile->getSkillPoints()
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // now check if the total skill rating would exceed 100
         $skillRatingObject = NULL;
-        $skillRating = 0;
-        if (!$this->response) {
-            $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $targetSkill);
-            /** @var SkillRating $skillRatingObject */
-            $skillRating = ($skillRatingObject) ? $skillRatingObject->getRating() : 0;
-            if ($skillRating + $skillPointAmount > 100) {
-                $possible = 100 - $skillRating;
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You can only spend up to %s skillpoints on that skill</pre>'),
-                        $possible
-                    )
-                ];
-            }
+        $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $targetSkill);
+        /** @var SkillRating $skillRatingObject */
+        $skillRating = ($skillRatingObject) ? $skillRatingObject->getRating() : 0;
+        if ($skillRating + $skillPointAmount > 100) {
+            $possible = 100 - $skillRating;
+            $message = sprintf(
+                $this->translate('You can only spend up to %s skillpoints on that skill'),
+                $possible
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* all checks passed, we can now spend the skillpoints */
-        if (!$this->response) {
-            $profile->setSkillPoints($profile->getSkillPoints() - $skillPointAmount);
-            $skillRatingObject->setRating($skillRating + $skillPointAmount);
-            $this->entityManager->flush();
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have raised [%s] to %s by spending %s skillpoints</pre>'),
-                    $targetSkill->getName(),
-                    $skillRatingObject->getRating(),
-                    $skillPointAmount
-                )
-            ];
-        }
-        return $this->response;
+        $skillPointAmount = $this->checkValueMinMax($skillPointAmount, 1, NULL);
+        $profile->setSkillPoints($profile->getSkillPoints() - $skillPointAmount);
+        $skillRatingObject->setRating($skillRating + $skillPointAmount);
+        $this->entityManager->flush();
+        $message = [
+            'command' => 'showmessage',
+            'message' => sprintf(
+                $this->translate('You have raised [%s] to %s by spending %s skillpoints'),
+                $targetSkill->getName(),
+                $skillRatingObject->getRating(),
+                $skillPointAmount
+            )
+        ];
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
     /**
-     * Shows the profile's faction ratings.
      * @param $resourceId
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function showFactionRatings($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $factions = $this->entityManager->getRepository('Netrunners\Entity\Faction')->findBy([
-                'joinable' => true,
-                'playerRun' => false
-            ]);
-            $returnMessage = array();
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $factions = $this->entityManager->getRepository('Netrunners\Entity\Faction')->findBy([
+            'joinable' => true,
+            'playerRun' => false
+        ]);
+        $returnMessage = [];
+        $headerMessage = sprintf(
+            '%-32s|%-11s',
+            $this->translate('FACTION'),
+            $this->translate('RATING')
+        );
+        $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
+        foreach ($factions as $faction) {
+            /** @var Faction $faction */
             $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-11s</pre>',
-                $this->translate('FACTION'),
-                $this->translate('RATING')
-            );
-            foreach ($factions as $faction) {
-                /** @var Faction $faction */
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-11s</pre>',
-                    $faction->getName(),
-                    $this->getProfileFactionRating($profile, $faction)
-                );
-            }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
+                '%-32s|%-11s',
+                $faction->getName(),
+                $this->getProfileFactionRating($profile, $faction)
             );
         }
-        return $this->response;
+        $this->gameClientResponse->addMessages($returnMessage);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function setEmail($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
         $emailParameter = $this->getNextParameter($contentArray, false);
         // if no parameter was give, show their current settings
         if (!$emailParameter) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">your current e-mail address on record: <span class="text-%s">%s</span></pre>'),
-                    ($profile->getEmail()) ? 'info' : 'sysmsg',
-                    ($profile->getEmail()) ? $profile->getEmail() : $this->translate('no e-mail address set')
-                )
-            ];
+            $message = sprintf(
+                $this->translate('your current e-mail address on record: <span class="text-%s">%s</span>'),
+                ($profile->getEmail()) ? 'info' : 'sysmsg',
+                ($profile->getEmail()) ? $profile->getEmail() : $this->translate('no e-mail address set')
+            );
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE)->send();
         }
         else {
             // player is trying to set email address
             $validator = new EmailAddress();
             if (!$validator->isValid($emailParameter)) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid e-mail address')
-                    )
-                ];
+                return $this->gameClientResponse->addMessage($this->translate('Invalid e-mail address'))->send();
             }
-            if (!$this->response) {
-                $profile->setEmail($emailParameter);
-                $this->entityManager->flush($profile);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('E-mail address set')
-                    )
-                ];
-            }
+            $profile->setEmail($emailParameter);
+            $this->entityManager->flush($profile);
+            $this->gameClientResponse->addMessages($this->translate('E-mail address set'), GameClientResponse::CLASS_SUCCESS);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function changePassword($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $newPassword = $this->getNextParameter($contentArray, false);
         // ask them to supply a new password
         if (!$newPassword) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a new password (8-char-min, 30-char-max, alpha-numeric only)')
-                )
-            ];
+            $message = $this->translate('Please specify a new password (8-char-min, 30-char-max, alpha-numeric only)');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         else {
-            $this->stringChecker($newPassword, 30, 8);
-            if (!$this->response) {
-                $bcrypt = new Bcrypt();
-                $bcrypt->setCost(10);
-                $pass = $bcrypt->create($newPassword);
-                $this->user->setPassword($pass);
-                $this->entityManager->flush($this->user);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Password set to: %s</pre>'),
-                        $newPassword
-                    )
-                ];
+            $checkResult = $this->stringChecker($newPassword, 30, 8);
+            if ($checkResult) {
+                return $this->gameClientResponse->addMessage($checkResult)->send();
             }
+            $bcrypt = new Bcrypt();
+            $bcrypt->setCost(10);
+            $pass = $bcrypt->create($newPassword);
+            $this->user->setPassword($pass);
+            $this->entityManager->flush($this->user);
+            $message = sprintf(
+                $this->translate('Password set to: %s'),
+                $newPassword
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function showBankBalance($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
-        $message = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Your current credits: %s</pre>'),
+        $message = [];
+        $message[] = sprintf(
+            $this->translate('Your current credits: %s'),
             $profile->getCredits()
         );
-        $message .= sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Your current bank balance in credits: %s</pre>'),
+        $message[] = sprintf(
+            $this->translate('Your current bank balance in credits: %s'),
             $profile->getBankBalance()
         );
-        $this->response = [
-            'command' => 'showmessage',
-            'message' => $message
-        ];
-        return $this->response;
+        $this->gameClientResponse->addMessages($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function depositCredits($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         // check if they are in a banking node
-        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to be in a banking node to deposit credits')
-                )
-            ];
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
+            $message = $this->translate('You need to be in a banking node to deposit credits');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         $amount = $this->getNextParameter($contentArray, false, true);
         // check if an amount was given
-        if (!$this->response && !$amount) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify how much you want to deposit')
-                )
-            ];
+        if (!$amount) {
+            $message = $this->translate('Please specify how much you want to deposit');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if they have that much
-        if (!$this->response && $amount && $profile->getCredits() < $amount) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You do not have that many credits')
-                )
-            ];
+        if ($profile->getCredits() < $amount) {
+            $message = $this->translate('You do not have that many credits');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if valid amount
-        if (!$this->response && $amount && $amount <= 0) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Nice try...')
-                )
-            ];
+        if ($amount <= 0) {
+            $message = $this->translate('Nice try');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* all seems good, deposit */
-        if (!$this->response && $amount) {
-            // check for skimmer
-            $skimmerFiles = $this->fileRepo->findRunningInNodeByType($currentNode, FileType::ID_SKIMMER);
-            $remainingAmount = $amount;
-            $triggerData = ['value' => $remainingAmount];
-            foreach ($skimmerFiles as $skimmerFile) {
-                /** @var File $skimmerFile */
-                $skimAmount = $this->checkFileTriggers($skimmerFile, $triggerData);
-                if ($skimAmount === false) continue;
-                $remainingAmount -= $skimAmount;
-                $triggerData['value'] = $remainingAmount;
-            }
-            // now add/substract
-            $profile->setCredits($profile->getCredits() - $amount);
-            $profile->setBankBalance($profile->getBankBalance() + $remainingAmount);
-            $this->entityManager->flush($profile);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have deposited %s credits into your bank account</pre>'),
-                    $amount
-                )
-            ];
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has deposited some credits</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        // check for skimmer
+        $skimmerFiles = $this->fileRepo->findRunningInNodeByType($currentNode, FileType::ID_SKIMMER);
+        $remainingAmount = $amount;
+        $triggerData = ['value' => $remainingAmount];
+        foreach ($skimmerFiles as $skimmerFile) {
+            /** @var File $skimmerFile */
+            $skimAmount = $this->checkFileTriggers($skimmerFile, $triggerData);
+            if ($skimAmount === false) continue;
+            $remainingAmount -= $skimAmount;
+            $triggerData['value'] = $remainingAmount;
         }
-        return $this->response;
+        // now add/substract
+        $profile->setCredits($profile->getCredits() - $amount);
+        $profile->setBankBalance($profile->getBankBalance() + $remainingAmount);
+        $this->entityManager->flush($profile);
+        $message = sprintf(
+            $this->translate('You have deposited %s credits into your bank account'),
+            $amount
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has deposited some credits'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -1099,204 +994,171 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function changeBackgroundOpacity($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            $newOpacity = $this->getNextParameter($contentArray, false, false, false, true);
-            if ($newOpacity === NULL) {
-                $newOpacity = 0.6;
-            }
-            if ($newOpacity < 0) {
-                $newOpacity = 0;
-            }
-            if ($newOpacity > 1) {
-                $newOpacity = 1;
-            }
-            $profile->setBgopacity($newOpacity);
-            $this->entityManager->flush($profile);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Background opacity set to: %s</pre>'),
-                    $newOpacity
-                )
-            ];
-            $this->addAdditionalCommand('setopacity', $newOpacity);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        $newOpacity = $this->getNextParameter($contentArray, false, false, false, true);
+        if ($newOpacity === NULL) {
+            $newOpacity = 0.6;
+        }
+        if ($newOpacity < 0) {
+            $newOpacity = 0;
+        }
+        if ($newOpacity > 1) {
+            $newOpacity = 1;
+        }
+        $profile->setBgopacity($newOpacity);
+        $this->entityManager->flush($profile);
+        $message = $this->translate('Background opacity set to: %s');
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $clientResponse = new GameClientResponse($resourceId);
+        $clientResponse
+            ->setSilent(true)
+            ->setCommand(GameClientResponse::COMMAND_SETOPACITY)
+            ->addOption(GameClientResponse::OPT_CONTENT, $newOpacity)
+            ->send();
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function withdrawCredits($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         // check if they are in a banking node
-        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to be in a banking node to withdraw credits')
-                )
-            ];
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
+            $message = $this->translate('You need to be in a banking node to withdraw credits');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         $amount = $this->getNextParameter($contentArray, false, true);
         // check if an amount was given
-        if (!$this->response && !$amount) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify how much you want to withdraw')
-                )
-            ];
+        if (!$amount) {
+            $message = $this->translate('Please specify how much you want to withdraw');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if they have that much
-        if (!$this->response && $amount && $profile->getBankBalance() < $amount) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You do not have that many credits in your bank account')
-                )
-            ];
+        if ($profile->getBankBalance() < $amount) {
+            $message = $this->translate('You do not have that many credits in your bank account');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if valid amount
-        if (!$this->response && $amount && $amount <= 0) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Nice try...')
-                )
-            ];
+        if ($amount <= 0) {
+            $message = $this->translate('Nice try...');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* all seems good, withdraw */
-        if (!$this->response && $amount) {
-            $profile->setCredits($profile->getCredits() + $amount);
-            $profile->setBankBalance($profile->getBankBalance() - $amount);
-            $this->entityManager->flush($profile);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have withdrawn %s credits from your bank account</pre>'),
-                    $amount
-                )
-            ];
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has withdrawn some credits</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        $profile->setCredits($profile->getCredits() + $amount);
+        $profile->setBankBalance($profile->getBankBalance() - $amount);
+        $this->entityManager->flush($profile);
+        $message = sprintf(
+            $this->translate('You have withdrawn %s credits from your bank account'),
+            $amount
+        );
+        $this->gameClientResponse->addMessage($message);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has withdrawn some credits'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function setProfileLocale($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
         $localeParameter = $this->getNextParameter($contentArray, false);
         // if no parameter was give, show their current settings
         if (!$localeParameter) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">your current locale on record: <span class="text-info">%s</span></pre>'),
-                    $profile->getLocale()
-                )
-            ];
+            $message = sprintf(
+                $this->translate('your current locale on record: <span class="text-info">%s</span>'),
+                $profile->getLocale()
+            );
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE)->send();
         }
         else {
             // player is trying to set locale
             if (!in_array($localeParameter, self::$availableLocales)) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid locale, available locales: <span class="text-muted">%s</span></pre>'),
-                        implode(' ', self::$availableLocales)
-                    )
-                ];
+                $message = sprintf(
+                    $this->translate('Invalid locale, available locales: <span class="text-muted">%s</span>'),
+                    implode(' ', self::$availableLocales)
+                );
+                return $this->gameClientResponse->addMessage($message)->send();
             }
-            if (!$this->response) {
-                $profile->setLocale($localeParameter);
-                $this->entityManager->flush($profile);
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('Locale set')
-                    )
-                ];
-            }
+            $profile->setLocale($localeParameter);
+            $this->entityManager->flush($profile);
+            $this->gameClientResponse->addMessage($this->translate('Locale set'), GameClientResponse::CLASS_SUCCESS);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param int $type
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function openSubmitFeedbackPanel($resourceId, $type = Feedback::TYPE_TYPO_ID)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $view = new ViewModel();
-            $view->setTemplate('netrunners/feedback/feedback-form.phtml');
-            $view->setVariable('typeid', $type);
-            $view->setVariable('typestring', Feedback::$lookup[$type]);
-            $this->response = array(
-                'command' => 'showpanel',
-                'content' => $this->viewRenderer->render($view)
-            );
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/feedback/feedback-form.phtml');
+        $view->setVariable('typeid', $type);
+        $view->setVariable('typestring', Feedback::$lookup[$type]);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function logoutCommand($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
-                    $this->translate('Disconnecting from NeoCortex Network - have a nice day and see you soon')
-                ),
-                'disconnectx' => true
-            ];
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $message = $this->translate('Disconnecting from NeoCortex Network - have a nice day and see you soon');
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_DISCONNECTX, true);
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_INFO);
+        return $this->gameClientResponse->send();
     }
 
 }

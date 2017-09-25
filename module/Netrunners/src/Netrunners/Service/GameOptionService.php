@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\GameOption;
 use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\GameOptionInstanceRepository;
 use Netrunners\Repository\GameOptionRepository;
 use Zend\Mvc\I18n\Translator;
@@ -46,7 +47,7 @@ class GameOptionService extends BaseService
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function optionsCommand($resourceId, $contentArray)
     {
@@ -56,111 +57,103 @@ class GameOptionService extends BaseService
         $returnMessage = [];
         list($contentArray, $optionName) = $this->getNextParameter($contentArray, true, false, false, true);
         if (!$optionName) {
-            $returnMessage = $this->addCurrentOptionsOutput($profile, $returnMessage);
+            return $this->addCurrentOptionsOutput($profile, $returnMessage);
         }
         else {
             $gameOption = $this->gameOptionRepo->findOneBy([
                 'name' => $optionName
             ]);
             if (!$gameOption) {
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unknown game option')
-                );
+                $returnMessage = $this->translate('Unknown game option');
+                return $this->gameClientResponse->addMessage($returnMessage)->send();
+            }
+            /** @var GameOption $gameOption */
+            // if this is an option that requires another parameter as its value
+            if ($gameOption->getDefaultValue()) {
+                $goiRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOptionInstance');
+                /** @var GameOptionInstanceRepository $goiRepo */
+                $gameOptionValue = $this->getNextParameter($contentArray, false, false, true, true);
+                if (!$gameOptionValue) {
+                    $returnMessage = $this->translate('Please specify a value');
+                    return $this->gameClientResponse->addMessage($returnMessage)->send();
+                }
+                $now = new \DateTime();
+                switch ($gameOption->getId()) {
+                    default:
+                        $returnMessage = $this->translate('Unable to process input');
+                        return $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_DANGER)->send();
+                    case GameOption::ID_BGOPACITY:
+                        $gameOptionValue = floatval($gameOptionValue);
+                        $gameOptionInstance = $goiRepo->findOneBy([
+                            'gameOption' => $gameOption,
+                            'profile' => $profile
+                        ]);
+                        if ($gameOptionInstance) {
+                            /** @var GameOptionInstance $gameOptionInstance */
+                            $gameOptionInstance->setValue((string)$gameOptionValue);
+                            $gameOptionInstance->setChanged($now);
+                        }
+                        else {
+                            $gameOptionInstance = new GameOptionInstance();
+                            $gameOptionInstance->setValue((string)$gameOptionValue);
+                            $gameOptionInstance->setProfile($profile);
+                            $gameOptionInstance->setGameOption($gameOption);
+                            $gameOptionInstance->setChanged($now);
+                            $this->entityManager->persist($gameOptionInstance);
+                        }
+                        $this->entityManager->flush($gameOptionInstance);
+                        $returnMessage = sprintf($this->translate('Opacity set to %s'), (string)$gameOptionValue);
+                        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SUCCESS);
+                        break;
+                }
             }
             else {
-                /** @var GameOption $gameOption */
-                // if this is an option that requires another parameter as its value
-                if ($gameOption->getDefaultValue()) {
-                    $goiRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOptionInstance');
-                    /** @var GameOptionInstanceRepository $goiRepo */
-                    $gameOptionValue = $this->getNextParameter($contentArray, false, false, true, true);
-                    if (!$gameOptionValue) {
-                        $returnMessage[] = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Please specify a value')
-                        );
-                    }
-                    if (empty($returnMessage)) {
-                        $now = new \DateTime();
-                        switch ($gameOption->getId()) {
-                            default:
-                                break;
-                            case GameOption::ID_BGOPACITY:
-                                $gameOptionValue = floatval($gameOptionValue);
-                                $gameOptionInstance = $goiRepo->findOneBy([
-                                    'gameOption' => $gameOption,
-                                    'profile' => $profile
-                                ]);
-                                if ($gameOptionInstance) {
-                                    /** @var GameOptionInstance $gameOptionInstance */
-                                    $gameOptionInstance->setValue((string)$gameOptionValue);
-                                    $gameOptionInstance->setChanged($now);
-                                }
-                                else {
-                                    $gameOptionInstance = new GameOptionInstance();
-                                    $gameOptionInstance->setValue((string)$gameOptionValue);
-                                    $gameOptionInstance->setProfile($profile);
-                                    $gameOptionInstance->setGameOption($gameOption);
-                                    $gameOptionInstance->setChanged($now);
-                                    $this->entityManager->persist($gameOptionInstance);
-                                }
-                                $this->entityManager->flush($gameOptionInstance);
-                                break;
-                        }
-                    }
-                }
-                else {
-                    // just toggle this option
-                    $this->toggleProfileGameOption($profile, $gameOption->getId());
-                    $newStatus = $this->getProfileGameOption($profile, $gameOption->getId());
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-white">Option [%s] changed to [<span class="text-%s">%s</span>]</pre>',
-                        $gameOption->getName(),
-                        ($newStatus) ? 'success' : 'sysmsg',
-                        ($newStatus) ? $this->translate('on') : $this->translate('off')
-                    );
-                }
+                // just toggle this option
+                $this->toggleProfileGameOption($profile, $gameOption->getId());
+                $newStatus = $this->getProfileGameOption($profile, $gameOption->getId());
+                $returnMessage = sprintf(
+                    'Option [%s] changed to [<span class="text-%s">%s</span>]',
+                    $gameOption->getName(),
+                    ($newStatus) ? 'success' : 'sysmsg',
+                    ($newStatus) ? $this->translate('on') : $this->translate('off')
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
             }
         }
-        $this->response = [
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        ];
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param Profile $profile
      * @param $returnMessage
-     * @return array
+     * @return GameClientResponse
      */
     private function addCurrentOptionsOutput(Profile $profile, $returnMessage)
     {
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-            $this->translate('Please specify which option to toggle:')
-        );
+        $returnMessage = ($returnMessage) ? $returnMessage : $this->translate('Please specify which option to toggle:');
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
         foreach ($this->gameOptionRepo->findAll() as $gameOption) {
             /** @var GameOption $gameOption */
             if ($gameOption->getDefaultValue()) {
                 $profileGameOptionValue = $this->getProfileGameOptionValue($profile, $gameOption->getId());
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-13s : %s</pre>',
+                $returnMessage = sprintf(
+                    '%-13s : %s',
                     $gameOption->getName(),
                     $profileGameOptionValue
                 );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
             }
             else {
                 $profileGameOptionValue = $this->getProfileGameOption($profile, $gameOption->getId());
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-13s : %s</pre>',
+                $returnMessage = sprintf(
+                    '%-13s : %s',
                     $gameOption->getName(),
                     ($profileGameOptionValue) ? $this->translate('on') : $this->translate('off')
                 );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
             }
         }
-        return $returnMessage;
+        return $this->gameClientResponse->send();
     }
 
 }

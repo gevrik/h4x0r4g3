@@ -41,6 +41,7 @@ use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Entity\SystemLog;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
@@ -109,6 +110,11 @@ class BaseService
     protected $response = false;
 
     /**
+     * @var bool|GameClientResponse
+     */
+    protected $gameClientResponse = false;
+
+    /**
      * @var array
      */
     protected $updatedSockets = [];
@@ -132,11 +138,20 @@ class BaseService
     }
 
     /**
+     * @param $resourceId
+     */
+    private function initResponse($resourceId)
+    {
+        $this->gameClientResponse = new GameClientResponse($resourceId);
+    }
+
+    /**
      * @param $string
      * @return string
      */
     protected function translate($string)
     {
+        /** @noinspection PhpUndefinedMethodInspection */
         $this->translator->getTranslator()->setLocale($this->profileLocale);
         return $this->translator->translate($string);
     }
@@ -158,6 +173,7 @@ class BaseService
         $this->setUser();
         $this->setProfileLocale();
         $this->setResponse(false);
+        $this->initResponse($resourceId);
     }
 
     /**
@@ -341,24 +357,31 @@ class BaseService
         return $total;
     }
 
+    /**
+     * @param Profile $profile
+     * @param $element
+     * @param $content
+     * @param array $adds
+     * @param bool $sendNow
+     * @return bool|GameClientResponse
+     */
     protected function updateDivHtml(Profile $profile, $element, $content, $adds = [], $sendNow = false)
     {
-        $response = [
-            'command' => 'updatedivhtml',
-            'content' => (string)$content,
-            'element' => $element
-        ];
+        if (!$profile->getCurrentResourceId()) return false;
+        $response = new GameClientResponse($profile->getCurrentResourceId());
+        $response->setCommand(GameClientResponse::COMMAND_UPDATEDIVHTML);
+        $response->addOption(GameClientResponse::OPT_ELEMENT, $element);
+        $response->addOption(GameClientResponse::OPT_CONTENT, (string)$content);
         if (!empty($adds)) {
             foreach ($adds as $key => $value) {
-                $response[$key] = $value;
+                $response->addOption($key, $value);
             }
         }
         if ($sendNow) {
-            $wsClient = $this->getWsClientByProfile($profile);
-            $wsClient->send(json_encode($response));
+            return $response->send();
         }
         else {
-            $this->response = $response;
+            return $response;
         }
     }
 
@@ -590,10 +613,10 @@ class BaseService
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
                 $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You have gained a level in %s</pre>'),
+                    $this->translate('You have gained a level in %s'),
                     $skill->getName()
                 );
-                $this->messageProfile($profile, $message);
+                $this->messageProfileNew($profile, $message, GameClientResponse::CLASS_ATTENTION);
                 // check if the should receive skillpoints for reaching a milestone
                 if ($newSkillRating%10 == 0) {
                     // skillrating divisible by 10, gain skillpoints
@@ -627,12 +650,12 @@ class BaseService
         $this->entityManager->persist($invitation);
         $this->entityManager->flush($invitation);
         $message = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
+            '%s',
             ($special) ?
                 $this->translate('You have gained a special invitation (see "invitations" for a list)') :
                 $this->translate('You have gained an invitation (see "invitations" for a list)')
         );
-        $this->messageProfile($profile, $message);
+        $this->messageProfileNew($profile, $message, GameClientResponse::CLASS_ATTENTION);
     }
 
     /**
@@ -657,10 +680,10 @@ class BaseService
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
                 $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">You have gained a level in %s</pre>'),
+                    $this->translate('You have gained a level in %s'),
                     $skill->getName()
                 );
-                $this->messageProfile($profile, $message);
+                $this->messageProfileNew($profile, $message, GameClientResponse::CLASS_ATTENTION);
             }
         }
         $this->entityManager->flush($profile);
@@ -676,24 +699,47 @@ class BaseService
     {
         $profile->setSkillPoints($profile->getSkillPoints() + $amount);
         $message = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">You have received %s skillpoints</pre>'),
+            $this->translate('You have received %s skillpoints'),
             $amount
         );
-        $this->messageProfile($profile, $message);
+        $this->messageProfileNew($profile, $message, GameClientResponse::CLASS_ATTENTION);
         if ($flush) $this->entityManager->flush($profile);
     }
 
     /**
      * @param Profile $profile
-     * @param null $message
-     * @param bool $noPrepend
+     * @param $message
+     * @param string $textClass
+     * @return GameClientResponse
      */
-    protected function messageProfile(Profile $profile, $message = NULL, $noPrepend = false)
+    protected function messageProfileNew(Profile $profile, $message, $textClass = GameClientResponse::CLASS_MUTED)
+    {
+        $clientResponse = new GameClientResponse($profile->getId());
+        $clientResponse->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        $clientResponse->addMessage($message, $textClass);
+        return $clientResponse->send();
+    }
+
+    /**
+     * @param Profile $profile
+     * @param null|string|array $message
+     * @param bool $noPrepend
+     * @param bool $sendMessage
+     * @param bool|string $wrap
+     * @return array|bool
+     */
+    protected function messageProfile(Profile $profile, $message = NULL, $noPrepend = false, $sendMessage = true, $wrap = false)
     {
         $wsClient = $this->getWsClientByProfile($profile);
         if ($wsClient) {
             if (!$message) {
-                $message = '<pre style="white-space: pre-wrap;" class="text-danger">INVALID SYSTEM-MESSAGE RECEIVED</pre>';
+                $message = 'INVALID SYSTEM-MESSAGE RECEIVED';
+            }
+            if ($wrap) {
+                $message = sprintf(
+                    '<pre style="white-space: pre-wrap;" class="text-%s">%s</pre>',
+                    $wrap
+                );
             }
             if (is_array($message)) {
                 $command = ($noPrepend) ? 'showoutput' : 'showoutputprepend';
@@ -705,8 +751,14 @@ class BaseService
                 'command' => $command,
                 'message' => $message
             ];
-            $wsClient->send(json_encode($response));
+            if ($sendMessage) {
+                $wsClient->send(json_encode($response));
+            }
+            else {
+                return $response;
+            }
         }
+        return true;
     }
 
     /**
@@ -921,31 +973,76 @@ class BaseService
         /** @var ProfileRepository $profileRepo */
         $wsClients = $this->getWebsocketServer()->getClients();
         $wsClientsData = $this->getWebsocketServer()->getClientsData();
-        $profiles = $profileRepo->findByCurrentNode($node);
+        $profiles = $profileRepo->findByCurrentNode($node, $actor, true);
         foreach ($profiles as $xprofile) {
             /** @var Profile $xprofile */
             if (!is_array($ignoredProfileIds)) $ignoredProfileIds = [$ignoredProfileIds];
             if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
             if ($xprofile !== $actor && !$this->canSee($xprofile, $actor)) continue;
+            // new
+//            if ($updateMap && !array_key_exists($xprofile->getId(), $this->updatedSockets)) {
+//                $this->updatedSockets[$xprofile->getId()] = $xprofile->getId();
+//            }
+//            else {
+//                $this->messageProfile($xprofile, $message);
+//            }
+            // old
             foreach ($wsClients as $wsClient) {
                 if (
                     isset($wsClientsData[$wsClient->resourceId]) &&
                     $wsClientsData[$wsClient->resourceId]['hash'] &&
                     $wsClientsData[$wsClient->resourceId]['profileId'] == $xprofile->getId()
                 ) {
-
                     if (!is_array($message)) {
                         $message = [
                             'command' => 'showmessageprepend',
                             'message' => $message
                         ];
-                    }
-                    $wsClient->send(json_encode($message));
-                    if ($updateMap && !array_key_exists($wsClient->resourceId, $this->updatedSockets)) {
-                        $this->updatedSockets[$wsClient->resourceId] = $wsClient;
+                        if ($updateMap && !array_key_exists($wsClient->resourceId, $this->updatedSockets)) {
+                            $this->updatedSockets[$wsClient->resourceId] = $wsClient;
+                        }
+                        else {
+                            $this->messageProfile($xprofile, $message);
+                        }
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Sends the given message to everyone in the given node, optionally excluding the source of the message.
+     * An actor can be given, if it is, the method will check if the current subject can see the actor.
+     * If profiles is given, those profiles will be excluded as they will be considered to be the source of the message.
+     * @param Node $node
+     * @param $message
+     * @param string $textClass
+     * @param null|Profile|NpcInstance $actor
+     * @param array $ignoredProfileIds
+     * @param bool $updateMap
+     */
+    public function messageEveryoneInNodeNew(
+        Node $node,
+        $message,
+        $textClass = GameClientResponse::CLASS_MUTED,
+        $actor = NULL,
+        $ignoredProfileIds = [],
+        $updateMap = false
+    )
+    {
+        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        /** @var ProfileRepository $profileRepo */
+        $profiles = $profileRepo->findByCurrentNode($node, $actor, true);
+        $response = new GameClientResponse(NULL, GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        $response->addMessage($message, $textClass);
+        foreach ($profiles as $xprofile) {
+            /** @var Profile $xprofile */
+            if (!is_array($ignoredProfileIds)) $ignoredProfileIds = [$ignoredProfileIds];
+            if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
+            if ($xprofile !== $actor && !$this->canSee($xprofile, $actor)) continue;
+            if (!$xprofile->getCurrentResourceId()) continue;
+            if ($updateMap) $this->updateMap($xprofile->getCurrentResourceId(), $xprofile);
+            $response->setResourceId($xprofile->getCurrentResourceId())->send();
         }
     }
 
@@ -1087,7 +1184,54 @@ class BaseService
      * Moves the profile to the node specified by the connection or the target-node.
      * If no connection is given then source- and target-node must be given. This also messages all profiles
      * in the source- and target-node. If no resourceId is given, this will move the profile but not
-     * message the moved profile.
+     * generate a response message for the moved profile. If a resourceId is given, you can specify if the generated
+     * node-info will be sent silently (prepend) by setting the prepend property.
+     * @param int|NULL $resourceId
+     * @param Profile $profile
+     * @param Connection|NULL $connection
+     * @param Node|NULL $sourceNode
+     * @param Node|NULL $targetNode
+     */
+    protected function movePlayerToTargetNodeNew(
+        $resourceId = NULL,
+        Profile $profile,
+        Connection $connection = NULL,
+        Node $sourceNode = NULL,
+        Node $targetNode = NULL
+    )
+    {
+        if ($connection) {
+            $sourceNode = $connection->getSourceNode();
+            $targetNode = $connection->getTargetNode();
+        }
+        $toString = ($connection) ? $targetNode->getName() : $this->translate('somewhere unknown');
+        // message everyone in source node
+        $messageText = sprintf(
+            $this->translate('%s has used the connection to %s'),
+            $profile->getUser()->getUsername(),
+            $toString
+        );
+        $this->messageEveryoneInNodeNew($sourceNode, $messageText, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $profile->setCurrentNode($targetNode);
+        $this->entityManager->flush($profile);
+        $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
+        $messageText = sprintf(
+            $this->translate('%s has connected to this node from %s'),
+            $profile->getUser()->getUsername(),
+            $fromString
+        );
+        $this->messageEveryoneInNodeNew($targetNode, $messageText, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $this->checkNpcAggro($profile, $resourceId); // TODO solve aggro in a different way
+        $this->checkKnownNode($profile);
+        $this->checkMoveFileTriggers($profile, $sourceNode);
+    }
+
+    /**
+     * Moves the profile to the node specified by the connection or the target-node.
+     * If no connection is given then source- and target-node must be given. This also messages all profiles
+     * in the source- and target-node. If no resourceId is given, this will move the profile but not
+     * generate a response message for the moved profile. If a resourceId is given, you can specify if the generated
+     * node-info will be sent silently (prepend) by setting the prepend property.
      * @param int|NULL $resourceId
      * @param Profile $profile
      * @param Connection|NULL $connection
@@ -1110,32 +1254,24 @@ class BaseService
         $toString = ($connection) ? $targetNode->getName() : $this->translate('somewhere unknown');
         // message everyone in source node
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has used the connection to %s</pre>'),
+            $this->translate('[%s] has used the connection to [%s]'),
             $profile->getUser()->getUsername(),
             $toString
         );
-        $message = array(
-            'command' => 'showmessageprepend',
-            'message' => $messageText
-        );
-        $this->messageEveryoneInNode($sourceNode, $message, $profile, $profile->getId());
+        $this->messageEveryoneInNodeNew($sourceNode, $messageText, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         $profile->setCurrentNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has connected to this node from %s</pre>'),
+            $this->translate('%s has connected to this node from %s'),
             $profile->getUser()->getUsername(),
             $fromString
         );
-        $message = array(
-            'command' => 'showmessageprepend',
-            'message' => $messageText
-        );
-        $this->messageEveryoneInNode($targetNode, $message, $profile, $profile->getId());
+        $this->messageEveryoneInNodeNew($targetNode, $messageText, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         $this->entityManager->flush($profile);
         $this->checkNpcAggro($profile, $resourceId); // TODO solve aggro in a different way
         $this->checkKnownNode($profile);
         $this->checkMoveFileTriggers($profile, $sourceNode);
-        return ($resourceId) ? $this->showNodeInfo($resourceId) : false;
+        return ($resourceId) ? $this->showNodeInfoNew($resourceId, NULL, true) : false;
     }
 
     /**
@@ -1164,18 +1300,18 @@ class BaseService
                     // TODO add stun effect
                     $damage = ceil(round($file->getIntegrity()/10));
                     $messageText = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for %s points of damage</pre>'),
+                        $this->translate('[%s] hits you for %s points of damage'),
                         $file->getName(),
                         $damage
                     );
                     $otherMessageText = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits [%s] for %s points of damage</pre>'),
+                        $this->translate('[%s] hits [%s] for %s points of damage'),
                         $file->getName(),
                         $profile->getUser()->getUsername(),
                         $damage
                     );
-                    $this->messageProfile($profile, $messageText);
-                    $this->messageEveryoneInNode($currentNode, $otherMessageText, $profile, $profile->getId());
+                    $this->messageProfileNew($profile, $messageText, GameClientResponse::CLASS_DANGER);
+                    $this->messageEveryoneInNodeNew($currentNode, $otherMessageText, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
                     $this->damageProfile($profile, $damage);
                     break;
                 case FileType::ID_IO_TRACER:
@@ -1287,27 +1423,19 @@ class BaseService
         // message everyone in source node
         $toString = ($connection) ? $targetNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has used the connection to %s</pre>'),
+            $this->translate('%s has used the connection to %s'),
             $npc->getName(),
             $toString
         );
-        $message = array(
-            'command' => 'showmessageprepend',
-            'message' => $messageText
-        );
-        $this->messageEveryoneInNode($sourceNode, $message, $npc, [], true);
+        $this->messageEveryoneInNodeNew($sourceNode, $messageText, GameClientResponse::CLASS_MUTED, $npc, [], true);
         $npc->setNode($targetNode);
         $fromString = ($connection) ? $sourceNode->getName() : $this->translate('somewhere unknown');
         $messageText = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has connected to this node from %s</pre>'),
+            $this->translate('%s has connected to this node from %s'),
             $npc->getName(),
             $fromString
         );
-        $message = array(
-            'command' => 'showmessageprepend',
-            'message' => $messageText
-        );
-        $this->messageEveryoneInNode($targetNode, $message, $npc, [], true);
+        $this->messageEveryoneInNodeNew($targetNode, $messageText, GameClientResponse::CLASS_MUTED, $npc, [], true);
         $this->checkNpcAggro($npc);
         $this->checkAggro($npc);
         if (!$this->isInCombat($npc)) $this->checkNpcTriggers($npc);
@@ -1538,6 +1666,61 @@ class BaseService
                 'command' => 'showmessage',
                 'message' => $message
             ];
+        }
+        return $isBlocked;
+    }
+
+    /**
+     * Checks if the player is blocked from performing another action.
+     * Returns true if the action is blocked, false if it is not blocked.
+     * @param $resourceId
+     * @param bool $checkForFullBlock
+     * @param File|NULL $file
+     * @return bool|string
+     */
+    protected function isActionBlockedNew($resourceId, $checkForFullBlock = false, File $file = NULL)
+    {
+        $ws = $this->getWebsocketServer();
+        $clientData = $ws->getClientData($resourceId);
+        $isBlocked = false;
+        $message = $this->translate('You are currently busy with something else');
+        /* combat block check follows - combat never fully blocks */
+        if (!$checkForFullBlock) {
+            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+            $profile = $user->getProfile();
+            $isBlocked = $this->isInCombat($profile);
+            $fileUnblock = false;
+            if ($isBlocked) {
+                // if a file was given, we check if it a combat file and unblock if needed
+                if ($file) {
+                    $unblockingFileTypeIds = [FileType::ID_KICKER];
+                    $isBlocked = (in_array($file->getFileType()->getId(), $unblockingFileTypeIds)) ? false : true;
+                    // set fileunblock tracker to true if this unblocked them
+                    if (!$isBlocked) $fileUnblock = true;
+                }
+                if ($isBlocked) {
+                    $message = $this->translate('You are currently busy fighting');
+                }
+            }
+            // now check if they are under effects - like stunned - and only if they werent unblocked by the current file type
+            if (!$isBlocked && !$fileUnblock && $this->isUnderEffect($profile, Effect::ID_STUNNED)) {
+                $isBlocked = true;
+                $message = $this->translate('You are currently stunned');
+            }
+        }
+        /* action block check follows */
+        if (!empty($clientData->action) && !$isBlocked) {
+            $actionData = (object)$clientData->action;
+            $isBlocked = false;
+            if ($checkForFullBlock) {
+                if ($actionData->fullblock) $isBlocked = true;
+            }
+            if (!$isBlocked) {
+                if ($actionData->blocking) $isBlocked = true;
+            }
+        }
+        if ($isBlocked) {
+            return $message;
         }
         return $isBlocked;
     }
@@ -2044,12 +2227,12 @@ class BaseService
      * @param $resourceId
      * @param bool $messageSocket
      * @param bool $asActiveCommand
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     protected function cancelAction($resourceId, $messageSocket = false, $asActiveCommand = false)
     {
         $ws = $this->getWebsocketServer();
-        $ws->setClientData($resourceId, 'action', []);
+        $ws->clearClientActionData($resourceId);
         $clientData = $ws->getClientData($resourceId);
         $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
         if ($asActiveCommand) $ws->removeCombatant($profile, false);
@@ -2057,65 +2240,51 @@ class BaseService
             foreach ($ws->getClients() as $wsClient) {
                 /** @noinspection PhpUndefinedFieldInspection */
                 if ($wsClient->resourceId == $resourceId) {
-                    $response = [
-                        'command' => ($asActiveCommand) ? 'showmessage' : 'showmessageprepend',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
-                            $this->translate('Your current action has been cancelled')
-                        ),
-                        'cleardeadline' => true
-                    ];
+                    $response = new GameClientResponse();
+                    $message = $this->translate('Your current action has been cancelled');
+                    $response->addMessage($message, GameClientResponse::CLASS_ATTENTION);
+                    $response->addOption(GameClientResponse::OPT_CLEARDEADLINE, true);
                     if ($asActiveCommand) {
                         return $response;
                     }
                     else {
-                        return $wsClient->send(json_encode($response));
+                        return $response->send();
                     }
                     break;
                 }
             }
         }
-        return true;
+        return false;
     }
 
     /**
      * @param string $string
      * @param int $maxLength
      * @param int $minLength
+     * @return bool|string
      */
     protected function stringChecker($string = '', $maxLength = 32, $minLength = 1)
     {
         // check if only alphanumeric
         $validator = new Alnum(array('allowWhiteSpace' => true));
-        if (!$this->response && !$validator->isValid($string)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid string (alpha-numeric only)')
-                )
-            );
+        if (!$validator->isValid($string)) {
+            return $this->translate('Invalid string (alpha-numeric only)');
         }
         // check for max characters
-        if (!$this->response && mb_strlen($string) > $maxLength) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid string (%s-characters-max)</pre>'),
-                    $maxLength
-                )
+        if (mb_strlen($string) > $maxLength) {
+            return sprintf(
+                $this->translate('Invalid string (%s-characters-max)'),
+                $maxLength
             );
         }
         // check for min characters
-        if (!$this->response && mb_strlen($string) < $minLength) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid string (%s-characters-min)</pre>'),
-                    $minLength
-                )
+        if (mb_strlen($string) < $minLength) {
+            return sprintf(
+                $this->translate('Invalid string (%s-characters-min)'),
+                $minLength
             );
         }
+        return false;
     }
 
     /**
@@ -2456,12 +2625,281 @@ class BaseService
             $view->setVariable('json', json_encode($mapArray));
             $this->response = array(
                 'command' => 'showmap',
-                'type' => 'default',
                 'content' => $this->viewRenderer->render($view),
                 'silent' => true
             );
         }
         return $this->response;
+    }
+
+    /**
+     * @param Profile|NULL $xprofile
+     * @return string
+     */
+    public function generateSystemMap(Profile $xprofile = NULL)
+    {
+        $profile = ($xprofile) ? $xprofile : $this->user->getProfile();
+        $currentSystem = $profile->getCurrentNode()->getSystem();
+        $mapArray = [
+            'nodes' => [],
+            'links' => []
+        ];
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        /** @var NodeRepository $nodeRepo */
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $nodes = $nodeRepo->findBySystem($currentSystem);
+        foreach ($nodes as $node) {
+            /** @var Node $node */
+            $nodeType = $node->getNodeType();
+            $fileNodes = [];
+            $npcNodes = [];
+            if ($node == $profile->getCurrentNode()) {
+                $group = 99;
+                $files = $fileRepo->findByNode($node);
+                foreach ($files as $file) {
+                    $fileNodes[] = $file;
+                }
+                $npcs = $npcInstanceRepo->findByNode($node);
+                foreach ($npcs as $npc) {
+                    $npcNodes[] = $npc;
+                }
+            }
+            else {
+                $group = $nodeType->getId();
+            }
+            $mapArray['nodes'][] = [
+                'name' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                'type' => $group,
+                'shapetype' => 'circle'
+            ];
+            // add files to map
+            foreach ($fileNodes as $fileNode) {
+                /** @var File $fileNode */
+                $fileType = $fileNode->getFileType();
+                $mapArray['nodes'][] = [
+                    'name' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                    'type' => $fileType->getId(),
+                    'shapetype' => 'rect'
+                ];
+                $mapArray['links'][] = [
+                    'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                    'target' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                    'value' => 2,
+                    'type' => 'W'
+                ];
+            }
+            // add npcs to map
+            foreach ($npcNodes as $npcNode) {
+                /** @var NpcInstance $npcNode */
+                $npcType = $npcNode->getNpc();
+                $mapArray['nodes'][] = [
+                    'name' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                    'type' => $npcType->getId(),
+                    'shapetype' => 'triangle'
+                ];
+                $mapArray['links'][] = [
+                    'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                    'target' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                    'value' => 2,
+                    'type' => 'Z'
+                ];
+            }
+            $connections = $connectionRepo->findBySourceNode($node);
+            foreach ($connections as $connection) {
+                /** @var Connection $connection */
+                $typeValue = 'A';
+                if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                    if ($connection->getisOpen()) {
+                        $typeValue = 'Y';
+                    }
+                    else {
+                        $typeValue = 'E';
+                    }
+                }
+                $mapArray['links'][] = [
+                    'source' => (string)$connection->getSourceNode()->getId() . '_' .
+                        $connection->getSourceNode()->getNodeType()->getShortName() . '_' .
+                        $connection->getSourceNode()->getName(),
+                    'target' => (string)$connection->getTargetNode()->getId() . '_' .
+                        $connection->getTargetNode()->getNodeType()->getShortName() . '_' .
+                        $connection->getTargetNode()->getName(),
+                    'value' => 2,
+                    'type' => $typeValue
+                ];
+            }
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/partials/map.phtml');
+        $view->setVariable('json', json_encode($mapArray));
+        return $this->viewRenderer->render($view);
+    }
+
+    /**
+     * @param Profile|NULL $xprofile
+     * @return string
+     */
+    public function generateAreaMap(Profile $xprofile = NULL)
+    {
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $knRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        /** @var KnownNodeRepository $knRepo */
+        $profile = ($xprofile) ? $xprofile : $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        // if the profile or its faction or group owns this system, show them the full map
+        $currentSystem = $currentNode->getSystem();
+        if (
+            $profile === $currentSystem->getProfile() ||
+            ($profile->getFaction() && $profile->getFaction() == $currentSystem->getFaction()) ||
+            ($profile->getGroup() && $profile->getGroup() == $currentSystem->getGroup())
+        ) {
+            return $this->generateSystemMap($xprofile);
+        }
+        $mapArray = [
+            'nodes' => [],
+            'links' => []
+        ];
+        $nodes = [];
+        $nodes[] = $currentNode;
+        $connections = $connectionRepo->findBySourceNode($currentNode);
+        foreach ($connections as $xconnection) {
+            /** @var Connection $xconnection */
+            $nodes[] = $xconnection->getTargetNode();
+        }
+        $knownNodes = $knRepo->findByProfileAndSystem($profile, $currentSystem);
+        foreach ($knownNodes as $knownNode) {
+            /** @var KnownNode $knownNode */
+            $knownNodeNode = $knownNode->getNode();
+            if (in_array($knownNodeNode, $nodes)) continue;
+            $kconnections = $connectionRepo->findBySourceNode($knownNodeNode);
+            foreach ($kconnections as $kconnection) {
+                /** @var Connection $kconnection */
+                $typeValue = 'A';
+                if ($kconnection->getType() == Connection::TYPE_CODEGATE) {
+                    if ($kconnection->getisOpen()) {
+                        $typeValue = 'Y';
+                    }
+                    else {
+                        $typeValue = 'E';
+                    }
+                }
+                if (in_array($kconnection->getTargetNode(), $nodes)) {
+                    $mapArray['links'][] = [
+                        'source' => (string)$kconnection->getSourceNode()->getId() . '_' . $kconnection->getSourceNode()->getNodeType()->getShortName() . '_' . $kconnection->getSourceNode()->getName(),
+                        'target' => (string)$kconnection->getTargetNode()->getId() . '_' . $kconnection->getTargetNode()->getNodeType()->getShortName() . '_' . $kconnection->getTargetNode()->getName(),
+                        'value' => 2,
+                        'type' => $typeValue
+                    ];
+                }
+            }
+            $nodes[] = $knownNodeNode;
+        }
+        $counter = true;
+        foreach ($nodes as $node) {
+            /** @var Node $node */
+            $nodeType = $node->getNodeType();
+            $fileNodes = [];
+            $npcNodes = [];
+            if ($node == $profile->getCurrentNode()) {
+                $group = 99;
+                $files = $fileRepo->findByNode($node);
+                $npcs = $npcInstanceRepo->findByNode($node);
+                foreach ($files as $file) {
+                    $fileNodes[] = $file;
+                }
+                foreach ($npcs as $npc) {
+                    $npcNodes[] = $npc;
+                }
+            }
+            else {
+                $group = $nodeType->getId();
+            }
+            $mapArray['nodes'][] = [
+                'name' => (string)$node->getId() . '_' . $node->getNodeType()->getShortName() . '_' . $node->getName(),
+                'type' => $group,
+                'shapetype' => 'circle'
+            ];
+            foreach ($fileNodes as $fileNode) {
+                /** @var File $fileNode */
+                $fileType = $fileNode->getFileType();
+                $mapArray['nodes'][] = [
+                    'name' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                    'type' => $fileType->getId(),
+                    'shapetype' => 'rect'
+                ];
+                $mapArray['links'][] = [
+                    'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                    'target' => (string)$fileNode->getId() . '_' . $fileType->getName() . '_' . $fileNode->getName(),
+                    'value' => 2,
+                    'type' => 'W'
+                ];
+            }
+            // add npcs to map
+            foreach ($npcNodes as $npcNode) {
+                /** @var NpcInstance $npcNode */
+                $npcType = $npcNode->getNpc();
+                $mapArray['nodes'][] = [
+                    'name' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                    'type' => $npcType->getId(),
+                    'shapetype' => 'triangle'
+                ];
+                $mapArray['links'][] = [
+                    'source' => (string)$node->getId() . '_' . $nodeType->getShortName() . '_' . $node->getName(),
+                    'target' => (string)$npcNode->getId() . '_' . $npcType->getName() . '_' . $npcNode->getName(),
+                    'value' => 2,
+                    'type' => 'Z'
+                ];
+            }
+            if ($counter) {
+                $connections = $connectionRepo->findBySourceNode($node);
+                foreach ($connections as $connection) {
+                    /** @var Connection $connection */
+                    $typeValue = 'A';
+                    if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                        if ($connection->getisOpen()) {
+                            $typeValue = 'Y';
+                        }
+                        else {
+                            $typeValue = 'E';
+                        }
+                    }
+                    $mapArray['links'][] = [
+                        'source' => (string)$connection->getSourceNode()->getId() . '_' . $connection->getSourceNode()->getNodeType()->getShortName() . '_' . $connection->getSourceNode()->getName(),
+                        'target' => (string)$connection->getTargetNode()->getId() . '_' . $connection->getTargetNode()->getNodeType()->getShortName() . '_' . $connection->getTargetNode()->getName(),
+                        'value' => 2,
+                        'type' => $typeValue
+                    ];
+                    $this->checkKnownNode($profile, $connection->getTargetNode());
+                }
+                $counter = false;
+            }
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/partials/map.phtml');
+        $view->setVariable('json', json_encode($mapArray));
+        return $this->viewRenderer->render($view);
+    }
+
+    /**
+     * @param $resourceId
+     * @param Profile|NULL $profile
+     * @param bool $silent
+     * @return GameClientResponse
+     */
+    public function updateMap($resourceId, Profile $profile = NULL, $silent = true)
+    {
+        $updatedMapPackage = new GameClientResponse($resourceId, GameClientResponse::COMMAND_SHOWMAP, [], $silent);
+        $updatedMapPackage->addOption(GameClientResponse::OPT_CONTENT, $this->generateAreaMap($profile));
+        return $updatedMapPackage->send();
     }
 
     /**
@@ -2599,7 +3037,7 @@ class BaseService
             if (!$this->isInCombat($actor)) {
                 $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
                 /** @var ProfileRepository $profileRepo */
-                $profiles = $profileRepo->findByCurrentNode($currentNode);
+                $profiles = $profileRepo->findByCurrentNode($currentNode, NULL, true);
                 foreach ($profiles as $profile) {
                     /** @var Profile $profile */
                     if ($profile->getCurrentResourceId()) {
@@ -2887,80 +3325,67 @@ class BaseService
         return $npcInstance;
     }
 
-    protected function executeMissionFile(File $file, $resourceId)
+    /**
+     * @param File $file
+     * @return bool|GameClientResponse
+     */
+    protected function executeMissionFile(File $file)
     {
         $profile = $this->user->getProfile();
         $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
         /** @var MissionRepository $missionRepo */
         $mission = $missionRepo->findByTargetFile($file);
-        $response = false;
         if (!$mission) {
-            return $response;
+            return false;
         }
-        if (!$response && $mission) {
-            /** @var Mission $mission */
-            switch ($mission->getMission()->getId()) {
-                default:
-                    break;
-                case MissionArchetype::ID_PLANT_BACKDOOR:
-                    if (!$response && $mission->getProfile() != $profile) {
-                        $response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] can not be executed</pre>'),
-                                $file->getName()
-                            )
-                        );
-                    }
-                    if (!$response && $mission->getTargetNode() != $profile->getCurrentNode()) {
-                        $response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] does not seem to have any effect in this node</pre>'),
-                                $file->getName()
-                            )
-                        );
-                    }
-                    break;
-                case MissionArchetype::ID_UPLOAD_FILE:
-                    if ($mission->getTargetNode() != $profile->getCurrentNode()) {
-                        $response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] does not seem to have any effect in this node</pre>'),
-                                $file->getName()
-                            )
-                        );
-                    }
-                    break;
-                case MissionArchetype::ID_STEAL_FILE:
-                case MissionArchetype::ID_DELETE_FILE:
-                    if ($mission->getProfile() != $profile) {
-                        $response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] can not be interacted with</pre>'),
-                                $file->getName()
-                            )
-                        );
-                    }
-                    break;
-            }
-            if (!$response) {
-                $response = $this->completeMission($resourceId);
-            }
+        /** @var Mission $mission */
+        switch ($mission->getMission()->getId()) {
+            default:
+                break;
+            case MissionArchetype::ID_PLANT_BACKDOOR:
+                if ($mission->getProfile() != $profile) {
+                    $message = sprintf(
+                        $this->translate('[%s] can not be executed'),
+                        $file->getName()
+                    );
+                    return $this->gameClientResponse->addMessage($message);
+                }
+                if ($mission->getTargetNode() != $profile->getCurrentNode()) {
+                    $message = sprintf(
+                        $this->translate('[%s] does not seem to have any effect in this node'),
+                        $file->getName()
+                    );
+                    return $this->gameClientResponse->addMessage($message);
+                }
+                break;
+            case MissionArchetype::ID_UPLOAD_FILE:
+                if ($mission->getTargetNode() != $profile->getCurrentNode()) {
+                    $message = sprintf(
+                        $this->translate('[%s] does not seem to have any effect in this node'),
+                        $file->getName()
+                    );
+                    return $this->gameClientResponse->addMessage($message);
+                }
+                break;
+            case MissionArchetype::ID_STEAL_FILE:
+            case MissionArchetype::ID_DELETE_FILE:
+                if ($mission->getProfile() != $profile) {
+                    $message = sprintf(
+                        $this->translate('[%s] can not be interacted with'),
+                        $file->getName()
+                    );
+                    return $this->gameClientResponse->addMessage($message);
+                }
+                break;
         }
-        return $response;
+        return $this->completeMission();
     }
 
     /**
-     * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
-    protected function completeMission($resourceId)
+    protected function completeMission()
     {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
         /** @var MissionRepository $missionRepo */
@@ -2990,31 +3415,43 @@ class BaseService
                 $mission->getTargetFaction()
             );
             $this->entityManager->flush();
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Mission accomplished - you received %s credits</pre>'),
-                    $reward
-                )
-            ];
+            $message = sprintf(
+                $this->translate('Mission accomplished - you received %s credits'),
+                $reward
+            );
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         }
-        return $this->response;
+        return false;
     }
 
     /**
      * Shows important information about a node.
-     * If no node is given, it will use the profile's current node.
+     * If no node is given, it will use the profile's current node. If silent is given, it will generate
+     * prepend output. This is if the result of the originating command is not immediate.
      * @param $resourceId
      * @param Node|NULL $node
+     * @param bool $prepend
+     * @param bool|string|array $prependMessage
      * @return array|bool|false
      */
-    public function showNodeInfo($resourceId, Node $node = NULL)
+    public function showNodeInfo($resourceId, Node $node = NULL, $prepend = false, $prependMessage = false)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = ($node) ? $node : $profile->getCurrentNode();
-        $returnMessage = array();
+        $returnMessage = [];
+        // check if prependMessage was given and add it as first element of output
+        if ($prependMessage) {
+            if (is_array($prependMessage)) {
+                foreach ($prependMessage as $pm) {
+                    $returnMessage[] = $pm;
+                }
+            }
+            else {
+                $returnMessage[] = $prependMessage;
+            }
+        }
         // add a note if the node was given (most prolly a scan command)
         if ($node) $returnMessage[] = sprintf(
             '<pre class="text-info">You scan into the node [%s]:</pre>',
@@ -3136,7 +3573,7 @@ class BaseService
         }
         // prepare and return response
         $this->response = array(
-            'command' => 'showoutput',
+            'command' => ($prepend) ? 'showoutputprepend' : 'showoutput',
             'message' => $returnMessage,
             'moved' => true
         );
@@ -3145,24 +3582,167 @@ class BaseService
     }
 
     /**
-     * @param Node $currentNode
+     * @param $resourceId
+     * @param Node|NULL $node
+     * @param bool $sendNow
+     * @return GameClientResponse|bool
+     */
+    public function showNodeInfoNew($resourceId, Node $node = NULL, $sendNow = false)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $currentNode = ($node) ? $node : $profile->getCurrentNode();
+        // add survey text if option is turned on
+        if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) {
+            $this->gameClientResponse->addMessage($this->getSurveyText($currentNode), GameClientResponse::CLASS_MUTED);
+        }
+        // get connections and show them if there are any
+        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        /** @var ConnectionRepository $connectionRepo */
+        $connections = $connectionRepo->findBySourceNode($currentNode);
+        if (count($connections) > 0) {
+            $this->gameClientResponse->addMessage($this->translate('connections:'), GameClientResponse::CLASS_SURVEY);
+        }
+        $counter = 0;
+        foreach ($connections as $connection) {
+            /** @var Connection $connection */
+            $counter++;
+            $addonString = '';
+            if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                $addonString = ($connection->getisOpen()) ?
+                    $this->translate('<span class="text-muted">(codegate) (open)</span>') :
+                    $this->translate('<span class="text-addon">(codegate) (closed)</span>');
+            }
+            $returnMessage = sprintf(
+                '%-12s: <span class="contextmenu-connection" data-id="%s">%s</span> %s',
+                $counter,
+                $counter,
+                $connection->getTargetNode()->getName(),
+                $addonString
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SURVEY);
+        }
+        // get files and show them if there are any
+        $files = [];
+        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        /** @var FileRepository $fileRepo */
+        foreach ($fileRepo->findByNode($currentNode) as $fileInstance) {
+            /** @var File $fileInstance */
+            if (!$fileInstance->getFileType()->getStealthing()) {
+                $files[] = $fileInstance;
+            }
+            else {
+                if ($this->canSee($profile, $fileInstance)) $files[] = $fileInstance;
+            }
+        }
+        if (count($files) > 0) {
+            $this->gameClientResponse->addMessage($this->translate('files:'), GameClientResponse::CLASS_EXECUTABLE);
+        }
+        $counter = 0;
+        foreach ($files as $file) {
+            /** @var File $file */
+            $counter++;
+            $returnMessage = sprintf(
+                '%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span>',
+                $counter,
+                $file->getName(),
+                $file->getName(),
+                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_EXECUTABLE);
+        }
+        // get profiles and show them if there are any
+        $profiles = [];
+        foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
+            $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
+            /** @var Profile $requestedProfile */
+            if(
+                $requestedProfile &&
+                $requestedProfile !== $profile &&
+                $requestedProfile->getCurrentNode() == $currentNode
+            )
+            {
+                if (!$requestedProfile->getStealthing()) {
+                    $profiles[] = $requestedProfile;
+                }
+                else {
+                    if ($this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
+                }
+            }
+        }
+        if (count($profiles) > 0) {
+            $this->gameClientResponse->addMessage($this->translate('users:'), GameClientResponse::CLASS_USERS);
+        }
+        $counter = 0;
+        foreach ($profiles as $pprofile) {
+            /** @var Profile $pprofile */
+            $counter++;
+            $returnMessage = sprintf(
+                '%-12s: %s %s %s %s',
+                $counter,
+                $pprofile->getUser()->getUsername(),
+                ($pprofile->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
+                ($profile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getFaction()->getName()) : '',
+                ($profile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getGroup()->getName()) : ''
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_USERS);
+        }
+        // get npcs and show them if there are any
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $npcInstances = $npcInstanceRepo->findByNode($currentNode);
+        $npcs = [];
+        foreach ($npcInstances as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
+            if (!$npcInstance->getStealthing()) {
+                $npcs[] = $npcInstance;
+            }
+            else {
+                if ($this->canSee($profile, $npcInstance)) $npcs[] = $npcInstance;
+            }
+        }
+        if (count($npcs) > 0) {
+            $this->gameClientResponse->addMessage($this->translate('entities:'), GameClientResponse::CLASS_NPCS);
+        }
+        $counter = 0;
+        foreach ($npcs as $npcInstance) {
+            /** @var NpcInstance $npcInstance */
+            $counter++;
+            $returnMessage = sprintf(
+                '%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s',
+                $counter,
+                $counter,
+                $npcInstance->getName(),
+                ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
+                ($npcInstance->getProfile()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getProfile()->getUser()->getUsername()) : '',
+                ($npcInstance->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getFaction()->getName()) : '',
+                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : ''
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_NPCS);
+        }
+        // prepare and return response
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_MOVED, true);
+        return ($sendNow) ? $this->gameClientResponse->send() : $this->gameClientResponse;
+    }
+
+    /**
+     * @param Node $node
      * @return string
      */
-    protected function getSurveyText(Node $currentNode)
+    protected function getSurveyText(Node $node)
     {
-        if (!$currentNode->getDescription()) {
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
-                wordwrap($this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.'), 120)
-            );
+        if (!$node->getDescription()) {
+            $text = wordwrap(
+                $this->translate('This is a raw Cyberspace node, white walls, white ceiling, white floor - no efforts have been made to customize it.'),
+                120);
         }
         else {
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-survey">%s</pre>',
-                wordwrap(htmLawed($currentNode->getDescription(), ['safe'=>1, 'elements'=>'strong, em, strike, u']), 120)
+            $text = sprintf(
+                wordwrap($node->getDescription(), 120)
             );
         }
-        return $returnMessage;
+        return $text;
     }
 
     /**
@@ -3175,7 +3755,14 @@ class BaseService
         $this->entityManager->flush($profile);
         $currentNode = $profile->getCurrentNode();
         $homeNode = $profile->getHomeNode();
-        $this->movePlayerToTargetNode(NULL, $profile , NULL, $currentNode, $homeNode);
+        $this->movePlayerToTargetNodeNew(NULL, $profile , NULL, $currentNode, $homeNode);
+        $this->updateMap($profile->getCurrentResourceId(), $profile);
+        if ($currentNode->getSystem() !== $homeNode->getSystem()) {
+            $flytoResponse = new GameClientResponse($profile->getCurrentResourceId());
+            $flytoResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
+            $flytoResponse->addOption(GameClientResponse::OPT_CONTENT, explode(',',$homeNode->getSystem()->getGeocoords()));
+            $flytoResponse->send();
+        }
     }
 
     /**
@@ -3304,13 +3891,13 @@ class BaseService
                     if ($actor instanceof Profile) {
                         if ($actor == $profile) {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are still under the effect of [%s]</pre>'),
+                                $this->translate('<span class="text-attention">You are still under the effect of [%s]</span>'),
                                 $effect->getName()
                             );
                         }
                         else {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is still under the effect of [%s]</pre>'),
+                                $this->translate('<span class="text-attention">[%s] is still under the effect of [%s]</span>'),
                                 ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
                                 $effect->getName()
                             );
@@ -3322,13 +3909,13 @@ class BaseService
                     if ($actor instanceof Profile) {
                         if ($actor == $profile) {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You have recently been under the effect of [%s] - receiving dimishing returns</pre>'),
+                                $this->translate('<span class="text-attention">You have recently been under the effect of [%s] - receiving dimishing returns</span>'),
                                 $effect->getName()
                             );
                         }
                         else {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] has recently been under the effect of [%s] - receiving dimishing returns</pre>'),
+                                $this->translate('<span class="text-attention">[%s] has recently been under the effect of [%s] - receiving dimishing returns</span>'),
                                 ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
                                 $effect->getName()
                             );
@@ -3340,13 +3927,13 @@ class BaseService
                     if ($actor instanceof Profile) {
                         if ($actor == $profile) {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You have recently been under the effect of [%s] and are currently immune</pre>'),
+                                $this->translate('<span class="text-attention">You have recently been under the effect of [%s] and are currently immune</span>'),
                                 $effect->getName()
                             );
                         }
                         else {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] has recently been under the effect of [%s] and is currently immune</pre>'),
+                                $this->translate('<span class="text-attention">[%s] has recently been under the effect of [%s] and is currently immune</span>'),
                                 ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
                                 $effect->getName()
                             );
@@ -3380,7 +3967,7 @@ class BaseService
                         }
                         if ($profile) {
                             $profileMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s] with diminishing returns</pre>'),
+                                $this->translate('<span class="text-attention">You are now under the effect of [%s] with diminishing returns</span>'),
                                 $effect->getName()
                             );
                         }
@@ -3407,20 +3994,20 @@ class BaseService
                         }
                         if ($profile) {
                             $profileMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                                $this->translate('<span class="text-attention">You are now under the effect of [%s]</span>'),
                                 $effect->getName()
                             );
                         }
                         if ($actor instanceof Profile) {
                             if ($actor == $profile) {
                                 $actorMessage = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                                    $this->translate('<span class="text-attention">You are now under the effect of [%s]</span>'),
                                     $effect->getName()
                                 );
                             }
                             else {
                                 $actorMessage = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is now under the effect of [%s]</pre>'),
+                                    $this->translate('<span class="text-attention">[%s] is now under the effect of [%s]</span>'),
                                     ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
                                     $effect->getName()
                                 );
@@ -3439,13 +4026,13 @@ class BaseService
                     if ($actor instanceof Profile) {
                         if ($actor == $profile) {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are currently immune to [%s]</pre>'),
+                                $this->translate('<span class="text-attention">You are currently immune to [%s]</span>'),
                                 $effect->getName()
                             );
                         }
                         else {
                             $actorMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is currently immune to [%s]</pre>'),
+                                $this->translate('<span class="text-attention">[%s] is currently immune to [%s]</span>'),
                                 ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
                                 $effect->getName()
                             );
@@ -3485,13 +4072,13 @@ class BaseService
                 if ($actor instanceof Profile) {
                     if ($actor == $profile) {
                         $actorMessage = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                            $this->translate('<span class="text-attention">You are now under the effect of [%s]</span>'),
                             $effect->getName()
                         );
                     }
                     else {
                         $actorMessage = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] is now under the effect of [%s]</pre>'),
+                            $this->translate('<span class="text-attention">[%s] is now under the effect of [%s]</span>'),
                             ($profile) ? $profile->getUser()->getUsername() : $npc->getName(),
                             $effect->getName()
                         );
@@ -3499,7 +4086,7 @@ class BaseService
                 }
                 if ($profile) {
                     $profileMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">You are now under the effect of [%s]</pre>'),
+                        $this->translate('<span class="text-attention">You are now under the effect of [%s]</span>'),
                         $effect->getName()
                     );
                 }
@@ -3553,6 +4140,72 @@ class BaseService
             $effectInstance = $peRepo->findOneByNpcAndEffect($subject, $effectId);
         }
         return $effectInstance;
+    }
+
+    /**
+     * @param $string
+     * @param int $caseChance
+     * @param int $leetChance
+     * @return mixed
+     */
+    protected function leetifyString($string, $caseChance = 50, $leetChance = 50)
+    {
+        // TODO can be leetified more?
+        for ($index = 0; $index < mb_strlen($string); $index++) {
+            if (mt_rand(1, 100) > $caseChance) {
+                $string[$index] = strtoupper($string[$index]);
+            }
+            else {
+                $string[$index] = strtolower($string[$index]);
+            }
+            if (mt_rand(1, 100) > $leetChance) {
+                switch (strtolower($string[$index])) {
+                    default:
+                        break;
+                    case 'a':
+                        $string[$index] = '4';
+                        break;
+                    case 'b':
+                        $string[$index] = '8';
+                        break;
+                    case 'e':
+                        $string[$index] = '3';
+                        break;
+                    case 'g':
+                        $string[$index] = '6';
+                        break;
+                    case 'i':
+                        $string[$index] = '1';
+                        break;
+                    case 'o':
+                        $string[$index] = '0';
+                        break;
+                    case 'p':
+                        $string[$index] = '9';
+                        break;
+                    case 's':
+                        $string[$index] = '5';
+                        break;
+                    case 't':
+                        $string[$index] = '7';
+                        break;
+                }
+            }
+        }
+        return $string;
+    }
+
+    /**
+     * @param $value
+     * @param null $min
+     * @param null $max
+     * @return null
+     */
+    protected function checkValueMinMax($value, $min = NULL, $max = NULL)
+    {
+        if ($min && $value < $min) $value = $min;
+        if ($max && $value > $max) $value = $max;
+        return $value;
     }
 
 }

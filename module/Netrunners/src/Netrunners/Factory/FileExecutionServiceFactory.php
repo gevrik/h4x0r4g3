@@ -29,7 +29,8 @@ class FileExecutionServiceFactory implements FactoryInterface
             $serviceLocator->get('ViewRenderer'),
             $serviceLocator->get('translator'),
             $serviceLocator->get('Netrunners\Service\CodebreakerService'),
-            $serviceLocator->get('Netrunners\Service\MissionService')
+            $serviceLocator->get('Netrunners\Service\MissionService'),
+            $serviceLocator->get('Netrunners\Service\HangmanService')
         );
     }
 

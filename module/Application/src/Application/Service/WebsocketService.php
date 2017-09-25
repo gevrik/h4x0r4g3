@@ -250,7 +250,30 @@ class WebsocketService implements MessageComponentInterface {
      */
     public function setClientData($resourceId, $key, $value)
     {
-        $this->clientsData[$resourceId][$key] = $value;
+        if ($resourceId && $key && $value) {
+            $this->clientsData[$resourceId][$key] = $value;
+        }
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @return $this
+     */
+    public function clearClientActionData($resourceId)
+    {
+        $this->clientsData[$resourceId]['action'] = [];
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $actionData
+     * @return $this
+     */
+    public function setClientActionData($resourceId, $actionData)
+    {
+        $this->clientsData[$resourceId]['action'] = $actionData;
         return $this;
     }
 
@@ -479,7 +502,8 @@ class WebsocketService implements MessageComponentInterface {
                 'contentArray' => []
             ],
             'captchasolution' => NULL,
-            'invitationid' => NULL
+            'invitationid' => NULL,
+            'replyId' => NULL
         );
         $response = array(
             'command' => 'getipaddy',

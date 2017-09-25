@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
 use Zend\Mvc\I18n\Translator;
@@ -49,107 +50,89 @@ class CombatService extends BaseService
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function attackCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            // get parameter
-            $parameter = $this->getNextParameter($contentArray, false);
-            $npc = $this->findNpcByNameOrNumberInCurrentNode($parameter);
-            if (!$this->response && !$npc) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('No such entity')
-                    )
-                );
-            }
-            if (!$this->response) {
-                $this->getWebsocketServer()->addCombatant($profile, $npc, $resourceId);
-                if (!$this->isInCombat($npc)) $this->getWebsocketServer()->addCombatant($npc, $profile, NULL, $resourceId);
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You attack [%s]</pre>'),
-                        $npc->getName()
-                    )
-                );
-                // inform other players in node
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
-                    $this->user->getUsername(),
-                    $npc->getName()
-                );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], NULL, $profile->getId());
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false);
+        $npc = $this->findNpcByNameOrNumberInCurrentNode($parameter);
+        if (!$npc) {
+            return $this->gameClientResponse->addMessage($this->translate('No such entity'))->send();
+        }
+        $this->getWebsocketServer()->addCombatant($profile, $npc, $resourceId);
+        if (!$this->isInCombat($npc)) $this->getWebsocketServer()->addCombatant($npc, $profile, NULL, $resourceId);
+        $message = sprintf(
+            $this->translate('You attack [%s]'),
+            $npc->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] attacks [%s]'),
+            $this->user->getUsername(),
+            $npc->getName()
+        );
+        $this->messageEveryoneInNodeNew(
+            $profile->getCurrentNode(),
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            NULL,
+            $profile->getId()
+        );
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function slayCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            // get parameter
-            $parameter = $this->getNextParameter($contentArray, false);
-            $targetProfile = $this->findProfileByNameOrNumberInCurrentNode($parameter);
-            if (!$this->response && !$targetProfile) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('No such user')
-                    )
-                );
-            }
-            if (!$this->response && $targetProfile === $profile) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('We are starting to worry about you...')
-                    )
-                );
-            }
-            if (!$this->response) {
-                $this->getWebsocketServer()->addCombatant($profile, $targetProfile, $resourceId, $targetProfile->getCurrentResourceId());
-                if (!$this->isInCombat($targetProfile)) $this->getWebsocketServer()->addCombatant($targetProfile, $profile, $targetProfile->getCurrentResourceId(), $resourceId);
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You attack [%s]</pre>'),
-                        $targetProfile->getUser()->getUsername()
-                    )
-                );
-                $defenderMessage = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] attacks you</pre>'),
-                    $this->user->getUsername()
-                );
-                $this->messageProfile($targetProfile, $defenderMessage);
-                // inform other players in node
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] attacks [%s]</pre>'),
-                    $this->user->getUsername(),
-                    $targetProfile->getUser()->getUsername()
-                );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), ['command' => 'showmessageprepend', 'message' => $message], NULL, $profile->getId());
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false);
+        $targetProfile = $this->findProfileByNameOrNumberInCurrentNode($parameter);
+        if (!$targetProfile) {
+            return $this->gameClientResponse->addMessage($this->translate('No such user'))->send();
+        }
+        if ($targetProfile === $profile) {
+            return $this->gameClientResponse->addMessage($this->translate('We are starting to worry about you...'))->send();
+        }
+        $this->getWebsocketServer()->addCombatant($profile, $targetProfile, $resourceId, $targetProfile->getCurrentResourceId());
+        if (!$this->isInCombat($targetProfile)) $this->getWebsocketServer()->addCombatant($targetProfile, $profile, $targetProfile->getCurrentResourceId(), $resourceId);
+        $message = sprintf(
+            $this->translate('You attack [%s]'),
+            $targetProfile->getUser()->getUsername()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $defenderMessage = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-attention">[%s] attacks you</pre>'),
+            $this->user->getUsername()
+        );
+        $this->messageProfileNew($targetProfile, $defenderMessage, GameClientResponse::CLASS_ATTENTION);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] attacks [%s]'),
+            $this->user->getUsername(),
+            $targetProfile->getUser()->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, NULL, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**

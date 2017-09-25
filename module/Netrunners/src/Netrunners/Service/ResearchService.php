@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileCategoryRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
@@ -55,198 +56,169 @@ class ResearchService extends BaseService
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function showResearchers($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $researchers = $this->fileRepo->findByProfileAndType($profile, FileType::ID_RESEARCHER);
-            if (count($researchers) < 1) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                        $this->translate('You do not have any researcher programs')
-                    )
-                ];
-            }
-            else {
-                $returnMessage = [];
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-32s|%-3s|%-1s|%s</pre>',
-                    $this->translate('NAME'),
-                    $this->translate('NODE'),
-                    $this->translate('PRG'),
-                    $this->translate('R'),
-                    $this->translate('DATA')
-                );
-                foreach ($researchers as $researcher) {
-                    /** @var File $researcher */
-                    if ($researcher->getData()) {
-                        $researcherData = json_decode($researcher->getData());
-                        switch ($researcherData->type) {
-                            default:
-                                $idString = '---';
-                                $typeString = '---';
-                                $progressString = '---';
-                                break;
-                            case 'category':
-                                $fileCategory = $this->entityManager->find('Netrunners\Entity\FileCategory', $researcherData->id);
-                                $idString = $fileCategory->getName();
-                                $typeString = $researcherData->type;
-                                $progressString = (isset($researcherData->progress)) ? $researcherData->progress : '---';
-                                break;
-                            case 'file-type':
-                                $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $researcherData->id);
-                                $idString = $fileType->getName();
-                                $typeString = $researcherData->type;
-                                $progressString = (isset($researcherData->progress)) ? $researcherData->progress : '---';
-                                break;
-                        }
-                        $returnMessage[] = sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-32s|%-3s|%-1s|%s</pre>',
-                            $researcher->getName(),
-                            ($researcher->getNode()) ? $researcher->getNode()->getName() : $this->translate('---'),
-                            $progressString,
-                            ($researcher->getRunning()) ? $this->translate('<span class="text-success">Y</span>') : $this->translate('<span class="text-danger">N</span>'),
-                            $typeString . ' - ' . $idString
-                        );
-                    }
-                }
-                $this->response = [
-                    'command' => 'showoutput',
-                    'message' => $returnMessage
-                ];
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $researchers = $this->fileRepo->findByProfileAndType($profile, FileType::ID_RESEARCHER);
+        if (count($researchers) < 1) {
+            $message = $this->translate('You do not have any researcher programs');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        else {
+            $returnMessage = [];
+            $headerMessage = sprintf(
+                '%-32s|%-32s|%-3s|%-1s|%s',
+                $this->translate('NAME'),
+                $this->translate('NODE'),
+                $this->translate('PRG'),
+                $this->translate('R'),
+                $this->translate('DATA')
+            );
+            $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
+            foreach ($researchers as $researcher) {
+                /** @var File $researcher */
+                if ($researcher->getData()) {
+                    $researcherData = json_decode($researcher->getData());
+                    switch ($researcherData->type) {
+                        default:
+                            $idString = '---';
+                            $typeString = '---';
+                            $progressString = '---';
+                            break;
+                        case 'category':
+                            $fileCategory = $this->entityManager->find('Netrunners\Entity\FileCategory', $researcherData->id);
+                            $idString = $fileCategory->getName();
+                            $typeString = $researcherData->type;
+                            $progressString = (isset($researcherData->progress)) ? $researcherData->progress : '---';
+                            break;
+                        case 'file-type':
+                            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $researcherData->id);
+                            $idString = $fileType->getName();
+                            $typeString = $researcherData->type;
+                            $progressString = (isset($researcherData->progress)) ? $researcherData->progress : '---';
+                            break;
+                    }
+                    $returnMessage[] = sprintf(
+                        '%-32s|%-32s|%-3s|%-1s|%s',
+                        $researcher->getName(),
+                        ($researcher->getNode()) ? $researcher->getNode()->getName() : $this->translate('---'),
+                        $progressString,
+                        ($researcher->getRunning()) ? $this->translate('<span class="text-success">Y</span>') : $this->translate('<span class="text-danger">N</span>'),
+                        $typeString . ' - ' . $idString
+                    );
+                }
+            }
+            $this->gameClientResponse->addMessages($returnMessage);
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function researchCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            // check if there is a researcher program in the current node
-            $researcher = $this->fileRepo->findOneRunningInNodeByTypeAndProfile($currentNode, $profile, FileType::ID_RESEARCHER);
-            if (!$researcher) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('There is no running researcher program in this node that belongs to you')
-                    )
-                ];
-            }
-            /**
-             * get the research type - this can be category to research a random type within that category or
-             * type to research a specific type
-             */
-            list($contentArray, $researchType) = $this->getNextParameter($contentArray, true, false, false, true);
-            if (!$this->response && !$researchType) {
-                $this->response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Please specify a research type: "category" or "type"')
-                    )
-                ];
-            }
-            if (!$this->response) {
-                $researchTypeString = '---';
-                $researchIdString = '---';
-                $data = NULL;
-                $fileType = NULL;
-                $fileCategory = NULL;
-                switch ($researchType) {
-                    default:
-                        break;
-                    case 'type':
-                        $fileTypeString = $this->getNextParameter($contentArray, false, false, true, true);
-                        if (empty($fileTypeString)) $fileTypeString = 'chat';
-                        $fileType = $this->fileTypeRepo->findLikeName($fileTypeString);
-                        if (!$fileType) {
-                            $this->response = [
-                                'command' => 'showmessage',
-                                'message' => sprintf(
-                                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                    $this->translate('Please specify which file-type to research')
-                                )
-                            ];
-                        }
-                        if (!$this->response) {
-                            /** @var FileType $fileType */
-                            $data = [
-                                'type' => 'file-type',
-                                'id' => $fileType->getId(),
-                                'progress' => 0
-                            ];
-                            $researchTypeString = $this->translate('file-type');
-                            $researchIdString = $this->translate($fileType->getName());
-                        }
-                        break;
-                    case 'category':
-                        $fileCategoryString = $this->getNextParameter($contentArray, false, false, true, true);
-                        if (empty($fileCategoryString)) $fileCategoryString = 'node';
-                        $fileCategory = $this->fileCategoryRepo->findLikeName($fileCategoryString);
-                        if (!$fileCategory) {
-                            $this->response = [
-                                'command' => 'showmessage',
-                                'message' => sprintf(
-                                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                    $this->translate('Please specify which file-category to research')
-                                )
-                            ];
-                        }
-                        if (!$this->response) {
-                            /** @var FileCategory $fileCategory */
-                            $data = [
-                                'type' => 'category',
-                                'id' => $fileCategory->getId(),
-                                'progress' => 0
-                            ];
-                            $researchTypeString = $this->translate('category');
-                            $researchIdString = $this->translate($fileCategory->getName());
-                        }
-                        break;
-                }
-                // now add the data to the researcher
-                if (!$this->response && $data && $researcher) {
-                    /** @var File $researcher */
-                    $researcher->setData(json_encode($data));
-                    $this->entityManager->flush($researcher);
-                    $this->response = [
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] is now researching [%s: %s]</pre>'),
-                            $researcher->getName(),
-                            $researchTypeString,
-                            $researchIdString
-                        )
-                    ];
-                    // inform other players in node
-                    $message = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has changed some research settings on [%s]</pre>'),
-                        $this->user->getUsername(),
-                        $researcher->getName()
-                    );
-                    $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
-                }
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        // check if there is a researcher program in the current node
+        $researcher = $this->fileRepo->findOneRunningInNodeByTypeAndProfile($currentNode, $profile, FileType::ID_RESEARCHER);
+        if (!$researcher) {
+            $message = $this->translate('There is no running researcher program in this node that belongs to you');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /**
+         * get the research type - this can be category to research a random type within that category or
+         * type to research a specific type
+         */
+        list($contentArray, $researchType) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$researchType) {
+            $message = $this->translate('Please specify a research type: "category" or "type"');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $data = NULL;
+        $fileType = NULL;
+        $fileCategory = NULL;
+        switch ($researchType) {
+            default:
+                $message = $this->translate('Invalid research type');
+                return $this->gameClientResponse->addMessage($message)->send();
+            case 'type':
+                $fileTypeString = $this->getNextParameter($contentArray, false, false, true, true);
+                if (empty($fileTypeString)) $fileTypeString = 'chat';
+                $fileType = $this->fileTypeRepo->findLikeName($fileTypeString);
+                if (!$fileType) {
+                    $message = $this->translate('Please specify which file-type to research');
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                /** @var FileType $fileType */
+                $data = [
+                    'type' => 'file-type',
+                    'id' => $fileType->getId(),
+                    'progress' => 0
+                ];
+                $researchTypeString = $this->translate('file-type');
+                $researchIdString = $this->translate($fileType->getName());
+                break;
+            case 'category':
+                $fileCategoryString = $this->getNextParameter($contentArray, false, false, true, true);
+                if (empty($fileCategoryString)) $fileCategoryString = 'node';
+                $fileCategory = $this->fileCategoryRepo->findLikeName($fileCategoryString);
+                // check if the given category exists
+                if (!$fileCategory) {
+                    $message = $this->translate('Please specify which file-category to research');
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                // check if category can be researched
+                /** @var FileCategory $fileCategory */
+                if (!$fileCategory->getResearchable()) {
+                    $message = $this->translate('Invalid category');
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                /** @var FileCategory $fileCategory */
+                $data = [
+                    'type' => 'category',
+                    'id' => $fileCategory->getId(),
+                    'progress' => 0
+                ];
+                $researchTypeString = $this->translate('category');
+                $researchIdString = $this->translate($fileCategory->getName());
+                break;
+        }
+        // now add the data to the researcher
+        /** @var File $researcher */
+        $researcher->setData(json_encode($data));
+        $this->entityManager->flush($researcher);
+        $message = sprintf(
+            $this->translate('[%s] is now researching [%s: %s]'),
+            $researcher->getName(),
+            $researchTypeString,
+            $researchIdString
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has changed some research settings on [%s]'),
+            $this->user->getUsername(),
+            $researcher->getName()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
 }

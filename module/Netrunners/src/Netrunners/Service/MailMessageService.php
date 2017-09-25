@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\MailMessageRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -58,111 +59,107 @@ class MailMessageService extends BaseService
 
     /**
      * Returns a string that shows how many unread messages a profile has in its inbox.
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function displayAmountUnreadMails($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $profile = $this->user->getProfile();
-            $countUnreadMails = $this->mailMessageRepo->countByUnreadMails($profile);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-info">You have %s unread mails in your inbox</pre>'),
-                    $countUnreadMails
-                )
-            ];
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $profile = $this->user->getProfile();
+        $countUnreadMails = $this->mailMessageRepo->countByUnreadMails($profile);
+        $message = sprintf(
+            $this->translate('You have %s unread mails in your inbox'),
+            $countUnreadMails
+        );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_INFO)->send();
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function enterMailMode($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $mails = $this->mailMessageRepo->findBy(
-                [
-                    'recipient' => $profile
-                ]
-            );
-            $message = $this->translate("NeoMail - version 0.1 - '?' for help, 'q' to quit");
-            $message .= sprintf(
-                '<pre class="text-white"><strong>%-3s</strong> | <strong>%-20s</strong> | <strong>%-20s</strong> | <strong>%s</strong></pre>',
-                $this->translate('#'),
-                $this->translate('FROM'),
-                $this->translate('RECEIVED'),
-                $this->translate('SUBJECT')
-            );
-            $mailNumber = 0;
-            foreach ($mails as $mail) {
-                /** @var MailMessage $mail */
-                $mailNumber++;
-                $preTag = ($mail->getReadDateTime()) ? '<pre>' : '<pre style="white-space: pre-wrap;" class="text-white">';
-                $message .= sprintf(
-                    '%s%-3s | %-20s | %-20s | %s</pre>',
-                    $preTag,
-                    $mailNumber,
-                    ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : $this->translate("[SYSTEM-MAIL]"),
-                    $mail->getSentDateTime()->format('Y/m/d H:i:s'),
-                    $mail->getSubject()
-                );
-            }
-            $this->response = [
-                'command' => 'entermailmode',
-                'message' => $message,
-                'mailNumber' => $mailNumber
-            ];
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has entered mail-mode</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $mails = $this->mailMessageRepo->findBy(
+            [
+                'recipient' => $profile
+            ]
+        );
+        $message = $this->translate("NeoMail - version 0.1 - '?' for help, 'q' to quit");
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        $message = sprintf(
+            '<strong>%-3s</strong> | <strong>%-20s</strong> | <strong>%-20s</strong> | <strong>%s</strong>',
+            $this->translate('#'),
+            $this->translate('FROM'),
+            $this->translate('RECEIVED'),
+            $this->translate('SUBJECT')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $mailNumber = 0;
+        foreach ($mails as $mail) {
+            /** @var MailMessage $mail */
+            $mailNumber++;
+            $preTag = ($mail->getReadDateTime()) ? '<span>' : '<span class="text-white">';
+            $message = sprintf(
+                '%s%-3s | %-20s | %-20s | %s</span>',
+                $preTag,
+                $mailNumber,
+                ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : $this->translate("[SYSTEM-MAIL]"),
+                $mail->getSentDateTime()->format('Y/m/d H:i:s'),
+                $mail->getSubject()
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_MUTED);
+        }
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERMAILMODE)->addOption(GameClientResponse::OPT_MAIL_NUMBER, $mailNumber);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has entered mail-mode'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array
+     * @return bool|GameClientResponse
      */
     public function exitMailMode($resourceId)
     {
         $this->initService($resourceId);
-        $this->response = array(
-            'command' => 'exitmailmode',
-            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData)
-        );
+        if (!$this->user) return false;
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_EXITMAILMODE);
+        $profile = $this->user->getProfile();
         // inform other players in node
         $message = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has exited mail-mode</pre>'),
+            $this->translate('[%s] has exited mail-mode'),
             $this->user->getUsername()
         );
-        $profile = $this->user->getProfile();
-        $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        return $this->response;
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $mailOptions
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function displayMail($resourceId, $mailOptions)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $mailNumberArray = $mailOptions->currentMailNumber - 1;
         $mails = $this->mailMessageRepo->findBy(
@@ -172,49 +169,42 @@ class MailMessageService extends BaseService
         );
         $mail = (isset($mails[$mailNumberArray])) ? $mails[$mailNumberArray] : NULL;
         if (!$mail) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'type' => 'white',
-                'message' => 'Unknown mail number'
-            );
+            return $this->gameClientResponse->addMessage($this->translate('Invalid mail number'))->send();
         }
-        if (!$this->response) {
-            /** @var MailMessage $mail */
-            // mark mail as read
-            if (!$mail->getReadDateTime() && $mail->getRecipient() == $profile) {
-                $mail->setReadDateTime(new \DateTime());
-                $this->entityManager->flush($mail);
-            }
-            /** @var MailMessage $mail */
-            $authorName = ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : 'SYSTEM';
-            $message = sprintf(
-                $this->translate('<pre class="text-white">Message: %s</pre>'),
-                $mailOptions->currentMailNumber
-            );
-            $message .= sprintf(
-                $this->translate('<pre class="text-white">From: %s %s</pre>'),
-                $authorName,
-                $mail->getSentDateTime()->format('Y/m/d H:i:s')
-            );
-            $message .= sprintf(
-                $this->translate('<pre class="text-white">Subject: %s</pre>'),
-                $mail->getSubject()
-            );
-            $message .= sprintf('<pre class="text-white">%s</pre>', $mail->getContent());
-            $this->response = array(
-                'command' => 'showmessage',
-                'type' => 'white',
-                'message' => $message
-            );
+        /** @var MailMessage $mail */
+        // mark mail as read
+        if (!$mail->getReadDateTime() && $mail->getRecipient() == $profile) {
+            $mail->setReadDateTime(new \DateTime());
+            $this->entityManager->flush($mail);
         }
-        return $this->response;
+        /** @var MailMessage $mail */
+        $authorName = ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : 'SYSTEM';
+        $message = sprintf(
+            $this->translate('Message: %s'),
+            $mailOptions->currentMailNumber
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        $message = sprintf(
+            $this->translate('From: %s %s'),
+            $authorName,
+            $mail->getSentDateTime()->format('Y/m/d H:i:s')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('Subject: %s'),
+            $mail->getSubject()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf('%s', $mail->getContent());
+        $this->gameClientResponse->addMessage(wordwrap($message, 120), GameClientResponse::CLASS_WHITE);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
      * @param $mailOptions
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function deleteMail($resourceId, $contentArray, $mailOptions)
     {
@@ -237,26 +227,17 @@ class MailMessageService extends BaseService
         );
         $mail = $mails[$mailNumberArray];
         if (!$mail) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'type' => Notification::SEVERITY_DANGER,
-                'message' => 'Invalid mail number'
-            );
+            return $this->gameClientResponse->addMessage($this->translate('Invalid mail number'), GameClientResponse::CLASS_DANGER)->send();
         }
-        if (!$this->response) {
-            /** @var MailMessage $mail */
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Mail #%s has been deleted</pre>'),
-                $mailNumber
-            );
-            $this->entityManager->remove($mail);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => $message
-            );
-        }
-        return $this->response;
+        /** @var MailMessage $mail */
+        $message = sprintf(
+            $this->translate('Mail #%s has been deleted'),
+            $mailNumber
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->entityManager->remove($mail);
+        $this->entityManager->flush();
+        return $this->gameClientResponse->send();
     }
 
 }

@@ -15,6 +15,7 @@ use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\Role;
@@ -23,13 +24,14 @@ class UtilityService extends BaseService
 {
 
     /**
-     * @param $clientData
+     * @param null|object $clientData
      * @return bool|string
      */
-    public function showPrompt($clientData)
+    public function showPrompt($clientData = NULL)
     {
+        if (!$clientData) return false;
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
+        if (!$user) return false;
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $currentNode = $profile->getCurrentNode();
@@ -50,14 +52,14 @@ class UtilityService extends BaseService
      * @param ConnectionInterface $from
      * @param $clientData
      * @param string $content
-     * @return bool|ConnectionInterface
+     * @return bool|GameClientResponse
      */
     public function autocomplete(ConnectionInterface $from, $clientData, $content = '')
     {
         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         /** @var FileRepository $fileRepo */
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-        if (!$user) return true;
+        if (!$user) return false;
         $profile = $user->getProfile();
         /** @var Profile $profile */
         $contentArray = explode(' ', $content);
@@ -81,11 +83,11 @@ class UtilityService extends BaseService
         else {
             $promptContent = $content;
         }
-        $response = array(
-            'command' => 'updateprompt',
-            'message' => $promptContent
-        );
-        return $from->send(json_encode($response));
+        /** @noinspection PhpUndefinedFieldInspection */
+        $response = new GameClientResponse($from->resourceId);
+        $response->setCommand(GameClientResponse::COMMAND_UPDATEPROMPT);
+        $response->addOption(GameClientResponse::OPT_CONTENT, $promptContent);
+        return $response->send();
     }
 
     /**
@@ -113,101 +115,87 @@ class UtilityService extends BaseService
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function showCommands($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  close  bgopacity  bug  cancel  cd  changepassword  clear  code  commands  connect  consider  decompile  defaultmra  deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  killp killprocess  logout  ls  mail  map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  options  passwd  ps  recipes  removeconnection removenode  repairmra  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  withdraw';
+        if (!$this->user) return false;
+        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  close  bgopacity  bug  cancel  cd  changepassword  clear  code  commands  connect  consider  createpasskey passkey  decompile  defaultmra  deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  options  passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  repairmra  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  withdraw';
         $returnMessage = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
+            '%s',
             wordwrap($message, 120)
         );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         if ($this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
             $message = 'listmanpages  addmanpage  editmanpage  modchat mc';
-            $returnMessage .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-addon">%s</pre>',
+            $returnMessage = sprintf(
+                '%s',
                 wordwrap($message, 120)
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             $message = 'banip  cybermap  unbanip  banuser  unbanuser  clients  giveinvitation  goto  kick  nlist  setcredits  setsnippets  syslist';
-            $returnMessage .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-info">%s</pre>',
+            $returnMessage = sprintf(
+                '%s',
                 wordwrap($message, 120)
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_INFO);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
             $message = 'grantrole  removerole toggleadminmode';
-            $returnMessage .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
+            $returnMessage = sprintf(
+                '%s',
                 wordwrap($message, 120)
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_DANGER);
         }
-        $response = array(
-            'command' => 'showmessage',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function showMotd($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $message = '<pre style="white-space: pre-wrap;" class="text-sysmsg">MESSAGE OF THE DAY:</pre>';
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-attention">%s</pre>',
-                wordwrap($this->getServerSetting(self::SETTING_MOTD), 120)
-            );
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => $message
-            ];
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $message = $this->translate('MESSAGE OF THE DAY:');
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        $message = wordwrap($this->getServerSetting(self::SETTING_MOTD), 120);
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_ATTENTION);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param Geocoord $location
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function updateSystemCoords($resourceId, Geocoord $location)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         if ($currentSystem->getProfile() === $profile) {
             $currentSystem->setGeocoords($location->getLat() . ',' . $location->getLng());
-            $this->response = [
-                'command' => 'showmessageprepend',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('System coords successfully updated')
-                )
-            ];
+            $message = $this->translate('System coords successfully updated');
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         }
         else {
-            $this->response = [
-                'command' => 'showmessageprepend',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to update system coords - permission denied')
-                )
-            ];
+            $message = $this->translate('Unable to update system coords - permission denied');
+            $this->gameClientResponse->addMessage($message);
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
 }

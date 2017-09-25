@@ -24,6 +24,7 @@ use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\Skill;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
@@ -31,6 +32,7 @@ use Netrunners\Repository\FilePartRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\ProfileFileTypeRecipeRepository;
+use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 
 class CodingService extends BaseService
@@ -106,8 +108,8 @@ class CodingService extends BaseService
     }
 
     /**
-     * @param int $resourceId
-     * @return array|bool
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
     public function enterCodeMode($resourceId)
     {
@@ -115,39 +117,38 @@ class CodingService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_CODING) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You must be in a coding node to enter coding mode')
-                )
-            );
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        if (!$this->response) {
-            $message = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('NeoCode - version 0.1 - "?" for help, "q" to quit')
-            );
-            $this->response = array(
-                'command' => 'entercodemode',
-                'message' => $message
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has entered coding mode</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_CODING) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You must be in a coding node to enter coding mode'))->send();
         }
-        return $this->response;
+        $this->gameClientResponse->addMessage(
+            $this->translate('NeoCode - version 0.1 - "?" for help, "q" to quit'),
+            GameClientResponse::CLASS_SYSMSG
+        );
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCODEMODE);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has entered coding mode'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew(
+            $currentNode,
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function switchCodeMode($resourceId, $contentArray)
     {
@@ -170,98 +171,84 @@ class CodingService extends BaseService
         }
         $this->getWebsocketServer()->setCodingOption($resourceId, 'mode', $value);
         $message = sprintf(
-            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">mode set to [%s]</pre>'),
+            $this->translate('mode set to [%s]'),
             $value
         );
-        $this->response = array(
-            'command' => 'showmessage',
-            'message' => $message
-        );
-        return $this->response;
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function commandLevel($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         // get parameter
-        $parameter = $this->getNextParameter($contentArray, false, true, false, true);
+        $parameter = $this->getNextParameter($contentArray, false, true);
         // init message
         if (!$parameter) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Choose a number between 1 and 100')
-                )
-            );
+            $this->gameClientResponse->addMessage($this->translate('Choose a number between 1 and 100'));
         }
         else {
             if ($parameter < 1 || $parameter > 100) {
-                $command = 'showmessage';
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Choose a number between 1 and 100')
-                );
+                $message = $this->translate('Choose a number between 1 and 100');
+                $this->gameClientResponse->addMessage($message);
             }
             else {
-                $command = 'showmessage';
                 $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">level set to [%s]</pre>'),
+                    $this->translate('level set to [%s]'),
                     $parameter
                 );
                 $this->getWebsocketServer()->setCodingOption($resourceId, 'fileLevel', $parameter);
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
             }
-            $this->response = array(
-                'command' => $command,
-                'message' => $message
-            );
         }
         // init response
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $codeOptions
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function commandOptions($resourceId, $codeOptions)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $message = '';
-        $message .= sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+        $message = sprintf(
+            '%-10s: %s',
             $this->translate('mode'),
             $codeOptions->mode
         );
-        $message .= sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            '%-10s: %s',
             $this->translate('level'),
             ($codeOptions->fileLevel) ? $codeOptions->fileLevel : $this->translate('not set')
         );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         /* options are different depending on if we are in program or resource mode */
         // if we are in program mode
         if ($codeOptions->mode == 'program') {
             $fileType = $this->fileTypeRepo->find($codeOptions->fileType);
             /** @var FileType $fileType*/
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate('type'),
                 ($fileType) ? $fileType->getName() : $this->translate('not set')
             );
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $this->gameClientResponse->addMessage($message);
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate('snippets'),
                 ($codeOptions->fileLevel) ? $codeOptions->fileLevel : $this->translate('unknown')
             );
+            $this->gameClientResponse->addMessage($message);
             $partsString = '';
             if ($fileType) {
                 foreach ($fileType->getFileParts() as $filePart) {
@@ -274,11 +261,12 @@ class CodingService extends BaseService
                         $partsString .= '<span class="text-success">' . $filePart->getName() . '</span> ';
                     }
                 }
-                $message .= sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+                $message = sprintf(
+                    '%-10s: %s',
                     $this->translate('resources'),
                     $partsString
                 );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
                 // add optional parts to the ouput
                 $partsString = '';
                 foreach ($fileType->getOptionalFileParts() as $filePart) {
@@ -287,22 +275,24 @@ class CodingService extends BaseService
                     $shortName = explode(' ', $name);
                     $partsString .= $shortName[0] . ' ';
                 }
-                $message .= sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+                $message = sprintf(
+                    '%-10s: %s',
                     $this->translate('optional'),
                     $partsString
                 );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
             }
         }
         else if ($codeOptions->mode == 'mod') {
             /* filemod mode */
             $fileType = $this->fileModRepo->find($codeOptions->fileType);
             /** @var FileMod $fileType*/
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate('type'),
                 ($fileType) ? $fileType->getName() : $this->translate('not set')
             );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
             $partsString = '';
             if ($fileType) {
                 foreach ($fileType->getFileParts() as $filePart) {
@@ -315,58 +305,53 @@ class CodingService extends BaseService
                         $partsString .= '<span class="text-success">' . $filePart->getName() . '</span> ';
                     }
                 }
-                $message .= sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+                $message = sprintf(
+                    '%-10s: %s',
                     $this->translate('resources'),
                     $partsString
                 );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
             }
         }
         else {
             /* resource mode */
             $fileType = $this->filePartRepo->find($codeOptions->fileType);
             /** @var FilePart $fileType*/
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate('type'),
                 ($fileType) ? $fileType->getName() : $this->translate('not set')
             );
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate('snippets'),
                 ($codeOptions->fileLevel) ? $codeOptions->fileLevel : $this->translate('unknown')
             );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         }
         // if level and type have been set, show the needed skills and chance of success
         if ($codeOptions->fileLevel && $codeOptions->fileType) {
             $skillList = $this->getSkillListForType($codeOptions);
             $chance = $this->calculateCodingSuccessChance($profile, $codeOptions);
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate("skills"),
                 implode(' ', $skillList)
             );
-            $message .= sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-10s: %s</pre>',
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+            $message = sprintf(
+                '%-10s: %s',
                 $this->translate('chance'),
                 $chance
             );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         }
-        // build response
-        $this->response = array(
-            'command' => 'showmessage',
-            'message' => $message
-        );
-        // init response
-        return $this->response;
+        // return response
+        return $this->gameClientResponse->send();
     }
 
-    /**
-     * @param int $resourceId
-     * @param $contentArray
-     * @param $codeOptions
-     * @return array|bool
-     */
+
     public function commandType($resourceId, $contentArray, $codeOptions)
     {
         $this->initService($resourceId);
@@ -375,7 +360,6 @@ class CodingService extends BaseService
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         // init message
-        $message = '';
         $codeMode = $codeOptions->mode;
         switch ($codeMode) {
             default:
@@ -395,59 +379,44 @@ class CodingService extends BaseService
         if (!$parameter) {
             /* if no param was given we return a list of possible options */
             $fileTypes = $typeRepository->findForCoding($this->user->getProfile());
+            $message = '';
             foreach ($fileTypes as $fileType) {
                 /** @var FileType|FilePart $fileType */
                 $message .= $fileType->getName() . ' ';
             }
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                wordwrap($message, 120)
-            );
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => $returnMessage
-            );
+            return $this->gameClientResponse->addMessage(wordwrap($message, 120), GameClientResponse::CLASS_WHITE)->send();
         }
         else {
             /* param was given - we need to check if this is a valid filetype, filepart or mod */
-            $message = false;
             $entity = $typeRepository->findLikeName($parameter);
             if (!$entity instanceof FilePart && !$entity instanceof FileType && !$entity instanceof FileMod) {
                 /** @var FilePart|FileType|FileMod $entity */
-                $message = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid type given')
-                );
+                return $this->gameClientResponse->addMessage($this->translate('Invalid type given'))->send();
             }
             // check if they should not be able to code this
             if ($entity instanceof FileType) {
                 if (!$entity->getCodable()) {
-                    $message = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid type given')
-                    );
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid type given'))->send();
                 }
                 if ($entity->getNeedRecipe()) {
                     $message = $this->checkForRecipe($profile, $entity);
+                    if ($message) {
+                        return $this->gameClientResponse->addMessage($message)->send();
+                    }
                 }
             }
             // add message if not already set
-            if (!$message) {
-                $value = $entity->getId();
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">type set to [%s]</pre>'),
-                    $parameter
-                );
-                // set coding options on client data
-                $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
-            }
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => $message
+            $value = $entity->getId();
+            $message = sprintf(
+                $this->translate('type set to [%s]'),
+                $parameter
             );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+            // set coding options on client data
+            $this->getWebsocketServer()->setCodingOption($resourceId, 'fileType', $value);
         }
         // init response
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
@@ -460,20 +429,18 @@ class CodingService extends BaseService
         $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
         /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
         $message = false;
-        if (!$profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $fileType)) {
-            $message = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                $this->translate('You do not have the needed recipe')
-            );
+        // now check, admins do not need recipes
+        if (!$profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $fileType) && !$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            $message = $this->translate('You do not have the needed recipe');
         }
         return $message;
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $codeOptions
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse|string
      */
     public function commandCode($resourceId, $codeOptions, $contentArray)
     {
@@ -485,31 +452,20 @@ class CodingService extends BaseService
         if ($amount > 5) $amount = 5;
         switch ($mode) {
             default:
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid code mode')
-                    )
-                );
-                break;
+                return $this->gameClientResponse->addMessage($this->translate('Invalid code mode'))->send();
             case 'mod':
-                $this->response = $this->codeFileMod($codeOptions);
-                break;
+                return $this->codeFileMod($codeOptions);
             case 'program':
-                $this->response = $this->codeProgram($codeOptions);
-                break;
+                return $this->codeProgram($codeOptions);
             case 'resource':
-                $this->response = $this->codeResource($codeOptions, $amount);
-                break;
+                return $this->codeResource($codeOptions, $amount);
         }
-        return $this->response;
     }
 
     /**
      * @param $codeOptions
      * @param int $amount
-     * @return array|bool
+     * @return GameClientResponse
      */
     private function codeResource($codeOptions, $amount = 1)
     {
@@ -517,317 +473,256 @@ class CodingService extends BaseService
         $type = (int)$codeOptions->fileType;
         // check if a type has been set
         if ($type === 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to specify a type first')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('You need to specify a type first'))->send();
         }
-        // check if a level has been set
-        $level = $codeOptions->fileLevel;
+        $level = (int)$codeOptions->fileLevel;
         $totalSnippets = $level * $amount;
-        if (!$this->response && $level === 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to specify a level first')
-                )
-            );
+        if ($level === 0) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to specify a level first'))->send();
         }
         $filePart = NULL;
-        if (!$this->response) {
-            $filePart = $this->entityManager->find('Netrunners\Entity\FilePart', $type);
-            if (!$filePart) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Invalid file part: %s</pre>'),
-                        htmLawed($type,['safe'=>1,'elements'=>'strong'])
-                    )
-                );
-            }
-            if (!$this->response && $level > $profile->getSnippets()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code %s %s</pre>'),
-                        $totalSnippets,
-                        $amount,
-                        $filePart->getName()
-                    )
-                );
-            }
+        $filePart = $this->entityManager->find('Netrunners\Entity\FilePart', $type);
+        if (!$filePart) {
+            $message = sprintf(
+                $this->translate('Invalid file part: %s'),
+                htmLawed($type,['safe'=>1,'elements'=>'strong'])
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($level > $profile->getSnippets()) {
+            $message = sprintf(
+                $this->translate('You need %s snippets to code %s %s'),
+                $totalSnippets,
+                $amount,
+                $filePart->getName()
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* now check if advanced coding is involved and check skill rating requirements */
         $skillList = $this->getSkillListForType($codeOptions);
-        if (!$this->response && in_array('advanced-coding', $skillList)) {
-            $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+        if (in_array('advanced-coding', $skillList)) {
+            $message = $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+            if ($message) {
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
         }
-        if (!$this->response && in_array('advanced-networking', $skillList)) {
-            $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+        if (in_array('advanced-networking', $skillList)) {
+            $message = $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+            if ($message) {
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
         }
         /* checks passed, we can now create the file part */
-        if (!$this->response) {
-            /** @var FilePart $filePart */
-            $difficulty = $level;
-            $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
-            $skillModifier = $this->getSkillModifierForFilePart($filePart, $profile);
-            $modifier = floor(($skillRating + $skillModifier)/2);
-            $modifier = (int)$modifier;
-            $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE) . 'S'));
-            $filePartId = $filePart->getId();
-            for ($x = 1; $x<=$amount; $x++) {
-                $this->getWebsocketServer()->addJob([
-                    'difficulty' => $difficulty,
-                    'modifier' => $modifier,
-                    'completionDate' => $completionDate,
-                    'typeId' => $filePartId,
-                    'type' => 'resource',
-                    'mode' => 'resource',
-                    'skills' => $skillList,
-                    'profileId' => $profile->getId(),
-                    'socketId' => $this->clientData->socketId,
-                    'nodeId' => $profile->getCurrentNode()->getId()
-                ]);
-            }
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding %s %s for %s snippets</pre>'),
-                    $amount,
-                    $filePart->getName(),
-                    $totalSnippets
-                )
-            );
-            $currentSnippets = $profile->getSnippets();
-            $profile->setSnippets($currentSnippets - $totalSnippets);
-            $this->entityManager->flush($profile);
+        /** @var FilePart $filePart */
+        $difficulty = $level;
+        $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+        $skillModifier = $this->getSkillModifierForFilePart($filePart, $profile);
+        $modifier = floor(($skillRating + $skillModifier)/2);
+        $modifier = (int)$modifier;
+        $completionDate = new \DateTime();
+        $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE) . 'S'));
+        $filePartId = $filePart->getId();
+        for ($x = 1; $x<=$amount; $x++) {
+            $this->getWebsocketServer()->addJob([
+                'difficulty' => $difficulty,
+                'modifier' => $modifier,
+                'completionDate' => $completionDate,
+                'typeId' => $filePartId,
+                'type' => 'resource',
+                'mode' => 'resource',
+                'skills' => $skillList,
+                'profileId' => $profile->getId(),
+                'socketId' => $this->clientData->socketId,
+                'nodeId' => $profile->getCurrentNode()->getId()
+            ]);
         }
-        return $this->response;
+        $message = sprintf(
+            $this->translate('You start coding %s %s for %s snippets'),
+            $amount,
+            $filePart->getName(),
+            $totalSnippets
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $currentSnippets = $profile->getSnippets();
+        $profile->setSnippets($currentSnippets - $totalSnippets);
+        $this->entityManager->flush($profile);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $codeOptions
-     * @return array|false
+     * @return GameClientResponse|string
      */
     private function codeFileMod($codeOptions)
     {
         $profile = $this->user->getProfile();
         $type = $codeOptions->fileType;
         if ($type === 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to specify a type first')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('You need to specify a type first'))->send();
         }
         $level = (int)$codeOptions->fileLevel;
-        if (!$this->response && $level === 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to specify a level first')
-                )
-            );
+        if ($level === 0) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to specify a level first'))->send();
         }
         /* check if the given type is valid */
         $fileMod = NULL;
-        if (!$this->response) {
-            $fileMod = $this->fileModRepo->find($type);
-            if (!$fileMod) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Unknown file mod: %s</pre>'),
-                        htmLawed($type,['safe'=>1,'elements'=>'strong'])
-                    )
+        $fileMod = $this->fileModRepo->find($type);
+        if (!$fileMod) {
+            $message = sprintf(
+                $this->translate('Unknown file mod: %s'),
+                htmLawed($type,['safe'=>1,'elements'=>'strong'])
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now we check if the player has all the needed resources
+        /** @var FileMod $fileMod */
+        $neededResources = $fileMod->getFileParts();
+        $missingResources = [];
+        foreach ($neededResources as $neededResource) {
+            /** @var FilePart $neededResource */
+            $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
+            if (empty($filePartInstances)) {
+                $missingResources[] = sprintf(
+                    $this->translate('You need [%s] with at least level %s to code the [%s]'),
+                    $neededResource->getName(),
+                    $level,
+                    $fileMod->getName()
                 );
             }
         }
-        // now we check if the player has all the needed resources
-        if (!$this->response) {
-            /** @var FileMod $fileMod */
-            $neededResources = $fileMod->getFileParts();
-            $missingResources = [];
-            foreach ($neededResources as $neededResource) {
-                /** @var FilePart $neededResource */
-                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
-                if (empty($filePartInstances)) {
-                    $missingResources[] = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need [%s] with at least level %s to code the [%s]</pre>'),
-                        $neededResource->getName(),
-                        $level,
-                        $fileMod->getName()
-                    );
-                }
+        if (!empty($missingResources)) {
+            foreach ($missingResources as $missingResource) {
+                $this->gameClientResponse->addMessage($missingResource);
             }
-            if (!empty($missingResources)) {
-                $this->response = array(
-                    'command' => 'showoutput',
-                    'message' => $missingResources
-                );
-            }
+            return $this->gameClientResponse->send();
         }
         // check if advanced coding is involved and check for skill rating requirements
         $skillList = $this->getSkillListForType($codeOptions);
-        $this->checkAdvancedCoding($profile, Skill::ID_CODING);
-        /* checks passed, we can now create the mod */
-        if (!$this->response) {
-            $difficulty = $level;
-            $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
-            $skillModifier = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
-            $modifier = floor(($skillRating + $skillModifier)/2);
-            $modifier = (int)$modifier;
-            $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_MOD) . 'S'));
-            $fileTypeId = $fileMod->getId();
-            foreach ($fileMod->getFileParts() as $neededResource) {
-                /** @var FilePart $neededResource */
-                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
-                $filePartInstance = array_shift($filePartInstances);
-                $modifier += $filePartInstance->getLevel() - $level;
-                $this->entityManager->remove($filePartInstance);
-            }
-            // add the coding job to the loop service
-            $this->getWebsocketServer()->addJob([
-                'difficulty' => $difficulty,
-                'modifier' => $modifier,
-                'completionDate' => $completionDate,
-                'typeId' => $fileTypeId,
-                'type' => 'mod',
-                'mode' => 'mod',
-                'skills' => $skillList,
-                'profileId' => $profile->getId(),
-                'socketId' => $this->clientData->socketId,
-                'nodeId' => $profile->getCurrentNode()->getId()
-            ]);
-            // prepare response message and add clientdata
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding the %s</pre>'),
-                    $fileMod->getName()
-                )
-            );
-            $this->entityManager->flush();
-
+        $message = $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+        if ($message) {
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        return $this->response;
+        /* checks passed, we can now create the mod */
+        $difficulty = $level;
+        $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+        $skillModifier = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+        $modifier = floor(($skillRating + $skillModifier)/2);
+        $modifier = (int)$modifier;
+        $completionDate = new \DateTime();
+        $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_MOD) . 'S'));
+        $fileTypeId = $fileMod->getId();
+        foreach ($fileMod->getFileParts() as $neededResource) {
+            /** @var FilePart $neededResource */
+            $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
+            $filePartInstance = array_shift($filePartInstances);
+            $modifier += $filePartInstance->getLevel() - $level;
+            $this->entityManager->remove($filePartInstance);
+        }
+        // add the coding job to the loop service
+        $this->getWebsocketServer()->addJob([
+            'difficulty' => $difficulty,
+            'modifier' => $modifier,
+            'completionDate' => $completionDate,
+            'typeId' => $fileTypeId,
+            'type' => 'mod',
+            'mode' => 'mod',
+            'skills' => $skillList,
+            'profileId' => $profile->getId(),
+            'socketId' => $this->clientData->socketId,
+            'nodeId' => $profile->getCurrentNode()->getId()
+        ]);
+        // prepare response message and add clientdata
+        $message = sprintf(
+            $this->translate('You start coding the %s'),
+            $fileMod->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->entityManager->flush();
+        return $this->gameClientResponse->send();
     }
 
-    /**
-     * @param $codeOptions
-     * @return array|bool
-     */
+
     private function codeProgram($codeOptions)
     {
         $profile = $this->user->getProfile();
         $type = $codeOptions->fileType;
         if ($type === 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to specify a type first')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('You need to specify a type first'));
         }
         $level = (int)$codeOptions->fileLevel;
-        if (!$this->response && $level === 0) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need to specify a level first')
-                )
-            );
+        if ($level === 0) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to specify a level first'));
         }
         /* check if the given type is valid and if they have enough snippets */
         $fileType = NULL;
-        if (!$this->response) {
-            $fileType = $this->fileTypeRepo->find($type);
-            if (!$fileType) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Unknown file type: %s</pre>'),
-                        htmLawed($type,['safe'=>1,'elements'=>'strong'])
-                    )
-                );
-            }
-            if (!$this->response && $level > $profile->getSnippets()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s snippets to code: %s</pre>'),
-                        $level,
-                        $fileType->getName()
-                    )
-                );
-            }
+        $fileType = $this->fileTypeRepo->find($type);
+        if (!$fileType) {
+            $message = sprintf(
+                $this->translate('Unknown file type: %s'),
+                htmLawed($type,['safe'=>1,'elements'=>'strong'])
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($level > $profile->getSnippets()) {
+            $message = sprintf(
+                $this->translate('You need %s snippets to code: %s'),
+                $level,
+                $fileType->getName()
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // now we check if the player has all the needed resources
-        if (!$this->response) {
-            /** @var FileType $fileType */
-            // check if a recipe is needed
-            if ($fileType->getNeedRecipe()) {
-                $message = $this->checkForRecipe($profile, $fileType);
-                if ($message) {
-                    $this->response = [
-                        'command' => 'showmessage',
-                        'message' => $message
-                    ];
-                }
-            }
-            // if they have a recipe
-            if (!$this->response) {
-                $neededResources = $fileType->getFileParts();
-                $missingResources = [];
-                foreach ($neededResources as $neededResource) {
-                    /** @var FilePart $neededResource */
-                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
-                    if (empty($filePartInstances)) {
-                        $missingResources[] = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need [%s] with at least level %s to code the [%s]</pre>'),
-                            $neededResource->getName(),
-                            $level,
-                            $fileType->getName()
-                        );
-                    }
-                }
-                if (!empty($missingResources)) {
-                    $this->response = array(
-                        'command' => 'showoutput',
-                        'message' => $missingResources
-                    );
-                }
+        /** @var FileType $fileType */
+        // check if a recipe is needed
+        if ($fileType->getNeedRecipe()) {
+            $message = $this->checkForRecipe($profile, $fileType);
+            if ($message) {
+                return $this->gameClientResponse->addMessage($message)->send();
             }
         }
+        // if they have a recipe
+        $neededResources = $fileType->getFileParts();
+        $missingResources = [];
+        foreach ($neededResources as $neededResource) {
+            /** @var FilePart $neededResource */
+            $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
+            if (empty($filePartInstances)) {
+                $missingResources[] = sprintf(
+                    $this->translate('You need [%s] with at least level %s to code the [%s]'),
+                    $neededResource->getName(),
+                    $level,
+                    $fileType->getName()
+                );
+            }
+        }
+        if (!empty($missingResources)) {
+            foreach ($missingResources as $missingResource) {
+                $this->gameClientResponse->addMessage($missingResource);
+            }
+            return $this->gameClientResponse->send();
+        }
         // check if the player can store the file in his total storage
-        if (!$this->response && !$this->canStoreFileOfSize($profile, $fileType->getSize())) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough storage space to code the %s - you need %s more storage units - build more storage nodes</pre>'),
-                    $fileType->getName(),
-                    $fileType->getSize()
-                )
+        if (!$this->canStoreFileOfSize($profile, $fileType->getSize())) {
+            $message = sprintf(
+                $this->translate('You do not have enough storage space to code the %s - you need %s more storage units - build more storage nodes'),
+                $fileType->getName(),
+                $fileType->getSize()
             );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if advanced coding is involved and check for skill rating requirements
         $skillList = $this->getSkillListForType($codeOptions);
-        if (!$this->response && in_array('advanced-coding', $skillList)) {
-            $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+        if (in_array('advanced-coding', $skillList)) {
+            $message = $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+            if ($message) {
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
         }
-        if (!$this->response && in_array('advanced-networking', $skillList)) {
-            $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+        if (in_array('advanced-networking', $skillList)) {
+            $message = $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+            if ($message) {
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
         }
         // check if the system has enough coding levels to support this job
         $alljobs = $this->getWebsocketServer()->getJobs();
@@ -840,75 +735,63 @@ class CodingService extends BaseService
                 $systemJobAmount++;
             }
         }
-        if (!$this->response && $systemJobAmount >= $this->getTotalSystemValueByNodeType($currentSystem, self::VALUE_TYPE_CODINGNODELEVELS)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('The system does not have enough coding rating to accept another coding job - please wait until another job has finished')
-                )
-            );
+        if ($systemJobAmount >= $this->getTotalSystemValueByNodeType($currentSystem, self::VALUE_TYPE_CODINGNODELEVELS)) {
+            $message = $this->translate('The system does not have enough coding rating to accept another coding job - please wait until another job has finished');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* checks passed, we can now create the file */
-        if (!$this->response) {
-            $difficulty = $level;
-            $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
-            $skillModifier = $this->getSkillModifierForFileType($fileType, $profile);
-            $modifier = floor(($skillRating + $skillModifier)/2);
-            $modifier = (int)$modifier;
-            $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM) . 'S'));
-            $fileTypeId = $fileType->getId();
-            foreach ($fileType->getFileParts() as $neededResource) {
-                /** @var FilePart $neededResource */
-                $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
-                $filePartInstance = array_shift($filePartInstances);
-                $modifier += $filePartInstance->getLevel();
-                $this->entityManager->remove($filePartInstance);
-            }
-            // add the coding job to the loop service
-            $this->getWebsocketServer()->addJob([
-                'difficulty' => $difficulty,
-                'modifier' => $modifier,
-                'completionDate' => $completionDate,
-                'typeId' => $fileTypeId,
-                'type' => 'program',
-                'mode' => 'program',
-                'skills' => $skillList,
-                'profileId' => $profile->getId(),
-                'socketId' => $this->clientData->socketId,
-                'nodeId' => $profile->getCurrentNode()->getId()
-            ]);
-            // prepare response message and add clientdata
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You start coding the %s for %s snippets</pre>'),
-                    $fileType->getName(),
-                    $level
-                )
-            );
-            $currentSnippets = $profile->getSnippets();
-            $profile->setSnippets($currentSnippets - $level);
-            $this->entityManager->flush();
-
+        $difficulty = $level;
+        $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+        $skillModifier = $this->getSkillModifierForFileType($fileType, $profile);
+        $modifier = floor(($skillRating + $skillModifier)/2);
+        $modifier = (int)$modifier;
+        $completionDate = new \DateTime();
+        // calculate coding time - for admins this is always 1s
+        $codingTime = ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) ? 1 : $difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM;
+        $completionDate->add(new \DateInterval('PT' . $codingTime . 'S'));
+        $fileTypeId = $fileType->getId();
+        foreach ($fileType->getFileParts() as $neededResource) {
+            /** @var FilePart $neededResource */
+            $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
+            $filePartInstance = array_shift($filePartInstances);
+            $modifier += $filePartInstance->getLevel();
+            $this->entityManager->remove($filePartInstance);
         }
-        return $this->response;
+        // add the coding job to the loop service
+        $this->getWebsocketServer()->addJob([
+            'difficulty' => $difficulty,
+            'modifier' => $modifier,
+            'completionDate' => $completionDate,
+            'typeId' => $fileTypeId,
+            'type' => 'program',
+            'mode' => 'program',
+            'skills' => $skillList,
+            'profileId' => $profile->getId(),
+            'socketId' => $this->clientData->socketId,
+            'nodeId' => $profile->getCurrentNode()->getId()
+        ]);
+        // prepare response message and add clientdata
+        $message = sprintf(
+            $this->translate('You start coding the %s for %s snippets'),
+            $fileType->getName(),
+            $level
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $currentSnippets = $profile->getSnippets();
+        $profile->setSnippets($currentSnippets - $level);
+        $this->entityManager->flush();
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function exitCodeMode($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $this->response = array(
-            'command' => 'exitcodemode',
-            'prompt' => $this->getWebsocketServer()->getUtilityService()->showPrompt($this->clientData)
-        );
-        return $this->response;
+        return $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_EXITCODEMODE)->send();
     }
 
     /**
@@ -948,23 +831,23 @@ class CodingService extends BaseService
     /**
      * @param Profile $profile
      * @param $skillId
+     * @return bool|string
      */
     private function checkAdvancedCoding(Profile $profile, $skillId)
     {
         $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
         /** @var Skill $skill */
         $skillRating = $this->getSkillRating($profile, $skill->getId());
+        $message = false;
         if ($skillRating < self::MIN_ADV_SKILL_RATING) {
-            $message = '<pre style="white-space: pre-wrap;" class="text-warning">Your rating in [%s] is not high enough (need %s skill rating)</pre>';
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate($message),
-                    $skill->getName(),
-                    self::MIN_ADV_SKILL_RATING
-                )
+            $tempMessage = 'Your rating in [%s] is not high enough (need %s skill rating)';
+            $message = sprintf(
+                $this->translate($tempMessage),
+                $skill->getName(),
+                self::MIN_ADV_SKILL_RATING
             );
         }
+        return $message;
     }
 
     /**
@@ -1136,7 +1019,7 @@ class CodingService extends BaseService
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function showRecipes($resourceId)
     {
@@ -1148,27 +1031,24 @@ class CodingService extends BaseService
         $recipes = $profileFileTypeRecipeRepo->findBy([
             'profile' => $profile
         ]);
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-19s|%-32s|%-4s</pre>',
+        $returnMessage = sprintf(
+            '%-19s|%-32s|%-4s',
             $this->translate('ADDED'),
             $this->translate('FILETYPE'),
             $this->translate('RUNS')
         );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
         foreach ($recipes as $recipe) {
             /** @var ProfileFileTypeRecipe $recipe */
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-19s|%-32s|%-4s</pre>',
+            $returnMessage = sprintf(
+                '%-19s|%-32s|%-4s',
                 $recipe->getAdded()->format('Y/m/d H:i:s'),
                 $recipe->getFileType()->getName(),
                 $recipe->getRuns()
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         }
-        $this->response = [
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        ];
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**

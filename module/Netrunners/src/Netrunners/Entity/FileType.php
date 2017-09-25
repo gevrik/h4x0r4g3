@@ -59,6 +59,7 @@ class FileType
     const ID_ANTIDOTE = 37;
     const ID_PUNCHER = 38;
     const ID_STIMULANT = 39;
+    const ID_PASSKEY = 40;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -99,6 +100,7 @@ class FileType
     const STRING_ANTIDOTE = 'antidote';
     const STRING_PUNCHER = 'puncher';
     const STRING_STIMULANT = 'stimulant';
+    const STRING_PASSKEY = 'passkey';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -140,6 +142,7 @@ class FileType
         self::STRING_ANTIDOTE => self::ID_ANTIDOTE,
         self::STRING_PUNCHER => self::ID_PUNCHER,
         self::STRING_STIMULANT => self::ID_STIMULANT,
+        self::STRING_PASSKEY => self::ID_PASSKEY,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;

@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
@@ -64,7 +65,7 @@ class ConnectionService extends BaseService
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|\Netrunners\Model\GameClientResponse
      */
     public function useConnection($resourceId, $contentArray)
     {
@@ -74,47 +75,34 @@ class ConnectionService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter (connection name or number)
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
         if (!$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
         // check if they can access the connection
         if (
-            !$this->response &&
-            (
-                $connection->getType() == Connection::TYPE_CODEGATE &&
-                !$connection->getisOpen() &&
-                !$this->canAccess($profile, $currentSystem)
-            )
+            $connection->getType() == Connection::TYPE_CODEGATE &&
+            !$connection->getisOpen() &&
+            !$this->canAccess($profile, $currentSystem)
         ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Access denied')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('Access denied'))->send();
         }
-        if (!$this->response) {
-            $this->response = $this->movePlayerToTargetNode($resourceId, $profile, $connection);
-        }
-        return $this->response;
+        $this->movePlayerToTargetNodeNew($resourceId, $profile, $connection);
+        $this->updateMap($resourceId);
+        return $this->showNodeInfoNew($resourceId, NULL, true);
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function removeConnection($resourceId, $contentArray)
     {
@@ -123,103 +111,76 @@ class ConnectionService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they can add connections
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter and check if this is a valid connection
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
-        if (!$this->response && !$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
         // check if there is still a connection to an io node
-        if (!$this->response && $connection) {
-            $this->nodeService->initConnectionsChecked();
-            $stillConnectedToIo = $this->nodeService->nodeStillConnectedToNodeType(
-                $currentNode,
-                $connection,
-                [NodeType::ID_PUBLICIO, NodeType::ID_IO]
-            );
-            if (!$stillConnectedToIo) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('This node would no longer be connected to an io-node after removing this connection')
-                    )
-                );
-            }
-            $this->nodeService->initConnectionsChecked();
+        $this->nodeService->initConnectionsChecked();
+        $stillConnectedToIo = $this->nodeService->nodeStillConnectedToNodeType(
+            $currentNode,
+            $connection,
+            [NodeType::ID_PUBLICIO, NodeType::ID_IO]
+        );
+        if (!$stillConnectedToIo) {
+            $message = $this->translate('This node would no longer be connected to an io-node after removing this connection');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
+        $this->nodeService->initConnectionsChecked();
         // check the same for the target node
-        $reversedConnection = NULL;
-        $targetNode = NULL;
-        if (!$this->response && $connection) {
-            $this->nodeService->initConnectionsChecked();
-            $targetNode = $connection->getTargetNode();
-            $reversedConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetNode, $currentNode);
-            $stillConnectedToIo = $this->nodeService->nodeStillConnectedToNodeType(
-                $targetNode,
-                $reversedConnection,
-                [NodeType::ID_PUBLICIO, NodeType::ID_IO]
-            );
-            if (!$stillConnectedToIo) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('The target node would no longer be connected to an io-node after removing this connection')
-                    )
-                );
-            }
-            $this->nodeService->initConnectionsChecked();
+        $this->nodeService->initConnectionsChecked();
+        $targetNode = $connection->getTargetNode();
+        $reversedConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetNode, $currentNode);
+        $stillConnectedToIo = $this->nodeService->nodeStillConnectedToNodeType(
+            $targetNode,
+            $reversedConnection,
+            [NodeType::ID_PUBLICIO, NodeType::ID_IO]
+        );
+        if (!$stillConnectedToIo) {
+            $message = $this->translate('The target node would no longer be connected to an io-node after removing this connection');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
+        $this->nodeService->initConnectionsChecked();
         /* all seems good, we can remove the connection */
         if (!$this->response && $connection && $reversedConnection) {
             $this->entityManager->remove($connection);
             $this->entityManager->remove($reversedConnection);
             $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You removed the connection to [%s]</pre>'),
-                    ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
-                )
-            );
-            $this->addAdditionalCommand();
-            $sourceMessage = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
+            $message = sprintf(
+                $this->translate('You removed the connection to [%s]'),
                 ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
             );
-            $this->messageEveryoneInNode($currentNode, $sourceMessage, NULL, $profile->getId());
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+            $this->updateMap($resourceId);
+            $sourceMessage = sprintf(
+                $this->translate('The connection to [%s] was removed'),
+                ($targetNode) ? $targetNode->getName() : $this->translate('unknown')
+            );
+            $this->messageEveryoneInNodeNew($currentNode, $sourceMessage, GameClientResponse::CLASS_MUTED, NULL, $profile->getId());
             $targetMessage = sprintf(
                 $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">The connection to [%s] was removed</pre>'),
                 $currentNode->getName()
             );
-            $this->messageEveryoneInNode($targetNode, $targetMessage, NULL, $profile->getId());
+            $this->messageEveryoneInNodeNew($targetNode, $targetMessage, GameClientResponse::CLASS_MUTED, NULL, $profile->getId());
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function scanConnection($resourceId, $contentArray)
     {
@@ -228,49 +189,37 @@ class ConnectionService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
-        if (!$this->response && !$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
         // check if they can access the connection
-        if (!$this->response &&
-            ($connection->getType() == Connection::TYPE_CODEGATE && $profile !== $currentSystem->getProfile() && !$connection->getisOpen())
+        if (
+            $connection->getType() == Connection::TYPE_CODEGATE && $profile !== $currentSystem->getProfile() && !$connection->getisOpen()
         ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Access denied')
-                )
-            );
+            return $this->gameClientResponse->addMessage($this->translate('Access denied'))->send();
         }
-        if (!$this->response) {
-            $this->response = $this->nodeService->showNodeInfo($resourceId, $connection->getTargetNode());
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is scanning into [%s]</pre>'),
-                $this->user->getUsername(),
-                $connection->getTargetNode()->getName()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is scanning into [%s]'),
+            $this->user->getUsername(),
+            $connection->getTargetNode()->getName()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->nodeService->showNodeInfoNew($resourceId, $connection->getTargetNode(), true);
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function closeConnection($resourceId, $contentArray)
     {
@@ -278,78 +227,55 @@ class ConnectionService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
-        if (!$this->response && !$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
-        if (
-            !$this->response && $connection->getType() != Connection::TYPE_CODEGATE
-        ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That is not a codegate')
-                )
-            );
+        if ($connection->getType() != Connection::TYPE_CODEGATE) {
+            return $this->gameClientResponse->addMessage($this->translate('That is not a codegate'))->send();
         }
-        if (
-            !$this->response && $connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()
-        ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That codegate is not open')
-                )
-            );
+        if ($connection->getType() == Connection::TYPE_CODEGATE && !$connection->getisOpen()) {
+            return $this->gameClientResponse->addMessage($this->translate('That codegate is not open'))->send();
         }
         // all good - can close
-        if (!$this->response) {
-            $connection->setIsOpen(false);
-            $this->entityManager->flush($connection);
-            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
-            $targetConnection->setIsOpen(false);
-            $this->entityManager->flush($targetConnection);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have closed the connection to [%s]</pre>'),
-                    $connection->getTargetNode()->getName()
-                )
-            ];
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has closed the connection to [%s]</pre>'),
-                $this->user->getUsername(),
-                $connection->getTargetNode()->getName()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId(), true);
-            // inform other players in target node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">Someone has opened the connection to [%s]</pre>'),
-                $currentNode->getName()
-            );
-            $this->messageEveryoneInNode($connection->getTargetNode(), $message, NULL, [], true);
-        }
-        return $this->response;
+        $connection->setIsOpen(false);
+        $this->entityManager->flush($connection);
+        $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
+        $targetConnection->setIsOpen(false);
+        $this->entityManager->flush($targetConnection);
+        $message = sprintf(
+            $this->translate('You have closed the connection to [%s]'),
+            $connection->getTargetNode()->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has closed the connection to [%s]</pre>'),
+            $this->user->getUsername(),
+            $connection->getTargetNode()->getName()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        // inform other players in target node
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">Someone has opened the connection to [%s]</pre>'),
+            $currentNode->getName()
+        );
+        $this->messageEveryoneInNodeNew($connection->getTargetNode(), $message, GameClientResponse::CLASS_MUTED, NULL, [], true);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function openConnection($resourceId, $contentArray)
     {
@@ -357,89 +283,58 @@ class ConnectionService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
         $connection = $this->findConnectionByNameOrNumber($parameter, $currentNode);
-        if (!$this->response && !$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
-        if (
-            !$this->response && $connection->getType() != Connection::TYPE_CODEGATE
-        ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That is not a codegate')
-                )
-            );
+        if ($connection->getType() != Connection::TYPE_CODEGATE) {
+            return $this->gameClientResponse->addMessage($this->translate('That is not a codegate'))->send();
         }
-        if (
-            !$this->response && $profile !== $currentNode->getSystem()->getProfile()
-        ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentNode->getSystem()->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
-        if (
-            !$this->response && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()
-        ) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That codegate is already open')
-                )
-            );
+        if ($connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
+            return $this->gameClientResponse->addMessage($this->translate('That codegate is already open'))->send();
         }
         // all good - can open
-        if (!$this->response) {
-            $connection->setIsOpen(true);
-            $this->entityManager->flush($connection);
-            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
-            $targetConnection->setIsOpen(true);
-            $this->entityManager->flush($targetConnection);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have opened the connection to [%s]</pre>'),
-                    $connection->getTargetNode()->getName()
-                )
-            ];
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has opened the connection to [%s]</pre>'),
-                $this->user->getUsername(),
-                $connection->getTargetNode()->getName()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId(), true);
-            // inform other players in target node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">Someone has opened the connection to [%s]</pre>'),
-                $currentNode->getName()
-            );
-            $this->messageEveryoneInNode($connection->getTargetNode(), $message, NULL, [], true);
-        }
-        return $this->response;
+        $connection->setIsOpen(true);
+        $this->entityManager->flush($connection);
+        $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
+        $targetConnection->setIsOpen(true);
+        $this->entityManager->flush($targetConnection);
+        $message = sprintf(
+            $this->translate('You have opened the connection to [%s]'),
+            $connection->getTargetNode()->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has opened the connection to [%s]'),
+            $this->user->getUsername(),
+            $connection->getTargetNode()->getName()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        // inform other players in target node
+        $message = sprintf(
+            $this->translate('Someone has opened the connection to [%s]'),
+            $currentNode->getName()
+        );
+        $this->messageEveryoneInNodeNew($connection->getTargetNode(), $message, GameClientResponse::CLASS_MUTED, NULL, [], true);
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return GameClientResponse|bool
      */
     public function addConnection($resourceId, $contentArray)
     {
@@ -448,151 +343,105 @@ class ConnectionService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they can add connections
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         $parameter = $this->getNextParameter($contentArray, false, true);
-        if (!$this->response && !$parameter) {
-            $returnMessage = array();
-            $returnMessage[] = sprintf(
-                '<pre class="text-warning">%s</pre>',
-                $this->translate('Please choose the target node:')
-            );
+        if (!$parameter) {
+            $this->gameClientResponse->addMessage($this->translate('Please choose the target node:'));
             $nodes = $this->nodeRepo->findBySystem($currentSystem);
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-11s|%s</pre>',
+            $returnMessage = sprintf(
+                '%-11s|%s',
                 $this->translate('NODE-ID'),
                 $this->translate('NODE-NAME')
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
             foreach ($nodes as $node) {
                 /** @var Node $node */
                 if ($node === $currentNode) continue;
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-11s|%s</pre>',
+                $returnMessage = sprintf(
+                    '%-11s|%s',
                     $node->getId(),
                     $node->getName()
                 );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
             }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+            return $this->gameClientResponse->send();
         }
         // check if this is a home node
-        if (!$this->response && $currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to add a connection to a home node')
-                )
-            );
+        if ($currentNode->getNodeType()->getId() == NodeType::ID_HOME) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to add a connection to a home node'))->send();
         }
         // check if they have enough credits
-        if (!$this->response && $profile->getCredits() < self::CONNECTION_COST) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a connection to the node</pre>'),
-                    self::CONNECTION_COST
-                )
+        if ($profile->getCredits() < self::CONNECTION_COST) {
+            $message = sprintf(
+                $this->translate('You need %s credits to add a connection to the node'),
+                self::CONNECTION_COST
             );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if the target node exists
-        if (!$this->response) {
-            $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
-            if (!$this->response && !$targetNode) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Invalid target node')
-                    )
-                );
-            }
+        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
+        if (!$targetNode) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid target node'))->send();
         }
         /** @var Node $targetNode */
         // check if the target node is the current node
-        if (!$this->response && $targetNode === $currentNode) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid target node')
-                )
-            );
+        if ($targetNode === $currentNode) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid target node'))->send();
         }
         // check if the target node is in the same system
-        if (!$this->response && $targetNode->getSystem() != $currentSystem) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid target node')
-                )
-            );
+        if ($targetNode->getSystem() != $currentSystem) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid target node'))->send();
         }
         // check if there already is a connection between the current node and the target node
-        if (!$this->response && $this->connectionRepo->findBySourceNodeAndTargetNode($currentNode, $targetNode)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('There already exists a connection between those nodes')
-                )
-            );
+        if ($this->connectionRepo->findBySourceNodeAndTargetNode($currentNode, $targetNode)) {
+            return $this->gameClientResponse->addMessage($this->translate('There already exists a connection between those nodes'))->send();
         }
         /* all checks passed, we can now add the connection */
-        if (!$this->response) {
-            $newCredits = $profile->getCredits() - self::CONNECTION_COST;
-            $profile->setCredits($newCredits);
-            $aconnection = new Connection();
-            $aconnection->setType(Connection::TYPE_NORMAL);
-            $aconnection->setTargetNode($targetNode);
-            $aconnection->setSourceNode($currentNode);
-            $aconnection->setCreated(new \DateTime());
-            $aconnection->setLevel($currentNode->getLevel());
-            $aconnection->setIsOpen(false);
-            $this->entityManager->persist($aconnection);
-            $bconnection = new Connection();
-            $bconnection->setType(Connection::TYPE_NORMAL);
-            $bconnection->setTargetNode($currentNode);
-            $bconnection->setSourceNode($targetNode);
-            $bconnection->setCreated(new \DateTime());
-            $bconnection->setLevel(1);
-            $bconnection->setIsOpen(false);
-            $this->entityManager->persist($bconnection);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">The connection has been created for %s credits</pre>'),
-                    self::CONNECTION_COST
-                )
-            );
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] added a new connection</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        $newCredits = $profile->getCredits() - self::CONNECTION_COST;
+        $profile->setCredits($newCredits);
+        $aconnection = new Connection();
+        $aconnection->setType(Connection::TYPE_NORMAL);
+        $aconnection->setTargetNode($targetNode);
+        $aconnection->setSourceNode($currentNode);
+        $aconnection->setCreated(new \DateTime());
+        $aconnection->setLevel($currentNode->getLevel());
+        $aconnection->setIsOpen(false);
+        $this->entityManager->persist($aconnection);
+        $bconnection = new Connection();
+        $bconnection->setType(Connection::TYPE_NORMAL);
+        $bconnection->setTargetNode($currentNode);
+        $bconnection->setSourceNode($targetNode);
+        $bconnection->setCreated(new \DateTime());
+        $bconnection->setLevel(1);
+        $bconnection->setIsOpen(false);
+        $this->entityManager->persist($bconnection);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('The connection has been created for %s credits'),
+            self::CONNECTION_COST
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] added a new connection'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return GameClientResponse|bool
      */
     public function secureConnection($resourceId, $contentArray)
     {
@@ -601,26 +450,21 @@ class ConnectionService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they can add connections
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if they have enough credits
-        if (!$this->response && $profile->getCredits() < self::CONNECTION_COST) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You need %s credits to add a connection to the node</pre>'),
-                    self::CONNECTION_COST
-                )
+        if ($profile->getCredits() < self::CONNECTION_COST) {
+            $message = sprintf(
+                $this->translate('You need %s credits to add a connection to the node'),
+                self::CONNECTION_COST
             );
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
@@ -644,57 +488,43 @@ class ConnectionService extends BaseService
                 }
             }
         }
-        if (!$this->response && !$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
-        if (!$this->response && $connection->getType() == Connection::TYPE_CODEGATE) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This connection is already secure')
-                )
-            );
+        if ($connection->getType() == Connection::TYPE_CODEGATE) {
+            return $this->gameClientResponse->addMessage($this->translate('This connection is already secure'))->send();
         }
-        if (!$this->response) {
-            $profile->setCredits($profile->getCredits() - self::SECURE_CONNECTION_COST);
-            $connection->setType(Connection::TYPE_CODEGATE);
-            $connection->setIsOpen(false);
-            $targetnode = $connection->getTargetNode();
-            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
-            /** @var Connection $targetConnection */
-            $targetConnection->setType(Connection::TYPE_CODEGATE);
-            $targetConnection->setIsOpen(false);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('The connection has been secured')
-                )
-            );
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has secured the connection to [%s]</pre>'),
-                $this->user->getUsername(),
-                $targetConnection->getTargetNode()->getName()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        $profile->setCredits($profile->getCredits() - self::SECURE_CONNECTION_COST);
+        $connection->setType(Connection::TYPE_CODEGATE);
+        $connection->setIsOpen(false);
+        $targetnode = $connection->getTargetNode();
+        $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
+        /** @var Connection $targetConnection */
+        $targetConnection->setType(Connection::TYPE_CODEGATE);
+        $targetConnection->setIsOpen(false);
+        $this->entityManager->flush();
+        $this->gameClientResponse->addMessage($this->translate('The connection has been secured'), GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has secured the connection to [%s]'),
+            $this->user->getUsername(),
+            $targetConnection->getTargetNode()->getName()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        // inform other players in target node
+        $message = sprintf(
+            $this->translate('Someone has secured the connection to [%s]'),
+            $currentNode->getName()
+        );
+        $this->messageEveryoneInNodeNew($targetnode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return GameClientResponse|bool
      */
     public function unsecureConnection($resourceId, $contentArray)
     {
@@ -703,16 +533,13 @@ class ConnectionService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // check if they can add connections
-        if (!$this->response && $profile !== $currentSystem->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile !== $currentSystem->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* connections can be given by name or number, so we need to handle both */
         // get parameter
@@ -736,57 +563,36 @@ class ConnectionService extends BaseService
                 }
             }
         }
-        if (!$this->response && !$connection) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such connection')
-                )
-            );
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
         }
-        if (!$this->response && $connection->getType() != Connection::TYPE_CODEGATE) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This connection is not secure')
-                )
-            );
+        if ($connection->getType() != Connection::TYPE_CODEGATE) {
+            return $this->gameClientResponse->addMessage($this->translate('This connection is not secure'))->send();
         }
-        if (!$this->response) {
-            $connection->setType(Connection::TYPE_NORMAL);
-            $connection->setIsOpen(false);
-            $targetnode = $connection->getTargetNode();
-            $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
-            /** @var Connection $targetConnection */
-            $targetConnection->setType(Connection::TYPE_NORMAL);
-            $targetConnection->setIsOpen(true);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('The connection is no longer secured')
-                )
-            );
-            $this->addAdditionalCommand();
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unsecured the connection to [%s]</pre>'),
-                $this->user->getUsername(),
-                $targetnode->getName()
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
-            // inform other players in target node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unsecured the connection to [%s]</pre>'),
-                $this->user->getUsername(),
-                $currentNode->getName()
-            );
-            $this->messageEveryoneInNode($targetnode, $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        $connection->setType(Connection::TYPE_NORMAL);
+        $connection->setIsOpen(false);
+        $targetnode = $connection->getTargetNode();
+        $targetConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($targetnode, $currentNode);
+        /** @var Connection $targetConnection */
+        $targetConnection->setType(Connection::TYPE_NORMAL);
+        $targetConnection->setIsOpen(true);
+        $this->entityManager->flush();
+        $this->gameClientResponse->addMessage($this->translate('The connection is no longer secured'), GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has unsecured the connection to [%s]'),
+            $this->user->getUsername(),
+            $targetnode->getName()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        // inform other players in target node
+        $message = sprintf(
+            $this->translate('Someone has unsecured the connection to [%s]'),
+            $currentNode->getName()
+        );
+        $this->messageEveryoneInNodeNew($targetnode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        return $this->gameClientResponse->send();
     }
 
 }

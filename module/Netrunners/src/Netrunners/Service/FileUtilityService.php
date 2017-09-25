@@ -16,6 +16,9 @@ use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Notification;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FileRepository;
@@ -26,6 +29,8 @@ use Zend\View\Renderer\PhpRenderer;
 
 class FileUtilityService extends BaseService
 {
+
+    const PASSKEY_COST = 10;
 
     /**
      * @var FileRepository
@@ -62,16 +67,19 @@ class FileUtilityService extends BaseService
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function changeFileName($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId, true);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // try to get target file via repo method
@@ -80,79 +88,57 @@ class FileUtilityService extends BaseService
             $profile,
             $parameter
         );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
-                    $this->translate('No such file')
-                )
-            );
+        if (count($targetFiles) < 1) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
         $file = array_shift($targetFiles);
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File not found')
-                )
-            );
+        if (!$file) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
         // now get the new name
         $newName = $this->getNextParameter($contentArray, false, false, true, true);
-        if (!$this->response && !$newName) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify a new name (alpha-numeric only, 32-chars-max)')
-                )
-            );
+        if (!$newName) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a new name (alpha-numeric only, 32-chars-max)'))->send();
         }
         // check if they can change the type
-        if (!$this->response && $profile != $file->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile != $file->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // string check
-        $this->stringChecker($newName);
-        /* all checks passed, we can rename the file now */
-        if (!$this->response) {
-            $newName = str_replace(' ', '_', $newName);
-            $file->setName($newName);
-            $this->entityManager->flush($file);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf('<pre style="white-space: pre-wrap;" class="text-success">File name changed to %s</pre>', $newName)
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has edited [%s]</pre>'),
-                $this->user->getUsername(),
-                $newName
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        $checkResult = $this->stringChecker($newName);
+        if ($checkResult) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
-        return $this->response;
+        /* all checks passed, we can rename the file now */
+        $newName = str_replace(' ', '_', $newName);
+        $file->setName($newName);
+        $this->entityManager->flush($file);
+        $message = sprintf('File name changed to %s', $newName);
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has edited [%s]'),
+            $this->user->getUsername(),
+            $newName
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function updateFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId, true);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, false, true, true);
         // try to get target file via repo method
@@ -161,68 +147,46 @@ class FileUtilityService extends BaseService
             $profile,
             $parameter
         );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
-                    $this->translate('No such file')
-                )
-            );
+        if (count($targetFiles) < 1) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
         $file = array_shift($targetFiles);
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File not found')
-                )
-            );
+        if (!$file) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
         /** @var File $file */
-        if (!$this->response && $file && $file->getIntegrity() >= $file->getMaxIntegrity()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File is already at max integrity')
-                )
-            );
+        if ($file->getIntegrity() >= $file->getMaxIntegrity()) {
+            return $this->gameClientResponse->addMessage($this->translate('File is already at max integrity'))->send();
         }
         /* all checks passed, we can update the file now */
-        if (!$this->response && $file) {
-            $currentIntegrity = $file->getIntegrity();
-            $maxIntegrity = $file->getMaxIntegrity();
-            $neededIntegrity = $maxIntegrity - $currentIntegrity;
-            if ($neededIntegrity > $profile->getSnippets()) $neededIntegrity = $profile->getSnippets();
-            $file->setIntegrity($file->getIntegrity() + $neededIntegrity);
-            $this->entityManager->flush($file);
-            $profile->setSnippets($profile->getSnippets() - $neededIntegrity);
-            $this->entityManager->flush($profile);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">[%s] updated with %s snippets</pre>',
-                    $file->getName(),
-                    $neededIntegrity
-                )
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has updated [%s]</pre>'),
-                $this->user->getUsername(),
-                $file->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-        }
-        return $this->response;
+        $currentIntegrity = $file->getIntegrity();
+        $maxIntegrity = $file->getMaxIntegrity();
+        $neededIntegrity = $maxIntegrity - $currentIntegrity;
+        if ($neededIntegrity > $profile->getSnippets()) $neededIntegrity = $profile->getSnippets();
+        $file->setIntegrity($file->getIntegrity() + $neededIntegrity);
+        $this->entityManager->flush($file);
+        $profile->setSnippets($profile->getSnippets() - $neededIntegrity);
+        $this->entityManager->flush($profile);
+        $message = sprintf(
+            '[%s] updated with %s snippets',
+            $file->getName(),
+            $neededIntegrity
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has updated [%s]</pre>'),
+            $this->user->getUsername(),
+            $file->getName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function downloadFile($resourceId, $contentArray)
     {
@@ -230,7 +194,10 @@ class FileUtilityService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         // init response
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
@@ -239,254 +206,198 @@ class FileUtilityService extends BaseService
             'name' => $parameter,
             'node' => $profile->getCurrentNode()
         ]);
-        if (!$this->response && !$targetFile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such file')
-                )
-            );
+        if (!$targetFile) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
         /** @var File $targetFile */
         // check for mission
-        if (!$this->response && $targetFile && $targetFile->getFileType()->getId() == FileType::ID_TEXT) {
-            $this->response = $this->executeMissionFile($targetFile, $resourceId);
+        if ($targetFile->getFileType()->getId() == FileType::ID_TEXT) {
+            return $this->executeMissionFile($targetFile);
         }
         // can only download files that do not belong to themselves in owned systems
-        if (!$this->response && $targetFile) {
-            $targetFileSystem = $targetFile->getSystem();
-            $targetFileNode = $targetFile->getNode();
-            if (
-                $targetFile->getProfile() !== $profile &&
-                $targetFileSystem->getProfile() !== $profile &&
-                ($targetFileNode->getProfile() && $targetFileNode->getProfile() !== $profile) &&
-                ($targetFileSystem->getProfile() != NULL && $targetFileSystem->getFaction() != NULL && $targetFileSystem->getGroup() != NULL)
-            )
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        $targetFileSystem = $targetFile->getSystem();
+        $targetFileNode = $targetFile->getNode();
+        if (
+            $targetFile->getProfile() !== $profile &&
+            $targetFileSystem->getProfile() !== $profile &&
+            ($targetFileNode->getProfile() && $targetFileNode->getProfile() !== $profile) &&
+            ($targetFileSystem->getProfile() != NULL && $targetFileSystem->getFaction() != NULL && $targetFileSystem->getGroup() != NULL)
+        ){
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if the file is running - can't download then
-        if (!$this->response && $targetFile && $targetFile->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to download running file')
-                )
-            );
+        if ($targetFile->getRunning()) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to download running file'))->send();
         }
         // check if the file belongs to a profile or npc - can't download then
-        if (!$this->response && $targetFile && $targetFile->getProfile() != NULL) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This file has already been downloaded by someone')
-                )
-            );
+        if ($targetFile->getProfile() != NULL) {
+            return $this->gameClientResponse->addMessage($this->translate('This file has already been downloaded by someone'))->send();
         }
-        if (!$this->response && $targetFile && $targetFile->getNpc() != NULL) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This file has already been downloaded by an entity')
-                )
-            );
+        if ($targetFile->getNpc() != NULL) {
+            return $this->gameClientResponse->addMessage($this->translate('This file has already been downloaded by an entity'))->send();
         }
         // check if there is enough storage to store this
-        if (!$this->response && $targetFile && !$this->canStoreFile($profile, $targetFile)) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You do not have enough storage to download %s - build or upgrade storage nodes</pre>'),
-                    $targetFile->getName()
-                )
-            );
-        }
-        /* all checks passed, download file */
-        if (!$this->response && $targetFile) {
-            $targetFile->setProfile($profile);
-            $targetFile->setNode(NULL);
-            $targetFile->setSystem(NULL);
-            $this->entityManager->flush($targetFile);
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You download %s to your storage</pre>'),
-                    $targetFile->getName()
-                )
-            );
-            // inform other players in node
+        if (!$this->canStoreFile($profile, $targetFile)) {
             $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] downloaded [%s]</pre>'),
-                $this->user->getUsername(),
+                $this->translate('You do not have enough storage to download %s - build or upgrade storage nodes'),
                 $targetFile->getName()
             );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        return $this->response;
+        /* all checks passed, download file */
+        $targetFile->setProfile($profile);
+        $targetFile->setNode(NULL);
+        $targetFile->setSystem(NULL);
+        $this->entityManager->flush($targetFile);
+        $message = sprintf(
+            $this->translate('You download %s to your storage'),
+            $targetFile->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] downloaded [%s]'),
+            $this->user->getUsername(),
+            $targetFile->getName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $command
      * @param array $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function enterMode($resourceId, $command, $contentArray = [])
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response) {
-            $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
-            switch ($command) {
-                default:
-                    break;
-                case 'rm':
-                    $file = $this->removeFileChecks($contentArray, $resourceId);
-                    if (!$this->response) {
-                        $this->response = [
-                            'command' => 'enterconfirmmode',
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-white">Are you sure that you want to delete [%s] - Please confirm this action:</pre>'),
-                                $file->getName()
-                            )
-                        ];
-                    }
-                    break;
-            }
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
+        switch ($command) {
+            default:
+                break;
+            case 'rm':
+                $checkResult = $this->removeFileChecks($contentArray);
+                if (!$checkResult instanceof File) {
+                    if ($checkResult instanceof GameClientResponse) {
+                        return $checkResult->send();
+                    }
+                    return $this->gameClientResponse->addMessage($checkResult)->send();
+                }
+                $message = sprintf(
+                    $this->translate('Are you sure that you want to delete [%s] - Please confirm this action:'),
+                    $checkResult->getName()
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                break;
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function harvestCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $minerString = $this->getNextParameter($contentArray, false);
-        if (!$this->response && !$minerString) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Please specify the miner that you want to harvest</pre>'
-            );
+        if (!$minerString) {
+            $message = $this->translate('Please specify the miner that you want to harvest');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         $minerId = NULL;
-        if (!$this->response) {
-            // try to get target file via repo method
-            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
-            if (!$this->response && count($targetFiles) < 1) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-                );
-            }
-            if (!$this->response) {
-                $miner = array_shift($targetFiles);
-                /** @var File $miner */
-                if ($miner->getProfile() != $profile) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Permission denied</pre>'
-                    );
-                }
-                if (!$this->response) {
-                    $minerData = json_decode($miner->getData());
-                    if (!isset($minerData->value)) {
-                        $this->response = [
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                $this->translate('No resources to harvest in that miner')
-                            )
-                        ];
-                    }
-                    if (!$this->response && $minerData->value < 1) {
-                        $this->response = [
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                                $this->translate('No resources to harvest in that miner')
-                            )
-                        ];
-                    }
-                    if (!$this->response) {
-                        $availableResources = $minerData->value;
-                        $minerData->value = 0;
-                        switch ($miner->getFileType()->getId()) {
-                            default:
-                                $message = NULL;
-                                break;
-                            case FileType::ID_DATAMINER:
-                                $profile->setSnippets($profile->getSnippets() + $availableResources);
-                                $message = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You harvest [%s] snippets from [%s]</pre>'),
-                                    $availableResources,
-                                    $miner->getName()
-                                );
-                                break;
-                            case FileType::ID_COINMINER:
-                                $profile->setCredits($profile->getCredits() + $availableResources);
-                                $message = sprintf(
-                                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You harvest [%s] credits from [%s]</pre>'),
-                                    $availableResources,
-                                    $miner->getName()
-                                );
-                                break;
-                        }
-                        if (!$message) {
-                            $message = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">Unable to harvest at this moment</pre>'),
-                                $availableResources,
-                                $miner->getName()
-                            );
-                        }
-                        $this->response = array(
-                            'command' => 'showmessage',
-                            'message' => $message
-                        );
-                        $miner->setData(json_encode($minerData));
-                        $this->entityManager->flush($profile);
-                        $this->entityManager->flush($miner);
-                        // inform other players in node
-                        $message = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is harvesting [%s]</pre>'),
-                            $this->user->getUsername(),
-                            $miner->getName()
-                        );
-                        $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-                    }
-                }
-            }
+        // try to get target file via repo method
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
+        if (count($targetFiles) < 1) {
+            $message = $this->translate('File not found');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        return $this->response;
+        $miner = array_shift($targetFiles);
+        /** @var File $miner */
+        if ($miner->getProfile() != $profile) {
+            $message = $this->translate('Permission denied');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $minerData = json_decode($miner->getData());
+        if (!isset($minerData->value)) {
+            $message = $this->translate('No resources to harvest in that miner');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($minerData->value < 1) {
+            $message = $this->translate('No resources to harvest in that miner');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $availableResources = $minerData->value;
+        $minerData->value = 0;
+        switch ($miner->getFileType()->getId()) {
+            default:
+                $message = sprintf(
+                    $this->translate('Unable to harvest at this moment'),
+                    $availableResources,
+                    $miner->getName()
+                );
+                return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_DANGER)->send();
+            case FileType::ID_DATAMINER:
+                $profile->setSnippets($profile->getSnippets() + $availableResources);
+                $message = sprintf(
+                    $this->translate('You harvest [%s] snippets from [%s]'),
+                    $availableResources,
+                    $miner->getName()
+                );
+                break;
+            case FileType::ID_COINMINER:
+                $profile->setCredits($profile->getCredits() + $availableResources);
+                $message = sprintf(
+                    $this->translate('You harvest [%s] credits from [%s]'),
+                    $availableResources,
+                    $miner->getName()
+                );
+                break;
+        }
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $miner->setData(json_encode($minerData));
+        $this->entityManager->flush($profile);
+        $this->entityManager->flush($miner);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is harvesting [%s]'),
+            $this->user->getUsername(),
+            $miner->getName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function initArmorCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // try to get target file via repo method
@@ -495,141 +406,89 @@ class FileUtilityService extends BaseService
             $profile,
             $parameter
         );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
-                    $this->translate('No such file')
-                )
-            );
+        if (count($targetFiles) < 1) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
         $file = array_shift($targetFiles);
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File not found')
-                )
-            );
+        if (!$file) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
-        if (!$this->response && $file && $file->getFileType()->getId() != FileType::ID_CODEARMOR) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You can only initialize codearmor files')
-                )
-            );
+        if ($file->getFileType()->getId() != FileType::ID_CODEARMOR) {
+            return $this->gameClientResponse->addMessage($this->translate('You can only initialize codearmor files'))->send();
         }
         // now get the subtype
         $subtype = $this->getNextParameter($contentArray, false, false, true, true);
-        if (!$this->response && !$subtype) {
-            $message = [];
-            $message[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('Please choose from the following options:')
-            );
-            $message[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                wordwrap(implode(',', FileType::$armorSubtypeLookup), 120)
-            );
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $message
-            );
+        if (!$subtype) {
+            $message = $this->translate('Please choose from the following options:');
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+            $message = wordwrap(implode(',', FileType::$armorSubtypeLookup), 120);
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE)->send();
         }
         // check if they can change the type
-        if (!$this->response && $profile != $file->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile != $file->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // all seems fine - init
-        if (!$this->response && $file && $subtype) {
-            $fileData = json_decode($file->getData());
-            if ($fileData && $fileData->subtype) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('This codearmor has already been initialized')
-                    )
-                );
-            }
-            if (!$this->response) {
-                switch ($subtype) {
-                    default:
-                        $realType = false;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_HEAD_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_HEAD;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_SHOULDERS_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_SHOULDERS;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_UPPER_ARM_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_UPPER_ARM;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_LOWER_ARM_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_LOWER_ARM;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_HANDS_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_HANDS;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_TORSO_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_TORSO;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_LEGS_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_LEGS;
-                        break;
-                    case FileType::SUBTYPE_ARMOR_SHOES_STRING:
-                        $realType = FileType::SUBTYPE_ARMOR_SHOES;
-                        break;
-                }
-                if (!$realType) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Invalid subtype')
-                        )
-                    );
-                }
-                else {
-                    $file->setData(json_encode(['subtype'=>$realType]));
-                    $this->entityManager->flush($file);
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have initialized [%s] to subtype [%s]</pre>'),
-                            $file->getName(),
-                            FileType::$armorSubtypeLookup[$realType]
-                        )
-                    );
-                    // inform other players in node
-                    $message = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has initialized [%s]</pre>'),
-                        $this->user->getUsername(),
-                        $file->getName()
-                    );
-                    $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-                }
-            }
+        $fileData = json_decode($file->getData());
+        if ($fileData && $fileData->subtype) {
+            return $this->gameClientResponse->addMessage($this->translate('This codearmor has already been initialized'))->send();
         }
-        return $this->response;
+        switch ($subtype) {
+            default:
+                $realType = false;
+                break;
+            case FileType::SUBTYPE_ARMOR_HEAD_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_HEAD;
+                break;
+            case FileType::SUBTYPE_ARMOR_SHOULDERS_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_SHOULDERS;
+                break;
+            case FileType::SUBTYPE_ARMOR_UPPER_ARM_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_UPPER_ARM;
+                break;
+            case FileType::SUBTYPE_ARMOR_LOWER_ARM_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_LOWER_ARM;
+                break;
+            case FileType::SUBTYPE_ARMOR_HANDS_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_HANDS;
+                break;
+            case FileType::SUBTYPE_ARMOR_TORSO_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_TORSO;
+                break;
+            case FileType::SUBTYPE_ARMOR_LEGS_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_LEGS;
+                break;
+            case FileType::SUBTYPE_ARMOR_SHOES_STRING:
+                $realType = FileType::SUBTYPE_ARMOR_SHOES;
+                break;
+        }
+        if (!$realType) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid subtype'))->send();
+        }
+        else {
+            $file->setData(json_encode(['subtype'=>$realType]));
+            $this->entityManager->flush($file);
+            $message = sprintf(
+                $this->translate('You have initialized [%s] to subtype [%s]'),
+                $file->getName(),
+                FileType::$armorSubtypeLookup[$realType]
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+            // inform other players in node
+            $message = sprintf(
+                $this->translate('[%s] has initialized [%s]'),
+                $this->user->getUsername(),
+                $file->getName()
+            );
+            $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * Kill a running program.
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function killProcess($resourceId, $contentArray)
     {
@@ -639,89 +498,51 @@ class FileUtilityService extends BaseService
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false, true);
         // init response
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response && !$parameter) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Please specify the process id to kill (ps for list)')
-                )
-            );
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        $runningFile = (!$this->response) ? $this->entityManager->find('Netrunners\Entity\File', $parameter) : NULL;
-        if (!$this->response && !$runningFile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid process id')
-                )
-            );
+        if (!$parameter) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify the process id to kill (ps for list)'))->send();
         }
-        if (!$this->response && $runningFile->getProfile() != $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Invalid process id')
-                )
-            );
+        $runningFile = $this->entityManager->find('Netrunners\Entity\File', $parameter);
+        if (!$runningFile) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid process id'))->send();
         }
-        if (!$this->response && !$runningFile->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No process with that id')
-                )
-            );
+        if ($runningFile->getProfile() != $profile) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid process id'))->send();
         }
-        if (!$this->response && $runningFile->getSystem() && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That process needs to be killed in the system that it is running in')
-                )
-            );
+        if (!$runningFile->getRunning()) {
+            return $this->gameClientResponse->addMessage($this->translate('No process with that id'))->send();
         }
-        if (!$this->response && $runningFile->getNode() && $runningFile->getNode() != $profile->getCurrentNode()) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('That process needs to be killed in the node that it is running in')
-                )
-            ];
+        if ($runningFile->getSystem() && $runningFile->getSystem() != $profile->getCurrentNode()->getSystem())  {
+            return $this->gameClientResponse->addMessage($this->translate('That process needs to be killed in the system that it is running in'))->send();
         }
-        if (!$this->response) {
-            $runningFile->setRunning(false);
-            $runningFile->setSystem(NULL);
-            $runningFile->setNode(NULL);
-            $this->entityManager->flush($runningFile);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">Process with id [%s] has been killed</pre>'),
-                    $runningFile->getId()
-                )
-            ];
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] killed a process<s/pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        if ($runningFile->getNode() && $runningFile->getNode() != $profile->getCurrentNode()) {
+            return $this->gameClientResponse->addMessage($this->translate('That process needs to be killed in the node that it is running in'))->send();
         }
-        return $this->response;
+        $runningFile->setRunning(false);
+        $runningFile->setSystem(NULL);
+        $runningFile->setNode(NULL);
+        $this->entityManager->flush($runningFile);
+        $message = sprintf(
+            $this->translate('Process with id [%s] has been killed'),
+            $runningFile->getId()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] killed a process'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * Shows all running processes of the current system.
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function listProcesses($resourceId, $contentArray)
     {
@@ -729,6 +550,10 @@ class FileUtilityService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $showAll = $this->getNextParameter($contentArray, false);
         if ($showAll) {
             $runningFiles = $this->fileRepo->findBy([
@@ -742,92 +567,57 @@ class FileUtilityService extends BaseService
                 'running' => true
             ]);
         }
-        $returnMessage = [];
-        if (count($runningFiles) < 1) {
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                $this->translate('No running processes')
+        $returnMessage = sprintf(
+            '%-12s|%-20s|%s',
+            $this->translate('PROCESS-ID'),
+            $this->translate('FILE-TYPE'),
+            $this->translate('FILE-NAME')
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
+        foreach ($runningFiles as $runningFile) {
+            /** @var File $runningFile */
+            $returnMessage = sprintf(
+                '%-12s|%-20s|%s',
+                $runningFile->getId(),
+                $runningFile->getFileType()->getName(),
+                $runningFile->getName()
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         }
-        else {
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-12s|%-20s|%s</pre>',
-                $this->translate('PROCESS-ID'),
-                $this->translate('FILE-TYPE'),
-                $this->translate('FILE-NAME')
-            );
-            foreach ($runningFiles as $runningFile) {
-                /** @var File $runningFile */
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%-12s|%-20s|%s</pre>',
-                    $runningFile->getId(),
-                    $runningFile->getFileType()->getName(),
-                    $runningFile->getName()
-                );
-            }
-        }
-        $this->response = [
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        ];
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $contentArray
-     * @param null $resourceId
      * @return mixed|File|null
      */
-    private function removeFileChecks($contentArray, $resourceId = NULL)
+    private function removeFileChecks($contentArray)
     {
+        $response = false;
         $profile = $this->user->getProfile();
         $parameter = $this->getNextParameter($contentArray, false);
-        $file = NULL;
         // try to get target file via repo method
         $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $parameter);
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-            );
+        if (count($targetFiles) < 1) {
+            $response = $this->translate('File not found');
         }
-        if (!$this->response) {
-            $file = array_shift($targetFiles);
-            /** @var File $file */
-            // check if this file is a mission file
-            if ($file && $file->getFileType()->getId() == FileType::ID_TEXT) {
-                 $this->response = $this->executeMissionFile($file, $resourceId);
-            }
-            // check if the file belongs to the profile
-            if (!$this->response && $file && $file->getProfile() != $profile) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Permission denied')
-                    )
-                );
-            }
-            if (!$this->response && $file->getRunning()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Command failed - program is still running')
-                    )
-                );
-            }
-            if (!$this->response && $file->getSystem()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Command failed - please unload the file first')
-                    )
-                );
-            }
+        $file = array_shift($targetFiles);
+        /** @var File $file */
+        // check if this file is a mission file
+        if ($file->getFileType()->getId() == FileType::ID_TEXT) {
+             $response = $this->executeMissionFile($file);
         }
-        return $file;
+        // check if the file belongs to the profile
+        if (!$response && $file && $file->getProfile() != $profile) {
+            $response = $this->translate('Permission denied');
+        }
+        if (!$response && $file->getRunning()) {
+            $response = $this->translate('Command failed - program is still running');
+        }
+        if (!$response && $file->getSystem()) {
+            $response = $this->translate('Command failed - please unload the file first');
+        }
+        return ($response) ? $response : $file;
     }
 
     /**
@@ -835,10 +625,11 @@ class FileUtilityService extends BaseService
      * If you pass a contentArray (user-input), it will get the file from the user-input.
      * @param array|null $contentArray
      * @param File|null $givenFile
-     * @return mixed|File|null
+     * @return bool|string|File|null
      */
     private function editFileChecks($contentArray = NULL, File $givenFile = NULL)
     {
+        $response = false;
         $profile = $this->user->getProfile();
         if ($givenFile) {
             $file = $givenFile;
@@ -848,66 +639,44 @@ class FileUtilityService extends BaseService
             $parameter = $this->getNextParameter($contentArray, false);
             // try to get target file via repo method
             $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $parameter);
-            if (!$this->response && count($targetFiles) < 1) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-                );
+            if (count($targetFiles) < 1) {
+                $response = $this->translate('File not found');
             }
         }
-        if (!$this->response) {
+        if (!$response) {
             if (!$givenFile) $file = array_shift($targetFiles);
             /** @var File $file */
             // check if the file belongs to the profile
-            if (!$this->response && $file && $file->getProfile() != $profile) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Permission denied')
-                    )
-                );
+            if (!$response && $file && $file->getProfile() != $profile) {
+                $response = $this->translate('Permission denied');
             }
-            if (!$this->response && $file->getSystem()) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Command failed - please download the file first')
-                    )
-                );
+            if (!$response && $file->getSystem()) {
+                $response = $this->translate('Command failed - please download the file first');
             }
             // check if this file is a text file
-            if (!$this->response && $file && $file->getFileType()->getId() != FileType::ID_TEXT) {
-                $this->response = $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Unable to edit this file type</pre>'
-                );
+            if (!$response && $file && $file->getFileType()->getId() != FileType::ID_TEXT) {
+                $response = $this->translate('Unable to edit this file type');
             }
             $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
             /** @var MissionRepository $missionRepo */
             // check if this file is a text file that is used in a mission
-            if (!$this->response && $file && $missionRepo->findByTargetFile($file)) {
-                $this->response = $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Unable to edit mission files</pre>'
-                );
+            if (!$response && $file && $missionRepo->findByTargetFile($file)) {
+                $response = $this->translate('Unable to edit mission files');
             }
         }
-        return $file;
+        return ($response) ? $response : $file;
     }
 
-    /**
-     * @param $resourceId
-     * @param $contentArray
-     * @return array|bool|false
-     */
+
     public function modFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         // try to get target file via repo method
@@ -916,181 +685,131 @@ class FileUtilityService extends BaseService
             $profile,
             $parameter
         );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    "<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s</pre>",
-                    $this->translate('No such file')
-                )
-            );
+        if (count($targetFiles) < 1) {
+            return $this->gameClientResponse->addMessage($this->translate('No such file'))->send();
         }
         $file = array_shift($targetFiles);
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('File not found')
-                )
-            );
+        if (!$file) {
+            return $this->gameClientResponse->addMessage($this->translate('No such file'))->send();
         }
         /** @var File $file */
         // now get the filemodinstance
         $fileModName = $this->getNextParameter($contentArray, false, false, true, true);
-        if (!$this->response && !$fileModName) {
+        if (!$fileModName) {
             $fileType = $file->getFileType();
-            $message = [];
-            $message[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-                $this->translate('Please choose from the following options:')
-            );
+            $message = $this->translate('Please choose from the following options:');
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
             $possibleFileMods = $this->fileModRepo->listForTypeCommand($fileType);
             $fileModListString = '';
             foreach ($possibleFileMods as $possibleFileMod) {
                 /** @var FileMod $possibleFileMod */
                 $fileModListString .= $possibleFileMod->getName() . ' ';
             }
-            $message[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                wordwrap($fileModListString, 120)
-            );
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $message
-            );
+            $message = wordwrap($fileModListString, 120);
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+            return $this->gameClientResponse->send();
         }
         // check if they can change the type
-        if (!$this->response && $profile != $file->getProfile()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($profile != $file->getProfile()) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if the file can accept more mods
-        if (!$this->response && $file && $this->fileModInstanceRepo->countByFile($file) >= $file->getSlots()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('This file can no longer be modded - max mods reached')
-                )
-            );
+        if ($this->fileModInstanceRepo->countByFile($file) >= $file->getSlots()) {
+            $message = $this->translate('This file can no longer be modded - max mods reached');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // all seems fine
-        if (!$this->response && $file && $fileModName) {
-            $fileMod = $this->fileModRepo->findLikeName($fileModName);
-            if (!$fileMod) {
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                        $this->translate('Unable to find given file mod type')
-                    )
-                );
-            }
-            if (!$this->response && $fileMod) {
-                // ok, now we know the file and the filemod, try to find a filemodinstance that fits the variables
-                $fileModInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileMod, $file->getLevel());
-                if (count($fileModInstances) < 1) {
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('You do not own a fitting file-mod of that level')
-                        )
+        $fileMod = $this->fileModRepo->findLikeName($fileModName);
+        if (!$fileMod) {
+            $message = $this->translate('Unable to find given file mod type');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // ok, now we know the file and the filemod, try to find a filemodinstance that fits the variables
+        $fileModInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileMod, $file->getLevel());
+        if (count($fileModInstances) < 1) {
+            $message = $this->translate('You do not own a fitting file-mod of that level');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        else {
+            $fileModInstance = array_shift($fileModInstances);
+            /** @var FileModInstance $fileModInstance */
+            $flush = false;
+            $successMessage = false;
+            switch ($fileMod->getId()) {
+                default:
+                    break;
+                case FileMod::ID_BACKSLASH:
+                    break;
+                case FileMod::ID_INTEGRITY_BOOSTER:
+                    $newMaxIntegrity = $file->getMaxIntegrity() + $fileModInstance->getLevel();
+                    if ($newMaxIntegrity > 100) $newMaxIntegrity = 100;
+                    $file->setMaxIntegrity($newMaxIntegrity);
+                    $fileModInstance->setFile($file);
+                    $flush = true;
+                    $successMessage = sprintf(
+                        $this->translate('[%s] has been modded with [%s] - new max-integrity: %s'),
+                        $file->getName(),
+                        $fileMod->getName(),
+                        $newMaxIntegrity
                     );
-                }
-                else {
-                    $fileModInstance = array_shift($fileModInstances);
-                    /** @var FileModInstance $fileModInstance */
-                    $flush = false;
-                    $successMessage = false;
-                    switch ($fileMod->getId()) {
-                        default:
-                            break;
-                        case FileMod::ID_BACKSLASH:
-                            break;
-                        case FileMod::ID_INTEGRITY_BOOSTER:
-                            $newMaxIntegrity = $file->getMaxIntegrity() + $fileModInstance->getLevel();
-                            if ($newMaxIntegrity > 100) $newMaxIntegrity = 100;
-                            $file->setMaxIntegrity($newMaxIntegrity);
-                            $fileModInstance->setFile($file);
-                            $flush = true;
-                            $successMessage = sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">[%s] has been modded with [%s] - new max-integrity: %s</pre>'),
-                                $file->getName(),
-                                $fileMod->getName(),
-                                $newMaxIntegrity
-                            );
-                            break;
-                    }
-                    if ($flush) {
-                        $this->entityManager->flush($file);
-                        $this->entityManager->flush($fileModInstance);
-                        $this->response = array(
-                            'command' => 'showmessage',
-                            'message' => $successMessage
-                        );
-                    }
-                    else {
-                        $this->response = array(
-                            'command' => 'showmessage',
-                            'message' => sprintf(
-                                '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                                $this->translate('This mod has no effect, yet')
-                            )
-                        );
-                    }
-                }
+                    break;
+            }
+            if ($flush) {
+                $this->entityManager->flush($file);
+                $this->entityManager->flush($fileModInstance);
+                $this->gameClientResponse->addMessage($successMessage, GameClientResponse::CLASS_SUCCESS);
+            }
+            else {
+                $this->gameClientResponse->addMessage($this->translate('This mod has no effect, yet'));
             }
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function removeFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId);
-        $file = false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $checkResult = false;
         if (!$this->response) {
-            $file = $this->removeFileChecks($contentArray, $resourceId);
-        }
-        if (!$this->response && $file) {
-            // start removing the file by removing all of its filemodinstances
-            $fmInstances = $this->fileModInstanceRepo->findBy([
-                'file' => $file
-            ]);
-            foreach ($fmInstances as $fmInstance) {
-                $this->entityManager->remove($fmInstance);
+            $checkResult = $this->removeFileChecks($contentArray);
+            if (!$checkResult instanceof File) {
+                if ($checkResult instanceof GameClientResponse) {
+                    return $checkResult->send();
+                }
+                return $this->gameClientResponse->addMessage($checkResult)->send();
             }
-            $this->entityManager->remove($file);
-            $this->entityManager->flush();
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You removed [%s]</pre>'),
-                $file->getName()
-            );
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => $message
-            ];
         }
-        return $this->response;
+        // start removing the file by removing all of its filemodinstances
+        $fmInstances = $this->fileModInstanceRepo->findBy([
+            'file' => $checkResult
+        ]);
+        foreach ($fmInstances as $fmInstance) {
+            $this->entityManager->remove($fmInstance);
+        }
+        $this->entityManager->remove($checkResult);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You removed [%s]'),
+            $checkResult->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function editFileDescription($resourceId, $contentArray)
     {
@@ -1098,43 +817,43 @@ class FileUtilityService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
-        $this->response = $this->isActionBlocked($resourceId, true);
-        $file = false;
-        if (!$this->response) {
-            $file = $this->editFileChecks($contentArray);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $checkResult = $this->editFileChecks($contentArray);
+        if (!$checkResult instanceof File) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
         /* checks passed, we can now edit the file */
-        if (!$this->response && $file) {
-            /** @var File $file */
+        if (!$checkResult) {
+            /** @var File $checkResult */
             $view = new ViewModel();
             $view->setTemplate('netrunners/file/edit-text.phtml');
-            $description = $file->getContent();
+            $description = $checkResult->getContent();
             $processedDescription = '';
             if ($description) {
                 $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
             }
             $view->setVariable('description', $processedDescription);
-            $view->setVariable('entityId', $file->getId());
-            $this->response = array(
-                'command' => 'showpanel',
-                'type' => 'default',
-                'content' => $this->viewRenderer->render($view)
-            );
+            $view->setVariable('entityId', $checkResult->getId());
+            $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+            $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
             // inform other players in node
             $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] is editing a file</pre>'),
+                $this->translate('[%s] is editing a file'),
                 $this->user->getUsername()
             );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+            $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         }
-        return $this->response;
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param string $content
      * @param $entityId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function saveFileDescription(
         $resourceId,
@@ -1145,151 +864,323 @@ class FileUtilityService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $file = $this->fileRepo->find($entityId);
-        if (!$this->response && !$file) {
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('invalid file id')
-                )
-            ];
+        if (!$file) {
+            $message = $this->translate('invalid file id');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        $file = $this->editFileChecks(NULL, $file);
-        if (!$this->response && $file) {
-            /** @var File $file */
-            $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
-            $file->setContent($content);
-            $this->entityManager->flush($file);
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('File content saved')
-                )
-            ];
+        $checkResult = $this->editFileChecks(NULL, $file);
+        if (!$checkResult instanceof File) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
-        return $this->response;
+        /** @var File $file */
+        $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
+        $file->setContent($content);
+        $this->entityManager->flush($file);
+        $message = $this->translate('File content saved');
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function decompileFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        $file = false;
-        if (!$this->response) {
-            $file = $this->removeFileChecks($contentArray, $resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        if (!$this->response && $file) {
-            $returnedSnippets = $file->getLevel();
-            // start removing the file by removing all of its filemodinstances
-            $fmInstances = $this->fileModInstanceRepo->findBy([
-                'file' => $file
-            ]);
-            foreach ($fmInstances as $fmInstance) {
-                /** @var FileModInstance $fmInstance */
-                $returnedSnippets += $fmInstance->getLevel();
-                $this->entityManager->remove($fmInstance);
+        $checkResult = $this->removeFileChecks($contentArray);
+        if (!$checkResult instanceof File) {
+            if ($checkResult instanceof GameClientResponse) {
+                return $checkResult->send();
             }
-            $this->entityManager->remove($file);
-            $profile->setSnippets($profile->getSnippets()+$returnedSnippets);
-            $this->entityManager->flush();
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You decompiled [%s] and received %s snippets</pre>'),
-                $file->getName(),
-                $returnedSnippets
-            );
-            $this->response = [
-                'command' => 'showmessage',
-                'message' => $message
-            ];
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
-        return $this->response;
+        $returnedSnippets = $checkResult->getLevel();
+        // start removing the file by removing all of its filemodinstances
+        $fmInstances = $this->fileModInstanceRepo->findBy([
+            'file' => $checkResult
+        ]);
+        foreach ($fmInstances as $fmInstance) {
+            /** @var FileModInstance $fmInstance */
+            $returnedSnippets += $fmInstance->getLevel();
+            $this->entityManager->remove($fmInstance);
+        }
+        $this->entityManager->remove($checkResult);
+        $profile->setSnippets($profile->getSnippets()+$returnedSnippets);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You decompiled [%s] and received %s snippets'),
+            $checkResult->getName(),
+            $returnedSnippets
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @return array
+     * @param $resourceId
+     * @return bool|GameClientResponse
      */
-    public function showFileCategories()
+    public function createPasskeyCommand($resourceId)
     {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $nodeType = $currentNode->getNodeType();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // sanity checks
+        if ($nodeType->getId() != NodeType::ID_PUBLICIO && $nodeType->getId() != NodeType::ID_IO) {
+            $message = $this->translate('Passkeys can only be created in I/O nodes');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($currentNode->getProfile() !== $profile && $currentSystem->getProfile() !== $profile) {
+            $message = $this->translate('Passkeys can only be created in nodes that you own');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($profile->getSnippets() < self::PASSKEY_COST) {
+            $message = sprintf(
+                $this->translate('You need %s snippets to create a passkey'),
+                self::PASSKEY_COST
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // logic start
+        $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_PASSKEY);
+        $data = [
+            'systemid' => $currentSystem->getId(),
+            'nodeid' => $currentNode->getId()
+        ];
+        $shortSystemName = substr($currentSystem->getName(), 0, 8);
+        $shortNodeName = substr($currentNode->getName(), 0, 8);
+        $passkeyDesc = sprintf(
+            'This passkey can be used to access the node [%s] in system [%s]',
+            $currentNode->getName(),
+            $currentSystem->getName()
+        );
+        $profile->setSnippets($profile->getSnippets()-self::PASSKEY_COST);
+        $this->entityManager->flush($profile);
+        $passkey = new File();
+        $passkey->setProfile($profile);
+        $passkey->setNode(NULL);
+        $passkey->setCreated(new \DateTime());
+        $passkey->setLevel(1);
+        $passkey->setIntegrity(100);
+        $passkey->setMaxIntegrity(100);
+        $passkey->setSystem(NULL);
+        $passkey->setModified(NULL);
+        $passkey->setNpc(NULL);
+        $passkey->setMailMessage(NULL);
+        $passkey->setFileType($fileType);
+        $passkey->setRunning(false);
+        $passkey->setCoder($profile);
+        $passkey->setExecutable(true);
+        $passkey->setSize(0);
+        $passkey->setSlots(0);
+        $passkey->setVersion(1);
+        $passkey->setData(json_encode($data));
+        $passkey->setName(sprintf(
+            '%s_%s_%s',
+            $shortSystemName,
+            $shortNodeName,
+            'passkey'
+        ));
+        $passkey->setContent($passkeyDesc);
+        $this->entityManager->persist($passkey);
+        $this->entityManager->flush($passkey);
+        $this->gameClientResponse->addMessage($this->translate('Passkey created'), GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     */
+    public function listPasskeysCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // logic start
+        $message = sprintf(
+            '%-11s|%-32s|%-32s|%s',
+            $this->translate('PASSKEY-ID'),
+            $this->translate('TARGET-SYSTEM'),
+            $this->translate('TARGET-NODE'),
+            $this->translate('CURRENT-OWNER')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        foreach ($this->fileRepo->findByProfileAndType($profile, FileType::ID_PASSKEY) as $passkey) {
+            /** @var File $passkey */
+            $passkeyData = json_decode($passkey->getData());
+            if (!$passkeyData) continue;
+            $targetNodeId = $passkeyData->nodeid;
+            if (!$targetNodeId) continue;
+            $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+            if (!$targetNode) continue;
+            $currentOwnerString = ($passkey->getProfile()) ?
+                sprintf('<span class="text-attention">%s</span>', $passkey->getProfile()->getUser()->getUsername()) :
+                sprintf('<span class="text-danger">%s</span>', $this->translate('UNKNOWN-LOCATION'));
+            $message = sprintf(
+                '%-11s|%-32s|%-32s|%s',
+                $passkey->getId(),
+                $targetNode->getSystem()->getName(),
+                $targetNode->getName(),
+                $currentOwnerString
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        }
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     */
+    public function removePasskeyCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $passkey = NULL;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $passkeyId = $this->getNextParameter($contentArray, false, true);
+        if (!$passkeyId) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify the passkey id'))->send();
+        }
+        $passkey = $this->fileRepo->find($passkeyId);
+        if (!$passkey) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid passkey id'))->send();
+        }
+        /** @var File $passkey */
+        if ($passkey->getCoder() !== $profile) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid passkey id'))->send();
+        }
+        // logic start
+        $owningProfile = ($passkey->getProfile()) ? $passkey->getProfile() : NULL;
+        $this->entityManager->remove($passkey);
+        $this->entityManager->flush($passkey);
+        // inform the current owner of deletion
+        if ($owningProfile && $owningProfile !== $profile) {
+            if ($owningProfile->getCurrentResourceId()) {
+                $message = sprintf(
+                    $this->translate('Passkey [%s] has been deleted by [%s]'),
+                    $passkey->getName(),
+                    $passkey->getCoder()->getUser()->getUsername()
+                );
+                $this->messageProfileNew($owningProfile, $message, GameClientResponse::CLASS_ATTENTION);
+            }
+            else {
+                $message = sprintf(
+                    $this->translate('Passkey [%s] has been deleted by [%s]'),
+                    $passkey->getName(),
+                    $passkey->getCoder()->getUser()->getUsername()
+                );
+                $this->storeNotification($owningProfile, $message, Notification::SEVERITY_INFO);
+            }
+        }
+        // inform actor
+        $this->gameClientResponse->addMessage($this->translate('Passkey deleted'), GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return GameClientResponse
+     */
+    public function showFileCategories($resourceId)
+    {
+        $this->initService($resourceId);
         $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileCategory')->findBy(
             [],
             ['name' => 'ASC']
         );
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%s</pre>',
+        $returnMessage = sprintf(
+            '%-32s|%s',
             $this->translate('FILECAT-NAME'),
             $this->translate('DESCRIPTION')
         );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
         foreach ($fileMods as $fileMod) {
             /** @var FileCategory $fileMod */
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%s</pre>',
+            if (!$fileMod->getResearchable()) continue;
+            $returnMessage = sprintf(
+                '%-32s|%s',
                 $fileMod->getName(),
                 $fileMod->getDescription()
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @return array
+     * @param $resourceId
+     * @return GameClientResponse
      */
-    public function showFileMods()
+    public function showFileMods($resourceId)
     {
+        $this->initService($resourceId);
         $fileMods = $this->entityManager->getRepository('Netrunners\Entity\FileMod')->findBy(
             [],
             ['name' => 'ASC']
         );
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%s</pre>',
+        $returnMessage = sprintf(
+            '%-32s|%s',
             $this->translate('FILEMOD-NAME'),
             $this->translate('DESCRIPTION')
         );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
         foreach ($fileMods as $fileMod) {
             /** @var FileMod $fileMod */
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%s</pre>',
+            $returnMessage = sprintf(
+                '%-32s|%s',
                 $fileMod->getName(),
                 $fileMod->getDescription()
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @return array
+     * @param $resourceId
+     * @return GameClientResponse
      */
-    public function showFileTypes()
+    public function showFileTypes($resourceId)
     {
+        $this->initService($resourceId);
         $fileTypes = $this->entityManager->getRepository('Netrunners\Entity\FileType')->findBy(
             ['codable' => true],
             ['name' => 'ASC']
         );
-        $returnMessage = array();
-        $returnMessage[] = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%-32s|%-20s|%-4s|%s</pre>',
+        $returnMessage = sprintf(
+            '%-32s|%-20s|%-4s|%s',
             $this->translate('FILETYPE-NAME'),
             $this->translate('FILETYPE-CATEGORIES'),
             $this->translate('SIZE'),
             $this->translate('DESCRIPTION')
         );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
         foreach ($fileTypes as $fileType) {
             /** @var FileType $fileType */
             $categories = '';
@@ -1297,32 +1188,31 @@ class FileUtilityService extends BaseService
                 /** @var FileCategory $fileCategory */
                 $categories .= $fileCategory->getName() . ' ';
             }
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-32s|%-20s|%-4s|%s</pre>',
+            $returnMessage = sprintf(
+                '%-32s|%-20s|%-4s|%s',
                 $fileType->getName(),
                 $categories,
                 $fileType->getSize(),
                 $fileType->getDescription()
             );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         }
-        $response = array(
-            'command' => 'showoutput',
-            'message' => $returnMessage
-        );
-        return $response;
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * Get detailed information about a file.
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function statFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
-        $this->response = $this->isActionBlocked($resourceId, true);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         $profile = $this->user->getProfile();
         $parameter = $this->getNextParameter($contentArray, false);
         // try to get target file via repo method
@@ -1331,149 +1221,160 @@ class FileUtilityService extends BaseService
             $profile,
             $parameter
         );
-        if (!$this->response && count($targetFiles) < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">No such file</pre>'
-            );
+        if (count($targetFiles) < 1) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
-        /* start logic if we do not have a response already */
-        if (!$this->response) {
-            $targetFile = array_shift($targetFiles);
-            /** @var File $targetFile */
-            $returnMessage = [];
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Name"),
-                $targetFile->getName()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Coder"),
-                ($targetFile->getCoder()) ?
-                    $targetFile->getCoder()->getUser()->getUsername() :
-                    $this->translate('<span class="text-muted">system-generated</span>')
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %smu</pre>',
-                $this->translate("Size"),
-                $targetFile->getSize()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Level"), $targetFile->getLevel()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Version"),
-                $targetFile->getVersion()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Type"),
-                $targetFile->getFileType()->getName()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s/%s</pre>',
-                $this->translate("Integrity"),
-                $targetFile->getIntegrity(),
-                $targetFile->getMaxIntegrity()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Slots"),
-                $targetFile->getSlots()
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Birth"),
-                $targetFile->getCreated()->format('Y/m/d H:i:s')
-            );
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-white">%-12s: %s</pre>',
-                $this->translate("Modified"),
-                ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : $this->translate("---")
-            );
-            $categories = '';
-            foreach ($targetFile->getFileType()->getFileCategories() as $fileCategory) {
-                /** @var FileCategory $fileCategory */
-                $categories .= $fileCategory->getName() . ' ';
-            }
-            $returnMessage[] = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-addon">%s: %s</pre>',
-                $this->translate("Categories"),
-                $categories
-            );
-            switch ($targetFile->getFileType()->getId()) {
-                default:
-                    break;
-                case FileType::ID_COINMINER:
-                    $fileData = json_decode($targetFile->getData());
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-addon">%-12s: %s</pre>',
-                        $this->translate("Collected credits"),
-                        (isset($fileData->value)) ? $fileData->value : 0
-                    );
-                    break;
-                case FileType::ID_DATAMINER:
-                    $fileData = json_decode($targetFile->getData());
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-addon">%-12s: %s</pre>',
-                        $this->translate("Collected snippets"),
-                        (isset($fileData->value)) ? $fileData->value : 0
-                    );
-                    break;
-                case FileType::ID_TEXT:
-                    $fileData = $targetFile->getContent();
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-addon">%s<br/><span class="text-muted">%s</span></pre>',
-                        $this->translate("File content:"),
-                        ($fileData) ? wordwrap($fileData, 120) : $this->translate('[CONTENT IS EMPTY]')
-                    );
-                    break;
-                case FileType::ID_CUSTOM_IDE:
-                    $returnMessage[] = sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-addon">%s <span class="text-muted">%s</span></pre>',
-                        $this->translate("Effective skill boost:"),
-                        $this->getBonusForFileLevel($targetFile)
-                    );
-                    break;
-            }
-            // now show its file-mods
-            $fileModsCount = $this->fileModInstanceRepo->countByFile($targetFile);
-            if ($fileModsCount >= 1) {
-                $fileMods = $this->fileModInstanceRepo->findByFile($targetFile);
-                $installedModsString = '';
-                foreach ($fileMods as $fileMod) {
-                    /** @var FileModInstance $fileMod */
-                    $installedModsString .= $fileMod->getFileMod()->getName() . ' ';
-                }
-                $returnMessage[] = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-addon">%s %s</pre>',
-                    $this->translate("Installed mods:"),
-                    wordwrap($installedModsString, 120)
+        /* start logic */
+        $targetFile = array_shift($targetFiles);
+        /** @var File $targetFile */
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Name"),
+            $targetFile->getName()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Coder"),
+            ($targetFile->getCoder()) ?
+                $targetFile->getCoder()->getUser()->getUsername() :
+                $this->translate('<span class="text-muted">system-generated</span>')
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %smu',
+            $this->translate("Size"),
+            $targetFile->getSize()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Level"), $targetFile->getLevel()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Version"),
+            $targetFile->getVersion()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Type"),
+            $targetFile->getFileType()->getName()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s/%s',
+            $this->translate("Integrity"),
+            $targetFile->getIntegrity(),
+            $targetFile->getMaxIntegrity()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Slots"),
+            $targetFile->getSlots()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Birth"),
+            $targetFile->getCreated()->format('Y/m/d H:i:s')
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Modified"),
+            ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : $this->translate("---")
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $categories = '';
+        foreach ($targetFile->getFileType()->getFileCategories() as $fileCategory) {
+            /** @var FileCategory $fileCategory */
+            $categories .= $fileCategory->getName() . ' ';
+        }
+        $returnMessage = sprintf(
+            '%s: %s',
+            $this->translate("Categories"),
+            $categories
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+        switch ($targetFile->getFileType()->getId()) {
+            default:
+                break;
+            case FileType::ID_COINMINER:
+                $fileData = json_decode($targetFile->getData());
+                $returnMessage = sprintf(
+                    '%-12s: %s',
+                    $this->translate("Collected credits"),
+                    (isset($fileData->value)) ? $fileData->value : 0
                 );
-            }
-            $this->response = array(
-                'command' => 'showoutput',
-                'message' => $returnMessage
-            );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+            case FileType::ID_DATAMINER:
+                $fileData = json_decode($targetFile->getData());
+                $returnMessage = sprintf(
+                    '%-12s: %s',
+                    $this->translate("Collected snippets"),
+                    (isset($fileData->value)) ? $fileData->value : 0
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+            case FileType::ID_TEXT:
+            case FileType::ID_PASSKEY:
+                $fileData = $targetFile->getContent();
+                $returnMessage = sprintf(
+                    '%s<br/><span class="text-muted">%s</span>',
+                    $this->translate("File content:"),
+                    ($fileData) ? wordwrap($fileData, 120) : $this->translate('[CONTENT IS EMPTY]')
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+            case FileType::ID_CUSTOM_IDE:
+                $returnMessage = sprintf(
+                    '%s <span class="text-muted">%s</span>',
+                    $this->translate("Effective skill boost:"),
+                    $this->getBonusForFileLevel($targetFile)
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
         }
-        return $this->response;
+        // now show its file-mods
+        $fileModsCount = $this->fileModInstanceRepo->countByFile($targetFile);
+        if ($fileModsCount >= 1) {
+            $fileMods = $this->fileModInstanceRepo->findByFile($targetFile);
+            $installedModsString = '';
+            foreach ($fileMods as $fileMod) {
+                /** @var FileModInstance $fileMod */
+                $installedModsString .= $fileMod->getFileMod()->getName() . ' ';
+            }
+            $returnMessage = sprintf(
+                '%s %s',
+                $this->translate("Installed mods:"),
+                wordwrap($installedModsString, 120)
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
-     * @param int $resourceId
+     * @param $resourceId
      * @param $contentArray
-     * @return array|bool
+     * @return bool|GameClientResponse
      */
     public function touchFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         // init response
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
@@ -1482,82 +1383,73 @@ class FileUtilityService extends BaseService
             $profile->getCurrentNode(),
             $parameter
         );
-        if (!$this->response && count($targetFiles) >= 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('A file with that name already exists in this node')
-                )
-            );
+        if (count($targetFiles) >= 1) {
+            $message = $this->translate('A file with that name already exists in this node');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
-        if (!$this->response && $profile->getSnippets() < 1) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You need 1 snippet to create an empty text file')
-                )
-            );
+        if ($profile->getSnippets() < 1) {
+            $message = $this->translate('You need 1 snippet to create an empty text file');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         // check string val and length
-        $this->stringChecker($parameter);
-        $parameter = str_replace(' ', '_', $parameter);
-        /* start logic if we do not have a response already */
-        if (!$this->response) {
-            $currentSnippets = $profile->getSnippets();
-            $profile->setSnippets($currentSnippets - 1);
-            $newCode = new File();
-            $newCode->setProfile($profile);
-            $newCode->setCoder($profile);
-            $newCode->setLevel(1);
-            $newCode->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT));
-            $newCode->setCreated(new \DateTime());
-            $newCode->setExecutable(0);
-            $newCode->setIntegrity(100);
-            $newCode->setMaxIntegrity(100);
-            $newCode->setMailMessage(NULL);
-            $newCode->setModified(NULL);
-            $newCode->setName($parameter . '.txt');
-            $newCode->setRunning(NULL);
-            $newCode->setSize(0);
-            $newCode->setSlots(0);
-            $newCode->setSystem(NULL);
-            $newCode->setNode(NULL);
-            $newCode->setVersion(1);
-            $newCode->setData(NULL);
-            $this->entityManager->persist($newCode);
-            $this->entityManager->flush();
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-success">%s has been created</pre>'),
-                    $parameter
-                )
-            );
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has created a text file</pre>'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-            return $this->response;
+        $checkResult = $this->stringChecker($parameter);
+        if ($checkResult) {
+            return $this->gameClientResponse->addMessage($checkResult)->send();
         }
-        return $this->response;
+        $parameter = str_replace(' ', '_', $parameter);
+        /* start logic */
+        $currentSnippets = $profile->getSnippets();
+        $profile->setSnippets($currentSnippets - 1);
+        $newCode = new File();
+        $newCode->setProfile($profile);
+        $newCode->setCoder($profile);
+        $newCode->setLevel(1);
+        $newCode->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT));
+        $newCode->setCreated(new \DateTime());
+        $newCode->setExecutable(0);
+        $newCode->setIntegrity(100);
+        $newCode->setMaxIntegrity(100);
+        $newCode->setMailMessage(NULL);
+        $newCode->setModified(NULL);
+        $newCode->setName($parameter . '.txt');
+        $newCode->setRunning(NULL);
+        $newCode->setSize(0);
+        $newCode->setSlots(0);
+        $newCode->setSystem(NULL);
+        $newCode->setNode(NULL);
+        $newCode->setVersion(1);
+        $newCode->setData(NULL);
+        $this->entityManager->persist($newCode);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('%s has been created'),
+            $parameter
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has created a text file'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function unloadFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         // init response
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
@@ -1566,76 +1458,56 @@ class FileUtilityService extends BaseService
             'name' => $parameter,
             'profile' => $profile
         ]);
-        if (!$this->response && !$targetFile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such file')
-                )
-            );
+        if (!$targetFile) {
+            return $this->gameClientResponse->addMessage($this->translate('No such file'))->send();
         }
         /** @var File $targetFile */
         // check if the file belongs to the profile
-        if (!$this->response && $targetFile && $targetFile->getProfile() != $profile) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Permission denied')
-                )
-            );
+        if ($targetFile->getProfile() != $profile) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if attempt to unload running file
-        if (!$this->response && $targetFile && $targetFile->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Unable to unload running file')
-                )
-            );
+        if ($targetFile->getRunning()) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to upload running file'))->send();
         }
         /* all checks passed, unload file */
-        if (!$this->response && $targetFile) {
-            if ($targetFile->getFileType()->getId() == FileType::ID_TEXT) {
-                $this->response = $this->executeMissionFile($targetFile, $resourceId);
-            }
-            if (!$this->response) {
-                $targetFile->setProfile(NULL);
-                $targetFile->setNode($profile->getCurrentNode());
-                $targetFile->setSystem($profile->getCurrentNode()->getSystem());
-                $this->entityManager->flush($targetFile);
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You unload %s to the node</pre>'),
-                        $targetFile->getName()
-                    )
-                );
-                // inform other players in node
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has unloaded [%s] into the node</pre>'),
-                    $this->user->getUsername(),
-                    $targetFile->getName()
-                );
-                $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
-            }
+        if ($targetFile->getFileType()->getId() == FileType::ID_TEXT) {
+            return $this->executeMissionFile($targetFile);
         }
-        return $this->response;
+        $targetFile->setProfile(NULL);
+        $targetFile->setNode($profile->getCurrentNode());
+        $targetFile->setSystem($profile->getCurrentNode()->getSystem());
+        $this->entityManager->flush($targetFile);
+        $message = sprintf(
+            $this->translate('You upload %s to the node'),
+            $targetFile->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        $this->updateMap($resourceId);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has uploaded [%s] to the node'),
+            $this->user->getUsername(),
+            $targetFile->getName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId(), true);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param $contentArray
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function useCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         // get parameter
         $parameter = implode(' ', $contentArray);
         $parameter = trim($parameter);
@@ -1648,51 +1520,39 @@ class FileUtilityService extends BaseService
         if (count($targetFiles) >= 1) {
             $file = array_shift($targetFiles);
         }
-        if (!$this->response && !$file) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('No such file')
-                )
-            );
+        if (!$file) {
+            return $this->gameClientResponse->addMessage($this->translate('No such file'))->send();
         }
-        if (!$this->response && $file && !$file->getRunning()) {
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('Files must be running to use them')
-                )
-            );
+        if (!$file->getRunning()) {
+            return $this->gameClientResponse->addMessage($this->translate('Files must be running to use them'))->send();
         }
-        if (!$this->response && $file) {
-            $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
-            switch ($file->getFileType()->getId()) {
-                default:
-                    $this->response = array(
-                        'command' => 'showmessage',
-                        'message' => sprintf(
-                            '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                            $this->translate('Unable to use this type of file')
-                        )
-                    );
-                    break;
-                case FileType::ID_WILDERSPACE_HUB_PORTAL:
-                    $hubNode = $this->entityManager->find('Netrunners\Entity\Node', $serverSetting->getWildernessHubNodeId());
-                    $this->response = $this->movePlayerToTargetNode($resourceId, $profile, NULL, $profile->getCurrentNode(), $hubNode);
-                    $this->addAdditionalCommand('flyto', $hubNode->getSystem()->getGeocoords(), true);
-                    break;
-            }
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has used [%s]</pre>'),
-                $this->user->getUsername(),
-                $file->getName()
-            );
-            $this->messageEveryoneInNode($profile->getCurrentNode(), $message, $profile, $profile->getId());
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        switch ($file->getFileType()->getId()) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Unable to use this type of file'))->send();
+            case FileType::ID_WILDERSPACE_HUB_PORTAL:
+                $hubNode = $this->entityManager->find('Netrunners\Entity\Node', $serverSetting->getWildernessHubNodeId());
+                $this->movePlayerToTargetNodeNew($resourceId, $profile, NULL, $profile->getCurrentNode(), $hubNode);
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
+                $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, explode(',',$hubNode->getSystem()->getGeocoords()));
+                $this->gameClientResponse->send();
+                $this->updateMap($resourceId);
+                break;
         }
-        return $this->response;
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has used [%s]'),
+            $this->user->getUsername(),
+            $file->getName()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $this->gameClientResponse
+            ->reset()
+            ->setSilent(true)
+            ->addMessage($this->translate('You have connected to the target node'), GameClientResponse::CLASS_SUCCESS)
+            ->send();
+        // redirect to show-node-info method
+        return $this->showNodeInfoNew($resourceId, NULL, true);
     }
 
 }

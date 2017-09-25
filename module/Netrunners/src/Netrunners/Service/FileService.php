@@ -154,6 +154,25 @@ class FileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function listPasskeysCommand($resourceId)
+    {
+        return $this->fileUtilityService->listPasskeysCommand($resourceId);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return array|bool|false
+     */
+    public function removePasskeyCommand($resourceId, $contentArray)
+    {
+        return $this->fileUtilityService->removePasskeyCommand($resourceId, $contentArray);
+    }
+
+    /**
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
@@ -206,7 +225,7 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @param System $system
-     * @return array|bool
+     * @return \Netrunners\Model\GameClientResponse
      */
     public function executePortscanner(File $file, System $system)
     {
@@ -218,7 +237,7 @@ class FileService extends BaseService
      * @param File $file
      * @param System $system
      * @param Node $node
-     * @return array|bool
+     * @return \Netrunners\Model\GameClientResponse
      */
     public function executeJackhammer($resourceId, File $file, System $system, Node $node)
     {
@@ -228,7 +247,7 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @param File $miner
-     * @return bool|string
+     * @return \Netrunners\Model\GameClientResponse
      */
     public function executeSiphon(File $file, File $miner)
     {
@@ -237,7 +256,7 @@ class FileService extends BaseService
 
     /**
      * @param File $file
-     * @return array|bool
+     * @return \Netrunners\Model\GameClientResponse
      */
     public function executeMedkit(File $file)
     {
@@ -246,7 +265,7 @@ class FileService extends BaseService
 
     /**
      * @param File $file
-     * @return array|bool
+     * @return \Netrunners\Model\GameClientResponse
      */
     public function executeProxifier(File $file)
     {
@@ -286,11 +305,12 @@ class FileService extends BaseService
     }
 
     /**
-     * @return array
+     * @param $resourceId
+     * @return \Netrunners\Model\GameClientResponse
      */
-    public function showFileTypes()
+    public function showFileTypes($resourceId)
     {
-        return $this->fileUtilityService->showFileTypes();
+        return $this->fileUtilityService->showFileTypes($resourceId);
     }
 
     /**
@@ -304,19 +324,30 @@ class FileService extends BaseService
     }
 
     /**
-     * @return array
+     * @param $resourceId
+     * @return \Netrunners\Model\GameClientResponse
      */
-    public function showFileMods()
+    public function showFileMods($resourceId)
     {
-        return $this->fileUtilityService->showFileMods();
+        return $this->fileUtilityService->showFileMods($resourceId);
     }
 
     /**
-     * @return array
+     * @param $resourceId
+     * @return \Netrunners\Model\GameClientResponse
      */
-    public function showFileCategories()
+    public function showFileCategories($resourceId)
     {
-        return $this->fileUtilityService->showFileCategories();
+        return $this->fileUtilityService->showFileCategories($resourceId);
+    }
+
+    /**
+     * @param $resourceId
+     * @return array|bool|false
+     */
+    public function createPasskeyCommand($resourceId)
+    {
+        return $this->fileUtilityService->createPasskeyCommand($resourceId);
     }
 
 }

@@ -17,6 +17,7 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\Mission;
 use Netrunners\Entity\MissionArchetype;
 use Netrunners\Entity\NodeType;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FactionRepository;
 use Netrunners\Repository\MissionArchetypeRepository;
 use Netrunners\Repository\MissionRepository;
@@ -70,323 +71,280 @@ class MissionService extends BaseService
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function enterMode($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        $this->response = $this->isActionBlocked($resourceId);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
         if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_AGENT) {
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                $this->translate('You need to be in an agent node to request a mission')
-            );
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => $returnMessage
-            );
+            return $this->gameClientResponse->addMessage($this->translate('You need to be in an agent node to request a mission'))->send();
         }
-        if (!$this->response) {
-            $currentMission = $this->missionRepo->findCurrentMission($profile);
-            if ($currentMission) {
-                $returnMessage = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You have already accepted another mission')
-                );
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => $returnMessage
-                );
-            }
-            if (!$this->response) {
-                $missions = $this->missionArchetypeRepo->findAll();
-                $amount = count($missions) - 1;
-                $targetMission = $missions[mt_rand(0, $amount)];
-                /** @var MissionArchetype $targetMission */
-                $missionLevel = $currentNode->getLevel();
-                $timer = 3600;
-                $expires = new \DateTime();
-                $expires->add(new \DateInterval('PT' . $timer . 'S'));
-                $possibleSourceFactions = [];
-                if ($profile->getFaction()) $possibleSourceFactions[] = $profile->getFaction();
-                if ($currentSystem->getFaction()) $possibleSourceFactions[] = $currentSystem->getFaction();
-                $sourceFaction = $this->getRandomFaction($possibleSourceFactions);
-                $targetFaction = $this->getRandomFaction();
-                while ($targetFaction === $sourceFaction) {
-                    $targetFaction = $this->getRandomFaction();
-                }
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">MISSION: %s</pre>'),
-                    $targetMission->getName()
-                );
-                $message .= sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-muted">%s</pre>',
-                    wordwrap($targetMission->getDescription(), 120)
-                );
-                $message .= sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">LEVEL: %s</pre>'),
-                    $missionLevel
-                );
-                $message .= sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">EXPIRES: %s</pre>'),
-                    $expires->format('Y/m/d H:i:s')
-                );
-                $message .= sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">SOURCE: %s</pre>'),
-                    $sourceFaction->getName()
-                );
-                $message .= sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">TARGET: %s</pre>'),
-                    $targetFaction->getName()
-                );
-                $message .= sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">REWARD: %sc</pre>'),
-                    $missionLevel * self::CREDITS_MULTIPLIER
-                );
-                $message .= sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-white">%s</pre>',
-                    $this->translate('Accept this mission? (enter "y" to confirm)')
-                );
-                $confirmData = [
-                    'missionArchetypeId' => $targetMission->getId(),
-                    'level' => $missionLevel,
-                    'sourceFactionId' => $sourceFaction->getId(),
-                    'targetFactionId' => $targetFaction->getId(),
-                    'expires' => $expires
-                ];
-                $this->getWebsocketServer()->setConfirm($resourceId, 'mission', $confirmData);
-                $this->response = [
-                    'command' => 'enterconfirmmode',
-                    'message' => $message
-                ];
-            }
+        $currentMission = $this->missionRepo->findCurrentMission($profile);
+        if ($currentMission) {
+            return $this->gameClientResponse->addMessage($this->translate('You have already accepted another mission'))->send();
         }
-        return $this->response;
+        $missions = $this->missionArchetypeRepo->findAll();
+        $amount = count($missions) - 1;
+        $targetMission = $missions[mt_rand(0, $amount)];
+        /** @var MissionArchetype $targetMission */
+        $missionLevel = $currentNode->getLevel();
+        $timer = 3600;
+        $expires = new \DateTime();
+        $expires->add(new \DateInterval('PT' . $timer . 'S'));
+        $possibleSourceFactions = [];
+        if ($profile->getFaction()) $possibleSourceFactions[] = $profile->getFaction();
+        if ($currentSystem->getFaction()) $possibleSourceFactions[] = $currentSystem->getFaction();
+        $sourceFaction = $this->getRandomFaction($possibleSourceFactions);
+        $targetFaction = $this->getRandomFaction();
+        while ($targetFaction === $sourceFaction) {
+            $targetFaction = $this->getRandomFaction();
+        }
+        $message = sprintf(
+            $this->translate('MISSION: %s'),
+            $targetMission->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        $this->gameClientResponse->addMessage(wordwrap($targetMission->getDescription(), 120), GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('LEVEL: %s'),
+            $missionLevel
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('EXPIRES: %s'),
+            $expires->format('Y/m/d H:i:s')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('SOURCE: %s'),
+            $sourceFaction->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('TARGET: %s'),
+            $targetFaction->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('REWARD: %sc'),
+            $missionLevel * self::CREDITS_MULTIPLIER
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $this->gameClientResponse->addMessage($this->translate('Accept this mission? (enter "y" to confirm)'), GameClientResponse::CLASS_WHITE);
+        $confirmData = [
+            'missionArchetypeId' => $targetMission->getId(),
+            'level' => $missionLevel,
+            'sourceFactionId' => $sourceFaction->getId(),
+            'targetFactionId' => $targetFaction->getId(),
+            'expires' => $expires
+        ];
+        $this->getWebsocketServer()->setConfirm($resourceId, 'mission', $confirmData);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+        return $this->gameClientResponse->send();
     }
 
     /**
      * @param $resourceId
      * @param null|object $confirmData
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function requestMission($resourceId, $confirmData = NULL)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         /** @var NodeRepository $nodeRepo */
         $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var SystemRepository $systemRepo */
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId);
-        if (!$this->response && $profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
-            $returnMessage = sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                $this->translate('You need to be in an agent node to request a mission')
-            );
-            $this->response = array(
-                'command' => 'showmessage',
-                'message' => $returnMessage
-            );
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        if (!$this->response) {
-            $currentMission = $this->missionRepo->findCurrentMission($profile);
-            if ($currentMission) {
-                $returnMessage = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translate('You have accepted another mission already')
-                );
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => $returnMessage
-                );
-            }
-            if (!$this->response) {
-                $instanceData = (object)$confirmData->contentArray;
-                $targetMission = $this->entityManager->find('Netrunners\Entity\MissionArchetype', $instanceData->missionArchetypeId);
-                $sourceFaction = $this->entityManager->find('Netrunners\Entity\Faction', $instanceData->sourceFactionId);
-                $targetFaction = $this->entityManager->find('Netrunners\Entity\Faction', $instanceData->targetFactionId);
-                /** @var Faction $targetFaction */
-                $mInstance = new Mission();
-                $mInstance->setAdded(new \DateTime());
-                $mInstance->setExpires($instanceData->expires);
-                $mInstance->setLevel($instanceData->level);
-                $mInstance->setProfile($profile);
-                $mInstance->setSourceFaction($sourceFaction);
-                $mInstance->setTargetFaction($targetFaction);
-                $mInstance->setMission($targetMission);
-                $mInstance->setCompleted(NULL);
-                $mInstance->setExpired(NULL);
-                $mInstance->setTargetFile(NULL);
-                $mInstance->setTargetSystem(NULL);
-                $mInstance->setTargetNode(NULL);
-                $this->entityManager->persist($mInstance);
-                $possibleSystems = $systemRepo->findByTargetFaction($targetFaction);
-                // generate new system randomly or if we have found no existing systems
-                if (count($possibleSystems) < 1 || mt_rand(1, 100) <= 50) {
-                    $targetSystem = $this->systemGeneratorService->generateRandomSystem($instanceData->level, $targetFaction);
-                }
-                else {
-                    shuffle($possibleSystems);
-                    $targetSystem = array_shift($possibleSystems);
-                }
-                $mInstance->setTargetSystem($targetSystem);
-                $this->entityManager->flush($mInstance);
-                switch ($targetMission->getId()) {
-                    default:
-                        $createTargetFile = false;
-                        $setTargetProfile = false;
-                        $targetNode = NULL;
-                        $addToNode = false;
-                        break;
-                    case MissionArchetype::ID_STEAL_FILE:
-                    case MissionArchetype::ID_DELETE_FILE:
-                        $addToNode = true;
-                        $createTargetFile = true;
-                        $setTargetProfile = false;
-                        $targetNode = $nodeRepo->getRandomNodeForMission($targetSystem);
-                        break;
-                    case MissionArchetype::ID_PLANT_BACKDOOR:
-                    case MissionArchetype::ID_UPLOAD_FILE:
-                        $createTargetFile = true;
-                        $setTargetProfile = true;
-                        $targetNode = $nodeRepo->getRandomNodeForMission($targetSystem);
-                        $addToNode = false;
-                        break;
-                }
-                if ($createTargetFile) {
-                    $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT);
-                    /** @var FileType $fileType */
-                    $fileName = $this->getRandomString(12) . '.txt';
-                    $targetFile = new File();
-                    $targetFile->setVersion(1);
-                    $targetFile->setSlots(0);
-                    $targetFile->setSize(0);
-                    $targetFile->setExecutable(false);
-                    $targetFile->setCoder(NULL);
-                    $targetFile->setRunning(false);
-                    $targetFile->setFileType($fileType);
-                    $targetFile->setNode(($addToNode) ? $targetNode : NULL);
-                    $targetFile->setMailMessage(NULL);
-                    $targetFile->setModified(NULL);
-                    $targetFile->setNpc(NULL);
-                    $targetFile->setData(NULL);
-                    $targetFile->setSystem(($addToNode) ? $targetSystem : NULL);
-                    $targetFile->setCreated(new \DateTime());
-                    $targetFile->setLevel(1);
-                    $targetFile->setProfile(($setTargetProfile) ? $profile : NULL);
-                    $targetFile->setName($fileName);
-                    $targetFile->setMaxIntegrity(100);
-                    $targetFile->setIntegrity(100);
-                    $this->entityManager->persist($targetFile);
-                    $mInstance->setTargetFile($targetFile);
-                    $mInstance->setTargetNode($targetNode);
-                    $this->entityManager->flush();
-                }
-                $returnMessage = sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                    $this->translate('You have accepted the mission')
-                );
-                $this->response = array(
-                    'command' => 'showmessage',
-                    'message' => $returnMessage
-                );
-            }
+        if ($profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to be in an agent node to request a mission'))->send();
         }
-        return $this->response;
+        $currentMission = $this->missionRepo->findCurrentMission($profile);
+        if ($currentMission) {
+            return $this->gameClientResponse->addMessage($this->translate('You have accepted another mission already'))->send();
+        }
+        $instanceData = (object)$confirmData->contentArray;
+        $targetMission = $this->entityManager->find('Netrunners\Entity\MissionArchetype', $instanceData->missionArchetypeId);
+        $sourceFaction = $this->entityManager->find('Netrunners\Entity\Faction', $instanceData->sourceFactionId);
+        $targetFaction = $this->entityManager->find('Netrunners\Entity\Faction', $instanceData->targetFactionId);
+        /** @var Faction $targetFaction */
+        $mInstance = new Mission();
+        $mInstance->setAdded(new \DateTime());
+        $mInstance->setExpires($instanceData->expires);
+        $mInstance->setLevel($instanceData->level);
+        $mInstance->setProfile($profile);
+        $mInstance->setSourceFaction($sourceFaction);
+        $mInstance->setTargetFaction($targetFaction);
+        $mInstance->setMission($targetMission);
+        $mInstance->setCompleted(NULL);
+        $mInstance->setExpired(NULL);
+        $mInstance->setTargetFile(NULL);
+        $mInstance->setTargetSystem(NULL);
+        $mInstance->setTargetNode(NULL);
+        $this->entityManager->persist($mInstance);
+        $possibleSystems = $systemRepo->findByTargetFaction($targetFaction);
+        // generate new system randomly or if we have found no existing systems
+        if (count($possibleSystems) < 1 || mt_rand(1, 100) <= 50) {
+            $targetSystem = $this->systemGeneratorService->generateRandomSystem($instanceData->level, $targetFaction);
+        }
+        else {
+            shuffle($possibleSystems);
+            $targetSystem = array_shift($possibleSystems);
+        }
+        $mInstance->setTargetSystem($targetSystem);
+        $this->entityManager->flush($mInstance);
+        switch ($targetMission->getId()) {
+            default:
+                $createTargetFile = false;
+                $setTargetProfile = false;
+                $targetNode = NULL;
+                $addToNode = false;
+                break;
+            case MissionArchetype::ID_STEAL_FILE:
+            case MissionArchetype::ID_DELETE_FILE:
+                $addToNode = true;
+                $createTargetFile = true;
+                $setTargetProfile = false;
+                $targetNode = $nodeRepo->getRandomNodeForMission($targetSystem);
+                break;
+            case MissionArchetype::ID_PLANT_BACKDOOR:
+            case MissionArchetype::ID_UPLOAD_FILE:
+                $createTargetFile = true;
+                $setTargetProfile = true;
+                $targetNode = $nodeRepo->getRandomNodeForMission($targetSystem);
+                $addToNode = false;
+                break;
+        }
+        if ($createTargetFile) {
+            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT);
+            /** @var FileType $fileType */
+            $fileName = $this->getRandomString(12) . '.txt';
+            $targetFile = new File();
+            $targetFile->setVersion(1);
+            $targetFile->setSlots(0);
+            $targetFile->setSize(0);
+            $targetFile->setExecutable(false);
+            $targetFile->setCoder(NULL);
+            $targetFile->setRunning(false);
+            $targetFile->setFileType($fileType);
+            $targetFile->setNode(($addToNode) ? $targetNode : NULL);
+            $targetFile->setMailMessage(NULL);
+            $targetFile->setModified(NULL);
+            $targetFile->setNpc(NULL);
+            $targetFile->setData(NULL);
+            $targetFile->setSystem(($addToNode) ? $targetSystem : NULL);
+            $targetFile->setCreated(new \DateTime());
+            $targetFile->setLevel(1);
+            $targetFile->setProfile(($setTargetProfile) ? $profile : NULL);
+            $targetFile->setName($fileName);
+            $targetFile->setMaxIntegrity(100);
+            $targetFile->setIntegrity(100);
+            $this->entityManager->persist($targetFile);
+            $mInstance->setTargetFile($targetFile);
+            $mInstance->setTargetNode($targetNode);
+            $this->entityManager->flush();
+        }
+        return $this->gameClientResponse
+            ->addMessage($this->translate('You have accepted the mission'), GameClientResponse::CLASS_SUCCESS)
+            ->send();
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function showMissionDetails($resourceId)
     {
         $this->initService($resourceId);
-        if (!$this->user) return true;
+        if (!$this->user) return false;
         $profile = $this->user->getProfile();
-        $this->response = $this->isActionBlocked($resourceId, true);
-        if (!$this->response) {
-            $currentMission = $this->missionRepo->findCurrentMission($profile);
-            if (!$currentMission) {
-                $command = 'showmessage';
-                $message = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">No current mission</pre>'),
-                    $this->user->getUsername()
-                );
-            }
-            else {
-                /** @var Mission $currentMission */
-                $archetype = $currentMission->getMission();
-                $command = 'showoutput';
-                $message = [];
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-sysmsg">%s - %s</pre>'),
-                    $this->translate('MISSION'),
-                    strtoupper($archetype->getName())
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">%s</pre>'),
-                    $archetype->getDescription()
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('LEVEL'),
-                    $currentMission->getLevel()
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('ACCEPTED'),
-                    $currentMission->getAdded()->format('Y/m/d H:i:s')
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('EXPIRES'),
-                    $currentMission->getExpires()->format('Y/m/d H:i:s')
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('SOURCE'),
-                    $currentMission->getSourceFaction()->getName()
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('TARGET'),
-                    $currentMission->getTargetFaction()->getName()
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('SYSTEM'),
-                    $currentMission->getTargetSystem()->getAddy()
-                );
-                $message[] = sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                    $this->translate('FILE'),
-                    $currentMission->getTargetFile()->getName()
-                );
-                switch ($archetype->getId()) {
-                    default:
-                        break;
-                    case MissionArchetype::ID_PLANT_BACKDOOR:
-                    case MissionArchetype::ID_UPLOAD_FILE:
-                        $message[] = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-white">%-14s: %s</pre>'),
-                            $this->translate('NODE'),
-                            $currentMission->getTargetNode()->getName()
-                        );
-                        break;
-                }
-            }
-            $this->response = [
-                'command' => $command,
-                'message' => $message
-            ];
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        return $this->response;
+        $currentMission = $this->missionRepo->findCurrentMission($profile);
+        if (!$currentMission) {
+            $message = $this->translate('No current mission');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var Mission $currentMission */
+        $archetype = $currentMission->getMission();
+        $message = sprintf(
+            $this->translate('%s - %s'),
+            $this->translate('MISSION'),
+            strtoupper($archetype->getName())
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        $this->gameClientResponse->addMessage($archetype->getDescription(), GameClientResponse::CLASS_ADDON);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('LEVEL'),
+            $currentMission->getLevel()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('ACCEPTED'),
+            $currentMission->getAdded()->format('Y/m/d H:i:s')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('EXPIRES'),
+            $currentMission->getExpires()->format('Y/m/d H:i:s')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('SOURCE'),
+            $currentMission->getSourceFaction()->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('TARGET'),
+            $currentMission->getTargetFaction()->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('SYSTEM'),
+            $currentMission->getTargetSystem()->getAddy()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        $message = sprintf(
+            $this->translate('%-14s: %s'),
+            $this->translate('FILE'),
+            $currentMission->getTargetFile()->getName()
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        switch ($archetype->getId()) {
+            default:
+                break;
+            case MissionArchetype::ID_PLANT_BACKDOOR:
+            case MissionArchetype::ID_UPLOAD_FILE:
+                $message = sprintf(
+                    $this->translate('%-14s: %s'),
+                    $this->translate('NODE'),
+                    $currentMission->getTargetNode()->getName()
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+        }
+        return $this->gameClientResponse->send();
     }
 
     /**
