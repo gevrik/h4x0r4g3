@@ -126,7 +126,6 @@ class NodeService extends BaseService
             case 'addnode':
                 $checkResult = $this->addnodeChecks();
                 if ($checkResult) {
-                    var_dump($checkResult);
                     return $this->gameClientResponse->addMessage($checkResult)->send();
                 }
                 $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);

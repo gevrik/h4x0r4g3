@@ -826,7 +826,6 @@ class WebsocketService implements MessageComponentInterface {
                     return true;
                 case 'createpasswordconfirm':
                     list($disconnect, $response) = $this->loginService->createPasswordConfirm($resourceId, $content);
-                    var_dump($response);
                     $response->send();
                     if ($disconnect) {
                         $from->close();

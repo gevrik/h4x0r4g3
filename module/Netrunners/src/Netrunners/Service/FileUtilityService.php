@@ -870,7 +870,6 @@ class FileUtilityService extends BaseService
             return $this->gameClientResponse->addMessage($message)->send();
         }
         $checkResult = $this->editFileChecks(NULL, $file);
-        var_dump('checks passed');
         if (!$checkResult instanceof File) {
             return $this->gameClientResponse->addMessage($checkResult)->send();
         }

@@ -637,7 +637,6 @@ class ParserService
         }
         if (!is_array($response)) {
             if (!$silent) {
-                var_dump($response);
                 $response = [
                     'command' => 'showmessage',
                     'message' => sprintf(
