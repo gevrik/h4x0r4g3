@@ -1017,7 +1017,7 @@ class ProfileService extends BaseService
         }
         $profile->setBgopacity($newOpacity);
         $this->entityManager->flush($profile);
-        $message = $this->translate('Background opacity set to: %s');
+        $message = sprintf($this->translate('Background opacity set to: %s'), $newOpacity);
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         $clientResponse = new GameClientResponse($resourceId);
         $clientResponse

@@ -212,7 +212,10 @@ class FileUtilityService extends BaseService
         /** @var File $targetFile */
         // check for mission
         if ($targetFile->getFileType()->getId() == FileType::ID_TEXT) {
-            return $this->executeMissionFile($targetFile);
+            $missionFileCheck = $this->executeMissionFile($targetFile);
+            if ($missionFileCheck instanceof GameClientResponse) {
+                return $missionFileCheck->send();
+            }
         }
         // can only download files that do not belong to themselves in owned systems
         $targetFileSystem = $targetFile->getSystem();
@@ -604,7 +607,7 @@ class FileUtilityService extends BaseService
         $file = array_shift($targetFiles);
         /** @var File $file */
         // check if this file is a mission file
-        if ($file->getFileType()->getId() == FileType::ID_TEXT) {
+        if (!$response && $file->getFileType()->getId() == FileType::ID_TEXT) {
              $response = $this->executeMissionFile($file);
         }
         // check if the file belongs to the profile
@@ -826,26 +829,24 @@ class FileUtilityService extends BaseService
             return $this->gameClientResponse->addMessage($checkResult)->send();
         }
         /* checks passed, we can now edit the file */
-        if (!$checkResult) {
-            /** @var File $checkResult */
-            $view = new ViewModel();
-            $view->setTemplate('netrunners/file/edit-text.phtml');
-            $description = $checkResult->getContent();
-            $processedDescription = '';
-            if ($description) {
-                $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
-            }
-            $view->setVariable('description', $processedDescription);
-            $view->setVariable('entityId', $checkResult->getId());
-            $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
-            $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
-            // inform other players in node
-            $message = sprintf(
-                $this->translate('[%s] is editing a file'),
-                $this->user->getUsername()
-            );
-            $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        /** @var File $checkResult */
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/file/edit-text.phtml');
+        $description = $checkResult->getContent();
+        $processedDescription = '';
+        if ($description) {
+            $processedDescription = htmLawed($description, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
         }
+        $view->setVariable('description', $processedDescription);
+        $view->setVariable('entityId', $checkResult->getId());
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is editing a file'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         return $this->gameClientResponse->send();
     }
 
@@ -869,6 +870,7 @@ class FileUtilityService extends BaseService
             return $this->gameClientResponse->addMessage($message)->send();
         }
         $checkResult = $this->editFileChecks(NULL, $file);
+        var_dump('checks passed');
         if (!$checkResult instanceof File) {
             return $this->gameClientResponse->addMessage($checkResult)->send();
         }
@@ -1472,7 +1474,10 @@ class FileUtilityService extends BaseService
         }
         /* all checks passed, unload file */
         if ($targetFile->getFileType()->getId() == FileType::ID_TEXT) {
-            return $this->executeMissionFile($targetFile);
+            $missionFileCheck = $this->executeMissionFile($targetFile);
+            if ($missionFileCheck instanceof GameClientResponse) {
+                return $missionFileCheck->send();
+            }
         }
         $targetFile->setProfile(NULL);
         $targetFile->setNode($profile->getCurrentNode());

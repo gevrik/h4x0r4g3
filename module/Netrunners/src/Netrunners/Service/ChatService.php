@@ -293,7 +293,7 @@ class ChatService extends BaseService
             ->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)
             ->setResourceId($recipient->getCurrentResourceId())
             ->send();
-        $ws->setClientData($recipient->getCurrentResourceId(), 'replyId', $profile->getId());
+        $ws->setClientDataReplyId($recipient->getCurrentResourceId(), $profile->getId());
         // create response for sender
         $senderMessage = $this->prepareMessage($recipient, $messageContent, self::CHANNEL_TELL, true, 'TO ');
         // TODO add ignore system and anonymous flag

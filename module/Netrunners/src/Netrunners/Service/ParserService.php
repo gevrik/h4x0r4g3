@@ -748,32 +748,24 @@ class ParserService
         switch ($userCommand) {
             default:
             case 'options':
-                $response = $this->codingService->commandOptions($resourceId, $codeOptions);
-                break;
+                return $this->codingService->commandOptions($resourceId, $codeOptions);
             case 'code':
                 return $this->codingService->commandCode($resourceId, $codeOptions, $contentArray);
             case 'jobs':
-                $response = $this->profileService->showJobs($resourceId, $jobs);
-                break;
+                return $this->profileService->showJobs($resourceId, $jobs);
             case 'level':
-                $response = $this->codingService->commandLevel($resourceId, $contentArray);
-                break;
+                return $this->codingService->commandLevel($resourceId, $contentArray);
             case 'mode':
-                $response = $this->codingService->switchCodeMode($resourceId, $contentArray);
-                break;
+                return $this->codingService->switchCodeMode($resourceId, $contentArray);
             case 'parts':
             case 'resources':
             case 'res':
-                $response = $this->profileService->showFilePartInstances($resourceId);
-                break;
+                return $this->profileService->showFilePartInstances($resourceId);
             case 'type':
-                $response = $this->codingService->commandType($resourceId, $contentArray, $codeOptions);
-                break;
+                return $this->codingService->commandType($resourceId, $contentArray, $codeOptions);
             case 'q':
-                $response = $this->codingService->exitCodeMode($resourceId);
-                break;
+                return $this->codingService->exitCodeMode($resourceId);
         }
-        return $response;
     }
 
     /**
@@ -840,35 +832,18 @@ class ParserService
         $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
         if (!$user) return true;
         list($content, $entityId, $userCommand) = $this->prepareFrontendData($msgData);
-        $silent = false;
-        $response = false;
         switch (strtolower($userCommand)) {
             default:
                 break;
             case 'savefiledescription':
-                $response = $this->fileService->saveFileDescription($resourceId, $content, $entityId);
-                break;
+                return $this->fileService->saveFileDescription($resourceId, $content, $entityId);
             case 'savenodedescription':
-                $response = $this->nodeService->saveNodeDescription($resourceId, $content, $entityId);
-                break;
+                return $this->nodeService->saveNodeDescription($resourceId, $content, $entityId);
             case 'savemanpage':
                 $mpTitle = (isset($msgData->title)) ? $msgData->title : false;
                 $mpStatus = (isset($msgData->status)) ? $msgData->status : false;
-                $response = $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId, $mpStatus);
-                break;
+                return $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId, $mpStatus);
         }
-        if (!$response) {
-            $response = array(
-                'command' => self::CMD_SHOWMESSAGE,
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-warning">%s</pre>',
-                    $this->translator->translate('frontend-parse error')
-                )
-            );
-        }
-        $response['prompt'] = $this->getWebsocketServer()->getUtilityService()->showPrompt($clientData);
-        $response['silent'] = $silent;
-        $from->send(json_encode($response));
         return true;
     }
 

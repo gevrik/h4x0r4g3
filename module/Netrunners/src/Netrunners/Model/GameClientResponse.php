@@ -37,10 +37,20 @@ class GameClientResponse {
     const COMMAND_STARTMILKRUN = 'startmilkrun';
     const COMMAND_STOPMILKRUN = 'stopmilkrun';
     const COMMAND_COMPLETEMILKRUN = 'completemilkrun';
-    const COMMAND_SETOPACITY = 'setopacity';
+    const COMMAND_SETOPACITY = 'setbgopacity';
     const COMMAND_GETRANDOMGEOCOORDS = 'getrandomgeocoords';
     const COMMAND_UPDATEPROMPT = 'updateprompt';
     const COMMAND_UPDATEDIVHTML = 'updatedivhtml';
+    const COMMAND_CONFIRMUSERCREATE = 'confirmusercreate';
+    const COMMAND_PROMPTFORPASSWORD = 'promptforpassword';
+    const COMMAND_SOLVECAPTCHA = 'solvecaptcha';
+    const COMMAND_ENTERINVITATIONCODE = 'enterinvitationcode';
+    const COMMAND_CREATEPASSWORD = 'createpassword';
+    const COMMAND_CREATEPASSWORDCONFIRM = 'createpasswordconfirm';
+    const COMMAND_CREATEUSERDONE = 'createuserdone';
+    const COMMAND_LOGINCOMPLETE = 'logincomplete';
+    const COMMAND_ECHOCOMMAND = 'echocommand';
+    const COMMAND_GETIPADDY = 'getipaddy';
 
     const INVALID_MESSAGE = 'unknown command';
 
@@ -58,6 +68,10 @@ class GameClientResponse {
     const OPT_EXITCONFIRMMODE = 'exitconfirmmode';
     const OPT_ELEMENT = 'element';
     const OPT_PLAYSOUND = 'playsound';
+    const OPT_HASH = 'hash';
+    const OPT_HOMECOORDS = 'homecoords';
+    const OPT_GEOCOORDS = 'geocoords';
+    const OPT_BGOPACITY = 'bgopacity';
 
     /**
      * @var int

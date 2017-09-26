@@ -263,7 +263,7 @@ class FileExecutionService extends BaseService
         }
         // set global combat cooldown
         $now->add(new \DateInterval('PT2S'));
-        $this->getWebsocketServer()->setClientData($profile->getCurrentResourceId(), 'combatFileCooldown', $now);
+        $this->getWebsocketServer()->setClientCombatFileCooldown($profile->getCurrentResourceId(), $now);
         return $this->gameClientResponse->send();
     }
 

@@ -7,6 +7,7 @@ use Netrunners\Entity\Feedback;
 use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\BannedIpRepository;
 use Netrunners\Repository\GeocoordRepository;
 use Netrunners\Repository\PlaySessionRepository;
@@ -258,6 +259,39 @@ class WebsocketService implements MessageComponentInterface {
 
     /**
      * @param $resourceId
+     * @param \DateTime $cooldown
+     * @return $this
+     */
+    public function setClientCombatFileCooldown($resourceId, $cooldown)
+    {
+        $this->clientsData[$resourceId]['combatFileCooldown'] = $cooldown;
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $replyId
+     * @return $this
+     */
+    public function setClientDataReplyId($resourceId, $replyId)
+    {
+        $this->clientsData[$resourceId]['replyId'] = $replyId;
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @param int $count
+     * @return $this
+     */
+    public function setClientDataSpamcount($resourceId, $count = 0)
+    {
+        $this->clientsData[$resourceId]['spamcount'] = $count;
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
      * @return $this
      */
     public function clearClientActionData($resourceId)
@@ -274,6 +308,69 @@ class WebsocketService implements MessageComponentInterface {
     public function setClientActionData($resourceId, $actionData)
     {
         $this->clientsData[$resourceId]['action'] = $actionData;
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @return $this
+     */
+    public function clearClientHangmanData($resourceId)
+    {
+        $this->clientsData[$resourceId]['hangman'] = [];
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $actionData
+     * @return $this
+     */
+    public function setClientHangmanData($resourceId, $actionData)
+    {
+        $this->clientsData[$resourceId]['hangman'] = $actionData;
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @return $this
+     */
+    public function clearClientCodebreakerData($resourceId)
+    {
+        $this->clientsData[$resourceId]['codebreaker'] = [];
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $actionData
+     * @return $this
+     */
+    public function setClientCodebreakerData($resourceId, $actionData)
+    {
+        $this->clientsData[$resourceId]['codebreaker'] = $actionData;
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @return $this
+     */
+    public function clearClientMilkrunData($resourceId)
+    {
+        $this->clientsData[$resourceId]['milkrun'] = [];
+        return $this;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $actionData
+     * @return $this
+     */
+    public function setClientMilkrunData($resourceId, $actionData)
+    {
+        $this->clientsData[$resourceId]['milkrun'] = $actionData;
         return $this;
     }
 
@@ -505,11 +602,9 @@ class WebsocketService implements MessageComponentInterface {
             'invitationid' => NULL,
             'replyId' => NULL
         );
-        $response = array(
-            'command' => 'getipaddy',
-            'message' => 'default'
-        );
-        $conn->send(json_encode($response));
+        $response = new GameClientResponse($resourceId);
+        $response->setCommand(GameClientResponse::COMMAND_GETIPADDY);
+        $response->send();
     }
 
     /**
@@ -562,18 +657,16 @@ class WebsocketService implements MessageComponentInterface {
                         $this->clientsData[$resourceId]['spamcount']++;
                         if ($this->clientsData[$resourceId]['spamcount'] >= mt_rand(5, 10)) {
                             $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET IS SPAMMING - DISCONNECT SOCKET - ' . $msg);
-                            $response = array(
-                                'command' => 'showmessage',
-                                'message' => '<pre style="white-space: pre-wrap;" class="text-danger">DISCONNECTED - REASON: SPAMMING</pre>'
-                            );
-                            $from->send(json_encode($response));
+                            $response = new GameClientResponse($resourceId);
+                            $response->addMessage('DISCONNECTED - REASON: SPAMMING', GameClientResponse::CLASS_DANGER);
+                            $response->send();
                             $from->close();
                             return true;
                         }
                     }
                     else {
                         $this->clientsData[$resourceId]['millis'] = microtime();
-                        $this->setClientData($resourceId, 'spamcount', 0);
+                        $this->setClientDataSpamcount($resourceId);
                     }
                 }
             }
@@ -592,11 +685,10 @@ class WebsocketService implements MessageComponentInterface {
                 }
             }
             if (!$silent) {
-                $response = array(
-                    'command' => 'echocommand',
-                    'content' => $content
-                );
-                $from->send(json_encode($response));
+                $response = new GameClientResponse($resourceId);
+                $response->setCommand(GameClientResponse::COMMAND_ECHOCOMMAND);
+                $response->addOption(GameClientResponse::OPT_CONTENT, $content);
+                $response->send();
             }
             // log this command unless it is automated or contains sensitive informations
             if (
@@ -630,13 +722,10 @@ class WebsocketService implements MessageComponentInterface {
                             'ip' => $content
                         ]);
                         if ($bannedIpEntry) {
-                            $response = [
-                                'command' => 'showmessage',
-                                'message' => sprintf(
-                                    '<pre style="white-space: pre-wrap;" class="text-danger">This IP address has been banned!</pre>'
-                                )
-                            ];
-                            $from->send(json_encode($response));
+                            $response = new GameClientResponse($resourceId);
+                            $message = 'This IP address has been banned!';
+                            $response->addMessage($message, GameClientResponse::CLASS_DANGER);
+                            $response->send();
                             $from->close();
                             return true;
                         }
@@ -688,86 +777,76 @@ class WebsocketService implements MessageComponentInterface {
                             $count = count($possibleLocations);
                             $randLocNumber = mt_rand(0, $count-1);
                             $location = $possibleLocations[$randLocNumber];
-                            $response = $this->utilityService->updateSystemCoords($resourceId, $location);
-                            $from->send(json_encode($response));
-                            $needFlush = true;
-                            $response = [
-                                'command' => 'flytocoords',
-                                'content' => [$location->getLat(),$location->getLng()],
-                                'silent' => true
-                            ];
-                            $from->send(json_encode($response));
+                            $flytoResponse = new GameClientResponse($resourceId);
+                            $flytoResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
+                            $flytoResponse->addOption(GameClientResponse::OPT_CONTENT, [$location->getLat(),$location->getLng()]);
+                            $flytoResponse->send();
+                            return $this->utilityService->updateSystemCoords($resourceId, $location, true);
                         }
                         else {
-                            $response = [
-                                'command' => 'showmessageprepend',
-                                'message' => sprintf(
-                                    '<pre style="white-space: pre-wrap;" class="text-warning">Unable to process coordinates at this time - please try again later</pre>'
-                                )
-                            ];
-                            $from->send(json_encode($response));
+                            $message = 'Unable to process coordinates at this time - please try again later';
+                            $response = new GameClientResponse($resourceId);
+                            $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)->addMessage($message);
+                            $response->send();
                         }
                     }
-                    if ($needFlush) $this->entityManager->flush();
                     return true;
-                    break;
                 case 'login':
                     list($response, $disconnect) = $this->loginService->login($resourceId, $content);
-                    $from->send(json_encode($response));
+                    $response->send();
                     if ($disconnect) $from->close();
-                    break;
+                    return true;
                 case 'confirmusercreate':
                     list($disconnect, $response) = $this->loginService->confirmUserCreate($resourceId, $content);
-                    $from->send(json_encode($response));
+                    if ($response instanceof GameClientResponse) $response->send();
                     if ($disconnect) {
                         $from->close();
                     }
-                    break;
+                    return true;
                 case 'solvecaptcha':
                     list($disconnect, $response) = $this->loginService->solveCaptcha($resourceId, $content);
-                    $from->send(json_encode($response));
+                    if ($response instanceof GameClientResponse) $response->send();
                     if ($disconnect) {
                         $from->close();
                     }
-                    break;
+                    return true;
                 case 'enterinvitationcode':
                     list($disconnect, $response) = $this->loginService->enterInvitationCode($resourceId, $content);
-                    $from->send(json_encode($response));
+                    if ($response instanceof GameClientResponse) $response->send();
                     if ($disconnect) {
                         $from->close();
                     }
-                    break;
+                    return true;
                 case 'createpassword':
                     list($disconnect, $response) = $this->loginService->createPassword($resourceId, $content);
-                    $from->send(json_encode($response));
+                    if ($response instanceof GameClientResponse) $response->send();
                     if ($disconnect) {
                         $from->close();
                     }
-                    break;
+                    return true;
                 case 'createpasswordconfirm':
                     list($disconnect, $response) = $this->loginService->createPasswordConfirm($resourceId, $content);
-                    $from->send(json_encode($response));
+                    var_dump($response);
+                    $response->send();
                     if ($disconnect) {
                         $from->close();
                     }
-                    break;
+                    return true;
                 case 'promptforpassword':
                     list($disconnect, $response) = $this->loginService->promptForPassword($resourceId, $content);
-                    $from->send(json_encode($response));
+                    $response->send();
                     if ($disconnect) {
                         $from->close();
                     }
                     else {
-                        $from->send(json_encode($this->utilityService->showMotd($resourceId)));
+                        return $this->utilityService->showMotd($resourceId);
                     }
-                    break;
+                    return true;
                 case 'saveFeedback':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                     $fTitle = (isset($msgData->title)) ? $msgData->title : false;
                     $fType = (isset($msgData->type)) ? $msgData->type : false;
-                    $response = $this->saveFeedback($resourceId, $content, $fTitle, $fType);
-                    $from->send(json_encode($response));
-                    break;
+                    return $this->saveFeedback($resourceId, $content, $fTitle, $fType);
                 case 'parseFrontendInput':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
                     return $this->parserService->parseFrontendInput($from, $msgData);
@@ -785,12 +864,10 @@ class WebsocketService implements MessageComponentInterface {
                     return $this->parserService->parseMailInput($from, $content, $msgData->mailOptions);
                 case 'parseCodeInput':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                    $from->send(json_encode($this->parserService->parseCodeInput($from, $content, $this->loopService->getJobs())));
-                    break;
+                    return $this->parserService->parseCodeInput($from, $content, $this->loopService->getJobs());
                 case 'parseConfirmInput':
                     if ($hash != $this->clientsData[$resourceId]['hash']) return true;
-                    $from->send(json_encode($this->parserService->parseConfirmInput($from, $content)));
-                    break;
+                    return $this->parserService->parseConfirmInput($from, $content);
             }
         }
         catch (\Exception $e) {
@@ -822,12 +899,9 @@ class WebsocketService implements MessageComponentInterface {
             $profile->setCurrentResourceId(NULL);
             $this->entityManager->flush();
             // inform admins
-            $informer = array(
-                'command' => 'showmessageprepend',
-                'message' => sprintf(
-                    '<pre style="white-space: pre-wrap;" class="text-addon">user [%s] has disconnected</pre>',
-                    $profile->getUser()->getUsername()
-                )
+            $informerText = sprintf(
+                'user [%s] has disconnected',
+                $profile->getUser()->getUsername()
             );
             foreach ($this->getClients() as $wsClientId => $wsClient) {
                 if ($wsClient->resourceId == $resourceId) continue;
@@ -837,7 +911,10 @@ class WebsocketService implements MessageComponentInterface {
                 $xUser = $this->entityManager->find('TmoAuth\Entity\User', $xClientData->userId);
                 if (!$xUser) continue;
                 if (!$this->getUtilityService()->hasRole($xUser, Role::ROLE_ID_ADMIN)) continue;
-                $wsClient->send(json_encode($informer));
+                $informer = new GameClientResponse($wsClient->resourceId);
+                $informer->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+                $informer->addMessage($informerText, GameClientResponse::CLASS_ADDON);
+                $informer->send();
             }
         }
         // The connection is closed, remove it, as we can no longer send it messages
@@ -863,7 +940,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param string $content
      * @param string $fTitle
      * @param $type
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      */
     public function saveFeedback(
         $resourceId,
@@ -873,8 +950,8 @@ class WebsocketService implements MessageComponentInterface {
     )
     {
         $user = $this->entityManager->find('TmoAuth\Entity\User', $this->clientsData[$resourceId]['userId']);
-        if (!$user) return true;
-        if (!array_key_exists($type, Feedback::$lookup)) return true;
+        if (!$user) return false;
+        if (!array_key_exists($type, Feedback::$lookup)) return false;
         $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,a,br']);
         $fTitle = htmLawed($fTitle, ['safe'=>1,'elements'=>'strong']);
         $feedback = new Feedback();
@@ -890,14 +967,9 @@ class WebsocketService implements MessageComponentInterface {
         $feedback->setInternalData(json_encode($internalData));
         $this->entityManager->persist($feedback);
         $this->entityManager->flush($feedback);
-        $response = [
-            'command' => 'showmessage',
-            'message' => sprintf(
-                '<pre style="white-space: pre-wrap;" class="text-success">%s</pre>',
-                'Feedback saved'
-            )
-        ];
-        return $response;
+        $response = new GameClientResponse($resourceId);
+        $response->addMessage('Feedback saved', GameClientResponse::CLASS_SUCCESS);
+        return $response->send();
     }
 
 }

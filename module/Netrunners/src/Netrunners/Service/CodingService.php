@@ -242,13 +242,13 @@ class CodingService extends BaseService
                 $this->translate('type'),
                 ($fileType) ? $fileType->getName() : $this->translate('not set')
             );
-            $this->gameClientResponse->addMessage($message);
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
             $message = sprintf(
                 '%-10s: %s',
                 $this->translate('snippets'),
                 ($codeOptions->fileLevel) ? $codeOptions->fileLevel : $this->translate('unknown')
             );
-            $this->gameClientResponse->addMessage($message);
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
             $partsString = '';
             if ($fileType) {
                 foreach ($fileType->getFileParts() as $filePart) {
@@ -351,7 +351,12 @@ class CodingService extends BaseService
         return $this->gameClientResponse->send();
     }
 
-
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @param $codeOptions
+     * @return bool|GameClientResponse
+     */
     public function commandType($resourceId, $contentArray, $codeOptions)
     {
         $this->initService($resourceId);

@@ -20,6 +20,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Model\TextToImage;
 use Netrunners\Repository\FeedbackRepository;
 use Netrunners\Repository\InvitationRepository;
@@ -45,43 +46,26 @@ class LoginService extends BaseService
         $user = $this->entityManager->getRepository('TmoAuth\Entity\User')->findOneBy(array(
             'username' => $username
         ));
+        $response = new GameClientResponse($resourceId);
         if (!$user) {
             $ws->setClientData($resourceId, 'username', $username);
-            $response = array(
-                'command' => 'confirmusercreate',
-            );
+            $response->setCommand(GameClientResponse::COMMAND_CONFIRMUSERCREATE);
         }
         else {
             $this->setUser($user);
             // check if they are banned
             if ($user->getBanned()) {
-                $response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
-                        $this->translate('This account is banned from playing this game')
-                    )
-                ];
+                $response->addMessage($this->translate('This account is banned from playing this game'), GameClientResponse::CLASS_DANGER);
                 $disconnect = true;
             }
             // check if admin mode is active
             else if ($ws->isAdminMode() && !$this->hasRole($user, Role::ROLE_ID_ADMIN)) {
-                $response = [
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        '<pre style="white-space: pre-wrap;" class="text-danger">%s</pre>',
-                        $this->translate('The game is currently in admin mode - please try again later')
-                    )
-                ];
+                $response->addMessage($this->translate('The game is currently in admin mode - please try again later'), GameClientResponse::CLASS_DANGER);
                 $disconnect = true;
             }
             else if (count($ws->getClients()) >= WebsocketService::MAX_CLIENTS && !$this->hasRole($user, Role::ROLE_ID_ADMIN)) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">MAXIMUM AMOUNT OF CLIENTS REACHED - PLEASE TRY AGAIN LATER</pre>')
-                    )
-                );
+                $message = $this->translate('MAXIMUM AMOUNT OF CLIENTS REACHED - PLEASE TRY AGAIN LATER');
+                $response->addMessage($message, GameClientResponse::CLASS_DANGER);
                 $disconnect = true;
             }
             else {
@@ -89,9 +73,7 @@ class LoginService extends BaseService
                 $ws->setClientData($resourceId, 'username', $user->getUsername());
                 $ws->setClientData($resourceId, 'userId', $user->getId());
                 $ws->setClientData($resourceId, 'profileId', $user->getProfile()->getId());
-                $response = array(
-                    'command' => 'promptforpassword',
-                );
+                $response->setCommand(GameClientResponse::COMMAND_PROMPTFORPASSWORD);
             }
         }
         return [$response, $disconnect];
@@ -109,20 +91,15 @@ class LoginService extends BaseService
         $disconnect = false;
         $response = false;
         if ($content == 'yes' || $content == 'y') {
+            $response = new GameClientResponse($resourceId);
             $validator = new Alnum();
             if ($validator->isValid($clientData->username)) {
                 if (strlen($clientData->username) > 30) {
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Username must be between 3 and 30 characters, please try again</pre>')
-                    );
+                    $response->addMessage($this->translate('Username must be between 3 and 30 characters, please try again'));
                     $disconnect = true;
                 }
                 else if (strlen($clientData->username) < 3) {
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Username must be between 3 and 30 characters, please try again</pre>')
-                    );
+                    $response->addMessage($this->translate('Username must be between 3 and 30 characters, please try again'));
                     $disconnect = true;
                 }
                 else {
@@ -148,16 +125,11 @@ class LoginService extends BaseService
                     $captchaImage = new TextToImage();
                     $captchaImage->createImage($x . ' ' . $operator . ' ' . $y);
                     $captchaImage->saveAsPng('captcha', getcwd() . '/public/temp/');
-                    $response = array(
-                        'command' => 'solvecaptcha'
-                    );
+                    $response->setCommand(GameClientResponse::COMMAND_SOLVECAPTCHA);
                 }
             }
             else {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Username can only contain alphanumeric characters, please try again</pre>')
-                );
+                $response->addMessage($this->translate('Username can only contain alphanumeric characters, please try again'));
                 $disconnect = true;
             }
         }
@@ -179,15 +151,15 @@ class LoginService extends BaseService
         $disconnect = false;
         $response = false;
         if ($content == $clientData->captchasolution) {
-            $response = array(
-                'command' => 'enterinvitationcode'
-            );
+            $response = new GameClientResponse($resourceId);
+            $response->setCommand(GameClientResponse::COMMAND_ENTERINVITATIONCODE);
         }
         else {
             $disconnect = true;
         }
         return [$disconnect, $response];
     }
+
 
     public function enterInvitationCode($resourceId, $content)
     {
@@ -199,9 +171,8 @@ class LoginService extends BaseService
         $invitation = $invitationRepo->findOneUnusedByCode($content);
         if ($invitation && $content == $invitation->getCode() && !$invitation->getUsed()) {
             $ws->setClientData($resourceId, 'invitationid', $invitation->getId());
-            $response = array(
-                'command' => 'createpassword'
-            );
+            $response = new GameClientResponse($resourceId);
+            $response->setCommand(GameClientResponse::COMMAND_CREATEPASSWORD);
         }
         else {
             $disconnect = true;
@@ -219,33 +190,26 @@ class LoginService extends BaseService
         $ws = $this->getWebsocketServer();
         $disconnect = false;
         $validator = new Alnum();
+        $response = new GameClientResponse($resourceId);
         if ($validator->isValid($content)) {
             if (strlen($content) > 30) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Password must be between 8 and 30 characters, please try again</pre>'
-                );
+                $message = $this->translate('Password must be between 8 and 30 characters, please try again');
+                $response->addMessage($message);
                 $disconnect = true;
             }
             else if (strlen($content) < 8) {
-                $response = array(
-                    'command' => 'showmessage',
-                    'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Password must be between 8 and 30 characters, please try again</pre>'
-                );
+                $message = $this->translate('Password must be between 8 and 30 characters, please try again');
+                $response->addMessage($message);
                 $disconnect = true;
             }
             else {
                 $ws->setClientData($resourceId, 'tempPassword', $content);
-                $response = array(
-                    'command' => 'createpasswordconfirm',
-                );
+                $response->setCommand(GameClientResponse::COMMAND_CREATEPASSWORDCONFIRM);
             }
         }
         else {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Password can only contain alphanumeric characters, please try again</pre>'
-            );
+            $message = 'Password can only contain alphanumeric characters, please try again';
+            $response->addMessage($message);
             $disconnect = true;
         }
         return [$disconnect, $response];
@@ -262,11 +226,10 @@ class LoginService extends BaseService
         $clientData = $ws->getClientData($resourceId);
         $disconnect = false;
         $tempPassword = $clientData->tempPassword;
+        $response = new GameClientResponse($resourceId);
         if ($tempPassword != $content) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">The passwords do not match, please confirm again</pre>'
-            );
+            $message = $this->translate('The passwords do not match, please confirm again');
+            $response->addMessage($message);
             $disconnect = true;
         }
         else {
@@ -279,10 +242,8 @@ class LoginService extends BaseService
                 $addy = $utilityService->getRandomAddress(32);
                 $tries++;
                 if ($tries >= $maxTries) {
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Unable to initialize your account! Please contact an administrator!</pre>'
-                    );
+                    $message = $this->translate('Unable to create your account - try again later');
+                    $response->addMessage($message, GameClientResponse::CLASS_DANGER);
                     $disconnect = true;
                     return [$disconnect, $response];
                 }
@@ -396,22 +357,20 @@ class LoginService extends BaseService
             $ws->setClientData($resourceId, 'userId', $user->getId());
             $ws->setClientData($resourceId, 'username', $user->getUsername());
             $ws->setClientData($resourceId, 'jobs', []);
-            $response = array(
-                'command' => 'createuserdone',
-                'hash' => $hash,
-                'prompt' => $ws->getUtilityService()->showPrompt($ws->getClientData($resourceId))
-            );
+            $response->setCommand(GameClientResponse::COMMAND_CREATEUSERDONE);
+            $response->setResourceId($resourceId);
+            $response->addOption(GameClientResponse::OPT_HASH, $hash);
             // inform other clients
-            $informer = array(
-                'command' => 'showmessageprepend',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-info">a new user [%s] has connected</pre>'),
-                    $user->getUsername()
-                )
+            $informerText = sprintf(
+                $this->translate('a new user [%s] has connected'),
+                $user->getUsername()
             );
             foreach ($this->getWebsocketServer()->getClients() as $wsClientId => $wsClient) {
                 if ($wsClient->resourceId == $resourceId) continue;
-                $wsClient->send(json_encode($informer));
+                $informer = new GameClientResponse($wsClient->resourceId);
+                $informer->addMessage($informerText, GameClientResponse::CLASS_INFO);
+                $informer->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+                $informer->send();
             }
             // create play-session
             $playSession = new PlaySession();
@@ -440,11 +399,9 @@ class LoginService extends BaseService
         /** @var User $user */
         $currentPassword = $user->getPassword();
         $bcrypt = new Bcrypt();
+        $response = new GameClientResponse($resourceId);
         if (!$bcrypt->verify($content, $currentPassword)) {
-            $response = array(
-                'command' => 'showmessage',
-                'message' => '<pre style="white-space: pre-wrap;" class="text-warning">Invalid password</pre>',
-            );
+            $response->addMessage($this->translate('Invalid password'));
             $disconnect = true;
         }
         else {
@@ -456,10 +413,7 @@ class LoginService extends BaseService
             $wsClientsData = $ws->getClientsData();
             foreach ($wsClients as $client) {
                 if ($client->resourceId != $resourceId && $wsClientsData[$client->resourceId]['username'] == $wsClientsData[$resourceId]['username']) {
-                    $response = array(
-                        'command' => 'showmessage',
-                        'message' => '<pre style="white-space: pre-wrap;" class="text-danger">Your connection has been terminated because you are already logged in from another location</pre>'
-                    );
+                    $response->addMessage($this->translate('Your connection has been terminated because you are already logged in from another location'), GameClientResponse::CLASS_DANGER);
                     $disconnect = true;
                     return [$disconnect, $response];
                 }
@@ -470,25 +424,18 @@ class LoginService extends BaseService
             $currentCoords = $currentSystem->getGeocoords();
             // get some settings
             $bgOpacity = $profile->getBgopacity();
-            $response = array(
-                'command' => 'logincomplete',
-                'hash' => $hash,
-                'prompt' => $ws->getUtilityService()->showPrompt($clientData),
-                'silent' => true,
-                'homecoords' => explode(',', $homeCoords),
-                'geocoords' => explode(',', $currentCoords),
-                'bgopacity' => $bgOpacity
-            );
+            $response->setCommand(GameClientResponse::COMMAND_LOGINCOMPLETE);
+            $response->addOption(GameClientResponse::OPT_HASH, $hash);
+            $response->setSilent(true);
+            $response->addOption(GameClientResponse::OPT_HOMECOORDS, explode(',', $homeCoords));
+            $response->addOption(GameClientResponse::OPT_GEOCOORDS, explode(',', $currentCoords));
+            $response->addOption(GameClientResponse::OPT_BGOPACITY, $bgOpacity);
             // message everyone in node
             $messageText = sprintf(
-                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">%s has logged in to this node</pre>'),
+                $this->translate('%s has logged in to this node'),
                 $user->getUsername()
             );
-            $message = array(
-                'command' => 'showmessageprepend',
-                'message' => $messageText
-            );
-            $this->messageEveryoneInNode($currentNode, $message, $profile, $profile->getId());
+            $this->messageEveryoneInNodeNew($currentNode, $messageText, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
             // clear orphaned play-sessions and start a new one
             $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
             /** @var PlaySessionRepository $playSessionRepo */
@@ -503,20 +450,13 @@ class LoginService extends BaseService
                     /** @var FeedbackRepository $feedbackRepo */
                     $feedbackCount = $feedbackRepo->countByNewForProfile($lastPlaySession->getEnd());
                     if ($feedbackCount >= 1) {
-                        $feedbackMessage = [
-                            'command' => 'showmessage',
-                            'silent' => true,
-                            'message' => sprintf(
-                                $this->translate('<pre style="white-space: pre-wrap;" class="text-info">There are %s new feedback messages since your last login</pre>'),
-                                $feedbackCount
-                            )
-                        ];
-                        foreach ($wsClients as $xClientId => $xClient) {
-                            if ($xClient->resourceId == $resourceId) {
-                                $xClient->send(json_encode($feedbackMessage));
-                                break;
-                            }
-                        }
+                        $message = sprintf(
+                            $this->translate('There are %s new feedback messages since your last login'),
+                            $feedbackCount
+                        );
+                        $feedbackResponse = new GameClientResponse($resourceId);
+                        $feedbackResponse->setSilent(true)->addMessage($message, GameClientResponse::CLASS_ATTENTION);
+                        $feedbackResponse->send();
                     }
                 }
             }
@@ -529,12 +469,9 @@ class LoginService extends BaseService
             $playSession->setSocketId($resourceId);
             $this->entityManager->persist($playSession);
             // inform admins
-            $informer = array(
-                'command' => 'showmessageprepend',
-                'message' => sprintf(
-                    $this->translate('<pre style="white-space: pre-wrap;" class="text-addon">user [%s] has connected</pre>'),
-                    $user->getUsername()
-                )
+            $informerText = sprintf(
+                $this->translate('user [%s] has connected'),
+                $user->getUsername()
             );
             $ws = $this->getWebsocketServer();
             foreach ($ws->getClients() as $wsClientId => $wsClient) {
@@ -545,7 +482,10 @@ class LoginService extends BaseService
                 $xUser = $this->entityManager->find('TmoAuth\Entity\User', $xClientData->userId);
                 if (!$xUser) continue;
                 if (!$this->hasRole($xUser, Role::ROLE_ID_ADMIN)) continue;
-                $wsClient->send(json_encode($informer));
+                $informer = new GameClientResponse($wsClient->resourceId);
+                $informer->addMessage($informerText, GameClientResponse::CLASS_ADDON);
+                $informer->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+                $informer->send();
             }
             // commit all changes to db
             $this->entityManager->flush();

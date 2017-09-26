@@ -68,7 +68,10 @@ class MilkrunService extends BaseService
         $this->milkrunInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\MilkrunInstance');
     }
 
-
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     */
     public function enterMilkrunMode($resourceId)
     {
         $this->initService($resourceId);
@@ -255,7 +258,7 @@ class MilkrunService extends BaseService
             'mapData' => false
         ];
         $milkrunData = $this->generateMapData($milkrunData);
-        $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
+        $this->getWebsocketServer()->setClientMilkrunData($resourceId, $milkrunData);
         return $milkrunData;
     }
 
@@ -470,7 +473,7 @@ class MilkrunService extends BaseService
                 else {
                     // ice has hurt player, but nothing else
                     $aivatar->setCurrentEeg($newPlayerEeg);
-                    return $this->updateDivHtml($profile, '#milkrun-eeg', $aivatar->getCurrentEeg(), [], true);
+                    $this->updateDivHtml($profile, '#milkrun-eeg', $aivatar->getCurrentEeg(), [], true);
                 }
                 $this->entityManager->flush($aivatar);
                 break;
@@ -554,7 +557,7 @@ class MilkrunService extends BaseService
             $profile->setCredits($profile->getCredits() + ($mri->getMilkrun()->getCredits() * $mri->getLevel()));
             $profile->setCompletedMilkruns($profile->getCompletedMilkruns() + 1);
             $this->entityManager->flush($profile);
-            $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', []);
+            $this->getWebsocketServer()->clearClientMilkrunData($resourceId);
             $this->createProfileFactionRating(
                 $profile,
                 $mri,
@@ -582,7 +585,7 @@ class MilkrunService extends BaseService
             $mri->setExpired(true);
             $profile->setFaileddMilkruns($profile->getFaileddMilkruns() + 1);
             $this->entityManager->flush();
-            $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', []);
+            $this->getWebsocketServer()->clearClientMilkrunData($resourceId);
             $this->createProfileFactionRating(
                 $profile,
                 $mri,
@@ -608,7 +611,7 @@ class MilkrunService extends BaseService
                 $mapData = $this->changeSurroundingTiles($mapData, $targetX, $targetY);
                 $milkrunData['mapData'] = $mapData;
             }
-            $this->getWebsocketServer()->setClientData($resourceId, 'milkrun', $milkrunData);
+            $this->getWebsocketServer()->setClientMilkrunData($resourceId, $milkrunData);
             $view = new ViewModel();
             $view->setTemplate('netrunners/milkrun/partial-map.phtml');
             $view->setVariable('mapData', $milkrunData['mapData']);

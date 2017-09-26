@@ -2240,15 +2240,15 @@ class BaseService
             foreach ($ws->getClients() as $wsClient) {
                 /** @noinspection PhpUndefinedFieldInspection */
                 if ($wsClient->resourceId == $resourceId) {
-                    $response = new GameClientResponse();
+                    $response = new GameClientResponse($resourceId);
                     $message = $this->translate('Your current action has been cancelled');
                     $response->addMessage($message, GameClientResponse::CLASS_ATTENTION);
                     $response->addOption(GameClientResponse::OPT_CLEARDEADLINE, true);
                     if ($asActiveCommand) {
-                        return $response;
+                        return $response->send();
                     }
                     else {
-                        return $response->send();
+                        return $response;
                     }
                     break;
                 }

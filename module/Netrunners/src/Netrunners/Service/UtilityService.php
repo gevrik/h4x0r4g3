@@ -177,9 +177,10 @@ class UtilityService extends BaseService
     /**
      * @param $resourceId
      * @param Geocoord $location
+     * @param bool $flush
      * @return bool|GameClientResponse
      */
-    public function updateSystemCoords($resourceId, Geocoord $location)
+    public function updateSystemCoords($resourceId, Geocoord $location, $flush = false)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
@@ -188,6 +189,7 @@ class UtilityService extends BaseService
         $currentSystem = $currentNode->getSystem();
         if ($currentSystem->getProfile() === $profile) {
             $currentSystem->setGeocoords($location->getLat() . ',' . $location->getLng());
+            if ($flush) $this->entityManager->flush($currentSystem);
             $message = $this->translate('System coords successfully updated');
             $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         }

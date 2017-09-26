@@ -98,7 +98,7 @@ class HangmanService extends BaseService
             'nodeid' => $node->getId(),
             'fileid' => $file->getId()
         ];
-        $ws->setClientData($resourceId, 'hangman', $hangman);
+        $ws->setClientHangmanData($resourceId, $hangman);
         $view = new ViewModel();
         $view->setTemplate('netrunners/word/hangman-game.phtml');
         $view->setVariable('hangman', (object)$hangman);
@@ -141,7 +141,7 @@ class HangmanService extends BaseService
             }
         }
         $hangmanData['attempts']--;
-        $ws->setClientData($resourceId, 'hangman', $hangmanData);
+        $ws->setClientHangmanData($resourceId, $hangmanData);
         $view = new ViewModel();
         $view->setTemplate('netrunners/word/hangman-game.phtml');
         $view->setVariable('hangman', (object)$hangmanData);
@@ -163,7 +163,7 @@ class HangmanService extends BaseService
         $guess = $this->getNextParameter($contentArray, false, false, false, true);
         if (!$guess) return false;
         $hangmanData = $this->clientData->hangman;
-        $ws->setClientData($resourceId, 'hangman', []);
+        $ws->clearClientHangmanData($resourceId);
         $nodeId = $hangmanData['nodeid'];
         $fileId = $hangmanData['fileid'];
         $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);

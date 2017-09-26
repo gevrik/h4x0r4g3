@@ -113,7 +113,7 @@ class CodebreakerService extends BaseService
             $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
             $deadline = new \DateTime();
             $deadline->add(new \DateInterval('PT30S'));
-            $ws->setClientData($resourceId, 'codebreaker', [
+            $ws->setClientCodebreakerData($resourceId, [
                 'thePassword' => $thePassword,
                 'theString' => $theString,
                 'deadline' => 30,
@@ -172,7 +172,7 @@ class CodebreakerService extends BaseService
                 $connection->getSourceNode()
             );
         }
-        $ws->setClientData($resourceId, 'codebreaker', []);
+        $ws->clearClientCodebreakerData($resourceId);
         return $this->gameClientResponse->send();
     }
 

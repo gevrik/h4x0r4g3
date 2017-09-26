@@ -515,7 +515,7 @@ class LoopService extends BaseService
         $codebreakerData = $clientData->codebreaker;
         $codebreakerData['deadline']--;
         if ($codebreakerData['deadline'] < 1) {
-            $this->getWebsocketServer()->setClientData($resourceId, 'codebreaker', []);
+            $this->getWebsocketServer()->clearClientCodebreakerData($resourceId);
             $response = [
                 'command' => 'showmessageprepend',
                 'message' => sprintf(
@@ -533,7 +533,7 @@ class LoopService extends BaseService
             $wsClient->send(json_encode($response));
         }
         else {
-            $this->getWebsocketServer()->setClientData($resourceId, 'codebreaker', $codebreakerData);
+            $this->getWebsocketServer()->setClientCodebreakerData($resourceId, $codebreakerData);
         }
         return true;
     }
