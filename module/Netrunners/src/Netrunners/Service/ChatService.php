@@ -247,6 +247,7 @@ class ChatService extends BaseService
             /** @var User $clientUser */
             // skip if they are not in the same node
             if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
+            if ($clientUser === $this->user) continue;
             /** @noinspection PhpUndefinedFieldInspection */
             $this->gameClientResponse->setResourceId($wsClient->resourceId)->send();
         }
@@ -333,6 +334,7 @@ class ChatService extends BaseService
             $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
             if (!$clientUser) continue;
             /** @var User $clientUser */
+            if ($clientUser === $this->user) continue;
             /** @noinspection PhpUndefinedFieldInspection */
             $this->gameClientResponse->setResourceId($wsClient->resourceId)->send();
         }

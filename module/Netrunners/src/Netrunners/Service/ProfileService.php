@@ -229,11 +229,8 @@ class ProfileService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         $profile = $this->user->getProfile();
-        $message = sprintf(
-            '<pre style="white-space: pre-wrap;" class="text-sysmsg">%s</pre>',
-            $this->translate('You are currently using these equipment module files:')
-        );
-        $this->gameClientResponse->addMessages($message, GameClientResponse::CLASS_SYSMSG);
+        $message = $this->translate('You are currently using these equipment module files:');
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
         $messages = [];
         $messages[] = sprintf(
             '[%-10s] : [%-32s] [%-10s: %-3s] [%-10s: %-3s/%-3s]',
@@ -835,7 +832,7 @@ class ProfileService extends BaseService
                 ($profile->getEmail()) ? 'info' : 'sysmsg',
                 ($profile->getEmail()) ? $profile->getEmail() : $this->translate('no e-mail address set')
             );
-            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE)->send();
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         }
         else {
             // player is trying to set email address
@@ -845,7 +842,7 @@ class ProfileService extends BaseService
             }
             $profile->setEmail($emailParameter);
             $this->entityManager->flush($profile);
-            $this->gameClientResponse->addMessages($this->translate('E-mail address set'), GameClientResponse::CLASS_SUCCESS);
+            $this->gameClientResponse->addMessage($this->translate('E-mail address set'), GameClientResponse::CLASS_SUCCESS);
         }
         return $this->gameClientResponse->send();
     }
@@ -1156,7 +1153,7 @@ class ProfileService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         $message = $this->translate('Disconnecting from NeoCortex Network - have a nice day and see you soon');
-        $this->gameClientResponse->addOption(GameClientResponse::OPT_DISCONNECTX, true);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_DISCONNECTX, true)->setSilent(true);
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_INFO);
         return $this->gameClientResponse->send();
     }

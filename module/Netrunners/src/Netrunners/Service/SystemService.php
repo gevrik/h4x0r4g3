@@ -151,8 +151,8 @@ class SystemService extends BaseService
         }
         $message = $this->translate('Recalling to your home node');
         $this->gameClientResponse
+            ->setSilent(true)
             ->addMessage($message, GameClientResponse::CLASS_SUCCESS)
-            ->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)
             ->addOption(GameClientResponse::OPT_CLEARDEADLINE, true);
         $this->gameClientResponse->send();
         $this->updateMap($resourceId);

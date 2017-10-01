@@ -903,6 +903,10 @@ class FileUtilityService extends BaseService
             }
             return $this->gameClientResponse->addMessage($checkResult)->send();
         }
+        if (!$checkResult->getFileType()->getCodable()) {
+            $message = $this->translate('Unable to decompile this file type');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
         $returnedSnippets = $checkResult->getLevel();
         // start removing the file by removing all of its filemodinstances
         $fmInstances = $this->fileModInstanceRepo->findBy([

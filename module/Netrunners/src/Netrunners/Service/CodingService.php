@@ -524,8 +524,9 @@ class CodingService extends BaseService
         $skillModifier = $this->getSkillModifierForFilePart($filePart, $profile);
         $modifier = floor(($skillRating + $skillModifier)/2);
         $modifier = (int)$modifier;
+        $completionTime = ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) ? 1 : $difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE;
         $completionDate = new \DateTime();
-        $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE) . 'S'));
+        $completionDate->add(new \DateInterval('PT' . $completionTime . 'S'));
         $filePartId = $filePart->getId();
         for ($x = 1; $x<=$amount; $x++) {
             $this->getWebsocketServer()->addJob([
@@ -887,7 +888,7 @@ class CodingService extends BaseService
             /** @var FileType $basePart */
             if ($basePart->getNeedRecipe()) {
                 $recipe = $this->getRecipe($profile, $basePart);
-                if (!$recipe) {
+                if (!$recipe && !$this->hasRole($profile->getUser(), Role::ROLE_ID_ADMIN)) {
                     $response = [
                         'severity' => Notification::SEVERITY_DANGER,
                         'message' => sprintf(

@@ -189,11 +189,11 @@ class NodeService extends BaseService
         $profile = $this->user->getProfile();
         $isBlocked = $this->isActionBlockedNew($resourceId);
         if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
+            return $this->gameClientResponse->addMessage($isBlocked);
         }
         $checkResult = $this->upgradeNodeChecks();
         if (!$checkResult instanceof Node) {
-            return $this->gameClientResponse->addMessage($checkResult)->send();
+            return $this->gameClientResponse->addMessage($checkResult);
         }
         $nodeType = $checkResult->getNodeType();
         $upgradeCost = $nodeType->getCost() * pow($checkResult->getLevel(), $checkResult->getLevel() + 1);
@@ -221,7 +221,7 @@ class NodeService extends BaseService
             $checkResult->getLevel()
         );
         $this->messageEveryoneInNodeNew($checkResult, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
-        return $this->gameClientResponse->send();
+        return $this->gameClientResponse;
     }
 
     /**
@@ -802,7 +802,7 @@ class NodeService extends BaseService
         }
         if (!$nodeProperty) {
             $message = $this->listNodePropertiesByNodeType($nodeType->getId());
-            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE)->send();
         }
         if ($nodeProperty && !$propertyValue) {
             $message = $this->translate('Please specify the property value (on/off)');
@@ -1169,7 +1169,7 @@ class NodeService extends BaseService
         $flytoResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
         $flytoResponse->addOption(GameClientResponse::OPT_CONTENT, explode(',',$targetNode->getSystem()->getGeocoords()));
         $flytoResponse->send();
-        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)->send();
+        $this->gameClientResponse->setSilent(true)->send();
         return $this->showNodeInfoNew($resourceId, NULL, true);
     }
 

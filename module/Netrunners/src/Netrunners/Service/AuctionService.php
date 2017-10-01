@@ -520,7 +520,7 @@ class AuctionService extends BaseService
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have cancelled auction#%s'),
-            $auction->getId()
+            $auctionId
         );
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }

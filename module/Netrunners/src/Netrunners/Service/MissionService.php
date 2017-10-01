@@ -258,8 +258,7 @@ class MissionService extends BaseService
             $this->entityManager->flush();
         }
         return $this->gameClientResponse
-            ->addMessage($this->translate('You have accepted the mission'), GameClientResponse::CLASS_SUCCESS)
-            ->send();
+            ->addMessage($this->translate('You have accepted the mission'), GameClientResponse::CLASS_SUCCESS);
     }
 
     /**

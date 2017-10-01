@@ -267,8 +267,8 @@ class LoopService extends BaseService
             foreach ($ws->getClients() as $wsClient) {
                 /** @noinspection PhpUndefinedFieldInspection */
                 $clientData = $ws->getClientData($wsClient->resourceId);
-                if (empty($clientData['milkrun'])) continue;
-                if ($clientData['milkrun']['id'] == $expiringMilkrun->getId()) {
+                if (empty($clientData->milkrun)) continue;
+                if ($clientData->milkrun['id'] == $expiringMilkrun->getId()) {
                     $targetClient = $wsClient;
                     $targetClientData = $clientData;
                     break;
@@ -278,11 +278,11 @@ class LoopService extends BaseService
                 /** @noinspection PhpUndefinedFieldInspection */
                 $resourceId = $targetClient->resourceId;
                 /* send message */
-                $message = $this->translate('Your current milkrun has expired before you could complete it');
+                $message = $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">Your current milkrun has expired before you could complete it</pre>');
                 $response = new GameClientResponse($resourceId);
-                $response->setCommand(GameClientResponse::COMMAND_STOPMILKRUN)->setSilent(true);
+                $response->setCommand(GameClientResponse::COMMAND_COMPLETEMILKRUN);
+                $response->addOption(GameClientResponse::OPT_CONTENT, $message);
                 $response->send();
-                $response->reset()->addMessage($message);
                 $profile = $expiringMilkrun->getProfile();
                 $profile->setFaileddMilkruns($profile->getFaileddMilkruns()+1);
                 $this->entityManager->flush($profile);
@@ -297,7 +297,6 @@ class LoopService extends BaseService
                     $expiringMilkrun->getSourceFaction(),
                     $expiringMilkrun->getTargetFaction()
                 );
-                $response->send();
             }
             else {
                 /* store notification */
@@ -344,7 +343,7 @@ class LoopService extends BaseService
             foreach ($ws->getClients() as $wsClient) {
                 /** @noinspection PhpUndefinedFieldInspection */
                 $clientData = $ws->getClientData($wsClient->resourceId);
-                if ($clientData['profileId'] == $missionProfile->getId()) {
+                if ($clientData->profileId == $missionProfile->getId()) {
                     $targetClient = $wsClient;
                     $targetClientData = $clientData;
                     break;

@@ -448,6 +448,7 @@
                 command !== 'updateprompt' &&
                 command !== 'updatedivhtml' &&
                 command !== 'updateinterfaceelement' &&
+                command !== 'completemilkrun' &&
                 !silent &&
                 command !== 'ticker'
             ) {
@@ -646,20 +647,13 @@
                     resetConsoleOptionsMail();
                     showprompt();
                     break;
-                case 'stopmilkrun':
-                    stopMusicInstance();
-                    playSoundById(2);
-                    $('#milkrun-container').html('');
-                    commandInput.focus();
-                    break;
                 case 'completemilkrun':
                     stopMusicInstance();
                     if (data.playsound) playSoundById(data.playsound);
                     $('#milkrun-container').html('');
-                    //md.append(data.content);
-                    //showprompt();
                     var lastPrompt = $('.output-line').last();
-                    $(data.content).insertBefore(lastPrompt);
+                    var messageData = data.content;
+                    $(messageData).insertBefore(lastPrompt);
                     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
                     commandInput.focus();
                     return true;
@@ -837,6 +831,9 @@
                         $('.deadline-progress').hide();
                         clearInterval(deadlineTimer);
                     }
+                    if (data.disconnectx) {
+                        conn.close();
+                    }
                     break;
                 case 'updateprompt':
                     commandInput.val(data.content);
@@ -858,9 +855,11 @@
                     });
                     document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
                     if (data.cleardeadline) {
-                        console.log('here');
                         $('.deadline-progress').hide();
                         clearInterval(deadlineTimer);
+                    }
+                    if (data.disconnectx) {
+                        conn.close();
                     }
                     return true;
             }

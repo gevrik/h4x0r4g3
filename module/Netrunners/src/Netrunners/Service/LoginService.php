@@ -401,7 +401,7 @@ class LoginService extends BaseService
         $bcrypt = new Bcrypt();
         $response = new GameClientResponse($resourceId);
         if (!$bcrypt->verify($content, $currentPassword)) {
-            $response->addMessage($this->translate('Invalid password'));
+            $response->addMessage($this->translate('Invalid password'))->setSilent(true);
             $disconnect = true;
         }
         else {

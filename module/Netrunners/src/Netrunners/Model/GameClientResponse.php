@@ -144,8 +144,13 @@ class GameClientResponse {
      */
     public function addMessages($messages = [], $class = self::CLASS_WHITE)
     {
-        foreach ($messages as $message) {
-            $this->addMessage($message, $class);
+        if (is_array($messages)) {
+            foreach ($messages as $message) {
+                $this->addMessage($message, $class);
+            }
+        }
+        else {
+            var_dump($messages);
         }
         return $this;
     }

@@ -100,6 +100,7 @@ class MilkrunService extends BaseService
             /** @var Milkrun $targetMilkrun */
             $milkrunLevel = $currentNode->getLevel();
             $timer = $targetMilkrun->getTimer();
+            //$timer = 20;
             $expires = new \DateTime();
             $expires->add(new \DateInterval('PT' . $timer . 'S'));
             $possibleSourceFactions = [];
@@ -569,8 +570,8 @@ class MilkrunService extends BaseService
                 $mri->getSourceFaction(),
                 $mri->getTargetFaction()
             );
-            $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_COMPLETEMILKRUN)->setSilent(true);
-            $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->translate('You have completed your current milkrun'));
+            $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_COMPLETEMILKRUN);
+            $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You have completed your current milkrun</pre>'));
             if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) {
                 $this->gameClientResponse->addOption(GameClientResponse::OPT_PLAYSOUND, $playSound);
             };
@@ -598,8 +599,10 @@ class MilkrunService extends BaseService
                 $mri->getTargetFaction()
             );
             $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_COMPLETEMILKRUN);
-            $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->translate('You have failed your current milkrun'));
-            if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) $this->response['playsound'] = $playSound;
+            $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">You have failed your current milkrun</pre>'));
+            if ($this->getProfileGameOption($profile, GameOption::ID_SOUND)) {
+                $this->gameClientResponse->addOption(GameClientResponse::OPT_PLAYSOUND, $playSound);
+            };
         }
         else {
             if (!$newLevel) {
