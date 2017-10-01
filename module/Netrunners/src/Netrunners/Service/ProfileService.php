@@ -199,7 +199,7 @@ class ProfileService extends BaseService
             $this->translate('SKILLPOINTS'),
             $profile->getSkillPoints()
         );
-        $this->gameClientResponse->addMessages($headerMessage, GameClientResponse::CLASS_SYSMSG);
+        $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         $returnMessage = [];
         $skills = $this->skillRepo->findAll();
         foreach ($skills as $skill) {
