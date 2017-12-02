@@ -762,15 +762,12 @@ class ProfileService extends BaseService
         $profile->setSkillPoints($profile->getSkillPoints() - $skillPointAmount);
         $skillRatingObject->setRating($skillRating + $skillPointAmount);
         $this->entityManager->flush();
-        $message = [
-            'command' => 'showmessage',
-            'message' => sprintf(
-                $this->translate('You have raised [%s] to %s by spending %s skillpoints'),
-                $targetSkill->getName(),
-                $skillRatingObject->getRating(),
-                $skillPointAmount
-            )
-        ];
+        $message = sprintf(
+            $this->translate('You have raised [%s] to %s by spending %s skillpoints'),
+            $targetSkill->getName(),
+            $skillRatingObject->getRating(),
+            $skillPointAmount
+        );
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 

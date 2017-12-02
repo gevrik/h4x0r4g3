@@ -3,6 +3,9 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Auction;
+use Netrunners\Entity\AuctionBid;
+use Netrunners\Entity\BannedIp;
 use Netrunners\Entity\Feedback;
 use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\NpcInstance;
@@ -19,6 +22,7 @@ use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 use React\EventLoop\LoopInterface;
 use TmoAuth\Entity\Role;
+use TmoAuth\Entity\User;
 use Zend\Log\Logger;
 use Zend\Validator\Ip;
 
@@ -128,6 +132,32 @@ class WebsocketService implements MessageComponentInterface {
     ];
 
     /**
+     * @var array
+     */
+    protected $users = [];
+
+    /**
+     * @var array
+     */
+    protected $roles = [];
+
+    /**
+     * @var array
+     */
+    protected $auctions = [];
+
+    /**
+     * @var array
+     */
+    protected $auctionbids = [];
+
+    /**
+     * @var array
+     */
+    protected $bannedips = [];
+
+
+    /**
      * WebsocketService constructor.
      * @param EntityManager $entityManager
      * @param UtilityService $utilityService
@@ -161,6 +191,119 @@ class WebsocketService implements MessageComponentInterface {
         $this->logger = new Logger();
         $this->logger->addWriter('stream', null, array('stream' => getcwd() . '/data/log/command_log.txt'));
 
+        /* DATABASE CLEANUP */
+
+        // clear orphaned play-sessions
+        $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
+        /** @var PlaySessionRepository $playSessionRepo */
+        foreach ($playSessionRepo->findOrphaned() as $orphanedPlaySession) {
+            $this->entityManager->remove($orphanedPlaySession);
+        }
+        // clear all current-resource-id properties of all profiles
+        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
+        foreach ($profiles as $profile) {
+            /** @var Profile $profile */
+            $profile->setCurrentResourceId(NULL);
+        }
+        $this->entityManager->flush();
+
+        /* LOAD DATABASE INTO MEMORY */
+
+        // user
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('u');
+        $qb->from('TmoAuth\Entity\User', 'u');
+        $users = $qb->getQuery()->getResult();
+        foreach ($users as $user) {
+            /** @var User $user */
+            $this->users[$user->getId()] = [
+                'id' => $user->getId(),
+                'profileId' => $user->getProfile()->getId(),
+                'username' => $user->getUsername(),
+                'banned' => $user->getBanned(),
+                'displayName' => $user->getDisplayName(),
+                'email' => $user->getEmail(),
+                'password' => $user->getPassword(),
+                'state' => $user->getState(),
+                'roles' => []
+            ];
+            foreach ($user->getRoles() as $role) {
+                /** @var Role $role */
+                $this->users[$user->getId()]['roles'][] = $role->getId();
+            }
+        }
+
+        // role
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('r');
+        $qb->from('TmoAuth\Entity\Role', 'r');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Role $entity */
+            $this->roles[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'roleId' => $entity->getRoleId(),
+                'parentId' => ($entity->getParent()) ? $entity->getParent()->getId() : NULL,
+            ];
+        }
+
+        // auction
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('a');
+        $qb->from('Netrunners\Entity\Auction', 'a');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Auction $entity */
+            $this->auctions[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'expires' => $entity->getExpires(),
+                'nodeId' => $entity->getNode()->getId(),
+                'added' => $entity->getAdded(),
+                'bought' => $entity->getBought(),
+                'fileId' => ($entity->getFile()) ? $entity->getFile()->getId() : NULL,
+                'buyoutPrice' => $entity->getBuyoutPrice(),
+                'claimed' => $entity->getClaimed(),
+                'currentPrice' => $entity->getCurrentPrice(),
+                'buyerId' => ($entity->getBuyer()) ? $entity->getBuyer()->getId() : NULL,
+                'auctioneerId' => ($entity->getAuctioneer()) ? $entity->getAuctioneer()->getId() : NULL,
+                'startingPrice' => $entity->getStartingPrice(),
+            ];
+        }
+
+        // auctionbid
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ab');
+        $qb->from('Netrunners\Entity\AuctionBid', 'ab');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var AuctionBid $entity */
+            $this->auctionbids[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'bid' => $entity->getBid(),
+                'added' => $entity->getAdded(),
+                'modified' => $entity->getModified(),
+                'auctionId' => ($entity->getAuction()) ? $entity->getAuction()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+            ];
+        }
+
+        // bannedip
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('bi');
+        $qb->from('Netrunners\Entity\BannedIp', 'bi');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var BannedIp $entity */
+            $this->bannedips[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'ip' => $entity->getIp(),
+                'added' => $entity->getAdded(),
+                'bannerId' => ($entity->getBanner()) ? $entity->getBanner()->getId() : NULL,
+            ];
+        }
+
+        /* LOOPS */
+
         $this->loop->addPeriodicTimer(self::LOOP_TIME_JOBS, function(){
             $this->loopService->loopJobs();
         });
@@ -185,19 +328,7 @@ class WebsocketService implements MessageComponentInterface {
             $this->loopService->loopRegeneration();
         });
 
-        // clear orphaned play-sessions
-        $playSessionRepo = $this->entityManager->getRepository('Netrunners\Entity\PlaySession');
-        /** @var PlaySessionRepository $playSessionRepo */
-        foreach ($playSessionRepo->findOrphaned() as $orphanedPlaySession) {
-            $this->entityManager->remove($orphanedPlaySession);
-        }
-        // clear all current-resource-id properties of all profiles
-        $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
-        foreach ($profiles as $profile) {
-            /** @var Profile $profile */
-            $profile->setCurrentResourceId(NULL);
-        }
-        $this->entityManager->flush();
+        /* INIT SINGLETON */
 
         self::$instance = $this;
 
