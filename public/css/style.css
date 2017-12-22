@@ -54,6 +54,13 @@ pre.text-sysmsg {
     color: #2180ac;
 }
 
+.password-input {
+    display: none;
+    background-color: inherit !important;
+    border: 0 solid #000000;
+    flex-grow: 100;
+}
+
 .prompt {
     color: #afa8af;
 }

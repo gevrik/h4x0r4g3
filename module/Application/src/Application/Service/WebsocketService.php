@@ -6,7 +6,19 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Auction;
 use Netrunners\Entity\AuctionBid;
 use Netrunners\Entity\BannedIp;
+use Netrunners\Entity\ChatChannel;
+use Netrunners\Entity\CompanyName;
+use Netrunners\Entity\Connection;
+use Netrunners\Entity\Effect;
+use Netrunners\Entity\Faction;
+use Netrunners\Entity\FactionRole;
+use Netrunners\Entity\FactionRoleInstance;
 use Netrunners\Entity\Feedback;
+use Netrunners\Entity\File;
+use Netrunners\Entity\FileCategory;
+use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileModInstance;
+use Netrunners\Entity\FilePart;
 use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
@@ -156,6 +168,65 @@ class WebsocketService implements MessageComponentInterface {
      */
     protected $bannedips = [];
 
+    /**
+     * @var array
+     */
+    protected $chatchannels = [];
+
+    /**
+     * @var array
+     */
+    protected $companynames = [];
+
+    /**
+     * @var array
+     */
+    protected $connections = [];
+
+    /**
+     * @var array
+     */
+    protected $effects = [];
+
+    /**
+     * @var array
+     */
+    protected $factions = [];
+
+    /**
+     * @var array
+     */
+    protected $factionroles = [];
+
+    /**
+     * @var array
+     */
+    protected $feedbacks = [];
+
+    /**
+     * @var array
+     */
+    protected $files = [];
+
+    /**
+     * @var array
+     */
+    protected $filecategories = [];
+
+    /**
+     * @var array
+     */
+    protected $filemods = [];
+
+    /**
+     * @var array
+     */
+    protected $filemodinstances = [];
+
+    /**
+     * @var array
+     */
+    protected $factionroleinstances = [];
 
     /**
      * WebsocketService constructor.
@@ -167,6 +238,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param LoopInterface $loop
      * @param $hash
      * @param $adminMode
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function __construct(
         EntityManager $entityManager,
@@ -299,6 +371,229 @@ class WebsocketService implements MessageComponentInterface {
                 'ip' => $entity->getIp(),
                 'added' => $entity->getAdded(),
                 'bannerId' => ($entity->getBanner()) ? $entity->getBanner()->getId() : NULL,
+            ];
+        }
+
+        // chat channel
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('cc');
+        $qb->from('Netrunners\Entity\ChatChannel', 'cc');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var ChatChannel $entity */
+            $this->chatchannels[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'joinable' => $entity->getJoinable(),
+                'added' => $entity->getAdded(),
+                'owner' => ($entity->getOwner()) ? $entity->getOwner()->getId() : NULL,
+                'faction' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'group' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
+            ];
+        }
+
+        // company name
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('cn');
+        $qb->from('Netrunners\Entity\CompanyName', 'cn');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var CompanyName $entity */
+            $this->companynames[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'content' => $entity->getContent(),
+            ];
+        }
+
+        // connection
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('c');
+        $qb->from('Netrunners\Entity\Connection', 'c');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Connection $entity */
+            $this->connections[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'type' => $entity->getType(),
+                'level' => $entity->getLevel(),
+                'created' => $entity->getCreated(),
+                'isOpen' => $entity->getisOpen(),
+                'sourceNode' => ($entity->getSourceNode()) ? $entity->getSourceNode()->getId() : NULL,
+                'targetNode' => ($entity->getTargetNode()) ? $entity->getTargetNode()->getId() : NULL,
+            ];
+        }
+
+        // effect
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('e');
+        $qb->from('Netrunners\Entity\Effect', 'e');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Effect $entity */
+            $this->effects[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'expireTimer' => $entity->getExpireTimer(),
+                'dimishTimer' => $entity->getDimishTimer(),
+                'diminishValue' => $entity->getDiminishValue(),
+                'immuneTimer' => $entity->getImmuneTimer(),
+                'defaultRating' => $entity->getDefaultRating(),
+            ];
+        }
+
+        // faction
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('f');
+        $qb->from('Netrunners\Entity\Faction', 'f');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Faction $entity */
+            $this->factions[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'playerRun' => $entity->getPlayerRun(),
+                'joinable' => $entity->getJoinable(),
+                'credits' => $entity->getCredits(),
+                'snippets' => $entity->getSnippets(),
+                'added' => $entity->getAdded(),
+                'openRecruitment' => $entity->getOpenRecruitment(),
+            ];
+        }
+
+        // faction role
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fr');
+        $qb->from('Netrunners\Entity\FactionRole', 'fr');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FactionRole $entity */
+            $this->factionroles[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+            ];
+        }
+
+        // faction role instance
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fri');
+        $qb->from('Netrunners\Entity\FactionRoleInstance', 'fri');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FactionRoleInstance $entity */
+            $this->factionroles[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'added' => $entity->getAdded(),
+                'faction' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'factionRole' => ($entity->getFactionRole()) ? $entity->getFactionRole()->getId() : NULL,
+                'member' => ($entity->getMember()) ? $entity->getMember()->getId() : NULL,
+                'changer' => ($entity->getChanger()) ? $entity->getChanger()->getId() : NULL,
+            ];
+        }
+
+        // feedback
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fb');
+        $qb->from('Netrunners\Entity\Feedback', 'fb');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Feedback $entity */
+            $this->feedbacks[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'subject' => $entity->getSubject(),
+                'description' => $entity->getDescription(),
+                'added' => $entity->getAdded(),
+                'type' => $entity->getType(),
+                'status' => $entity->getStatus(),
+                'internalData' => $entity->getInternalData(),
+                'profile' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+            ];
+        }
+
+        // file
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fi');
+        $qb->from('Netrunners\Entity\File', 'fi');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var File $entity */
+            $this->files[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'size' => $entity->getSize(),
+                'level' => $entity->getLevel(),
+                'maxIntegrity' => $entity->getMaxIntegrity(),
+                'integrity' => $entity->getIntegrity(),
+                'created' => $entity->getCreated(),
+                'modified' => $entity->getModified(),
+                'executable' => $entity->getExecutable(),
+                'running' => $entity->getRunning(),
+                'version' => $entity->getVersion(),
+                'slots' => $entity->getSlots(),
+                'data' => $entity->getData(),
+                'content' => $entity->getContent(),
+                'fileType' => ($entity->getFileType()) ? $entity->getFileType()->getId() : NULL,
+                'coder' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
+                'profile' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'system' => ($entity->getSystem()) ? $entity->getSystem()->getId() : NULL,
+                'node' => ($entity->getNode()) ? $entity->getNode()->getId() : NULL,
+                'mailMessage' => ($entity->getMailMessage()) ? $entity->getMailMessage()->getId() : NULL,
+                'npc' => ($entity->getNpc()) ? $entity->getNpc()->getId() : NULL,
+            ];
+        }
+
+        // file category
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fc');
+        $qb->from('Netrunners\Entity\FileCategory', 'fc');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FileCategory $entity */
+            $this->filecategories[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'researchable' => $entity->getResearchable(),
+            ];
+        }
+
+        // file mod
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fm');
+        $qb->from('Netrunners\Entity\FileMod', 'fm');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FileMod $entity */
+            $this->filemods[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'fileparts' => [],
+            ];
+            foreach ($entity->getFileParts() as $filePart) {
+                /** @var FilePart $filePart */
+                $this->filemods[$entity->getId()]['fileparts'][] = $filePart->getId();
+            }
+        }
+
+        // file mod instance
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fmi');
+        $qb->from('Netrunners\Entity\FileModInstance', 'fmi');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FileModInstance $entity */
+            $this->filemodinstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'level' => $entity->getLevel(),
+                'added' => $entity->getAdded(),
+                'file' => ($entity->getFile()) ? $entity->getFile()->getId() : NULL,
+                'fileMod' => ($entity->getFileMod()) ? $entity->getFileMod()->getId() : NULL,
+                'coder' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
+                'profile' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
             ];
         }
 
@@ -926,6 +1221,7 @@ class WebsocketService implements MessageComponentInterface {
                     return true;
                 case 'login':
                     list($response, $disconnect) = $this->loginService->login($resourceId, $content);
+                    /** @var GameClientResponse $response */
                     $response->send();
                     if ($disconnect) $from->close();
                     return true;
@@ -959,6 +1255,7 @@ class WebsocketService implements MessageComponentInterface {
                     return true;
                 case 'createpasswordconfirm':
                     list($disconnect, $response) = $this->loginService->createPasswordConfirm($resourceId, $content);
+                    /** @var GameClientResponse $response */
                     $response->send();
                     if ($disconnect) {
                         $from->close();
@@ -966,6 +1263,7 @@ class WebsocketService implements MessageComponentInterface {
                     return true;
                 case 'promptforpassword':
                     list($disconnect, $response) = $this->loginService->promptForPassword($resourceId, $content);
+                    /** @var GameClientResponse $response */
                     $response->send();
                     if ($disconnect) {
                         $from->close();
@@ -1012,6 +1310,9 @@ class WebsocketService implements MessageComponentInterface {
 
     /**
      * @param ConnectionInterface $conn
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function onClose(ConnectionInterface $conn)
     {
@@ -1073,6 +1374,9 @@ class WebsocketService implements MessageComponentInterface {
      * @param string $fTitle
      * @param $type
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function saveFeedback(
         $resourceId,

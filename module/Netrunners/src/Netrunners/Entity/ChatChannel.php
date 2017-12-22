@@ -65,6 +65,7 @@ class ChatChannel
      */
     protected $group;
 
+
     /**
      * @return int
      */

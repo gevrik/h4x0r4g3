@@ -36,6 +36,7 @@
 
         var md = $('#messages');
         var commandInput = $('#command-input');
+        var passwordInput = $('#password-input');
 
         var ticker;
 
@@ -539,13 +540,15 @@
                     break;
                 case 'createpassword':
                     loginStage = 'createpassword';
-                    //commandInput.attr('type', 'password');
                     md.append('<div class="text-muted output-line">Please enter a password for the new user: </div>');
+                    var lastOutput = $('#messages div.output-line:last');
+                    passwordInput.detach().appendTo(lastOutput).show().focus();
                     break;
                 case 'createpasswordconfirm':
                     loginStage = 'createpasswordconfirm';
-                    //commandInput.attr('type', 'password');
                     md.append('<div class="text-muted output-line">Please confirm the password for the new user: </div>');
+                    var lastOutput = $('#messages div.output-line:last');
+                    passwordInput.detach().appendTo(lastOutput).show().focus();
                     break;
                 case 'createuserdone':
                     loginStage = 'complete';
@@ -556,8 +559,9 @@
                     break;
                 case 'promptforpassword':
                     loginStage = 'promptforpassword';
-                    //commandInput.attr('type', 'password');
                     md.append('<div class="text-muted output-line">password: </div>');
+                    var lastOutput = $('#messages div.output-line:last');
+                    passwordInput.detach().appendTo(lastOutput).show().focus();
                     break;
                 case 'logincomplete':
                     var jsonData;
@@ -883,6 +887,9 @@
                 command !== 'ticker' &&
                 command !== 'updatedivhtml' &&
                 command !== 'updateinterfaceelement' &&
+                command !== 'promptforpassword' &&
+                command !== 'createpassword' &&
+                command !== 'createpasswordconfirm' &&
                 !silent
             ) {
                 var lastOutput = $('#messages div.output-line:last');
@@ -928,20 +935,6 @@
                                     content: message
                                 };
                                 break;
-                            case 'createpassword':
-                                jsonData = {
-                                    command: 'createpassword',
-                                    hash: hash,
-                                    content: message
-                                };
-                                break;
-                            case 'createpasswordconfirm':
-                                jsonData = {
-                                    command: 'createpasswordconfirm',
-                                    hash: hash,
-                                    content: message
-                                };
-                                break;
                             case 'solvecaptcha':
                                 jsonData = {
                                     command: 'solvecaptcha',
@@ -952,13 +945,6 @@
                             case 'enterinvitationcode':
                                 jsonData = {
                                     command: 'enterinvitationcode',
-                                    hash: hash,
-                                    content: message
-                                };
-                                break;
-                            case 'promptforpassword':
-                                jsonData = {
-                                    command: 'promptforpassword',
                                     hash: hash,
                                     content: message
                                 };
@@ -1015,6 +1001,52 @@
                 $('.img-tesseract').click();
             }
         })
+            .on('keydown', '#password-input', function(event){
+                var keycode = (event.keyCode ? event.keyCode : event.which);
+                var jsonData;
+                var message = '';
+                // enter
+                if(keycode === 13) {
+                    // enter key pressed in input
+                    message = $(this).val();
+                    $.trim(message);
+                    $(this).val('');
+                    switch (consoleMode) {
+                        default:
+                            switch (loginStage) {
+                                default:
+                                    conn.close();
+                                    break;
+                                case 'createpassword':
+                                    jsonData = {
+                                        command: 'createpassword',
+                                        hash: hash,
+                                        content: message
+                                    };
+                                    passwordInput.hide();
+                                    break;
+                                case 'createpasswordconfirm':
+                                    jsonData = {
+                                        command: 'createpasswordconfirm',
+                                        hash: hash,
+                                        content: message
+                                    };
+                                    passwordInput.hide();
+                                    break;
+                                case 'promptforpassword':
+                                    jsonData = {
+                                        command: 'promptforpassword',
+                                        hash: hash,
+                                        content: message
+                                    };
+                                    passwordInput.hide();
+                                    break;
+                            }
+                            break;
+                    }
+                    conn.send(JSON.stringify(jsonData));
+                }
+            })
             .on('click', function(){
                 commandInput.focus();
             });

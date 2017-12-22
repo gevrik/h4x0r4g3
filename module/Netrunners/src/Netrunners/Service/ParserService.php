@@ -274,6 +274,9 @@ class ParserService
      * @param bool $jobs
      * @param bool $silent
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false, $silent = false)
     {
@@ -705,6 +708,9 @@ class ParserService
      * @param string $content
      * @param array $mailOptions
      * @return bool|ConnectionInterface
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function parseMailInput(ConnectionInterface $from, $content = '', $mailOptions = array())
     {
@@ -733,7 +739,10 @@ class ParserService
      * @param ConnectionInterface $from
      * @param string $content
      * @param bool $jobs
-     * @return array|bool
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function parseCodeInput(ConnectionInterface $from, $content = '', $jobs = false)
     {
@@ -771,6 +780,9 @@ class ParserService
      * @param ConnectionInterface $from
      * @param string $content
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function parseConfirmInput(ConnectionInterface $from, $content = '')
     {
@@ -821,7 +833,10 @@ class ParserService
     /**
      * @param ConnectionInterface $from
      * @param $msgData
-     * @return bool
+     * @return array|bool|false|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function parseFrontendInput(ConnectionInterface $from, $msgData)
     {
