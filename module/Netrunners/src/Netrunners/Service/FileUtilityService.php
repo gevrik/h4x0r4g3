@@ -1179,10 +1179,11 @@ class FileUtilityService extends BaseService
             ['name' => 'ASC']
         );
         $returnMessage = sprintf(
-            '%-32s|%-20s|%-4s|%s',
+            '%-32s|%-20s|%-4s|%-2s|%s',
             $this->translate('FILETYPE-NAME'),
             $this->translate('FILETYPE-CATEGORIES'),
             $this->translate('SIZE'),
+            $this->translate('RR'),
             $this->translate('DESCRIPTION')
         );
         $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
@@ -1194,10 +1195,11 @@ class FileUtilityService extends BaseService
                 $categories .= $fileCategory->getName() . ' ';
             }
             $returnMessage = sprintf(
-                '%-32s|%-20s|%-4s|%s',
+                '%-32s|%-20s|%-4s|%-2s|%s',
                 $fileType->getName(),
                 $categories,
                 $fileType->getSize(),
+                ($fileType->getNeedRecipe()) ? $this->translate('Y') : $this->translate('N'),
                 $fileType->getDescription()
             );
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);

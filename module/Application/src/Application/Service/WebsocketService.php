@@ -302,6 +302,8 @@ class WebsocketService implements MessageComponentInterface {
             ];
         }
 
+        // TODO keep working on this
+
         /* LOOPS */
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_JOBS, function(){
