@@ -33,8 +33,6 @@ use React\EventLoop\Factory;
 use React\Socket\Server;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
-use Zend\Config\Config;
-use Zend\Console\Adapter\AdapterInterface;
 use Zend\Console\ColorInterface;
 use Zend\Console\Request;
 use Zend\Crypt\Password\Bcrypt;
@@ -70,12 +68,12 @@ class IndexController extends AbstractActionController
     protected $loginService;
 
     /**
-     * @var Config
+     * @var
      */
     protected $config;
 
     /**
-     * @var AdapterInterface
+     * @var
      */
     protected $console;
 
@@ -97,7 +95,7 @@ class IndexController extends AbstractActionController
         LoopService $loopService,
         LoginService $loginService,
         $config,
-        AdapterInterface $console
+        $console
     )
     {
         $this->entityManager = $entityManager;

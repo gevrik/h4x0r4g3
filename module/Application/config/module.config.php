@@ -9,6 +9,8 @@
 
 namespace Application;
 
+use Zend\ServiceManager\Factory\InvokableFactory;
+
 return array(
     'router' => array(
         'routes' => array(
@@ -62,10 +64,11 @@ return array(
         'factories' => array(
             'translator' => 'Zend\Mvc\Service\TranslatorServiceFactory',
             'navigation' => 'Zend\Navigation\Service\DefaultNavigationFactory',
+            'Application\Service\WebsocketService' => InvokableFactory::class
         ),
-        'invokables' => array(
-            'Application\Service\WebsocketService' => 'Application\Service\WebsocketService'
-        ),
+//        'invokables' => array(
+//            'Application\Service\WebsocketService' => 'Application\Service\WebsocketService'
+//        ),
     ),
     'translator' => array(
         'locale' => 'en_US',
