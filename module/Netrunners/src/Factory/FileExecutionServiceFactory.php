@@ -10,27 +10,35 @@
 
 namespace Netrunners\Factory;
 
+use Doctrine\ORM\EntityManager;
+use Interop\Container\ContainerInterface;
+use Netrunners\Service\CodebreakerService;
 use Netrunners\Service\FileExecutionService;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Netrunners\Service\HangmanService;
+use Netrunners\Service\MissionService;
+use Zend\Mvc\I18n\Translator;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class FileExecutionServiceFactory implements FactoryInterface
 {
 
     /**
-     * Create service.
-     * @param ServiceLocatorInterface $serviceLocator
-     * @return mixed
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return FileExecutionService|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         return new FileExecutionService(
-            $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('translator'),
-            $serviceLocator->get('Netrunners\Service\CodebreakerService'),
-            $serviceLocator->get('Netrunners\Service\MissionService'),
-            $serviceLocator->get('Netrunners\Service\HangmanService')
+            $container->get(EntityManager::class),
+            $container->get('ViewRenderer'),
+            $container->get(Translator::class),
+            $container->get(CodebreakerService::class),
+            $container->get(MissionService::class),
+            $container->get(HangmanService::class)
         );
     }
 

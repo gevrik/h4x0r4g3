@@ -10,25 +10,31 @@
 
 namespace Netrunners\Factory;
 
+use BjyAuthorize\Service\Authorize;
+use Doctrine\ORM\EntityManager;
+use Interop\Container\ContainerInterface;
 use Netrunners\Service\AdminService;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Zend\Mvc\I18n\Translator;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class AdminServiceFactory implements FactoryInterface
 {
 
     /**
-     * Create service
-     * @param ServiceLocatorInterface $serviceLocator
-     * @return mixed
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return AdminService|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         return new AdminService(
-            $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('BjyAuthorize\Service\Authorize'),
-            $serviceLocator->get('translator')
+            $container->get(EntityManager::class),
+            $container->get('ViewRenderer'),
+            $container->get(Authorize::class),
+            $container->get(Translator::class)
         );
     }
 

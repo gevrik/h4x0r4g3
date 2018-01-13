@@ -10,26 +10,33 @@
 
 namespace Netrunners\Factory;
 
+use Doctrine\ORM\EntityManager;
+use Interop\Container\ContainerInterface;
+use Netrunners\Service\FileExecutionService;
 use Netrunners\Service\FileService;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Netrunners\Service\FileUtilityService;
+use Zend\Mvc\I18n\Translator;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class FileServiceFactory implements FactoryInterface
 {
 
     /**
-     * Create service.
-     * @param ServiceLocatorInterface $serviceLocator
-     * @return mixed
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return FileService|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         return new FileService(
-            $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('translator'),
-            $serviceLocator->get('Netrunners\Service\FileUtilityService'),
-            $serviceLocator->get('Netrunners\Service\FileExecutionService')
+            $container->get(EntityManager::class),
+            $container->get('ViewRenderer'),
+            $container->get(Translator::class),
+            $container->get(FileUtilityService::class),
+            $container->get(FileExecutionService::class)
         );
     }
 

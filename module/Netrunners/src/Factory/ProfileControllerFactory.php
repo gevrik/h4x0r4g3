@@ -10,29 +10,28 @@
 
 namespace Netrunners\Factory;
 
+use Doctrine\ORM\EntityManager;
+use Interop\Container\ContainerInterface;
 use Netrunners\Controller\ProfileController;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Netrunners\Service\ProfileService;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class ProfileControllerFactory implements FactoryInterface
 {
 
     /**
-     * Create service
-     *
-     * @param ServiceLocatorInterface $serviceLocator
-     *
-     * @return mixed
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return ProfileController|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-        $realServiceLocator = $serviceLocator->getServiceLocator();
-        $entityManager = $realServiceLocator->get('Doctrine\ORM\EntityManager');
-        $profileService = $realServiceLocator->get('Netrunners\Service\ProfileService');
-
         return new ProfileController(
-            $entityManager,
-            $profileService
+            $container->get(EntityManager::class),
+            $container->get(ProfileService::class)
         );
     }
 

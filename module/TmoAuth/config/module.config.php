@@ -1,4 +1,7 @@
 <?php
+
+namespace TmoAuth;
+
 return array(
     'router' => array(
         'routes' => array(

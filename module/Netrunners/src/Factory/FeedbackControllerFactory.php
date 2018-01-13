@@ -10,25 +10,26 @@
 
 namespace Netrunners\Factory;
 
+use Doctrine\ORM\EntityManager;
+use Interop\Container\ContainerInterface;
 use Netrunners\Controller\FeedbackController;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class FeedbackControllerFactory implements FactoryInterface
 {
 
     /**
-     * Create service
-     * @param ServiceLocatorInterface $serviceLocator
-     * @return mixed
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return FeedbackController|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-        $realServiceLocator = $serviceLocator->getServiceLocator();
-        $entityManager = $realServiceLocator->get('Doctrine\ORM\EntityManager');
-
         return new FeedbackController(
-            $entityManager
+            $container->get(EntityManager::class)
         );
     }
 

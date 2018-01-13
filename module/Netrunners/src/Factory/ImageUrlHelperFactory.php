@@ -2,21 +2,26 @@
 
 namespace Netrunners\Factory;
 
+use Interop\Container\ContainerInterface;
 use Netrunners\View\Helper\ImageUrlHelper;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class ImageUrlHelperFactory implements FactoryInterface
 {
+
     /**
-     * Create Service
-     * @param ServiceLocatorInterface $serviceLocator
-     * @return ImageUrlHelper
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return ImageUrlHelper|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-        $realServiceLocator = $serviceLocator->getServiceLocator();
-        $config = $realServiceLocator->get('config');
-        return new ImageUrlHelper($config);
+        return new ImageUrlHelper(
+            $container->get('config')
+        );
     }
+
 }

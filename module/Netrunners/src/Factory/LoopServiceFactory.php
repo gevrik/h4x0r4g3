@@ -10,28 +10,37 @@
 
 namespace Netrunners\Factory;
 
+use Doctrine\ORM\EntityManager;
+use Interop\Container\ContainerInterface;
+use Netrunners\Service\CodingService;
+use Netrunners\Service\CombatService;
+use Netrunners\Service\FileService;
 use Netrunners\Service\LoopService;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Netrunners\Service\SystemService;
+use Zend\Mvc\I18n\Translator;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 class LoopServiceFactory implements FactoryInterface
 {
 
     /**
-     * Create service.
-     * @param ServiceLocatorInterface $serviceLocator
-     * @return mixed
+     * @param ContainerInterface $container
+     * @param string $requestedName
+     * @param array|null $options
+     * @return LoopService|object
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         return new LoopService(
-            $serviceLocator->get('Doctrine\ORM\EntityManager'),
-            $serviceLocator->get('ViewRenderer'),
-            $serviceLocator->get('Netrunners\Service\FileService'),
-            $serviceLocator->get('Netrunners\Service\CodingService'),
-            $serviceLocator->get('Netrunners\Service\CombatService'),
-            $serviceLocator->get('Netrunners\Service\SystemService'),
-            $serviceLocator->get('translator')
+            $container->get(EntityManager::class),
+            $container->get('ViewRenderer'),
+            $container->get(FileService::class),
+            $container->get(CodingService::class),
+            $container->get(CombatService::class),
+            $container->get(SystemService::class),
+            $container->get(Translator::class)
         );
     }
 
