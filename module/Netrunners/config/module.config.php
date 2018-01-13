@@ -122,7 +122,7 @@ return array(
         'driver' => array(
             'netrunners' => array(
                 'class' => 'Doctrine\ORM\Mapping\Driver\AnnotationDriver',
-                'paths' => __DIR__ . '/../src/Netrunners/Entity',
+                'paths' => __DIR__ . '/../src/Entity',
             ),
             'orm_default' => array(
                 'drivers' => array(
