@@ -1,4 +1,7 @@
 <?php
+
+use Zend\Mvc\Application;
+
 /**
  * This makes our life easier when dealing with paths. Everything is relative
  * to the application root now.
@@ -24,8 +27,15 @@ if (php_sapi_name() === 'cli-server') {
     unset($path);
 }
 
-// Setup autoloading
-require 'init_autoloader.php';
+// Composer autoloading
+include __DIR__ . '/../vendor/autoload.php';
+
+if (! class_exists(Application::class)) {
+    throw new RuntimeException(
+        "Unable to load application.\n"
+        . "- Type `composer install` if you are developing locally.\n"
+    );
+}
 
 // Run the application!
-Zend\Mvc\Application::init(require 'config/application.config.php')->run();
+Application::init(require __DIR__ . '/../config/application.config.php')->run();

@@ -23,7 +23,6 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
-use Netrunners\Service\NodeService;
 use Netrunners\Service\ParserService;
 use Application\Service\WebsocketService;
 use Netrunners\Service\UtilityService;
@@ -34,6 +33,8 @@ use React\EventLoop\Factory;
 use React\Socket\Server;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
+use Zend\Config\Config;
+use Zend\Console\Adapter\AdapterInterface;
 use Zend\Console\ColorInterface;
 use Zend\Console\Request;
 use Zend\Crypt\Password\Bcrypt;
@@ -68,6 +69,16 @@ class IndexController extends AbstractActionController
      */
     protected $loginService;
 
+    /**
+     * @var Config
+     */
+    protected $config;
+
+    /**
+     * @var AdapterInterface
+     */
+    protected $console;
+
 
     /**
      * IndexController constructor.
@@ -76,13 +87,17 @@ class IndexController extends AbstractActionController
      * @param ParserService $parserService
      * @param LoopService $loopService
      * @param LoginService $loginService
+     * @param $config
+     * @param $console
      */
     public function __construct(
         EntityManager $entityManager,
         UtilityService $utilityService,
         ParserService $parserService,
         LoopService $loopService,
-        LoginService $loginService
+        LoginService $loginService,
+        Config $config,
+        AdapterInterface $console
     )
     {
         $this->entityManager = $entityManager;
@@ -90,6 +105,8 @@ class IndexController extends AbstractActionController
         $this->parserService = $parserService;
         $this->loopService = $loopService;
         $this->loginService = $loginService;
+        $this->config = $config;
+        $this->console = $console;
     }
 
     /**
@@ -97,12 +114,11 @@ class IndexController extends AbstractActionController
      */
     public function indexAction()
     {
-        $config = $this->getServiceLocator()->get('config');
         $view = new ViewModel();
         $view->setVariables([
-            'wsprotocol' => $config['wsconfig']['wsprotocol'],
-            'wshost' => $config['wsconfig']['wshost'],
-            'wsport' => $config['wsconfig']['wsport']
+            'wsprotocol' => $this->config['wsconfig']['wsprotocol'],
+            'wshost' => $this->config['wsconfig']['wshost'],
+            'wsport' => $this->config['wsconfig']['wsport']
         ]);
         return $view;
     }
@@ -110,7 +126,7 @@ class IndexController extends AbstractActionController
     // CLI
 
     /**
-     * @throws \React\Socket\ConnectionException
+     *
      */
     public function cliStartWebsocketAction()
     {
@@ -120,12 +136,9 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         $adminMode = $request->getParam('adminmode') || $request->getParam('am');
-        $console = $this->getServiceLocator()->get('console');
-        $config = $this->getServiceLocator()->get('config');
-        $console->writeLine("=== STARTING WEBSOCKET SERVICE ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
+        $this->console->writeLine("=== STARTING WEBSOCKET SERVICE ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
         $loop = Factory::create();
-        $webSock = new Server($loop);
-        $webSock->listen(8080, '0.0.0.0');
+        $webSock = new Server('0.0.0.0:8080', $loop);
         /** @noinspection PhpUnusedLocalVariableInspection */
         $server = new IoServer(
             new HttpServer(
@@ -137,19 +150,20 @@ class IndexController extends AbstractActionController
                         $this->loopService,
                         $this->loginService,
                         $loop,
-                        $config['hashmod'],
+                        $this->config['hashmod'],
                         $adminMode
                     )
                 )
             ),
             $webSock
         );
-        $console->writeLine("=== WEBSOCKET SERVICE STARTED ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
+        $this->console->writeLine("=== WEBSOCKET SERVICE STARTED ===", ColorInterface::LIGHT_WHITE, ColorInterface::GREEN);
         $loop->run();
     }
 
     /**
      * Used to add skill ratings for new skills to existing users.
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliResetSkillsAction()
     {
@@ -204,8 +218,8 @@ class IndexController extends AbstractActionController
     }
 
     /**
-     * To populate the word table after a new server installation.
      * @return bool
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliPopulateWordTableAction()
     {
@@ -215,14 +229,13 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('Reading in CSV', ColorInterface::GREEN);
+        $this->console->writeLine('Reading in CSV', ColorInterface::GREEN);
         if (($handle = fopen(getcwd() . '/public/nouns.csv', "r")) !== FALSE) {
             while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
                 $theWord = $data[0];
                 $wordLength = strlen($theWord);
                 if ($wordLength < 4) continue;
-                $console->writeLine('ADDING: ' . $theWord, ColorInterface::WHITE);
+                $this->console->writeLine('ADDING: ' . $theWord, ColorInterface::WHITE);
                 $word = new Word();
                 $word->setContent($theWord);
                 $word->setLength($wordLength);
@@ -231,7 +244,7 @@ class IndexController extends AbstractActionController
             fclose($handle);
         }
         $this->entityManager->flush();
-        $console->writeLine('DONE reading in CSV', ColorInterface::GREEN);
+        $this->console->writeLine('DONE reading in CSV', ColorInterface::GREEN);
         return true;
 
     }
@@ -239,6 +252,7 @@ class IndexController extends AbstractActionController
     /**
      * To populate the company name table after a new server installation.
      * @return bool
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliPopulateCompanyNamesTableAction()
     {
@@ -248,12 +262,11 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('Reading in CSV', ColorInterface::GREEN);
+        $this->console->writeLine('Reading in CSV', ColorInterface::GREEN);
         if (($handle = fopen(getcwd() . '/public/compnames.csv', "r")) !== FALSE) {
             while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
                 $theWord = $data[0];
-                $console->writeLine('ADDING: ' . $theWord, ColorInterface::WHITE);
+                $this->console->writeLine('ADDING: ' . $theWord, ColorInterface::WHITE);
                 $word = new CompanyName();
                 $word->setContent($theWord);
                 $this->entityManager->persist($word);
@@ -261,12 +274,15 @@ class IndexController extends AbstractActionController
             fclose($handle);
         }
         $this->entityManager->flush();
-        $console->writeLine('DONE reading in CSV', ColorInterface::GREEN);
+        $this->console->writeLine('DONE reading in CSV', ColorInterface::GREEN);
         return true;
     }
 
     /**
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function cliCreateAdminAccountAction()
     {
@@ -276,8 +292,7 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('CREATING ADMIN ACCOUNT', ColorInterface::GREEN);
+        $this->console->writeLine('CREATING ADMIN ACCOUNT', ColorInterface::GREEN);
         $addy = $this->utilityService->getRandomAddress(32);
         $maxTries = 100;
         $tries = 0;
@@ -285,7 +300,7 @@ class IndexController extends AbstractActionController
             $addy = $this->utilityService->getRandomAddress(32);
             $tries++;
             if ($tries >= $maxTries) {
-                $console->writeLine('COULD NOT CREATE SYSTEM ADDY - ABORTING', ColorInterface::LIGHT_RED);
+                $this->console->writeLine('COULD NOT CREATE SYSTEM ADDY - ABORTING', ColorInterface::LIGHT_RED);
                 return true;
             }
         }
@@ -298,7 +313,7 @@ class IndexController extends AbstractActionController
         $bcrypt = new Bcrypt();
         $bcrypt->setCost(10);
         $password = bin2hex(openssl_random_pseudo_bytes(4));
-        $console->writeLine('ADMIN PASSWORD: ' . $password, ColorInterface::LIGHT_RED);
+        $this->console->writeLine('ADMIN PASSWORD: ' . $password, ColorInterface::LIGHT_RED);
         $pass = $bcrypt->create($password);
         $user->setPassword($pass);
         $user->setProfile(NULL);
@@ -364,12 +379,15 @@ class IndexController extends AbstractActionController
         $profile->setLocale(Profile::DEFAULT_PROFILE_LOCALE);
         // flush to db
         $this->entityManager->flush();
-        $console->writeLine('DONE CREATING ADMIN ACCOUNT', ColorInterface::GREEN);
+        $this->console->writeLine('DONE CREATING ADMIN ACCOUNT', ColorInterface::GREEN);
         return true;
     }
 
     /**
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function cliCreateFactionSystemsAction()
     {
@@ -379,8 +397,7 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('CREATING FACTION SYSTEMS', ColorInterface::GREEN);
+        $this->console->writeLine('CREATING FACTION SYSTEMS', ColorInterface::GREEN);
         $factions = $this->entityManager->getRepository('Netrunners\Entity\Faction')->findAll();
         foreach ($factions as $faction) {
             /** @var Faction $faction */
@@ -401,14 +418,14 @@ class IndexController extends AbstractActionController
                 $addy = $this->utilityService->getRandomAddress(32);
                 $tries++;
                 if ($tries >= $maxTries) {
-                    $console->writeLine('UNABLE TO GENERATE ADDY FOR SYSTEM - ABORTING', ColorInterface::LIGHT_RED);
+                    $this->console->writeLine('UNABLE TO GENERATE ADDY FOR SYSTEM - ABORTING', ColorInterface::LIGHT_RED);
                     return true;
                 }
             }
             $system->setAddy($addy);
             $system->setMaxSize(System::FACTION_MAX_SYSTEM_SIZE);
             $this->entityManager->persist($system);
-            $console->writeLine('SYSTEM GENERATED - NOW WORKING ON NODES AND CONNECTIONS', ColorInterface::LIGHT_WHITE);
+            $this->console->writeLine('SYSTEM GENERATED - NOW WORKING ON NODES AND CONNECTIONS', ColorInterface::LIGHT_WHITE);
             // pub io node
             $node_pio = new Node();
             $node_pio->setName('public_io');
@@ -675,12 +692,15 @@ class IndexController extends AbstractActionController
         }
         // flush everything to db
         $this->entityManager->flush();
-        $console->writeLine('DONE CREATING FACTION SYSTEMS', ColorInterface::GREEN);
+        $this->console->writeLine('DONE CREATING FACTION SYSTEMS', ColorInterface::GREEN);
         return true;
     }
 
     /**
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function cliInitServerSettingsAction()
     {
@@ -690,11 +710,10 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('INITIALIZING SERVER SETTINGS', ColorInterface::GREEN);
+        $this->console->writeLine('INITIALIZING SERVER SETTINGS', ColorInterface::GREEN);
         $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
         if ($serverSetting) {
-            $console->writeLine('SERVER SETTINGS ALREADY INITIALIZED', ColorInterface::LIGHT_RED);
+            $this->console->writeLine('SERVER SETTINGS ALREADY INITIALIZED', ColorInterface::LIGHT_RED);
             return true;
         }
         $serverSetting = new ServerSetting();
@@ -731,12 +750,15 @@ class IndexController extends AbstractActionController
         $serverSetting->setWildernessSystemId($system->getId());
         $serverSetting->setWildernessHubNodeId($ioNode->getId());
         $this->entityManager->flush($serverSetting);
-        $console->writeLine('DONE INITIALIZING SERVER SETTINGS', ColorInterface::GREEN);
+        $this->console->writeLine('DONE INITIALIZING SERVER SETTINGS', ColorInterface::GREEN);
         return true;
     }
 
     /**
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function cliCreateChatsuboAction()
     {
@@ -746,19 +768,18 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
         $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
         if (!$serverSetting) {
-            $console->writeLine('SERVER SETTINGS NEED TO BE INITIALIZED FIRST', ColorInterface::LIGHT_RED);
+            $this->console->writeLine('SERVER SETTINGS NEED TO BE INITIALIZED FIRST', ColorInterface::LIGHT_RED);
             return true;
         }
         /** @var ServerSetting $serverSetting */
         $chatsuboSystemId = $serverSetting->getChatsuboSystemId();
         if ($chatsuboSystemId !== NULL) {
-            $console->writeLine('CHATUSBO SYSTEM HAS ALREADY BEEN CREATED', ColorInterface::LIGHT_RED);
+            $this->console->writeLine('CHATUSBO SYSTEM HAS ALREADY BEEN CREATED', ColorInterface::LIGHT_RED);
             return true;
         }
-        $console->writeLine('CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
+        $this->console->writeLine('CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
         $system = new System();
         $system->setProfile(NULL);
         $system->setName('the_chatsubo');
@@ -787,10 +808,16 @@ class IndexController extends AbstractActionController
         $serverSetting->setChatsuboSystemId($system->getId());
         $serverSetting->setChatsuboNodeId($ioNode->getId());
         $this->entityManager->flush($serverSetting);
-        $console->writeLine('DONE CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
+        $this->console->writeLine('DONE CREATING CHATSUBO SYSTEM', ColorInterface::GREEN);
         return true;
     }
 
+    /**
+     * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     public function cliAddMilkrunAivatarsAction()
     {
         // get request and check if we received it from the console
@@ -799,11 +826,10 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('CREATING MILKRUN AIVATARS', ColorInterface::GREEN);
+        $this->console->writeLine('CREATING MILKRUN AIVATARS', ColorInterface::GREEN);
         $milkrunAivatar = $this->entityManager->find('Netrunners\Entity\MilkrunAivatar', MilkrunAivatar::ID_SCROUNGER);
         if (!$milkrunAivatar) {
-            $console->writeLine('MilkrunAivatar BASE not found - table populated?', ColorInterface::LIGHT_RED);
+            $this->console->writeLine('MilkrunAivatar BASE not found - table populated?', ColorInterface::LIGHT_RED);
             return true;
         }
         /** @var MilkrunAivatar $milkrunAivatar */
@@ -831,12 +857,12 @@ class IndexController extends AbstractActionController
             $profile->setDefaultMilkrunAivatar($aivatar);
         }
         $this->entityManager->flush();
-        $console->writeLine('DONE CREATING MILKRUN AIVATARS', ColorInterface::GREEN);
+        $this->console->writeLine('DONE CREATING MILKRUN AIVATARS', ColorInterface::GREEN);
         return true;
     }
 
     /**
-     *
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliHarvestGeocoordsAction()
     {
@@ -849,8 +875,7 @@ class IndexController extends AbstractActionController
         set_time_limit(0);
         $coordRepo = $this->entityManager->getRepository('Netrunners\Entity\Geocoord');
         /** @var GeocoordRepository $coordRepo */
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('HARVESTING GEO-COORDS', ColorInterface::GREEN);
+        $this->console->writeLine('HARVESTING GEO-COORDS', ColorInterface::GREEN);
         $zoneBoundsData = [
             ['name'=>'global', 'latfrom'=> -80, 'latto' => 80, 'lngfrom'=> -180, 'lngto'=> 180],
             ['name'=>'aztech', 'latfrom'=> -54, 'latto' => 71, 'lngfrom'=> -179, 'lngto'=> -29],
@@ -859,7 +884,7 @@ class IndexController extends AbstractActionController
         ];
         $totalFound = 0;
         for ($i=1;$i<=$runs;$i++) {
-            $console->writeLine('STARTING ROUND ' . $i, ColorInterface::LIGHT_BLUE);
+            $this->console->writeLine('STARTING ROUND ' . $i, ColorInterface::LIGHT_BLUE);
             $zoneid = mt_rand(0,3);
             $lat = round(($this->jsRandom() * ($zoneBoundsData[$zoneid]['latto'] - $zoneBoundsData[$zoneid]['latfrom']) + $zoneBoundsData[$zoneid]['latfrom']) * 1, 6);
             $lng = round(($this->jsRandom() * ($zoneBoundsData[$zoneid]['lngto'] - $zoneBoundsData[$zoneid]['lngfrom']) + $zoneBoundsData[$zoneid]['lngfrom']) * 1, 6);
@@ -908,14 +933,17 @@ class IndexController extends AbstractActionController
                         $this->entityManager->persist($geocoord);
                     }
                 }
-                $console->writeLine('PLACES SO FAR: ' . $totalFound, ColorInterface::LIGHT_MAGENTA);
+                $this->console->writeLine('PLACES SO FAR: ' . $totalFound, ColorInterface::LIGHT_MAGENTA);
             }
             sleep(1);
         }
         $this->entityManager->flush();
-        $console->writeLine('TOTAL PLACES FOUND: ' . $totalFound, ColorInterface::LIGHT_GREEN);
+        $this->console->writeLine('TOTAL PLACES FOUND: ' . $totalFound, ColorInterface::LIGHT_GREEN);
     }
 
+    /**
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
     public function cliUpgradeConnectionsAction()
     {
         // get request and check if we received it from the console
@@ -929,8 +957,7 @@ class IndexController extends AbstractActionController
         $connRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
         /** @var ConnectionRepository $connRepo */
         $nodes = $nodeRepo->findAll();
-        $console = $this->getServiceLocator()->get('console');
-        $console->writeLine('ITERATING NODES', ColorInterface::GREEN);
+        $this->console->writeLine('ITERATING NODES', ColorInterface::GREEN);
         foreach ($nodes as $node) {
             /** @var Node $node */
             $connections = $connRepo->findBySourceNode($node);
@@ -941,9 +968,12 @@ class IndexController extends AbstractActionController
             }
         }
         $this->entityManager->flush();
-        $console->writeLine('ALL CONNECTIONS UPDATED', ColorInterface::GREEN);
+        $this->console->writeLine('ALL CONNECTIONS UPDATED', ColorInterface::GREEN);
     }
 
+    /**
+     * @return float|int
+     */
     private function jsRandom(){
         return mt_rand() / (mt_getrandmax() + 1);
     }

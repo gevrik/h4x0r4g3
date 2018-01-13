@@ -11,7 +11,7 @@ return array(
     'router' => array(
         'routes' => array(
             'home' => array(
-                'type' => 'Zend\Mvc\Router\Http\Literal',
+                'type' => 'Zend\Router\Http\Literal',
                 'options' => array(
                     'route'    => '/',
                     'defaults' => array(
@@ -77,7 +77,7 @@ return array(
     ),
     'controllers' => array(
         'factories' => array(
-            'Application\Controller\Index' => 'Application\Factory\IndexControllerFactory'
+            Application\Controller\IndexController::class => Application\Factory\IndexControllerFactory::class
         ),
     ),
     'view_manager' => array(
