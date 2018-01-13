@@ -38,7 +38,7 @@ class IndexControllerFactory implements FactoryInterface
             $container->get(ParserService::class),
             $container->get(LoopService::class),
             $container->get(LoginService::class),
-            $container->get('config'),
+            $container->get('configuration'),
             $container->get('console')
         );
     }

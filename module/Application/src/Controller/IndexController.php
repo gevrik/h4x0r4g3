@@ -96,7 +96,7 @@ class IndexController extends AbstractActionController
         ParserService $parserService,
         LoopService $loopService,
         LoginService $loginService,
-        Config $config,
+        $config,
         AdapterInterface $console
     )
     {
