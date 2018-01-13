@@ -23,7 +23,7 @@
     "require": {
         "php": "^5.6 || ^7.0",
         "zendframework/zend-component-installer": "^1.1",
-        "zendframework/zend-mvc": "^3.1",
+        "zendframework/zendframework": "^3.0",
         "zf-commons/zfc-user": "^3.0",
         "kokspflanze/bjy-authorize": "^1.6.3",
         "doctrine/doctrine-module": "^1.2",
@@ -34,27 +34,16 @@
         "brianlmoon/gearmanmanager": "dev-zf-gearman-manager-fork",
         "cboden/ratchet": "^0.4.1",
         "shark/simple_html_dom": "dev-master",
-        "htmlawed/htmlawed": "dev-master",
-        "zendframework/zend-cache": "^2.7.1",
-        "zendframework/zend-db": "^2.8.1",
-        "zendframework/zend-mvc-form": "^1.0",
-        "zendframework/zend-json": "^3.0",
-        "zendframework/zend-log": "^2.9",
-        "zendframework/zend-mvc-console": "^1.1.10",
-        "zendframework/zend-mvc-i18n": "^1.0",
-        "zendframework/zend-mvc-plugins": "^1.0.1",
-        "zendframework/zend-psr7bridge": "^0.2.2",
-        "zendframework/zend-session": "^2.7.1"
+        "htmlawed/htmlawed": "dev-master"
     },
     "autoload": {
         "psr-4": {
             "Application\\": "module/Application/src/",
-            "Netrunners\\": "module/Application/src/",
-            "TmoAuth\\": "module/Application/src/"
+            "Netrunners\\": "module/Netrunners/src/",
+            "TmoAuth\\": "module/TmoAuth/src/"
         }
     },
     "extra": [],
     "require-dev": {
-        "zendframework/zend-test": "^3.0.1"
     }
 }
