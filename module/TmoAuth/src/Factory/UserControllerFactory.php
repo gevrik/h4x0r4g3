@@ -10,28 +10,54 @@
 
 namespace TmoAuth\Factory;
 
-use TmoAuth\Controller\UserController;
-use Zend\ServiceManager\FactoryInterface;
+use Interop\Container\ContainerInterface;
+use Zend\Mvc\Controller\ControllerManager;
+use Zend\ServiceManager\Factory\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
+use ZfcUser\Controller\RedirectCallback;
+use ZfcUser\Controller\UserController;
 
 class UserControllerFactory implements FactoryInterface
 {
 
     /**
-     * Create service
-     *
-     * @param ServiceLocatorInterface $serviceLocator
-     *
-     * @return mixed
+     * @param ContainerInterface $serviceManager
+     * @param string $requestedName
+     * @param array|null $options
+     * @return object|UserController
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function createService(ServiceLocatorInterface $serviceLocator)
+    public function __invoke(ContainerInterface $serviceManager, $requestedName, array $options = null)
     {
-        $realServiceLocator = $serviceLocator->getServiceLocator();
-        $redirectCallback = $realServiceLocator->get('zfcuser_redirect_callback');
+        /* @var RedirectCallback $redirectCallback */
+        $redirectCallback = $serviceManager->get('zfcuser_redirect_callback');
 
-        return new UserController(
-            $redirectCallback
-        );
+        /* @var UserController $controller */
+        $controller = new UserController($redirectCallback);
+        $controller->setServiceLocator($serviceManager);
+
+        $controller->setChangeEmailForm($serviceManager->get('zfcuser_change_email_form'));
+        $controller->setOptions($serviceManager->get('zfcuser_module_options'));
+        $controller->setChangePasswordForm($serviceManager->get('zfcuser_change_password_form'));
+        $controller->setLoginForm($serviceManager->get('zfcuser_login_form'));
+        $controller->setRegisterForm($serviceManager->get('zfcuser_register_form'));
+        $controller->setUserService($serviceManager->get('zfcuser_user_service'));
+
+        return $controller;
     }
 
+    /**
+     * @param ServiceLocatorInterface $controllerManager
+     * @return object|UserController
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    public function createService(ServiceLocatorInterface $controllerManager)
+    {
+        /* @var ControllerManager $controllerManager*/
+        $serviceManager = $controllerManager->getServiceLocator();
+
+        return $this->__invoke($serviceManager, null);
+    }
 }
