@@ -337,7 +337,7 @@ class FileRepository extends EntityRepository
         $miner = NULL;
         $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
         $qb = $this->createQueryBuilder('f');
-        $qb->where('f.fileType = :fileType AND f.node = :node AND f.integrity < 1');
+        $qb->where('f.fileType = :fileType AND f.node = :node AND f.integrity < f.maxIntegrity');
         $qb->setParameters([
             'fileType' => $fileType,
             'node' => $npc->getNode()
