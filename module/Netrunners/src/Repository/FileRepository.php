@@ -12,7 +12,6 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
-use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NpcInstance;
@@ -77,6 +76,8 @@ class FileRepository extends EntityRepository
      * Counts all files for the given node.
      * @param Node $node
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByNode(Node $node)
     {
@@ -166,6 +167,9 @@ class FileRepository extends EntityRepository
      * @param bool|true $running
      * @param int $fileType
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findRunningFilesInSystemByType(System $system, $running = true, $fileType)
     {
@@ -188,6 +192,10 @@ class FileRepository extends EntityRepository
      * Returns the first running chat client for the given profile or null.
      * @param Profile $profile
      * @return null|File
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findChatClientForProfile(Profile $profile)
     {
@@ -207,6 +215,10 @@ class FileRepository extends EntityRepository
      * @param Profile $profile
      * @param int $fileTypeId
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findOneRunningInNodeByTypeAndProfile(Node $node, Profile $profile, $fileTypeId)
     {
@@ -226,6 +238,9 @@ class FileRepository extends EntityRepository
      * @param Node $node
      * @param int $fileTypeId
      * @return mixed
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findRunningInNodeByType(Node $node, $fileTypeId)
     {
@@ -255,6 +270,11 @@ class FileRepository extends EntityRepository
      * @param Node $node
      * @param $fileTypeId
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function getTotalRunningLevelInNodeByType(Node $node, $fileTypeId)
     {
@@ -273,6 +293,9 @@ class FileRepository extends EntityRepository
      * @param Profile $profile
      * @param $fileTypeId
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findByProfileAndType(Profile $profile, $fileTypeId)
     {
@@ -290,6 +313,9 @@ class FileRepository extends EntityRepository
      * @param Profile $profile
      * @param $fileTypeId
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findRunningByProfileAndType(Profile $profile, $fileTypeId)
     {
