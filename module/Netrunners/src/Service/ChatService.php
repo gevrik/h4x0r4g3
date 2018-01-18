@@ -82,6 +82,10 @@ class ChatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function globalChat($resourceId, $contentArray)
     {
@@ -126,6 +130,9 @@ class ChatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function moderatorChat($resourceId, $contentArray)
     {
@@ -170,6 +177,10 @@ class ChatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function factionChat($resourceId, $contentArray)
     {
@@ -218,6 +229,9 @@ class ChatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function sayChat($resourceId, $contentArray)
     {
@@ -258,6 +272,10 @@ class ChatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function tellChat($resourceId, $contentArray)
     {
@@ -309,6 +327,10 @@ class ChatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function replyChat($resourceId, $contentArray)
     {
@@ -323,6 +345,9 @@ class ChatService extends BaseService
         $ws = $this->getWebsocketServer();
         // sanity checks
         $recipientId = $ws->getClientDataReplyId($resourceId);
+        if (!$recipientId) {
+            return $this->gameClientResponse->addMessage($this->translate('Nobody has messaged you'))->send();
+        }
         /** @var Profile $recipient */
         $recipient = $this->profileRepo->find($recipientId);
         $messageContent = $this->getNextParameter($contentArray, false, false, true, true);
@@ -334,6 +359,9 @@ class ChatService extends BaseService
         }
         if (!$messageContent) {
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        if (!$this->fileRepo->findChatClientForProfile($recipient)) {
+            return $this->gameClientResponse->addMessage($this->translate('Your reply target has no running chatclient'))->send();
         }
         // logic start
         // prepare message for recipient, send and set client-data
