@@ -59,6 +59,9 @@ class CodebreakerService extends BaseService
      * @param File $file
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function startCodebreaker($resourceId, File $file, $contentArray)
     {
@@ -134,6 +137,9 @@ class CodebreakerService extends BaseService
      * @param $resourceId
      * @param $guess
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function solveCodebreaker($resourceId, $guess)
     {

@@ -66,6 +66,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|\Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function useConnection($resourceId, $contentArray)
     {
@@ -103,6 +106,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removeConnection($resourceId, $contentArray)
     {
@@ -181,6 +187,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function scanConnection($resourceId, $contentArray)
     {
@@ -220,6 +229,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function closeConnection($resourceId, $contentArray)
     {
@@ -276,6 +288,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function openConnection($resourceId, $contentArray)
     {
@@ -335,6 +350,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function addConnection($resourceId, $contentArray)
     {
@@ -442,6 +460,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function secureConnection($resourceId, $contentArray)
     {
@@ -525,6 +546,9 @@ class ConnectionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function unsecureConnection($resourceId, $contentArray)
     {

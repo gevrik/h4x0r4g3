@@ -74,6 +74,9 @@ class AuctionService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listAuctions($resourceId)
     {
@@ -127,6 +130,9 @@ class AuctionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function auctionFile($resourceId, $contentArray)
     {
@@ -218,6 +224,9 @@ class AuctionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function bidOnAuction($resourceId, $contentArray)
     {
@@ -311,6 +320,9 @@ class AuctionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function buyoutAuction($resourceId, $contentArray)
     {
@@ -372,6 +384,7 @@ class AuctionService extends BaseService
     /**
      * @param Auction $auction
      * @param Profile|NULL $buyer
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function refundBidders(Auction $auction, Profile $buyer = NULL)
     {
@@ -399,6 +412,9 @@ class AuctionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function claimAuction($resourceId, $contentArray)
     {
@@ -474,6 +490,9 @@ class AuctionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function cancelAuction($resourceId, $contentArray)
     {
@@ -528,6 +547,9 @@ class AuctionService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showBids($resourceId)
     {

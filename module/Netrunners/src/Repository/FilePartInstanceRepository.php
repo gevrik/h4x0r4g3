@@ -18,16 +18,32 @@ use Netrunners\Entity\Profile;
 class FilePartInstanceRepository extends EntityRepository
 {
 
+    /**
+     * @param Profile $profile
+     * @return array
+     */
     public function findByProfile(Profile $profile)
     {
         return $this->findBy(['profile' => $profile]);
     }
 
+    /**
+     * @param Profile $profile
+     * @param FileType $fileType
+     * @return array
+     */
     public function findByProfileAndType(Profile $profile, FileType $fileType)
     {
         return $this->findBy(['profile' => $profile, 'fileType' => $fileType]);
     }
 
+    /**
+     * @param Profile $profile
+     * @param FilePart $filePart
+     * @param int $minLevel
+     * @param bool $orderByLevel
+     * @return array
+     */
     public function findByProfileAndTypeAndMinLevel(Profile $profile, FilePart $filePart, $minLevel = 1, $orderByLevel = false)
     {
         $qb = $this->createQueryBuilder('fpi');
@@ -43,6 +59,10 @@ class FilePartInstanceRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @param Profile $profile
+     * @return array
+     */
     public function findForPartsCommand(Profile $profile)
     {
         $qb = $this->createQueryBuilder('fpi');

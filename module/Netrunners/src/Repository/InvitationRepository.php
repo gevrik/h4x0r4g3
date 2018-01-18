@@ -43,6 +43,7 @@ class InvitationRepository extends EntityRepository
     /**
      * @param $code
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findOneUnusedByCode($code)
     {

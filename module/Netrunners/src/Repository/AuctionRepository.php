@@ -20,6 +20,8 @@ class AuctionRepository extends EntityRepository
     /**
      * @param Node $node
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countActiveByNode(Node $node)
     {
@@ -36,6 +38,8 @@ class AuctionRepository extends EntityRepository
     /**
      * @param Node $node
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByNode(Node $node)
     {

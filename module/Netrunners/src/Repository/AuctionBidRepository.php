@@ -58,6 +58,8 @@ class AuctionBidRepository extends EntityRepository
     /**
      * @param Auction $auction
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByAuction(Auction $auction)
     {
@@ -74,6 +76,7 @@ class AuctionBidRepository extends EntityRepository
      * @param Auction $auction
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findByAuctionAndProfile(Auction $auction, Profile $profile)
     {
@@ -90,6 +93,8 @@ class AuctionBidRepository extends EntityRepository
     /**
      * @param Auction $auction
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findHighBid(Auction $auction)
     {

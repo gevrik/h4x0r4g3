@@ -147,6 +147,11 @@ class LoopService extends BaseService
 
     /**
      * This runs to check if coding jobs are finished.
+     * @return bool
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function loopJobs()
     {
@@ -398,7 +403,9 @@ class LoopService extends BaseService
     }
 
     /**
-     *
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function loopCombatRound()
     {
@@ -504,6 +511,9 @@ class LoopService extends BaseService
     /**
      * @param ConnectionInterface $wsClient
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function checkCodebreaker(ConnectionInterface $wsClient)
     {
@@ -538,7 +548,9 @@ class LoopService extends BaseService
     }
 
     /**
-     *
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function loopNpcSpawn()
     {
@@ -679,6 +691,9 @@ class LoopService extends BaseService
     /**
      * @param System $system
      * @param Node $node
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function spawnVirus(System $system, Node $node)
     {
@@ -693,6 +708,7 @@ class LoopService extends BaseService
 
     /**
      * Loop that regenerates eeg, willpower and security rating. Default loop time is 5 minutes.
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function loopRegeneration()
     {
@@ -760,7 +776,9 @@ class LoopService extends BaseService
     }
 
     /**
-     *
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function loopNpcRoam()
     {
@@ -819,6 +837,9 @@ class LoopService extends BaseService
 
     /**
      * This runs every 15m to determine snippet and credit gains based on node types.
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function loopResources()
     {
@@ -876,6 +897,9 @@ class LoopService extends BaseService
 
     /**
      * OLD
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function loopResourcesOld()
     {
@@ -953,6 +977,9 @@ class LoopService extends BaseService
 
     /**
      * Part of the resource loop. Determines research progress on all researcher programs.
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function researchProgress()
     {
@@ -1061,44 +1088,8 @@ class LoopService extends BaseService
     }
 
     /**
-     * @param Node $node
-     * @return bool
-     */
-    private function checkForModifyingFilesOld(Node $node)
-    {
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        $filesInNode = $fileRepo->findByNode($node);
-        foreach ($filesInNode as $fileInNode) {
-            /** @var File $fileInNode */
-            // skip if the file is not running or has 0 integrity or is not connected to a profile
-            if (!$fileInNode->getRunning()) continue;
-            if ($fileInNode->getIntegrity() < 1) continue;
-            if (!$fileInNode->getProfile()) continue;
-            switch ($fileInNode->getFileType()->getId()) {
-                default:
-                    continue;
-                case FileType::ID_DATAMINER:
-                case FileType::ID_COINMINER:
-                    $fileData = json_decode($fileInNode->getData());
-                    if (!is_object($fileData)) {
-                        $fileData = json_encode(['value'=>0]);
-                        $fileData = json_decode($fileData);
-                    }
-                    // skip if the program has already collected equal to or more than its integrity allows
-                    if ($fileData->value >= $fileInNode->getIntegrity()) continue;
-                    $this->lowerIntegrityOfFile($fileInNode, 50);
-                    $fileData->value += $fileInNode->getLevel();
-                    if ($fileData->value > $fileInNode->getIntegrity()) $fileData->value = $fileInNode->getIntegrity();
-                    $fileInNode->setData(json_encode($fileData));
-                    break;
-            }
-        }
-        return true;
-    }
-
-    /**
      * @param System $system
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function checkForModifyingFiles(System $system)
     {

@@ -216,6 +216,10 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeFile($resourceId, $contentArray)
     {
@@ -226,6 +230,9 @@ class FileService extends BaseService
      * @param File $file
      * @param System $system
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executePortscanner(File $file, System $system)
     {
@@ -238,6 +245,9 @@ class FileService extends BaseService
      * @param System $system
      * @param Node $node
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeJackhammer($resourceId, File $file, System $system, Node $node)
     {
@@ -248,6 +258,7 @@ class FileService extends BaseService
      * @param File $file
      * @param File $miner
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function executeSiphon(File $file, File $miner)
     {
@@ -257,6 +268,7 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function executeMedkit(File $file)
     {
@@ -266,6 +278,7 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function executeProxifier(File $file)
     {

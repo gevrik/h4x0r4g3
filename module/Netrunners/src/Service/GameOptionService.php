@@ -48,6 +48,9 @@ class GameOptionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function optionsCommand($resourceId, $contentArray)
     {
@@ -127,6 +130,9 @@ class GameOptionService extends BaseService
      * @param Profile $profile
      * @param $returnMessage
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function addCurrentOptionsOutput(Profile $profile, $returnMessage)
     {

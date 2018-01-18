@@ -139,6 +139,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|\Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showScore($resourceId)
     {
@@ -184,6 +187,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showSkills($resourceId)
     {
@@ -219,6 +225,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showEquipment($resourceId)
     {
@@ -364,6 +373,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $jobs
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showJobs($resourceId, $jobs)
     {
@@ -422,6 +434,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileModInstances($resourceId)
     {
@@ -457,6 +472,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFilePartInstances($resourceId)
     {
@@ -492,6 +510,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function startStealthing($resourceId)
     {
@@ -521,6 +542,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function stopStealthing($resourceId)
     {
@@ -549,6 +573,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showInventory($resourceId)
     {
@@ -622,6 +649,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showInvitations($resourceId)
     {
@@ -683,6 +713,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function spendSkillPoints($resourceId, $contentArray)
     {
@@ -774,6 +807,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFactionRatings($resourceId)
     {
@@ -811,6 +847,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function setEmail($resourceId, $contentArray)
     {
@@ -848,6 +887,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changePassword($resourceId, $contentArray)
     {
@@ -885,6 +927,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showBankBalance($resourceId)
     {
@@ -912,6 +957,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function depositCredits($resourceId, $contentArray)
     {
@@ -979,6 +1027,9 @@ class ProfileService extends BaseService
      * @param bool $messageSocket
      * @param bool $asActiveCommand
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function cancelCurrentAction($resourceId, $messageSocket = false, $asActiveCommand = false)
     {
@@ -989,6 +1040,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changeBackgroundOpacity($resourceId, $contentArray)
     {
@@ -1026,6 +1080,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function withdrawCredits($resourceId, $contentArray)
     {
@@ -1080,6 +1137,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function setProfileLocale($resourceId, $contentArray)
     {
@@ -1119,6 +1179,9 @@ class ProfileService extends BaseService
      * @param $resourceId
      * @param int $type
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function openSubmitFeedbackPanel($resourceId, $type = Feedback::TYPE_TYPO_ID)
     {
@@ -1140,6 +1203,9 @@ class ProfileService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function logoutCommand($resourceId)
     {

@@ -56,6 +56,7 @@ class FileModRepository extends EntityRepository
     /**
      * @param $keyword
      * @return FileMod|null
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findLikeName($keyword)
     {

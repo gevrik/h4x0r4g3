@@ -51,6 +51,9 @@ class CombatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function attackCommand($resourceId, $contentArray)
     {
@@ -94,6 +97,9 @@ class CombatService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function slayCommand($resourceId, $contentArray)
     {
@@ -139,6 +145,9 @@ class CombatService extends BaseService
      * @param NpcInstance|Profile $attacker
      * @param NpcInstance|Profile $defender
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function resolveCombatRound($attacker, $defender)
     {

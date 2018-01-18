@@ -110,6 +110,9 @@ class CodingService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterCodeMode($resourceId)
     {
@@ -149,6 +152,9 @@ class CodingService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function switchCodeMode($resourceId, $contentArray)
     {
@@ -181,6 +187,9 @@ class CodingService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function commandLevel($resourceId, $contentArray)
     {
@@ -214,6 +223,9 @@ class CodingService extends BaseService
      * @param $resourceId
      * @param $codeOptions
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function commandOptions($resourceId, $codeOptions)
     {
@@ -356,6 +368,9 @@ class CodingService extends BaseService
      * @param $contentArray
      * @param $codeOptions
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function commandType($resourceId, $contentArray, $codeOptions)
     {
@@ -446,6 +461,10 @@ class CodingService extends BaseService
      * @param $codeOptions
      * @param $contentArray
      * @return bool|GameClientResponse|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function commandCode($resourceId, $codeOptions, $contentArray)
     {
@@ -471,6 +490,9 @@ class CodingService extends BaseService
      * @param $codeOptions
      * @param int $amount
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function codeResource($codeOptions, $amount = 1)
     {
@@ -558,6 +580,9 @@ class CodingService extends BaseService
     /**
      * @param $codeOptions
      * @return GameClientResponse|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function codeFileMod($codeOptions)
     {
@@ -647,7 +672,14 @@ class CodingService extends BaseService
         return $this->gameClientResponse->send();
     }
 
-
+    /**
+     * @param $codeOptions
+     * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
     private function codeProgram($codeOptions)
     {
         $profile = $this->user->getProfile();
@@ -792,6 +824,9 @@ class CodingService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function exitCodeMode($resourceId)
     {
@@ -828,7 +863,7 @@ class CodingService extends BaseService
                 break;
         }
         foreach ($results as $result) {
-            /** @var FilePartSkill|FileTypeSkill $result */
+            /** @var FilePartSkill|FileTypeSkill|Skill $result */
             $skillList[] = ($result instanceof Skill) ? $this->getNameWithoutSpaces($result->getName()) : $this->getNameWithoutSpaces($result->getSkill()->getName(), '-');
         }
         return $skillList;
@@ -838,6 +873,9 @@ class CodingService extends BaseService
      * @param Profile $profile
      * @param $skillId
      * @return bool|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function checkAdvancedCoding(Profile $profile, $skillId)
     {
@@ -859,6 +897,9 @@ class CodingService extends BaseService
     /**
      * @param $jobData
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function resolveCoding($jobData)
     {
@@ -1026,6 +1067,9 @@ class CodingService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showRecipes($resourceId)
     {

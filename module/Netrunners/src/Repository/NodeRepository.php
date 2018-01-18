@@ -12,7 +12,6 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\Node;
-use Netrunners\Entity\NodeType;
 use Netrunners\Entity\System;
 
 class NodeRepository extends EntityRepository
@@ -33,6 +32,8 @@ class NodeRepository extends EntityRepository
     /**
      * @param System $system
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countBySystem(System $system)
     {
@@ -46,6 +47,9 @@ class NodeRepository extends EntityRepository
     /**
      * @param $type
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findByType($type)
     {
@@ -60,6 +64,9 @@ class NodeRepository extends EntityRepository
      * @param System $system
      * @param $type
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findBySystemAndType(System $system, $type)
     {
@@ -77,6 +84,11 @@ class NodeRepository extends EntityRepository
      * @param System $system
      * @param $type
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function countBySystemAndType(System $system, $type)
     {
@@ -95,6 +107,11 @@ class NodeRepository extends EntityRepository
      * @param System $system
      * @param $nodeTypeId
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function getSumResourceLevelsForSystem(System $system, $nodeTypeId)
     {
@@ -125,6 +142,8 @@ class NodeRepository extends EntityRepository
     /**
      * @param System $system
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function getAverageNodeLevelOfSystem(System $system)
     {

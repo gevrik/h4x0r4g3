@@ -57,6 +57,9 @@ class ResearchService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showResearchers($resourceId)
     {
@@ -125,6 +128,9 @@ class ResearchService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function researchCommand($resourceId, $contentArray)
     {

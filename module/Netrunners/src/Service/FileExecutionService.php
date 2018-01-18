@@ -78,6 +78,10 @@ class FileExecutionService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeFile($resourceId, $contentArray)
     {
@@ -208,6 +212,7 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeChatClient(File $file)
     {
@@ -221,7 +226,13 @@ class FileExecutionService extends BaseService
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
-
+    /**
+     * @param File $file
+     * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     protected function executeCombatProgram(File $file)
     {
         $profile = $this->user->getProfile();
@@ -269,6 +280,9 @@ class FileExecutionService extends BaseService
 
     /**
      * @param File $file
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeSmokeScreen(File $file)
     {
@@ -308,6 +322,9 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeBreakout(File $file)
     {
@@ -356,6 +373,9 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeAntidote(File $file)
     {
@@ -406,6 +426,9 @@ class FileExecutionService extends BaseService
 
     /**
      * @param File $file
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function executeKicker(File $file)
     {
@@ -453,6 +476,9 @@ class FileExecutionService extends BaseService
 
     /**
      * @param File $file
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function executeVenom(File $file)
     {
@@ -502,6 +528,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeDataminer(File $file, Node $node)
     {
@@ -529,6 +556,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeCoinminer(File $file, Node $node)
     {
@@ -556,6 +584,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeGuardSpawner(File $file, Node $node)
     {
@@ -595,6 +624,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeIcmpBlocker(File $file, Node $node)
     {
@@ -622,6 +652,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeBeartrap(File $file, Node $node)
     {
@@ -651,6 +682,9 @@ class FileExecutionService extends BaseService
      * @param Node $node
      * @param $contentArray
      * @return array|bool|mixed
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function queueProgramExecution($resourceId, File $file, Node $node, $contentArray)
     {
@@ -789,6 +823,9 @@ class FileExecutionService extends BaseService
      * @param Node $node
      * @param $contentArray
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeWarningJackhammer(File $file, Node $node, $contentArray)
     {
@@ -907,6 +944,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeCustomIde(File $file, Node $node)
     {
@@ -934,6 +972,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeSkimmer(File $file, Node $node)
     {
@@ -961,6 +1000,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeBlockchainer(File $file, Node $node)
     {
@@ -988,6 +1028,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeIoTracer(File $file, Node $node)
     {
@@ -1014,6 +1055,7 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeObfuscator(File $file)
     {
@@ -1030,6 +1072,7 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeCloak(File $file)
     {
@@ -1047,6 +1090,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeLogEncryptor(File $file, Node $node)
     {
@@ -1074,6 +1118,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeLogDecryptor(File $file, Node $node)
     {
@@ -1101,6 +1146,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executePhisher(File $file, Node $node)
     {
@@ -1128,6 +1174,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeWilderspaceHubPortal(File $file, Node $node)
     {
@@ -1155,6 +1202,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeResearcher(File $file, Node $node)
     {
@@ -1181,6 +1229,7 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function equipFile(File $file)
     {
@@ -1553,6 +1602,9 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param System $system
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executePortscanner(File $file, System $system)
     {
@@ -1609,6 +1661,9 @@ class FileExecutionService extends BaseService
      * @param System $system
      * @param Node $node
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeJackhammer($resourceId, File $file, System $system, Node $node)
     {
@@ -1660,6 +1715,7 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param File $miner
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function executeSiphon(File $file, File $miner)
     {
@@ -1713,6 +1769,7 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function executeMedkit(File $file)
     {
@@ -1741,6 +1798,7 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function executeProxifier(File $file)
     {

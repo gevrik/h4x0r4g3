@@ -18,6 +18,8 @@ class FeedbackRepository extends EntityRepository
     /**
      * @param \DateTime $lastLogoutDate
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByNewForProfile(\DateTime $lastLogoutDate)
     {

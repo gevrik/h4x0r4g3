@@ -26,6 +26,9 @@ class UtilityService extends BaseService
     /**
      * @param null|object $clientData
      * @return bool|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showPrompt($clientData = NULL)
     {
@@ -53,6 +56,9 @@ class UtilityService extends BaseService
      * @param $clientData
      * @param string $content
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function autocomplete(ConnectionInterface $from, $clientData, $content = '')
     {
@@ -98,9 +104,7 @@ class UtilityService extends BaseService
      * @return string
      */
     public function getRandomAddress($length, $sep = ":", $space = 4) {
-        if (function_exists("mcrypt_create_iv")) {
-            $r = mcrypt_create_iv($length, MCRYPT_DEV_URANDOM);
-        } else if (function_exists("openssl_random_pseudo_bytes")) {
+        if (function_exists("openssl_random_pseudo_bytes")) {
             $r = openssl_random_pseudo_bytes($length);
         } else if (is_readable('/dev/urandom')) {
             $r = file_get_contents('/dev/urandom', false, null, 0, $length);
@@ -117,12 +121,15 @@ class UtilityService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showCommands($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
-        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  close  bgopacity  bug  cancel  cd  changepassword  clear  code  commands  connect  consider  createpasskey passkey  decompile  defaultmra  deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  options  passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  repairmra  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  withdraw';
+        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  close  bgopacity  bug  cancel  cd  changepassword  clear  code  commands  connect  consider  createpasskey passkey  decompile  defaultmra  deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  options  passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  repairmra  reply  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  withdraw';
         $returnMessage = sprintf(
             '%s',
             wordwrap($message, 120)
@@ -158,6 +165,10 @@ class UtilityService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function showMotd($resourceId)
     {
@@ -179,6 +190,9 @@ class UtilityService extends BaseService
      * @param Geocoord $location
      * @param bool $flush
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function updateSystemCoords($resourceId, Geocoord $location, $flush = false)
     {

@@ -21,6 +21,7 @@ class ProfileFileTypeRecipeRepository extends EntityRepository
      * @param Profile $profile
      * @param FileType $fileType
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findOneByProfileAndFileType(Profile $profile, FileType $fileType)
     {

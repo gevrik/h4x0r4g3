@@ -21,6 +21,10 @@ class ProfileEffectRepository extends EntityRepository
      * @param Profile $profile
      * @param $effectId
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findOneByProfileAndEffect(Profile $profile, $effectId)
     {
@@ -39,6 +43,10 @@ class ProfileEffectRepository extends EntityRepository
      * @param NpcInstance $npc
      * @param $effectId
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findOneByNpcAndEffect(NpcInstance $npc, $effectId)
     {

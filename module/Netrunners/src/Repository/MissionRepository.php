@@ -20,6 +20,7 @@ class MissionRepository extends EntityRepository
     /**
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findCurrentMission(Profile $profile)
     {
@@ -36,6 +37,7 @@ class MissionRepository extends EntityRepository
     /**
      * @param File $file
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findByTargetFile(File $file)
     {

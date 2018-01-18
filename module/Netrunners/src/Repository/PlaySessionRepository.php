@@ -36,6 +36,7 @@ class PlaySessionRepository extends EntityRepository
     /**
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findCurrentPlaySession(Profile $profile)
     {
@@ -50,6 +51,7 @@ class PlaySessionRepository extends EntityRepository
     /**
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findLastPlaySession(Profile $profile)
     {

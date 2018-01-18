@@ -37,6 +37,9 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function login($resourceId, $content)
     {
@@ -219,6 +222,9 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function createPasswordConfirm($resourceId, $content)
     {
@@ -389,6 +395,9 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function promptForPassword($resourceId, $content)
     {

@@ -13,9 +13,6 @@ namespace Netrunners\Repository;
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileMod;
-use Netrunners\Entity\FileModInstance;
-use Netrunners\Entity\FileType;
-use Netrunners\Entity\FileTypeMod;
 use Netrunners\Entity\Profile;
 
 class FileModInstanceRepository extends EntityRepository
@@ -26,6 +23,8 @@ class FileModInstanceRepository extends EntityRepository
      * @param FileMod $fileMod
      * @param int $minLevel
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByProfileAndTypeAndMinLevel(Profile $profile, FileMod $fileMod, $minLevel = 1)
     {
@@ -83,6 +82,8 @@ class FileModInstanceRepository extends EntityRepository
     /**
      * @param File $file
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByFile(File $file)
     {

@@ -11,7 +11,6 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
-use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Profile;
 
@@ -48,6 +47,7 @@ class FileTypeRepository extends EntityRepository
     /**
      * @param $keyword
      * @return array
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findLikeName($keyword)
     {

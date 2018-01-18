@@ -72,6 +72,9 @@ class MissionService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterMode($resourceId)
     {
@@ -155,6 +158,9 @@ class MissionService extends BaseService
      * @param $resourceId
      * @param null|object $confirmData
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function requestMission($resourceId, $confirmData = NULL)
     {
@@ -264,6 +270,9 @@ class MissionService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showMissionDetails($resourceId)
     {

@@ -20,6 +20,8 @@ class MailMessageRepository extends EntityRepository
      * Returns the amount of mails for the given profile.
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByTotalMails(Profile $profile)
     {
@@ -37,6 +39,8 @@ class MailMessageRepository extends EntityRepository
      * Returns the amount of unread mails for the given profile.
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByUnreadMails(Profile $profile)
     {

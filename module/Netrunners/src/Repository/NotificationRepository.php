@@ -19,6 +19,8 @@ class NotificationRepository extends EntityRepository
      * Returns the amount of unread notifications for the given profile.
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countUnreadByProfile(Profile $profile)
     {

@@ -53,6 +53,9 @@ class FactionService extends BaseService
     /**
      * @param $resourceId
      * @return array|bool|false|\Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listFactions($resourceId)
     {
@@ -87,6 +90,9 @@ class FactionService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function joinFaction($resourceId)
     {

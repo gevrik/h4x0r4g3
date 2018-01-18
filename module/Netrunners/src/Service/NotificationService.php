@@ -42,6 +42,9 @@ class NotificationService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showNotifications($resourceId)
     {
@@ -62,6 +65,9 @@ class NotificationService extends BaseService
      * @param $entityId
      * @param bool $all
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function dismissNotification($resourceId, $entityId, $all = false)
     {

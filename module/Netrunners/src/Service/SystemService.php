@@ -59,6 +59,9 @@ class SystemService extends BaseService
      * Shows important stats of the current system.
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showSystemStats($resourceId)
     {
@@ -91,6 +94,9 @@ class SystemService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function homeRecall($resourceId)
     {
@@ -128,6 +134,9 @@ class SystemService extends BaseService
      * @param $resourceId
      * @param bool $sendNow
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function homeRecallAction($resourceId, $sendNow = true)
     {
@@ -163,6 +172,9 @@ class SystemService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changeGeocoords($resourceId, $contentArray)
     {

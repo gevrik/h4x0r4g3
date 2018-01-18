@@ -12,7 +12,6 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\MailMessage;
-use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\MailMessageRepository;
@@ -61,6 +60,9 @@ class MailMessageService extends BaseService
      * Returns a string that shows how many unread messages a profile has in its inbox.
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function displayAmountUnreadMails($resourceId)
     {
@@ -82,6 +84,9 @@ class MailMessageService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterMailMode($resourceId)
     {
@@ -135,6 +140,9 @@ class MailMessageService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function exitMailMode($resourceId)
     {
@@ -155,6 +163,9 @@ class MailMessageService extends BaseService
      * @param $resourceId
      * @param $mailOptions
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function displayMail($resourceId, $mailOptions)
     {
@@ -205,6 +216,9 @@ class MailMessageService extends BaseService
      * @param $contentArray
      * @param $mailOptions
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function deleteMail($resourceId, $contentArray, $mailOptions)
     {

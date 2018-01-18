@@ -21,6 +21,8 @@ class FileTypeModRepository extends EntityRepository
      * If the count is 0, then the filemod can be used on all filetypes.
      * @param FileMod $fileMod
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByFileMod(FileMod $fileMod)
     {
@@ -34,6 +36,8 @@ class FileTypeModRepository extends EntityRepository
     /**
      * @param FileMod $fileMod
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByFileType(FileMod $fileMod)
     {

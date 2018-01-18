@@ -22,6 +22,8 @@ class NpcInstanceRepository extends EntityRepository
     /**
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByHostileToProfileInNode(Profile $profile)
     {
@@ -47,6 +49,8 @@ class NpcInstanceRepository extends EntityRepository
     /**
      * @param System $system
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countBySystem(System $system)
     {
@@ -72,6 +76,8 @@ class NpcInstanceRepository extends EntityRepository
     /**
      * @param Node $node
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByNode(Node $node)
     {
@@ -85,6 +91,7 @@ class NpcInstanceRepository extends EntityRepository
     /**
      * @param Node $node
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findOneByHomeNode(Node $node)
     {
@@ -98,6 +105,9 @@ class NpcInstanceRepository extends EntityRepository
     /**
      * @param int $npcId
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findByNpcId($npcId)
     {

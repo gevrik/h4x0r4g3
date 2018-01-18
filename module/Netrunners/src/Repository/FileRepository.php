@@ -305,8 +305,11 @@ class FileRepository extends EntityRepository
 
     /**
      * @param NpcInstance $npc
-     * @param $fileTypeId
+     * @param int $fileTypeId
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function findOneForHarvesting(NpcInstance $npc, $fileTypeId)
     {
@@ -314,6 +317,27 @@ class FileRepository extends EntityRepository
         $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
         $qb = $this->createQueryBuilder('f');
         $qb->where('f.fileType = :fileType AND f.node = :node AND f.running = 1 AND f.integrity >= 1 AND f.data IS NOT NULL');
+        $qb->setParameters([
+            'fileType' => $fileType,
+            'node' => $npc->getNode()
+        ]);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param NpcInstance $npc
+     * @param $fileTypeId
+     * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function findOneForRepair(NpcInstance $npc, $fileTypeId)
+    {
+        $miner = NULL;
+        $fileType = $this->_em->find('Netrunners\Entity\FileType', $fileTypeId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->where('f.fileType = :fileType AND f.node = :node AND f.integrity < 1');
         $qb->setParameters([
             'fileType' => $fileType,
             'node' => $npc->getNode()

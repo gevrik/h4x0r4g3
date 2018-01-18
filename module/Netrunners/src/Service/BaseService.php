@@ -166,6 +166,9 @@ class BaseService
 
     /**
      * @param $resourceId
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function initService($resourceId)
     {
@@ -187,6 +190,9 @@ class BaseService
     /**
      * Sets the user from the client data.
      * @param User|NULL $user
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function setUser(User $user = NULL)
     {
@@ -226,6 +232,7 @@ class BaseService
      * @param File $file
      * @param bool $assoc
      * @return mixed|string
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function getFileData(File $file, $assoc = false)
     {
@@ -271,7 +278,8 @@ class BaseService
     /**
      * @param Node $node
      * @param bool $assoc
-     * @return object|array
+     * @return mixed|string
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function getNodeData(Node $node, $assoc = false)
     {
@@ -457,6 +465,9 @@ class BaseService
      * @param Profile|NpcInstance|File $detector
      * @param Profile|NpcInstance|File $stealther
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function canSee($detector, $stealther)
     {
@@ -592,6 +603,9 @@ class BaseService
      * @param $jobData
      * @param int $modifier
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function learnFromSuccess(Profile $profile, $jobData, $modifier = 0)
     {
@@ -635,6 +649,7 @@ class BaseService
     /**
      * @param Profile $profile
      * @param null|int $special
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function gainInvitation(Profile $profile, $special = NULL)
     {
@@ -664,6 +679,9 @@ class BaseService
      * @param $jobData
      * @param int $modifier
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function learnFromFailure(Profile $profile, $jobData, $modifier = 0)
     {
@@ -694,6 +712,7 @@ class BaseService
      * @param Profile $profile
      * @param $amount
      * @param bool $flush
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function gainSkillpoints(Profile $profile, $amount, $flush = false)
     {
@@ -891,6 +910,9 @@ class BaseService
      * @param Profile|NpcInstance $profile
      * @param int $skillId
      * @return int
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function getSkillRating($profile, $skillId)
     {
@@ -908,6 +930,7 @@ class BaseService
      * @param Skill $skill
      * @param $newSkillRating
      * @return bool
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function setSkillRating(Profile $profile, Skill $skill, $newSkillRating)
     {
@@ -923,6 +946,7 @@ class BaseService
     /**
      * @param Profile $profile
      * @param Node $node
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function addKnownNode(Profile $profile, Node $node)
     {
@@ -966,6 +990,9 @@ class BaseService
      * @param Profile|NpcInstance|null $actor
      * @param mixed $ignoredProfileIds
      * @param bool $updateMap
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function messageEveryoneInNode(Node $node, $message, $actor = NULL, $ignoredProfileIds = [], $updateMap = false)
     {
@@ -1020,6 +1047,9 @@ class BaseService
      * @param null|Profile|NpcInstance $actor
      * @param array $ignoredProfileIds
      * @param bool $updateMap
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function messageEveryoneInNodeNew(
         Node $node,
@@ -1088,6 +1118,9 @@ class BaseService
      * @param Profile $profile
      * @param $codeOptions
      * @return int
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function calculateCodingSuccessChance(Profile $profile, $codeOptions)
     {
@@ -1191,6 +1224,9 @@ class BaseService
      * @param Connection|NULL $connection
      * @param Node|NULL $sourceNode
      * @param Node|NULL $targetNode
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function movePlayerToTargetNodeNew(
         $resourceId = NULL,
@@ -1238,6 +1274,9 @@ class BaseService
      * @param Node|NULL $sourceNode
      * @param Node|NULL $targetNode
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function movePlayerToTargetNode(
         $resourceId = NULL,
@@ -1277,6 +1316,9 @@ class BaseService
     /**
      * @param Profile $profile
      * @param Node|NULL $previousNode
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function checkMoveFileTriggers(Profile $profile, Node $previousNode = NULL)
     {
@@ -1352,6 +1394,9 @@ class BaseService
     /**
      * @param Profile $profile
      * @param int $damage
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function damageProfile(Profile $profile, $damage = 0)
     {
@@ -1370,6 +1415,7 @@ class BaseService
      * @param Profile $profile
      * @param Node|NULL $node
      * @return bool
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function checkKnownNode(Profile $profile, Node $node = NULL)
     {
@@ -1407,6 +1453,9 @@ class BaseService
      * @param Node|NULL $sourceNode
      * @param Node|NULL $targetNode
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function moveNpcToTargetNode(
         NpcInstance $npc,
@@ -1462,6 +1511,9 @@ class BaseService
 
     /**
      * @param NpcInstance $npc
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function checkNpcTriggers(NpcInstance $npc)
     {
@@ -1472,12 +1524,18 @@ class BaseService
                 case Npc::ID_WORKER_PROGRAM:
                     $this->checkWorkerTriggers($npc);
                     break;
+                case Npc::ID_DEBUGGER_PROGRAM:
+                    $this->checkDebuggerTriggers($npc);
+                    break;
             }
         }
     }
 
     /**
      * @param NpcInstance $npc
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function checkWorkerTriggers(NpcInstance $npc)
     {
@@ -1604,12 +1662,106 @@ class BaseService
     }
 
     /**
+     * @param NpcInstance $npc
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    private function checkDebuggerTriggers(NpcInstance $npc)
+    {
+        $currentNode = $npc->getNode();
+        switch ($currentNode->getNodeType()->getId()) {
+            default:
+                break;
+            case NodeType::ID_DATABASE:
+                $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                /** @var FileRepository $fileRepo */
+                $miners = $fileRepo->findOneForRepair($npc, FileType::ID_DATAMINER);
+                $lowestAmount = 100;
+                $miner = NULL;
+                foreach ($miners as $xMiner) {
+                    /** @var File $xMiner */
+                    if ($xMiner->getIntegrity() < $xMiner->getMaxIntegrity() && $xMiner->getIntegrity() < $lowestAmount) {
+                        $lowestAmount = $xMiner->getIntegrity();
+                        $miner = $xMiner;
+                    }
+                }
+                if ($miner) {
+                    $neededRepairAmount = $miner->getMaxIntegrity() - $miner->getIntegrity();
+                    $amount = ($npc->getLevel() > $neededRepairAmount) ? $neededRepairAmount : $npc->getLevel();
+                    $amount = ($npc->getCurrentEeg() > $amount) ? $amount : $npc->getCurrentEeg();
+                    $miner->setIntegrity($miner->getIntegrity()+$amount);
+                    if ($amount >= $npc->getCurrentEeg()) {
+                        $this->entityManager->remove($npc);
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has repaired some integrity on [%s] and then despawns</pre>'),
+                            $npc->getName(),
+                            $miner->getName()
+                        );
+                    }
+                    else {
+                        $npc->setCurrentEeg($npc->getCurrentEeg()-$amount);
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has repaired some integrity on [%s]</pre>'),
+                            $npc->getName(),
+                            $miner->getName()
+                        );
+                    }
+                    $this->entityManager->flush($miner);
+                    $this->messageEveryoneInNode($currentNode, $message);
+                }
+                break;
+            case NodeType::ID_TERMINAL:
+                $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                /** @var FileRepository $fileRepo */
+                $miners = $fileRepo->findOneForRepair($npc, FileType::ID_COINMINER);
+                $lowestAmount = 100;
+                $miner = NULL;
+                foreach ($miners as $xMiner) {
+                    /** @var File $xMiner */
+                    if ($xMiner->getIntegrity() < $xMiner->getMaxIntegrity() && $xMiner->getIntegrity() < $lowestAmount) {
+                        $lowestAmount = $xMiner->getIntegrity();
+                        $miner = $xMiner;
+                    }
+                }
+                if ($miner) {
+                    $neededRepairAmount = $miner->getMaxIntegrity() - $miner->getIntegrity();
+                    $amount = ($npc->getLevel() > $neededRepairAmount) ? $neededRepairAmount : $npc->getLevel();
+                    $amount = ($npc->getCurrentEeg() > $amount) ? $amount : $npc->getCurrentEeg();
+                    $miner->setIntegrity($miner->getIntegrity()+$amount);
+                    if ($amount >= $npc->getCurrentEeg()) {
+                        $this->entityManager->remove($npc);
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has repaired some integrity on [%s] and then despawns</pre>'),
+                            $npc->getName(),
+                            $miner->getName()
+                        );
+                    }
+                    else {
+                        $npc->setCurrentEeg($npc->getCurrentEeg()-$amount);
+                        $message = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has repaired some integrity on [%s]</pre>'),
+                            $npc->getName(),
+                            $miner->getName()
+                        );
+                    }
+                    $this->entityManager->flush($miner);
+                    $this->messageEveryoneInNode($currentNode, $message);
+                }
+                break;
+        }
+    }
+
+    /**
      * Checks if the player is blocked from performing another action.
      * Returns true if the action is blocked, false if it is not blocked.
      * @param $resourceId
      * @param bool $checkForFullBlock
-     * @param File|null $file
-     * @return array|bool
+     * @param File|NULL $file
+     * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function isActionBlocked($resourceId, $checkForFullBlock = false, File $file = NULL)
     {
@@ -1677,6 +1829,9 @@ class BaseService
      * @param bool $checkForFullBlock
      * @param File|NULL $file
      * @return bool|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function isActionBlockedNew($resourceId, $checkForFullBlock = false, File $file = NULL)
     {
@@ -1850,6 +2005,7 @@ class BaseService
      * @param string $subject
      * @param string $severity
      * @return bool
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function storeNotification(Profile $profile, $subject = 'INVALID', $severity = Notification::SEVERITY_DANGER)
     {
@@ -1874,6 +2030,8 @@ class BaseService
      * @param null $sourceFaction
      * @param null $targetFaction
      * @return bool
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function createProfileFactionRating(
         Profile $profile,
@@ -1957,6 +2115,7 @@ class BaseService
     /**
      * @param System $system
      * @param int $amount
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function raiseSystemAlertLevel(System $system, $amount = 0)
     {
@@ -1968,6 +2127,9 @@ class BaseService
     /**
      * @param Profile $profile
      * @param int $amount
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function raiseProfileSecurityRating(Profile $profile, $amount = 0)
     {
@@ -2011,6 +2173,9 @@ class BaseService
     /**
      * @param Profile|NpcInstance $attacker
      * @param Profile|NpcInstance $defender
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function forceAttack($attacker, $defender)
     {
@@ -2055,6 +2220,7 @@ class BaseService
      * @param File|NULL $file
      * @param Node|NULL $node
      * @param Profile|NULL $profile
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function writeSystemLogEntry(
         System $system,
@@ -2083,6 +2249,9 @@ class BaseService
      * @param Profile $profile
      * @param $gameOptionId
      * @return mixed
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function getProfileGameOptionValue(Profile $profile, $gameOptionId)
     {
@@ -2099,6 +2268,9 @@ class BaseService
      * @param Profile $profile
      * @param $gameOptionId
      * @return mixed
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function getProfileGameOption(Profile $profile, $gameOptionId)
     {
@@ -2114,6 +2286,9 @@ class BaseService
     /**
      * @param Profile $profile
      * @param $gameOptionId
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function toggleProfileGameOption(Profile $profile, $gameOptionId)
     {
@@ -2228,6 +2403,9 @@ class BaseService
      * @param bool $messageSocket
      * @param bool $asActiveCommand
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function cancelAction($resourceId, $messageSocket = false, $asActiveCommand = false)
     {
@@ -2290,6 +2468,9 @@ class BaseService
     /**
      * @param $resourceId
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showSystemMap($resourceId)
     {
@@ -2407,6 +2588,9 @@ class BaseService
     /**
      * @param $resourceId
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showCyberspaceMap($resourceId)
     {
@@ -2472,6 +2656,9 @@ class BaseService
     /**
      * @param int $resourceId
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showAreaMap($resourceId)
     {
@@ -2742,6 +2929,7 @@ class BaseService
     /**
      * @param Profile|NULL $xprofile
      * @return string
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function generateAreaMap(Profile $xprofile = NULL)
     {
@@ -2894,6 +3082,7 @@ class BaseService
      * @param Profile|NULL $profile
      * @param bool $silent
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function updateMap($resourceId, Profile $profile = NULL, $silent = true)
     {
@@ -3006,6 +3195,9 @@ class BaseService
 
     /**
      * @param NpcInstance $actor
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function checkAggro(NpcInstance $actor)
     {
@@ -3064,6 +3256,9 @@ class BaseService
     /**
      * @param NpcInstance|Profile $target
      * @param null|int $resourceId
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function checkNpcAggro($target, $resourceId = NULL)
     {
@@ -3117,9 +3312,10 @@ class BaseService
      * @param int $chance
      * @param int $integrityLoss
      * @param bool $flush
-     * @param File|null $targetFile
-     * @param NpcInstance|null $targetNpc
-     * @param Node|null $targetNode
+     * @param null $targetFile
+     * @param null $targetNpc
+     * @param null $targetNode
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function lowerIntegrityOfFile(
         File $file,
@@ -3159,6 +3355,9 @@ class BaseService
      * @param null $baseLevel
      * @param bool $flush
      * @return NpcInstance
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function spawnNpcInstance(
         Npc $npc,
@@ -3328,6 +3527,8 @@ class BaseService
     /**
      * @param File $file
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function executeMissionFile(File $file)
     {
@@ -3383,6 +3584,8 @@ class BaseService
 
     /**
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function completeMission()
     {
@@ -3433,6 +3636,9 @@ class BaseService
      * @param bool $prepend
      * @param bool|string|array $prependMessage
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showNodeInfo($resourceId, Node $node = NULL, $prepend = false, $prependMessage = false)
     {
@@ -3586,6 +3792,9 @@ class BaseService
      * @param Node|NULL $node
      * @param bool $sendNow
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showNodeInfoNew($resourceId, Node $node = NULL, $sendNow = false)
     {
@@ -3747,6 +3956,9 @@ class BaseService
 
     /**
      * @param Profile $profile
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function flatlineProfile(Profile $profile)
     {
@@ -3768,6 +3980,7 @@ class BaseService
     /**
      * @param NpcInstance $npcInstance
      * @param NpcInstance|Profile $attacker
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
     {
@@ -3810,6 +4023,9 @@ class BaseService
      * @param File $file
      * @param array $data
      * @return bool|float|mixed
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function checkFileTriggers(File $file, $data = [])
     {
@@ -3859,6 +4075,9 @@ class BaseService
      * @param int|null $duration
      * @param mixed|null $rating
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function addEffect(
         Profile $profile = NULL,

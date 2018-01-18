@@ -310,6 +310,57 @@ class ChatService extends BaseService
      * @param $contentArray
      * @return bool|GameClientResponse
      */
+    public function replyChat($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $messageContent = NULL;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $ws = $this->getWebsocketServer();
+        // sanity checks
+        $recipientId = $ws->getClientDataReplyId($resourceId);
+        /** @var Profile $recipient */
+        $recipient = $this->profileRepo->find($recipientId);
+        $messageContent = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$this->fileRepo->findChatClientForProfile($profile)) {
+            return $this->gameClientResponse->addMessage($this->translate('You need a running chatclient to send tell messages'))->send();
+        }
+        if (!$recipient) {
+            return $this->gameClientResponse->addMessage($this->translate('Nobody has messaged you'))->send();
+        }
+        if (!$messageContent) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        // logic start
+        // prepare message for recipient, send and set client-data
+        $recipientMessage = $this->prepareMessage($profile, $messageContent, self::CHANNEL_TELL, true, 'FROM ');
+        $this->gameClientResponse->addMessage($recipientMessage)
+            ->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)
+            ->setResourceId($recipient->getCurrentResourceId())
+            ->send();
+        $ws->setClientDataReplyId($recipient->getCurrentResourceId(), $profile->getId());
+        // create response for sender
+        $senderMessage = $this->prepareMessage($recipient, $messageContent, self::CHANNEL_TELL, true, 'TO ');
+        // TODO add ignore system and anonymous flag
+        return $this->gameClientResponse
+            ->reset()
+            ->setResourceId($resourceId)
+            ->addMessage($senderMessage)
+            ->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     public function newbieChat($resourceId, $contentArray)
     {
         // get user

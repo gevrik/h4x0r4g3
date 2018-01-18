@@ -15,6 +15,9 @@ use Doctrine\ORM\EntityRepository;
 class FactionRepository extends EntityRepository
 {
 
+    /**
+     * @return array
+     */
     public function findAllForMilkrun()
     {
         $qb = $this->createQueryBuilder('f');

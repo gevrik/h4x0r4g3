@@ -33,6 +33,8 @@ class ConnectionRepository extends EntityRepository
     /**
      * @param Node $node
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countBySourceNode(Node $node)
     {
@@ -48,6 +50,7 @@ class ConnectionRepository extends EntityRepository
      * @param Node $sourceNode
      * @param Node $targetNode
      * @return Connection
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findBySourceNodeAndTargetNode(Node $sourceNode, Node $targetNode)
     {

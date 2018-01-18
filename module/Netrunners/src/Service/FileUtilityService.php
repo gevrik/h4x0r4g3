@@ -70,6 +70,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changeFileName($resourceId, $contentArray)
     {
@@ -129,6 +132,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function updateFile($resourceId, $contentArray)
     {
@@ -187,6 +193,10 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function downloadFile($resourceId, $contentArray)
     {
@@ -273,6 +283,10 @@ class FileUtilityService extends BaseService
      * @param $command
      * @param array $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterMode($resourceId, $command, $contentArray = [])
     {
@@ -309,6 +323,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function harvestCommand($resourceId, $contentArray)
     {
@@ -391,6 +408,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function initArmorCommand($resourceId, $contentArray)
     {
@@ -492,6 +512,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function killProcess($resourceId, $contentArray)
     {
@@ -546,6 +569,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listProcesses($resourceId, $contentArray)
     {
@@ -593,6 +619,8 @@ class FileUtilityService extends BaseService
     /**
      * @param $contentArray
      * @return mixed|File|null
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function removeFileChecks($contentArray)
     {
@@ -670,7 +698,14 @@ class FileUtilityService extends BaseService
         return ($response) ? $response : $file;
     }
 
-
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     public function modFile($resourceId, $contentArray)
     {
         $this->initService($resourceId);
@@ -773,6 +808,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removeFile($resourceId, $contentArray)
     {
@@ -813,6 +851,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function editFileDescription($resourceId, $contentArray)
     {
@@ -855,6 +896,9 @@ class FileUtilityService extends BaseService
      * @param string $content
      * @param $entityId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function saveFileDescription(
         $resourceId,
@@ -886,6 +930,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function decompileFile($resourceId, $contentArray)
     {
@@ -932,6 +979,9 @@ class FileUtilityService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function createPasskeyCommand($resourceId)
     {
@@ -1011,6 +1061,9 @@ class FileUtilityService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listPasskeysCommand($resourceId)
     {
@@ -1057,6 +1110,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removePasskeyCommand($resourceId, $contentArray)
     {
@@ -1111,6 +1167,9 @@ class FileUtilityService extends BaseService
     /**
      * @param $resourceId
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileCategories($resourceId)
     {
@@ -1141,6 +1200,9 @@ class FileUtilityService extends BaseService
     /**
      * @param $resourceId
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileMods($resourceId)
     {
@@ -1170,6 +1232,9 @@ class FileUtilityService extends BaseService
     /**
      * @param $resourceId
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileTypes($resourceId)
     {
@@ -1211,6 +1276,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function statFile($resourceId, $contentArray)
     {
@@ -1371,6 +1439,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function touchFile($resourceId, $contentArray)
     {
@@ -1446,6 +1517,10 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function unloadFile($resourceId, $contentArray)
     {
@@ -1508,6 +1583,9 @@ class FileUtilityService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function useCommand($resourceId, $contentArray)
     {

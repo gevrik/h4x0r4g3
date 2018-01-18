@@ -709,6 +709,15 @@ class WebsocketService implements MessageComponentInterface {
 
     /**
      * @param $resourceId
+     * @return mixed
+     */
+    public function getClientDataReplyId($resourceId)
+    {
+        return $this->clientsData[$resourceId]['replyId'];
+    }
+
+    /**
+     * @param $resourceId
      * @param int $count
      * @return $this
      */

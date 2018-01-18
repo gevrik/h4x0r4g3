@@ -71,6 +71,9 @@ class MilkrunService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterMilkrunMode($resourceId)
     {
@@ -165,6 +168,9 @@ class MilkrunService extends BaseService
      * @param $resourceId
      * @param null|object $confirmData
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function requestMilkrun($resourceId, $confirmData = NULL)
     {
@@ -404,6 +410,10 @@ class MilkrunService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function clickTile($resourceId, $contentArray)
     {

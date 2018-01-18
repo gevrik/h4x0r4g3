@@ -277,6 +277,8 @@ class ParserService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function parseInput(ConnectionInterface $from, $content = '', $entityId = false, $jobs = false, $silent = false)
     {
@@ -450,12 +452,6 @@ class ParserService
                 return $this->mailMessageService->enterMailMode($resourceId);
             case 'map':
                 return $this->systemService->updateMap($resourceId, $user->getProfile(), false);
-//                if ($profile->getCurrentNode()->getSystem()->getProfile() !== $profile) {
-//                    return $this->systemService->showAreaMap($resourceId);
-//                }
-//                else {
-//                    return $this->systemService->showSystemMap($resourceId);
-//                }
             case 'showmra':
             case 'showmilkrunaivatars':
                 return $this->milkrunAivatarService->showMilkrunAivatars($resourceId);
@@ -505,6 +501,8 @@ class ParserService
             case 'removepasskey':
             case 'rmpasskey':
                 return $this->fileService->removePasskeyCommand($resourceId, $contentArray);
+            case 'reply':
+                return $this->chatService->replyChat($resourceId, $contentArray);
             case 'research':
                 return $this->researchService->researchCommand($resourceId, $contentArray);
             case 'showresearch':
@@ -743,6 +741,7 @@ class ParserService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function parseCodeInput(ConnectionInterface $from, $content = '', $jobs = false)
     {

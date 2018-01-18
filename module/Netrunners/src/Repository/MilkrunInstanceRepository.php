@@ -20,6 +20,7 @@ class MilkrunInstanceRepository extends EntityRepository
      * Returns the currently running milkrun or null.
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findCurrentMilkrun(Profile $profile)
     {

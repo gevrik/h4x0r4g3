@@ -18,6 +18,7 @@ class FileCategoryRepository extends EntityRepository
     /**
      * @param $keyword
      * @return array
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findLikeName($keyword)
     {

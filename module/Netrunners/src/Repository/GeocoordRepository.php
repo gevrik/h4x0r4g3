@@ -15,6 +15,12 @@ use Doctrine\ORM\EntityRepository;
 class GeocoordRepository extends EntityRepository
 {
 
+    /**
+     * @param $lat
+     * @param $lng
+     * @param $placeId
+     * @return null|object
+     */
     public function findOneUnique($lat, $lng, $placeId)
     {
         return $this->findOneBy([

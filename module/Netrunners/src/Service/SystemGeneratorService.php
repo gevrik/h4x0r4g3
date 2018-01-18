@@ -73,6 +73,9 @@ class SystemGeneratorService extends BaseService
      * @param int $levels
      * @param Faction|NULL $faction
      * @return System
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function generateRandomSystem($levels = 1, Faction $faction = NULL)
     {
@@ -132,6 +135,9 @@ class SystemGeneratorService extends BaseService
     /**
      * @param System $system
      * @param $cpuLevel
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function generateCpuCluster(System $system, $cpuLevel)
     {
@@ -248,6 +254,9 @@ class SystemGeneratorService extends BaseService
     /**
      * @param Node $node
      * @param System $system
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function populateNode(Node $node, System $system)
     {

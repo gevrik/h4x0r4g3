@@ -52,6 +52,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function giveInvitation($resourceId, $contentArray)
     {
@@ -79,6 +82,9 @@ class AdminService extends BaseService
     /**
      * @param $resourceId
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function adminShowUsers($resourceId)
     {
@@ -109,6 +115,9 @@ class AdminService extends BaseService
     /**
      * @param $resourceId
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function adminShowClients($resourceId)
     {
@@ -157,6 +166,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function adminSetMotd($resourceId, $contentArray)
     {
@@ -177,6 +189,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function adminSetSnippets($resourceId, $contentArray)
     {
@@ -208,6 +223,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function adminSetCredits($resourceId, $contentArray)
     {
@@ -239,6 +257,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function banIp($resourceId, $contentArray)
     {
@@ -269,6 +290,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function unbanIp($resourceId, $contentArray)
     {
@@ -304,6 +328,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function banUser($resourceId, $contentArray)
     {
@@ -329,6 +356,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function unbanUser($resourceId, $contentArray)
     {
@@ -354,6 +384,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function kickClient($resourceId, $contentArray)
     {
@@ -394,6 +427,9 @@ class AdminService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function adminToggleAdminMode($resourceId)
     {
@@ -416,6 +452,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function gotoNodeCommand($resourceId, $contentArray)
     {
@@ -479,6 +518,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function nListCommand($resourceId, $contentArray)
     {
@@ -524,6 +566,9 @@ class AdminService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function sysListCommand($resourceId)
     {
@@ -560,6 +605,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function grantRoleCommand($resourceId, $contentArray)
     {
@@ -587,6 +635,9 @@ class AdminService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removeRoleCommand($resourceId, $contentArray)
     {
@@ -614,6 +665,9 @@ class AdminService extends BaseService
     /**
      * @param $contentArray
      * @return array|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function validUserAndRoleCheck($contentArray)
     {

@@ -24,6 +24,7 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
+use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -109,6 +110,9 @@ class NodeService extends BaseService
      * @param $command
      * @param array $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterMode($resourceId, $command, $contentArray = [])
     {
@@ -181,6 +185,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function upgradeNode($resourceId)
     {
@@ -294,6 +301,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function addNode($resourceId)
     {
@@ -359,6 +369,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function claimCommand($resourceId)
     {
@@ -376,6 +389,10 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function exploreCommand($resourceId)
     {
@@ -460,6 +477,9 @@ class NodeService extends BaseService
     /**
      * @param array $excludedNodeTypes
      * @return null|NodeType
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function getRandomNodeType($excludedNodeTypes = [])
     {
@@ -476,6 +496,9 @@ class NodeService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changeNodeName($resourceId, $contentArray)
     {
@@ -530,6 +553,9 @@ class NodeService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changeNodeType($resourceId, $contentArray)
     {
@@ -573,6 +599,9 @@ class NodeService extends BaseService
     /**
      * @param $contentArray
      * @return NodeType|null|object|string
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function changeNodeTypeChecks($contentArray)
     {
@@ -666,6 +695,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function editNodeDescription($resourceId)
     {
@@ -707,6 +739,9 @@ class NodeService extends BaseService
      * @param $content
      * @param $entityId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function saveNodeDescription($resourceId, $content, $entityId)
     {
@@ -748,6 +783,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function ninfoCommand($resourceId)
     {
@@ -765,6 +803,9 @@ class NodeService extends BaseService
         }
         $nodeData = $this->getNodeData($currentNode, true);
         $this->gameClientResponse->addMessage($this->translate('NODE PROPERTIES:'), GameClientResponse::CLASS_SYSMSG);
+        if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            $this->gameClientResponse->addMessage($currentNode->getId(), GameClientResponse::CLASS_ADDON);
+        }
         foreach ($nodeData as $label => $value) {
             $response = sprintf(
                 '%-12s: <span class="text-%s">%s</span>',
@@ -781,6 +822,9 @@ class NodeService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function nset($resourceId, $contentArray)
     {
@@ -855,6 +899,7 @@ class NodeService extends BaseService
      * @param $property
      * @param $valueString
      * @return string
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function setNodeProperty(Node $node, $property, $valueString)
     {
@@ -886,6 +931,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removeNode($resourceId)
     {
@@ -983,6 +1031,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function surveyNode($resourceId)
     {
@@ -1049,6 +1100,9 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listNodes($resourceId)
     {
@@ -1092,6 +1146,9 @@ class NodeService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function systemConnect($resourceId, $contentArray)
     {

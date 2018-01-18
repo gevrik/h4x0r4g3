@@ -80,6 +80,8 @@ class ProfileRepository extends EntityRepository
      * @param Profile|NULL $profile
      * @param bool $onlyOnline
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByCurrentNode(Node $node, Profile $profile = NULL, $onlyOnline = false)
     {
@@ -100,6 +102,8 @@ class ProfileRepository extends EntityRepository
     /**
      * @param Faction $faction
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByFaction(Faction $faction)
     {
@@ -113,6 +117,8 @@ class ProfileRepository extends EntityRepository
     /**
      * @param Group $group
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countByGroup(Group $group)
     {
@@ -128,6 +134,7 @@ class ProfileRepository extends EntityRepository
      * @param Profile|null $profile
      * @param bool $onlineOnly
      * @return Profile|null
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findLikeName($keyword, Profile $profile = NULL, $onlineOnly = false)
     {
