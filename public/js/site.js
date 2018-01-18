@@ -542,13 +542,13 @@
                     loginStage = 'createpassword';
                     md.append('<div class="text-muted output-line">Please enter a password for the new user: </div>');
                     var lastOutput = $('#messages div.output-line:last');
-                    passwordInput.detach().appendTo(lastOutput).show().focus();
+                    passwordInput.detach().appendTo(lastOutput).show().focus().attr('type', 'password');
                     break;
                 case 'createpasswordconfirm':
                     loginStage = 'createpasswordconfirm';
                     md.append('<div class="text-muted output-line">Please confirm the password for the new user: </div>');
                     var lastOutput = $('#messages div.output-line:last');
-                    passwordInput.detach().appendTo(lastOutput).show().focus();
+                    passwordInput.detach().appendTo(lastOutput).show().focus().attr('type', 'password');
                     break;
                 case 'createuserdone':
                     loginStage = 'complete';
@@ -561,7 +561,7 @@
                     loginStage = 'promptforpassword';
                     md.append('<div class="text-muted output-line">password: </div>');
                     var lastOutput = $('#messages div.output-line:last');
-                    passwordInput.detach().appendTo(lastOutput).show().focus();
+                    passwordInput.detach().appendTo(lastOutput).show().focus().attr('type', 'password');
                     break;
                 case 'logincomplete':
                     var jsonData;
