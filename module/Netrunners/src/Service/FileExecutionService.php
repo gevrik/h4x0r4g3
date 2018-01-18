@@ -1229,7 +1229,9 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function equipFile(File $file)
     {

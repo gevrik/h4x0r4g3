@@ -3589,6 +3589,11 @@ class BaseService
      * @param Node|NULL $node
      * @param File|NULL $file
      * @return bool|int
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function getNodeAttackDifficulty(Node $node = NULL, File $file = NULL)
     {
