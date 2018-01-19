@@ -657,6 +657,7 @@ class FileUtilityService extends BaseService
      * @param array|null $contentArray
      * @param File|null $givenFile
      * @return bool|string|File|null
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     private function editFileChecks($contentArray = NULL, File $givenFile = NULL)
     {
@@ -733,11 +734,12 @@ class FileUtilityService extends BaseService
         /** @var File $file */
         // now get the filemodinstance
         $fileModName = $this->getNextParameter($contentArray, false, false, true, true);
+        // get a list of possible file mods
+        $fileType = $file->getFileType();
+        $possibleFileMods = $this->fileModRepo->listForTypeCommand($fileType);
         if (!$fileModName) {
-            $fileType = $file->getFileType();
             $message = $this->translate('Please choose from the following options:');
             $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
-            $possibleFileMods = $this->fileModRepo->listForTypeCommand($fileType);
             $fileModListString = '';
             foreach ($possibleFileMods as $possibleFileMod) {
                 /** @var FileMod $possibleFileMod */
@@ -761,6 +763,23 @@ class FileUtilityService extends BaseService
         if (!$fileMod) {
             $message = $this->translate('Unable to find given file mod type');
             return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // check if filetype and filemod are compatible
+        $compatible = $this->entityManager->getRepository('Netrunners\Entity\FileTypeMod')->findOneBy([
+            'fileType' => $fileType,
+            'fileMod' => $fileMod
+        ]);
+        if (!$compatible) {
+            $message = $this->translate('Invalid file type and mod combination, valid options for this file type:');
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+            $fileModListString = '';
+            foreach ($possibleFileMods as $possibleFileMod) {
+                /** @var FileMod $possibleFileMod */
+                $fileModListString .= $possibleFileMod->getName() . ' ';
+            }
+            $message = wordwrap($fileModListString, 120);
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+            return $this->gameClientResponse->send();
         }
         // ok, now we know the file and the filemod, try to find a filemodinstance that fits the variables
         $fileModInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileMod, $file->getLevel());
@@ -797,6 +816,16 @@ class FileUtilityService extends BaseService
                     $file->getName(),
                     $fileMod->getName(),
                     $newMaxIntegrity
+                );
+                break;
+            case FileMod::ID_TITANKILLER:
+                $fileModInstance->setFile($file);
+                $fileModInstance->setProfile(NULL);
+                $flush = true;
+                $successMessage = sprintf(
+                    $this->translate('[%s] has been modded with [%s]'),
+                    $file->getName(),
+                    $fileMod->getName()
                 );
                 break;
         }

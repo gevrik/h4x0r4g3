@@ -21,13 +21,16 @@ class FileMod
 
     const ID_BACKSLASH = 1;
     const ID_INTEGRITY_BOOSTER = 2;
+    const ID_TITANKILLER = 3;
 
     const STRING_BACKSLASH = 'backslash';
     const STRING_INTEGRITY_BOOSTER = 'integrity-booster';
+    const STRING_TITANKILLER = 'titankiller';
 
     static $revLookup = [
         self::STRING_BACKSLASH => self::ID_BACKSLASH,
         self::STRING_INTEGRITY_BOOSTER => self::ID_INTEGRITY_BOOSTER,
+        self::STRING_TITANKILLER => self::ID_TITANKILLER,
     ];
 
     /**
