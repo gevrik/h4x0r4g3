@@ -329,7 +329,7 @@ class BaseService
                 break;
             case Npc::ID_WILDERSPACE_INTRUDER:
                 $dropChance = $npcInstance->getLevel();
-                if (mt_rand(1, 100) <= $dropChance) {
+                if ($this->makePercentRollAgainstTarget($dropChance)) {
                     $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
                     /** @var FileType $fileType */
                     $file = new File();
@@ -1664,8 +1664,8 @@ class BaseService
             /** @var Profile $xprofile */
             if (!is_array($ignoredProfileIds)) $ignoredProfileIds = [$ignoredProfileIds];
             if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
-            if ($xprofile !== $actor && !$this->canSee($xprofile, $actor)) continue;
             if (!$xprofile->getCurrentResourceId()) continue;
+            if ($xprofile !== $actor && !$this->canSee($xprofile, $actor)) continue;
             if ($updateMap) $this->updateMap($xprofile->getCurrentResourceId(), $xprofile);
             $response->setResourceId($xprofile->getCurrentResourceId())->send();
         }
@@ -1746,7 +1746,7 @@ class BaseService
         // only check if they are actively stealthing
         if ($stealthing) {
             $chance = 50 + $detectorSkillRating - $stealtherSkillRating;
-            if (mt_rand(1, 100) > $chance) $canSee = false;
+            if ($this->makePercentRollAgainstTarget($chance)) $canSee = false;
             // check for skill gain
             if ($canSee) {
                 if ($detector instanceof Profile) $this->learnFromSuccess($detector, ['skills' => ['detection']], -50);
@@ -1807,7 +1807,7 @@ class BaseService
         $targetNode = NULL
     )
     {
-        if ($chance == 100 || mt_rand(1, 100) <= $chance) {
+        if ($chance == 100 || $this->makePercentRollAgainstTarget($chance)) {
             $currentIntegrity = $file->getIntegrity();
             $newIntegrity = $currentIntegrity - $integrityLoss;
             if ($newIntegrity < 0) $newIntegrity = 0;
@@ -1868,7 +1868,7 @@ class BaseService
             // return true if chance smaller than one
             if ($chance < 1) return true;
             // roll
-            if (mt_rand(1, 100) <= $chance) {
+            if ($this->makePercentRollAgainstTarget($chance)) {
                 // calc new skill-rating, set and message
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
@@ -1890,6 +1890,15 @@ class BaseService
         }
         $this->entityManager->flush($profile);
         return true;
+    }
+
+    /**
+     * @param int $target
+     * @return bool
+     */
+    protected function makePercentRollAgainstTarget($target)
+    {
+        return (mt_rand(1, 100) <= $target) ? true : false;
     }
 
     /**
@@ -2005,7 +2014,7 @@ class BaseService
             if ($skillRating >= SkillRating::MAX_SKILL_RATING_FAIL_LEARN) continue;
             $chance = 100 - $skillRating + $modifier;
             if ($chance < 1) return true;
-            if (mt_rand(1, 100) <= $chance) {
+            if ($this->makePercentRollAgainstTarget($chance)) {
                 $newSkillRating = $skillRating + 1;
                 $this->setSkillRating($profile, $skill, $newSkillRating);
                 $message = sprintf(
@@ -2627,7 +2636,7 @@ class BaseService
                         $this->lowerIntegrityOfFile($obfuscator, 50, 1, true);
                     }
                     // roll
-                    if (mt_rand(1, 100) <= $rating - $difficulty) {
+                    if ($this->makePercentRollAgainstTarget($rating - $difficulty)) {
                         $messageText = sprintf(
                             $this->translate('[%s] has detected [%s] connecting from %s'),
                             $file->getName(),
@@ -3971,7 +3980,7 @@ class BaseService
                     $difficulty += $this->getBonusForFileLevel($blockchainer);
                 }
                 // roll the dice
-                if (mt_rand(1, 100) <= $rating - $difficulty) {
+                if ($this->makePercentRollAgainstTarget($rating - $difficulty)) {
                     // success
                     $skimAmount = ceil(round($depositAmount/100));
                     $fileProfile = $file->getProfile();

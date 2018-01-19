@@ -257,6 +257,11 @@ class NodeService extends BaseService
 
     /**
      * @return bool|string
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function addnodeChecks()
     {
@@ -607,6 +612,7 @@ class NodeService extends BaseService
     {
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
+        $currentNodeType = $currentNode->getNodeType();
         $currentSystem = $currentNode->getSystem();
         // get parameter
         $parameter = $this->getNextParameter($contentArray, false);
@@ -654,7 +660,7 @@ class NodeService extends BaseService
             }
         }
         // check if this is a market
-        if ($nodeType->getId() == NodeType::ID_MARKET) {
+        if ($currentNodeType->getId() == NodeType::ID_MARKET) {
             $auctionRepo = $this->entityManager->getRepository('Netrunners\Entity\Auction');
             /** @var AuctionRepository $auctionRepo */
             if ($auctionRepo->countByNode($currentNode) >= 1) {
@@ -662,7 +668,7 @@ class NodeService extends BaseService
             }
         }
         // check if this is an io-node
-        if ($nodeType->getId() == NodeType::ID_IO || $nodeType->getId() == NodeType::ID_PUBLICIO) {
+        if ($currentNodeType->getId() == NodeType::ID_IO || $currentNodeType->getId() == NodeType::ID_PUBLICIO) {
             return $this->translate('Unable to remove I/O nodes');
         }
         // check if they have enough credits
@@ -683,7 +689,7 @@ class NodeService extends BaseService
         // check if this is a cpu node and the last one...
         $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
         if (
-            $currentNode->getNodeType()->getId() == NodeType::ID_CPU &&
+            $currentNodeType->getId() == NodeType::ID_CPU &&
             (int)$cpuCount < 2
         )
         {

@@ -83,6 +83,7 @@ class FileExecutionService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function executeFile($resourceId, $contentArray)
     {
@@ -230,9 +231,11 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function executeCombatProgram(File $file)
     {
@@ -289,7 +292,7 @@ class FileExecutionService extends BaseService
     {
         $profile = $file->getProfile();
         $rating = $this->getBonusForFileLevel($file);
-        if (mt_rand(1, 100) <= $rating) {
+        if ($this->makePercentRollAgainstTarget($rating)) {
             $this->getWebsocketServer()->removeCombatant($profile);
             $profile->setStealthing(true);
             $this->entityManager->flush($profile);
@@ -341,7 +344,7 @@ class FileExecutionService extends BaseService
         }
         if ($effectInstance) {
             $this->lowerIntegrityOfFile($file, 100, 1, true);
-            if (mt_rand(1, 100) <= $rating) {
+            if ($this->makePercentRollAgainstTarget($rating)) {
                 $effectInstance->setExpires($now);
                 $this->entityManager->flush($effectInstance);
                 $message = sprintf(
@@ -395,7 +398,7 @@ class FileExecutionService extends BaseService
         }
         if ($effectInstance) {
             $this->lowerIntegrityOfFile($file, 100, 1, true);
-            if (mt_rand(1, 100) <= $rating) {
+            if ($this->makePercentRollAgainstTarget($rating)) {
                 $effectInstance->setExpires($now);
                 $this->entityManager->flush($effectInstance);
                 $message = sprintf(
@@ -427,9 +430,11 @@ class FileExecutionService extends BaseService
 
     /**
      * @param File $file
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function executeKicker(File $file)
     {
@@ -453,7 +458,7 @@ class FileExecutionService extends BaseService
                 $this->gameClientResponse->addMessage($message);
             }
             else {
-                if (mt_rand(1, 100) <= $this->getBonusForFileLevel($file)) {
+                if ($this->makePercentRollAgainstTarget($this->getBonusForFileLevel($file))) {
                     if ($target instanceof Profile) {
                         list($actorMessage, $targetMessage) = $this->addEffect($target, NULL, $profile, Effect::ID_STUNNED);
                     }
@@ -477,9 +482,11 @@ class FileExecutionService extends BaseService
 
     /**
      * @param File $file
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function executeVenom(File $file)
     {
@@ -504,7 +511,7 @@ class FileExecutionService extends BaseService
 
             }
             else {
-                if (mt_rand(1, 100) <= $this->getBonusForFileLevel($file)) {
+                if ($this->makePercentRollAgainstTarget($this->getBonusForFileLevel($file))) {
                     if ($target instanceof Profile) {
                         list($actorMessage, $targetMessage) = $this->addEffect($target, NULL, $profile, Effect::ID_DAMAGE_OVER_TIME);
                     }
@@ -686,6 +693,7 @@ class FileExecutionService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function queueProgramExecution($resourceId, File $file, Node $node, $contentArray)
     {
@@ -1636,6 +1644,15 @@ class FileExecutionService extends BaseService
                 }
                 else {
                     // check for reaction from programs in the attacked node
+                    $file = $this->triggerProgramExecutionReaction($file, $node);
+                    if ($file->getIntegrity() <= 0) {
+                        $messages[] = sprintf(
+                            '<span class="text-sysmsg">%s</span>',
+                            $this->translate('Critical integrity failure - program shutdown initiated')
+                        );
+                        $response->addMessages($messages);
+                        return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+                    }
                 }
             }
         }
@@ -1661,16 +1678,34 @@ class FileExecutionService extends BaseService
         return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
     }
 
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return File
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     private function triggerProgramExecutionReaction(File $file, Node $node)
     {
         $fileType = $file->getFileType();
-        switch ($fileType) {
+        switch ($fileType->getId()) {
             default:
                 break;
             case FileType::ID_PORTSCANNER:
                 $reactingPrograms = $this->fileRepo->findRunningInNodeByMod($node, FileMod::ID_BACKSLASH);
+                foreach ($reactingPrograms as $reactingProgram) {
+                    /** @var File $reactingProgram */
+                    if ($this->makePercentRollAgainstTarget($reactingProgram->getLevel())) {
+                        $integrityDamage = $reactingProgram->getIntegrity();
+                        $file->setIntegrity($file->getIntegrity() - $integrityDamage);
+                        if ($file->getIntegrity()<0) $file->setIntegrity(0);
+                        $this->lowerIntegrityOfFile($reactingProgram, 100, 1, true);
+                    }
+                }
                 break;
         }
+        return $file;
     }
 
     /**
@@ -1733,7 +1768,9 @@ class FileExecutionService extends BaseService
      * @param File $file
      * @param File $miner
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeSiphon(File $file, File $miner)
     {
@@ -1787,7 +1824,9 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeMedkit(File $file)
     {
@@ -1816,7 +1855,9 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeProxifier(File $file)
     {
