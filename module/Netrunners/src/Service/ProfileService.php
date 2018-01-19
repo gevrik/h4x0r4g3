@@ -15,6 +15,7 @@ use Netrunners\Entity\Faction;
 use Netrunners\Entity\Feedback;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileModInstance;
+use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Invitation;
 use Netrunners\Entity\NodeType;
@@ -498,12 +499,13 @@ class ProfileService extends BaseService
 
     /**
      * @param $resourceId
+     * @param $contentArray
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function showFilePartInstances($resourceId)
+    public function showFilePartInstances($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
@@ -514,20 +516,45 @@ class ProfileService extends BaseService
         $profile = $this->user->getProfile();
         /** @var Profile $profile */
         $returnMessage = [];
-        $filePartInstances = $this->filePartInstanceRepo->findForPartsCommand($profile);
+        $showFull = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$showFull) {
+            $formatString = '%-27s: %-10s level-range: %s-%s';
+            $filePartInstances = $this->filePartInstanceRepo->findForPartsCommand($profile);
+        }
+        else {
+            $formatString = '%-11s|%-32s|%s';
+            $returnMessage[] = sprintf(
+                $formatString,
+                $this->translate('FILEPART-ID'),
+                $this->translate('FILEPART-NAME'),
+                $this->translate('FILEPART-LEVEL')
+            );
+            $filePartInstances = $this->filePartInstanceRepo->findForPartsCommandFull($profile);
+        }
         if (empty($filePartInstances)) {
-            $this->gameClientResponse->addMessage($this->translate('You have no file parts'));
+            $this->gameClientResponse->addMessage($this->translate('You have no unused file parts'));
         }
         else {
             foreach ($filePartInstances as $data) {
                 // prepare message
-                $returnMessage[] = sprintf(
-                    '%-27s: %-10s level-range: %s-%s',
-                    $data['fpname'],
-                    $data['fpicount'],
-                    $data['minlevel'],
-                    $data['maxlevel']
-                );
+                if (!$showFull) {
+                    $returnMessage[] = sprintf(
+                        $formatString,
+                        $data['fpname'],
+                        $data['fpicount'],
+                        $data['minlevel'],
+                        $data['maxlevel']
+                    );
+                }
+                else {
+                    /** @var FilePartInstance $data */
+                    $returnMessage[] = sprintf(
+                        $formatString,
+                        $data->getId(),
+                        $data->getFilePart()->getName(),
+                        $data->getLevel()
+                    );
+                }
             }
             $this->gameClientResponse->addMessages($returnMessage);
         }

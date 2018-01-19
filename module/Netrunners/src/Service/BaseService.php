@@ -58,6 +58,7 @@ use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
+use Zend\Log\Logger;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -985,166 +986,6 @@ class BaseService
     }
 
     /**
-     * Shows important information about a node.
-     * If no node is given, it will use the profile's current node. If silent is given, it will generate
-     * prepend output. This is if the result of the originating command is not immediate.
-     * @param $resourceId
-     * @param Node|NULL $node
-     * @param bool $prepend
-     * @param bool|string|array $prependMessage
-     * @return array|bool|false
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function showNodeInfo($resourceId, Node $node = NULL, $prepend = false, $prependMessage = false)
-    {
-        $this->initService($resourceId);
-        if (!$this->user) return true;
-        $profile = $this->user->getProfile();
-        $currentNode = ($node) ? $node : $profile->getCurrentNode();
-        $returnMessage = [];
-        // check if prependMessage was given and add it as first element of output
-        if ($prependMessage) {
-            if (is_array($prependMessage)) {
-                foreach ($prependMessage as $pm) {
-                    $returnMessage[] = $pm;
-                }
-            }
-            else {
-                $returnMessage[] = $prependMessage;
-            }
-        }
-        // add a note if the node was given (most prolly a scan command)
-        if ($node) $returnMessage[] = sprintf(
-            '<pre class="text-info">You scan into the node [%s]:</pre>',
-            $node->getName()
-        );
-        // add survey text if option is turned on
-        if ($this->getProfileGameOption($profile, GameOption::ID_SURVEY)) $returnMessage[] = $this->getSurveyText($currentNode);
-        // get connections and show them if there are any
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $connections = $connectionRepo->findBySourceNode($currentNode);
-        if (count($connections) > 0) $returnMessage[] = sprintf('<pre class="text-directory">%s:</pre>', $this->translate('connections'));
-        $counter = 0;
-        foreach ($connections as $connection) {
-            /** @var Connection $connection */
-            $counter++;
-            $addonString = '';
-            if ($connection->getType() == Connection::TYPE_CODEGATE) {
-                $addonString = ($connection->getisOpen()) ?
-                    $this->translate('<span class="text-muted">(codegate) (open)</span>') :
-                    $this->translate('<span class="text-addon">(codegate) (closed)</span>');
-            }
-            $returnMessage[] = sprintf(
-                '<pre class="text-directory">%-12s: <span class="contextmenu-connection" data-id="%s">%s</span> %s</pre>',
-                $counter,
-                $counter,
-                $connection->getTargetNode()->getName(),
-                $addonString
-            );
-        }
-        // get files and show them if there are any
-        $files = [];
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        foreach ($fileRepo->findByNode($currentNode) as $fileInstance) {
-            /** @var File $fileInstance */
-            if (!$fileInstance->getFileType()->getStealthing()) {
-                $files[] = $fileInstance;
-            }
-            else {
-                if ($this->canSee($profile, $fileInstance)) $files[] = $fileInstance;
-            }
-        }
-        if (count($files) > 0) $returnMessage[] = sprintf('<pre class="text-executable">%s:</pre>', $this->translate('files'));
-        $counter = 0;
-        foreach ($files as $file) {
-            /** @var File $file */
-            $counter++;
-            $returnMessage[] = sprintf(
-                '<pre class="text-executable">%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span></pre>',
-                $counter,
-                $file->getName(),
-                $file->getName(),
-                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
-            );
-        }
-        // get profiles and show them if there are any
-        $profiles = [];
-        foreach ($this->getWebsocketServer()->getClientsData() as $clientId => $xClientData) {
-            $requestedProfile = $this->entityManager->find('Netrunners\Entity\Profile', $xClientData['profileId']);
-            /** @var Profile $requestedProfile */
-            if(
-                $requestedProfile &&
-                $requestedProfile !== $profile &&
-                $requestedProfile->getCurrentNode() == $currentNode
-            )
-            {
-                if (!$requestedProfile->getStealthing()) {
-                    $profiles[] = $requestedProfile;
-                }
-                else {
-                    if ($this->canSee($profile, $requestedProfile)) $profiles[] = $requestedProfile;
-                }
-            }
-        }
-        if (count($profiles) > 0) $returnMessage[] = sprintf('<pre class="text-users">%s:</pre>', $this->translate('users'));
-        $counter = 0;
-        foreach ($profiles as $pprofile) {
-            /** @var Profile $pprofile */
-            $counter++;
-            $returnMessage[] = sprintf(
-                '<pre class="text-users">%-12s: %s %s %s %s</pre>',
-                $counter,
-                $pprofile->getUser()->getUsername(),
-                ($pprofile->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
-                ($profile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getFaction()->getName()) : '',
-                ($profile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getGroup()->getName()) : ''
-            );
-        }
-        // get npcs and show them if there are any
-        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
-        /** @var NpcInstanceRepository $npcInstanceRepo */
-        $npcInstances = $npcInstanceRepo->findByNode($currentNode);
-        $npcs = [];
-        foreach ($npcInstances as $npcInstance) {
-            /** @var NpcInstance $npcInstance */
-            if (!$npcInstance->getStealthing()) {
-                $npcs[] = $npcInstance;
-            }
-            else {
-                if ($this->canSee($profile, $npcInstance)) $npcs[] = $npcInstance;
-            }
-        }
-        if (count($npcs) > 0)  $returnMessage[] = sprintf('<pre class="text-npcs">%s:</pre>', $this->translate('entities'));
-        $counter = 0;
-        foreach ($npcs as $npcInstance) {
-            /** @var NpcInstance $npcInstance */
-            $counter++;
-            $returnMessage[] = sprintf(
-                '<pre class="text-npcs">%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s</pre>',
-                $counter,
-                $counter,
-                $npcInstance->getName(),
-                ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
-                ($npcInstance->getProfile()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getProfile()->getUser()->getUsername()) : '',
-                ($npcInstance->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getFaction()->getName()) : '',
-                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : ''
-            );
-        }
-        // prepare and return response
-        $this->response = array(
-            'command' => ($prepend) ? 'showoutputprepend' : 'showoutput',
-            'message' => $returnMessage,
-            'moved' => true
-        );
-        $this->addAdditionalCommand();
-        return $this->response;
-    }
-
-    /**
      * @param string $command
      * @param bool $content
      * @param bool $silent
@@ -1391,6 +1232,9 @@ class BaseService
      * @param array $adds
      * @param bool $sendNow
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function updateDivHtml(Profile $profile, $element, $content, $adds = [], $sendNow = false)
     {
@@ -2080,6 +1924,9 @@ class BaseService
      * @param $message
      * @param string $textClass
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function messageProfileNew(Profile $profile, $message, $textClass = GameClientResponse::CLASS_MUTED)
     {
@@ -2093,7 +1940,9 @@ class BaseService
      * @param Profile $profile
      * @param $amount
      * @param bool $flush
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function gainSkillpoints(Profile $profile, $amount, $flush = false)
     {
@@ -2109,7 +1958,9 @@ class BaseService
     /**
      * @param Profile $profile
      * @param null|int $special
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     protected function gainInvitation(Profile $profile, $special = NULL)
     {
@@ -2294,7 +2145,9 @@ class BaseService
      * @param Profile|NULL $profile
      * @param bool $silent
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function updateMap($resourceId, Profile $profile = NULL, $silent = true)
     {
@@ -2902,6 +2755,7 @@ class BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
+        $isAdmin = $this->hasRole(NULL, Role::ROLE_ID_ADMIN);
         $profile = $this->user->getProfile();
         $currentNode = ($node) ? $node : $profile->getCurrentNode();
         // add survey text if option is turned on
@@ -2955,11 +2809,12 @@ class BaseService
             /** @var File $file */
             $counter++;
             $returnMessage = sprintf(
-                '%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span>',
+                '%-12s: <span class="contextmenu-file" data-id="%s">%s%s</span> %s',
                 $counter,
                 $file->getName(),
                 $file->getName(),
-                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : ''
+                ($file->getIntegrity() < 1) ? $this->translate(' <span class="text-danger">(defunct)</span>') : '',
+                ($isAdmin) ? sprintf($this->translate('<span class="text-addon">[%s]</span>'), $file->getId()) : ''
             );
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_EXECUTABLE);
         }
@@ -2990,12 +2845,13 @@ class BaseService
             /** @var Profile $pprofile */
             $counter++;
             $returnMessage = sprintf(
-                '%-12s: %s %s %s %s',
+                '%-12s: %s %s %s %s %s',
                 $counter,
                 $pprofile->getUser()->getUsername(),
                 ($pprofile->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
-                ($profile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getFaction()->getName()) : '',
-                ($profile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $profile->getGroup()->getName()) : ''
+                ($pprofile->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $pprofile->getFaction()->getName()) : '',
+                ($pprofile->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $pprofile->getGroup()->getName()) : '',
+                ($isAdmin) ? sprintf($this->translate('<span class="text-addon">[%s]</span>'), $pprofile->getUser()->getId()) : ''
             );
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_USERS);
         }
@@ -3021,14 +2877,15 @@ class BaseService
             /** @var NpcInstance $npcInstance */
             $counter++;
             $returnMessage = sprintf(
-                '%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s',
+                '%-12s: <span class="contextmenu-entity" data-id="%s">%s</span> %s %s %s %s %s',
                 $counter,
                 $counter,
                 $npcInstance->getName(),
                 ($npcInstance->getStealthing()) ? $this->translate('<span class="text-info">[stealthing]</span>') : '',
                 ($npcInstance->getProfile()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getProfile()->getUser()->getUsername()) : '',
                 ($npcInstance->getFaction()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getFaction()->getName()) : '',
-                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : ''
+                ($npcInstance->getGroup()) ? sprintf($this->translate('<span class="text-info">[%s]</span>'), $npcInstance->getGroup()->getName()) : '',
+                ($isAdmin) ? sprintf($this->translate('<span class="text-addon">[%s]</span>'), $npcInstance->getId()) : ''
             );
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_NPCS);
         }
@@ -3087,6 +2944,9 @@ class BaseService
 
     /**
      * @param $resourceId
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function initResponse($resourceId)
     {
@@ -3455,20 +3315,21 @@ class BaseService
                     $amount = ($npc->getCurrentEeg() > $amount) ? $amount : $npc->getCurrentEeg();
                     $miner->setIntegrity($miner->getIntegrity()+$amount);
                     if ($amount >= $npc->getCurrentEeg()) {
-                        $this->entityManager->remove($npc);
+                        $this->getWebsocketServer()->log(Logger::ALERT, 'debugger despawning');
                         $message = sprintf(
                             $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has repaired some integrity on [%s] and then despawns</pre>'),
                             $npc->getName(),
                             $miner->getName()
                         );
+                        $this->entityManager->remove($npc);
                     }
                     else {
-                        $npc->setCurrentEeg($npc->getCurrentEeg()-$amount);
                         $message = sprintf(
                             $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] has repaired some integrity on [%s]</pre>'),
                             $npc->getName(),
                             $miner->getName()
                         );
+                        $npc->setCurrentEeg($npc->getCurrentEeg()-$amount);
                     }
                     $this->entityManager->flush($miner);
                     $this->messageEveryoneInNode($currentNode, $message);
@@ -4132,9 +3993,11 @@ class BaseService
      * @param int|null $duration
      * @param mixed|null $rating
      * @return array|bool
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function addEffect(
         Profile $profile = NULL,

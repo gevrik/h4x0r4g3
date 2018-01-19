@@ -77,4 +77,17 @@ class FilePartInstanceRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @param Profile $profile
+     * @return array
+     */
+    public function findForPartsCommandFull(Profile $profile)
+    {
+        $qb = $this->createQueryBuilder('fpi');
+        $qb->where('fpi.profile = :profile');
+        $qb->setParameter('profile', $profile);
+        $qb->orderBy('fpi.level', 'DESC');
+        return $qb->getQuery()->getResult();
+    }
+
 }

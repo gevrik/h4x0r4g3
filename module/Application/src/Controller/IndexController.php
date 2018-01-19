@@ -124,7 +124,7 @@ class IndexController extends AbstractActionController
     // CLI
 
     /**
-     *
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliStartWebsocketAction()
     {

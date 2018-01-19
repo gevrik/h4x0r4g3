@@ -16,6 +16,7 @@ use Netrunners\Entity\BannedIp;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\System;
@@ -26,6 +27,8 @@ use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\NpcInstanceRepository;
+use Netrunners\Repository\NpcRepository;
 use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
@@ -61,6 +64,17 @@ class AdminService extends BaseService
     protected $fileModInstanceRepo;
 
     /**
+     * @var NpcRepository
+     */
+    protected $npcRepo;
+
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
+
+    /**
      * AdminService constructor.
      * @param EntityManager $entityManager
      * @param $viewRenderer
@@ -75,6 +89,8 @@ class AdminService extends BaseService
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
+        $this->npcRepo = $this->entityManager->getRepository('Netrunners\Entity\Npc');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
     }
 
     /**
@@ -905,7 +921,6 @@ class AdminService extends BaseService
         if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->gameClientResponse->send();
         }
-        $profile = $this->user->getProfile();
         list($contentArray, $fileModInstanceId) = $this->getNextParameter($contentArray, true, true);
         // try to get target fmi via repo method
         $fmi = $this->fileModInstanceRepo->find($fileModInstanceId);
@@ -939,6 +954,170 @@ class AdminService extends BaseService
                 break;
         }
         $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $fmi->getFileMod()->getName(), $property, $newValue));
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function invokeNpc($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $profile = $this->user->getProfile();
+        $npcName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$npcName) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid NPC instance name'))->send();
+        }
+        $currentNode = $profile->getCurrentNode();
+        $npc = $this->npcRepo->findLikeName($npcName);
+        $npcInstance = $this->spawnNpcInstance(
+            $npc,
+            $currentNode,
+            $profile
+        );
+        $npcInstance->setAggressive(false);
+        $npcInstance->setRoaming(false);
+        $npcInstance->setBypassCodegates(false);
+        $this->entityManager->persist($npcInstance);
+        $this->entityManager->flush($npcInstance);
+        return $this->gameClientResponse->addMessage($this->translate('Npc invoked'), GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function setnpcproperty($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        list($contentArray, $npcInstanceId) = $this->getNextParameter($contentArray, true, true);
+        // try to get target npci via repo method
+        $npci = $this->npcInstanceRepo->find($npcInstanceId);
+        if (!$npci) {
+            return $this->gameClientResponse->addMessage($this->translate('Npc instance not found'))->send();
+        }
+        /* start logic */
+        /** @var NpcInstance $npci */
+        list($contentArray, $property) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$property) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid property (one of "credits, snippets, aggressive, maxeeg, currrenteeg, name, description, homenode, roaming, bypasscodegates, level, slots, stealthing, system, homesystem, faction, group, profile")'))->send();
+        }
+        $newValue = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$newValue) $newValue = 1;
+        switch ($property) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Invalid property (one of "credits, snippets, aggressive, maxeeg, currrenteeg, name, description, homenode, node, roaming, bypasscodegates, level, slots, stealthing, system, homesystem, faction, group, profile")'))->send();
+            case 'snippets':
+                $npci->setSnippets($newValue);
+                break;
+            case 'credits':
+                $npci->setCredits($newValue);
+                break;
+            case 'aggressive':
+                $npci->setCredits($newValue);
+                break;
+            case 'maxeeg':
+                $npci->setMaxEeg($newValue);
+                break;
+            case 'currenteeg':
+                $npci->setCurrentEeg($newValue);
+                break;
+            case 'name':
+                $checkResult = $this->stringChecker($newValue);
+                if ($checkResult) {
+                    return $this->gameClientResponse->addMessage($checkResult)->send();
+                }
+                $newValue = str_replace(' ', '_', $newValue);
+                $npci->setName($newValue);
+                break;
+            case 'description':
+                $npci->setDescription($newValue);
+                break;
+            case 'level':
+                if ($newValue > 100) $newValue = 100;
+                $npci->setLevel($newValue);
+                break;
+            case 'roaming':
+                $npci->setRoaming($newValue);
+                break;
+            case 'bypasscodegates':
+                $npci->setBypassCodegates($newValue);
+                break;
+            case 'slots':
+                $npci->setSlots($newValue);
+                break;
+            case 'stealthing':
+                $npci->setStealthing($newValue);
+                break;
+            case 'profile':
+                $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $newValue);
+                if (!$targetUser) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid user id'))->send();
+                }
+                $npci->setProfile($targetUser->getProfile());
+                break;
+            case 'homenode':
+                $homeNode = $this->entityManager->find('TmoAuth\Entity\Node', $newValue);
+                if (!$homeNode) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
+                }
+                $npci->setHomeNode($homeNode);
+                break;
+            case 'node':
+                $homeNode = $this->entityManager->find('TmoAuth\Entity\Node', $newValue);
+                if (!$homeNode) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
+                }
+                $npci->setNode($homeNode);
+                break;
+            case 'system':
+                $system = $this->entityManager->find('TmoAuth\Entity\System', $newValue);
+                if ($system) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid system id'))->send();
+                }
+                $npci->setSystem($system);
+                break;
+            case 'homesystem':
+                $system = $this->entityManager->find('TmoAuth\Entity\System', $newValue);
+                if ($system) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid system id'))->send();
+                }
+                $npci->setHomeSystem($system);
+                break;
+            case 'group':
+                $group = $this->entityManager->find('TmoAuth\Entity\Group', $newValue);
+                if ($group) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid group id'))->send();
+                }
+                $npci->setGroup($group);
+                break;
+            case 'faction':
+                $faction = $this->entityManager->find('TmoAuth\Entity\Faction', $newValue);
+                if ($faction) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid faction id'))->send();
+                }
+                $npci->setFaction($faction);
+                break;
+        }
+        $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $npci->getName(), $property, $newValue));
         return $this->gameClientResponse->send();
     }
 

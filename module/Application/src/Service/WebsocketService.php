@@ -602,22 +602,27 @@ class WebsocketService implements MessageComponentInterface {
         /* LOOPS */
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_JOBS, function(){
+            //$this->logger->log(Logger::INFO, 'looping jobs');
             $this->loopService->loopJobs();
         });
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_COMBAT, function(){
+            //$this->logger->log(Logger::INFO, 'looping combat');
             $this->loopService->loopCombatRound();
         });
 
         $this->loop->addPeriodicTimer(self::LOOP_TIME_RESOURCES, function(){
+            $this->log(Logger::INFO, 'looping resources');
             $this->loopService->loopResources();
         });
 
         $this->loop->addPeriodicTimer(self::LOOP_NPC_SPAWN, function(){
+            $this->log(Logger::INFO, 'looping npcspawn');
             $this->loopService->loopNpcSpawn();
         });
 
         $this->loop->addPeriodicTimer(self::LOOP_NPC_ROAM, function(){
+            $this->log(Logger::INFO, 'looping npcroam');
             $this->loopService->loopNpcRoam();
         });
 
@@ -629,6 +634,15 @@ class WebsocketService implements MessageComponentInterface {
 
         self::$instance = $this;
 
+    }
+
+    /**
+     * @param $priority
+     * @param $message
+     */
+    public function log($priority, $message)
+    {
+        $this->logger->log($priority, $message);
     }
 
     /**
@@ -1003,6 +1017,9 @@ class WebsocketService implements MessageComponentInterface {
 
     /**
      * @param ConnectionInterface $conn
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function onOpen(ConnectionInterface $conn)
     {
@@ -1076,7 +1093,7 @@ class WebsocketService implements MessageComponentInterface {
             $msgData = json_decode($msg);
             // check if we have everything that we need in the $msgData
             if (!is_object($msgData) || !isset($msgData->command) || !isset($msgData->hash) || !isset($msgData->content)) {
-                $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET IS SENDING GIBBERISH - GET RID OF THEM - ' . $msg);
+                $this->log(Logger::ALERT, $resourceId . ': SOCKET IS SENDING GIBBERISH - GET RID OF THEM - ' . $msg);
                 $from->close();
                 return true;
             }
@@ -1093,7 +1110,7 @@ class WebsocketService implements MessageComponentInterface {
                     if ($querytime <= 0.2) {
                         $this->clientsData[$resourceId]['spamcount']++;
                         if ($this->clientsData[$resourceId]['spamcount'] >= mt_rand(5, 10)) {
-                            $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET IS SPAMMING - DISCONNECT SOCKET - ' . $msg);
+                            $this->log(Logger::ALERT, $resourceId . ': SOCKET IS SPAMMING - DISCONNECT SOCKET - ' . $msg);
                             $response = new GameClientResponse($resourceId);
                             $response->addMessage('DISCONNECTED - REASON: SPAMMING', GameClientResponse::CLASS_DANGER);
                             $response->send();
@@ -1135,12 +1152,12 @@ class WebsocketService implements MessageComponentInterface {
                 $command != 'createpassword' &&
                 $command != 'createpasswordconfirm'
             ) {
-                $this->logger->log(Logger::INFO, $resourceId . ': ' . $msg);
+                $this->log(Logger::INFO, $resourceId . ': ' . $msg);
             }
             // check if we know the ip addy of the socket - if not, disconnect them
             if ($command != 'setipaddy') {
                 if (!$this->clientsData[$resourceId]['ipaddy']) {
-                    $this->logger->log(Logger::ALERT, $resourceId . ': SOCKET WITH NO IP ADDY INFO IS SENDING COMMANDS - DISCONNECT SOCKET');
+                    $this->log(Logger::ALERT, $resourceId . ': SOCKET WITH NO IP ADDY INFO IS SENDING COMMANDS - DISCONNECT SOCKET');
                     $from->close();
                     return true;
                 }
@@ -1169,7 +1186,7 @@ class WebsocketService implements MessageComponentInterface {
                         // not banned, set ip addy
                         $this->clientsData[$resourceId]['ipaddy'] = $content;
                     } else {
-                        $this->logger->log(Logger::ALERT, $resourceId . ': SOMETHING FISHY GOING ON - NO IP ADDRESS COULD BE FOUND - DISCONNECT SOCKET');
+                        $this->log(Logger::ALERT, $resourceId . ': SOMETHING FISHY GOING ON - NO IP ADDRESS COULD BE FOUND - DISCONNECT SOCKET');
                         $from->close();
                         return true;
                     }
@@ -1310,8 +1327,8 @@ class WebsocketService implements MessageComponentInterface {
             }
         }
         catch (\Exception $e) {
-            $this->logger->log(Logger::ALERT, $resourceId . ' : CAUGHT EXCEPTION : ' . $e->getMessage() . ' [' . $e->getCode() . ']');
-            $this->logger->log(Logger::INFO, $e->getTraceAsString());
+            $this->log(Logger::ALERT, $resourceId . ' : CAUGHT EXCEPTION : ' . $e->getMessage() . ' [' . $e->getCode() . ']');
+            $this->log(Logger::INFO, $e->getTraceAsString());
             $from->close();
         }
         return true;

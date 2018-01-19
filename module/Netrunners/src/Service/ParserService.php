@@ -515,7 +515,7 @@ class ParserService
                 return $this->missionService->enterMode($resourceId);
             case 'resources':
             case 'res':
-                return $this->profileService->showFilePartInstances($resourceId);
+                return $this->profileService->showFilePartInstances($resourceId, $contentArray);
             case 'passwd':
             case 'changepassword':
                 return $this->profileService->changePassword($resourceId, $contentArray);
@@ -643,6 +643,10 @@ class ParserService
                 return $this->adminService->invokeFileMod($resourceId, $contentArray);
             case 'setfilemodproperty':
                 return $this->adminService->setfilemodproperty($resourceId, $contentArray);
+            case 'invokenpc':
+                return $this->adminService->invokeNpc($resourceId, $contentArray);
+            case 'setnpcproperty':
+                return $this->adminService->setnpcproperty($resourceId, $contentArray);
         }
         if (!is_array($response)) {
             if (!$silent) {
@@ -678,7 +682,7 @@ class ParserService
                         ];
                         break;
                     case 'ls':
-                        $additionalResponse = $this->nodeService->showNodeInfo($resourceId);
+                        $additionalResponse = $this->nodeService->showNodeInfoNew($resourceId);
                         break;
                     case 'setopacity':
                         $additionalResponse = [
@@ -775,7 +779,7 @@ class ParserService
             case 'parts':
             case 'resources':
             case 'res':
-                return $this->profileService->showFilePartInstances($resourceId);
+                return $this->profileService->showFilePartInstances($resourceId, $contentArray);
             case 'type':
                 return $this->codingService->commandType($resourceId, $contentArray, $codeOptions);
             case 'q':
