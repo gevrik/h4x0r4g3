@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Query\Expr;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
@@ -287,6 +288,28 @@ class FileRepository extends EntityRepository
             'node' => $node
         ]);
         return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param Node $node
+     * @param $fileModId
+     * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function findRunningInNodeByMod(Node $node, $fileModId)
+    {
+        $fileMod = $this->_em->find('Netrunners\Entity\FileMod', $fileModId);
+        $qb = $this->createQueryBuilder('f');
+        $qb->select('f');
+        $qb->innerJoin('Netrunners\Entity\FileModInstance', 'fmi', 'WITH', 'fmi.file = f');
+        $qb->where('f.running = 1 AND f.integrity >= 1 AND f.node = :node AND fmi.fileMod = :fileMod');
+        $qb->setParameters([
+            'fileMod' => $fileMod,
+            'node' => $node
+        ]);
+        return $qb->getQuery()->getResult();
     }
 
     /**

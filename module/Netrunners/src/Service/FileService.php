@@ -66,6 +66,10 @@ class FileService extends BaseService
      * @param $command
      * @param array $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function enterMode($resourceId, $command, $contentArray = [])
     {
@@ -76,6 +80,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removeFile($resourceId, $contentArray)
     {
@@ -86,6 +93,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function statFile($resourceId, $contentArray)
     {
@@ -96,6 +106,10 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function downloadFile($resourceId, $contentArray)
     {
@@ -106,6 +120,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function editFileDescription($resourceId, $contentArray)
     {
@@ -117,6 +134,9 @@ class FileService extends BaseService
      * @param $content
      * @param int $entityId
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function saveFileDescription($resourceId, $content, $entityId)
     {
@@ -127,6 +147,10 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function unloadFile($resourceId, $contentArray)
     {
@@ -137,6 +161,9 @@ class FileService extends BaseService
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function touchFile($resourceId, $contentArray)
     {
@@ -147,6 +174,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function modFile($resourceId, $contentArray)
     {
@@ -156,6 +186,9 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listPasskeysCommand($resourceId)
     {
@@ -166,6 +199,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function removePasskeyCommand($resourceId, $contentArray)
     {
@@ -176,6 +212,9 @@ class FileService extends BaseService
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function updateFile($resourceId, $contentArray)
     {
@@ -186,6 +225,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function initArmorCommand($resourceId, $contentArray)
     {
@@ -196,6 +238,9 @@ class FileService extends BaseService
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function changeFileName($resourceId, $contentArray)
     {
@@ -206,6 +251,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function useCommand($resourceId, $contentArray)
     {
@@ -289,6 +337,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function harvestCommand($resourceId, $contentArray)
     {
@@ -300,6 +351,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function killProcess($resourceId, $contentArray)
     {
@@ -311,6 +365,9 @@ class FileService extends BaseService
      * @param int $resourceId
      * @param $contentArray
      * @return array|bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function listProcesses($resourceId, $contentArray)
     {
@@ -320,6 +377,9 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileTypes($resourceId)
     {
@@ -330,6 +390,9 @@ class FileService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function decompileFile($resourceId, $contentArray)
     {
@@ -339,6 +402,9 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileMods($resourceId)
     {
@@ -348,6 +414,9 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showFileCategories($resourceId)
     {
@@ -357,6 +426,9 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @return array|bool|false
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function createPasskeyCommand($resourceId)
     {

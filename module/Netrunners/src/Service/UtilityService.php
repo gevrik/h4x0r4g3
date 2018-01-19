@@ -152,7 +152,7 @@ class UtilityService extends BaseService
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_INFO);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
-            $message = 'grantrole  removerole toggleadminmode';
+            $message = 'grantrole  invokefile  invokefilemod  removerole toggleadminmode setfileproperty silefilemodproperty';
             $returnMessage = sprintf(
                 '%s',
                 wordwrap($message, 120)

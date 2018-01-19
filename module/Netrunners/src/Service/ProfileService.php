@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\Feedback;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Invitation;
 use Netrunners\Entity\NodeType;
@@ -433,12 +434,13 @@ class ProfileService extends BaseService
 
     /**
      * @param $resourceId
+     * @param $contentArray
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function showFileModInstances($resourceId)
+    public function showFileModInstances($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
@@ -446,23 +448,48 @@ class ProfileService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        $profile = $this->user->getProfile();
         /** @var Profile $profile */
+        $profile = $this->user->getProfile();
         $returnMessage = [];
-        $fileModInstances = $this->fileModInstanceRepo->findForPartsCommand($profile);
+        $showFull = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$showFull) {
+            $formatString = '%-11s: %-27s level-range: %s-%s';
+            $fileModInstances = $this->fileModInstanceRepo->findForPartsCommand($profile);
+        }
+        else {
+            $formatString = '%-11s|%-32s|%s';
+            $returnMessage[] = sprintf(
+                $formatString,
+                $this->translate('FILEMOD-ID'),
+                $this->translate('FILEMOD-NAME'),
+                $this->translate('FILEMOD-LEVEL')
+            );
+            $fileModInstances = $this->fileModInstanceRepo->findForPartsCommandFull($profile);
+        }
         if (empty($fileModInstances)) {
             $this->gameClientResponse->addMessage($this->translate('You have no unused file mods'));
         }
         else {
             foreach ($fileModInstances as $data) {
                 // prepare message
-                $returnMessage[] = sprintf(
-                    '%-27s: %-10s level-range: %s-%s',
-                    $data['fmname'],
-                    $data['fmicount'],
-                    $data['minlevel'],
-                    $data['maxlevel']
-                );
+                if (!$showFull) {
+                    $returnMessage[] = sprintf(
+                        $formatString,
+                        $data['fmname'],
+                        $data['fmicount'],
+                        $data['minlevel'],
+                        $data['maxlevel']
+                    );
+                }
+                else {
+                    /** @var FileModInstance $data */
+                    $returnMessage[] = sprintf(
+                        $formatString,
+                        $data->getId(),
+                        $data->getFileMod()->getName(),
+                        $data->getLevel()
+                    );
+                }
             }
             $this->gameClientResponse->addMessages($returnMessage);
         }

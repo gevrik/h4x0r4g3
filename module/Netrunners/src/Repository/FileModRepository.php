@@ -32,6 +32,8 @@ class FileModRepository extends EntityRepository
     /**
      * @param FileType $fileType
      * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function listForTypeCommand(FileType $fileType)
     {

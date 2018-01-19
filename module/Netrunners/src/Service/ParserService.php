@@ -470,7 +470,7 @@ class ParserService
             case 'modfile':
                 return $this->fileService->modFile($resourceId, $contentArray);
             case 'mods':
-                return $this->profileService->showFileModInstances($resourceId);
+                return $this->profileService->showFileModInstances($resourceId, $contentArray);
             case 'motd':
                 return $this->getWebsocketServer()->getUtilityService()->showMotd($resourceId);
             case 'new':
@@ -635,6 +635,14 @@ class ParserService
                 return $this->adminService->showCyberspaceMap($resourceId);
             case 'setmotd':
                 return $this->adminService->adminSetMotd($resourceId, $contentArray);
+            case 'invokefile':
+                return $this->adminService->invokeFile($resourceId, $contentArray);
+            case 'setfileproperty':
+                return $this->adminService->setfileproperty($resourceId, $contentArray);
+            case 'invokefilemod':
+                return $this->adminService->invokeFileMod($resourceId, $contentArray);
+            case 'setfilemodproperty':
+                return $this->adminService->setfilemodproperty($resourceId, $contentArray);
         }
         if (!is_array($response)) {
             if (!$silent) {

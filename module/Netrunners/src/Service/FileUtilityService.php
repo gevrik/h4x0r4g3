@@ -768,38 +768,45 @@ class FileUtilityService extends BaseService
             $message = $this->translate('You do not own a fitting file-mod of that level');
             return $this->gameClientResponse->addMessage($message)->send();
         }
+        $fileModInstance = array_shift($fileModInstances);
+        /** @var FileModInstance $fileModInstance */
+        $flush = false;
+        $successMessage = false;
+        switch ($fileMod->getId()) {
+            default:
+                break;
+            case FileMod::ID_BACKSLASH:
+                $fileModInstance->setFile($file);
+                $fileModInstance->setProfile(NULL);
+                $flush = true;
+                $successMessage = sprintf(
+                    $this->translate('[%s] has been modded with [%s]'),
+                    $file->getName(),
+                    $fileMod->getName()
+                );
+                break;
+            case FileMod::ID_INTEGRITY_BOOSTER:
+                $newMaxIntegrity = $file->getMaxIntegrity() + $fileModInstance->getLevel();
+                if ($newMaxIntegrity > 100) $newMaxIntegrity = 100;
+                $file->setMaxIntegrity($newMaxIntegrity);
+                $fileModInstance->setFile($file);
+                $fileModInstance->setProfile(NULL);
+                $flush = true;
+                $successMessage = sprintf(
+                    $this->translate('[%s] has been modded with [%s] - new max-integrity: %s'),
+                    $file->getName(),
+                    $fileMod->getName(),
+                    $newMaxIntegrity
+                );
+                break;
+        }
+        if ($flush) {
+            $this->entityManager->flush($file);
+            $this->entityManager->flush($fileModInstance);
+            $this->gameClientResponse->addMessage($successMessage, GameClientResponse::CLASS_SUCCESS);
+        }
         else {
-            $fileModInstance = array_shift($fileModInstances);
-            /** @var FileModInstance $fileModInstance */
-            $flush = false;
-            $successMessage = false;
-            switch ($fileMod->getId()) {
-                default:
-                    break;
-                case FileMod::ID_BACKSLASH:
-                    break;
-                case FileMod::ID_INTEGRITY_BOOSTER:
-                    $newMaxIntegrity = $file->getMaxIntegrity() + $fileModInstance->getLevel();
-                    if ($newMaxIntegrity > 100) $newMaxIntegrity = 100;
-                    $file->setMaxIntegrity($newMaxIntegrity);
-                    $fileModInstance->setFile($file);
-                    $flush = true;
-                    $successMessage = sprintf(
-                        $this->translate('[%s] has been modded with [%s] - new max-integrity: %s'),
-                        $file->getName(),
-                        $fileMod->getName(),
-                        $newMaxIntegrity
-                    );
-                    break;
-            }
-            if ($flush) {
-                $this->entityManager->flush($file);
-                $this->entityManager->flush($fileModInstance);
-                $this->gameClientResponse->addMessage($successMessage, GameClientResponse::CLASS_SUCCESS);
-            }
-            else {
-                $this->gameClientResponse->addMessage($this->translate('This mod has no effect, yet'));
-            }
+            $this->gameClientResponse->addMessage($this->translate('This mod has no effect, yet'));
         }
         return $this->gameClientResponse->send();
     }
@@ -1352,7 +1359,6 @@ class FileUtilityService extends BaseService
             $targetFile->getSlots()
         );
         $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
-        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
         $returnMessage = sprintf(
             '%-12s: %s',
             $this->translate("Birth"),
@@ -1423,7 +1429,7 @@ class FileUtilityService extends BaseService
             $installedModsString = '';
             foreach ($fileMods as $fileMod) {
                 /** @var FileModInstance $fileMod */
-                $installedModsString .= $fileMod->getFileMod()->getName() . ' ';
+                $installedModsString .= $fileMod->getFileMod()->getName() . '|' . $fileMod->getLevel() . ' ';
             }
             $returnMessage = sprintf(
                 '%s %s',

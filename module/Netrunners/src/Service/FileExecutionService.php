@@ -13,6 +13,7 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
@@ -1633,6 +1634,9 @@ class FileExecutionService extends BaseService
                         $node->getName()
                     );
                 }
+                else {
+                    // check for reaction from programs in the attacked node
+                }
             }
         }
         $headerMessage = sprintf(
@@ -1655,6 +1659,18 @@ class FileExecutionService extends BaseService
         $response->addMessages($messages);
         $this->lowerIntegrityOfFile($file);
         return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+    }
+
+    private function triggerProgramExecutionReaction(File $file, Node $node)
+    {
+        $fileType = $file->getFileType();
+        switch ($fileType) {
+            default:
+                break;
+            case FileType::ID_PORTSCANNER:
+                $reactingPrograms = $this->fileRepo->findRunningInNodeByMod($node, FileMod::ID_BACKSLASH);
+                break;
+        }
     }
 
     /**

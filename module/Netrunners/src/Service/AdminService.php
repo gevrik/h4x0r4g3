@@ -13,12 +13,18 @@ namespace Netrunners\Service;
 use BjyAuthorize\Service\Authorize;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\BannedIp;
+use Netrunners\Entity\File;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\BannedIpRepository;
+use Netrunners\Repository\FileModInstanceRepository;
+use Netrunners\Repository\FileModRepository;
+use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\Role;
@@ -35,6 +41,26 @@ class AdminService extends BaseService
     protected $authorize;
 
     /**
+     * @var FileTypeRepository
+     */
+    protected $fileTypeRepo;
+
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
+    /**
+     * @var FileModRepository
+     */
+    protected $fileModRepo;
+
+    /**
+     * @var FileModInstanceRepository
+     */
+    protected $fileModInstanceRepo;
+
+    /**
      * AdminService constructor.
      * @param EntityManager $entityManager
      * @param $viewRenderer
@@ -45,6 +71,10 @@ class AdminService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->authorize = $authorize;
+        $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
+        $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
     }
 
     /**
@@ -693,6 +723,223 @@ class AdminService extends BaseService
             return $this->translate('Invalid role name');
         }
         return [$targetUser, $targetRole];
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function invokeFile($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $profile = $this->user->getProfile();
+        list($contentArray, $fileTypeName) = $this->getNextParameter($contentArray, true, false, false, true);
+        list($contentArray, $level) = $this->getNextParameter($contentArray, true, true);
+        $slots = $this->getNextParameter($contentArray, false, true);
+        if (!$fileTypeName) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid file type'), GameClientResponse::CLASS_DANGER)->send();
+        }
+        if (!$level) $level = 1;
+        if (!$slots) $slots = 1;
+        $fileType = $this->fileTypeRepo->findLikeName($fileTypeName);
+        $file = new File();
+        $file->setIntegrity(100);
+        $file->setCoder($profile);
+        $file->setContent(NULL);
+        $file->setCreated(new \DateTime());
+        $file->setData(NULL);
+        $file->setExecutable($fileType->getExecutable());
+        $file->setFileType($fileType);
+        $file->setLevel($level);
+        $file->setMailMessage(NULL);
+        $file->setMaxIntegrity(100);
+        $file->setModified(NULL);
+        $file->setName('prototype_' . $fileType->getName());
+        $file->setNode(NULL);
+        $file->setNpc(NULL);
+        $file->setProfile($profile);
+        $file->setRunning(false);
+        $file->setSize($fileType->getSize());
+        $file->setSlots($slots);
+        $file->setSystem(NULL);
+        $file->setVersion(1);
+        $this->entityManager->persist($file);
+        $this->entityManager->flush($file);
+        return $this->gameClientResponse->addMessage($this->translate('File prototype invoked'), GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function setfileproperty($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $profile = $this->user->getProfile();
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray, true, false, false, true);
+        // try to get target file via repo method
+        $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
+            $profile->getCurrentNode(),
+            $profile,
+            $parameter
+        );
+        if (count($targetFiles) < 1) {
+            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
+        }
+        /* start logic */
+        /** @var File $targetFile */
+        $targetFile = array_shift($targetFiles);
+        list($contentArray, $property) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$property) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid property'))->send();
+        }
+        $newValue = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$newValue) $newValue = 1;
+        switch ($property) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Invalid property'))->send();
+            case 'integrity': // TODO extract constants
+                $maxIntegrity = $targetFile->getMaxIntegrity();
+                if ($newValue > $maxIntegrity) $newValue = $maxIntegrity;
+                $targetFile->setIntegrity($newValue);
+                break;
+            case 'level':
+                if ($newValue > 100) $newValue = 100;
+                $targetFile->setLevel($newValue);
+                break;
+            case 'maxintegrity':
+                if ($newValue > 100) $newValue = 100;
+                $targetFile->setMaxIntegrity($newValue);
+                break;
+            case 'name':
+                $checkResult = $this->stringChecker($newValue);
+                if ($checkResult) {
+                    return $this->gameClientResponse->addMessage($checkResult)->send();
+                }
+                $newValue = str_replace(' ', '_', $newValue);
+                $targetFile->setName($newValue);
+                break;
+            case 'slots':
+                $targetFile->setSlots($newValue);
+                break;
+            case 'version':
+                $targetFile->setVersion($newValue);
+                break;
+            case 'profile':
+                $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $newValue);
+                if (!$targetUser) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid user id'))->send();
+                }
+                $targetFile->setProfile($targetUser->getProfile());
+                break;
+        }
+        $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $targetFile->getName(), $property, $newValue));
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return GameClientResponse|bool
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function invokeFileMod($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $profile = $this->user->getProfile();
+        list($contentArray, $fileModName) = $this->getNextParameter($contentArray, true, false, false, true);
+        $level = $this->getNextParameter($contentArray, false, true);
+        if (!$fileModName) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid file mod'), GameClientResponse::CLASS_DANGER)->send();
+        }
+        if (!$level) $level = 1;
+        $fileMod = $this->fileModRepo->findLikeName($fileModName);
+        $fileModInstance = new FileModInstance();
+        $fileModInstance->setLevel($level);
+        $fileModInstance->setProfile($profile);
+        $fileModInstance->setCoder($profile);
+        $fileModInstance->setAdded(new \DateTime());
+        $fileModInstance->setFile(NULL);
+        $fileModInstance->setFileMod($fileMod);
+        $this->entityManager->persist($fileModInstance);
+        $this->entityManager->flush($fileModInstance);
+        return $this->gameClientResponse->addMessage($this->translate('Filemod prototype invoked'), GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function setfilemodproperty($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $profile = $this->user->getProfile();
+        list($contentArray, $fileModInstanceId) = $this->getNextParameter($contentArray, true, true);
+        // try to get target fmi via repo method
+        $fmi = $this->fileModInstanceRepo->find($fileModInstanceId);
+        if (!$fmi) {
+            return $this->gameClientResponse->addMessage($this->translate('Filemod not found'))->send();
+        }
+        /* start logic */
+        /** @var FileModInstance $fmi */
+        list($contentArray, $property) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$property) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid property (one of "level, profile")'))->send();
+        }
+        $newValue = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$newValue) $newValue = 1;
+        switch ($property) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Invalid property (one of "level, profile")'))->send();
+            case 'level':
+                if ($newValue > 100) $newValue = 100;
+                $fmi->setLevel($newValue);
+                break;
+            case 'profile':
+                if ($fmi->getFile()) {
+                    return $this->gameClientResponse->addMessage($this->translate('File mod has already used on a file'))->send();
+                }
+                $targetUser = $this->entityManager->find('TmoAuth\Entity\User', $newValue);
+                if (!$targetUser) {
+                    return $this->gameClientResponse->addMessage($this->translate('Invalid user id'))->send();
+                }
+                $fmi->setProfile($targetUser->getProfile());
+                break;
+        }
+        $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $fmi->getFileMod()->getName(), $property, $newValue));
+        return $this->gameClientResponse->send();
     }
 
 }

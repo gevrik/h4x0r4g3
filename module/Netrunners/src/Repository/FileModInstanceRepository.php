@@ -69,13 +69,27 @@ class FileModInstanceRepository extends EntityRepository
     {
         $qb = $this->createQueryBuilder('fmi');
         $qb->leftJoin('fmi.fileMod', 'fm');
-        $qb->where('fmi.profile = :profile AND fmi.file IS NULL');
+        $qb->where('fmi.profile = :profile');
         $qb->setParameter('profile', $profile);
         $qb->select('COUNT(fmi.id) AS fmicount');
         $qb->addSelect('fm.name AS fmname');
         $qb->addSelect('MIN(fmi.level) AS minlevel');
         $qb->addSelect('MAX(fmi.level) AS maxlevel');
         $qb->groupBy('fmname');
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Profile $profile
+     * @return array
+     */
+    public function findForPartsCommandFull(Profile $profile)
+    {
+        $qb = $this->createQueryBuilder('fmi');
+        $qb->select('fmi');
+        $qb->where('fmi.profile = :profile');
+        $qb->setParameter('profile', $profile);
+        $qb->orderBy('fmi.level', 'DESC');
         return $qb->getQuery()->getResult();
     }
 

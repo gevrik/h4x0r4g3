@@ -46,7 +46,7 @@ class FileTypeRepository extends EntityRepository
 
     /**
      * @param $keyword
-     * @return array
+     * @return FileType|null
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findLikeName($keyword)
