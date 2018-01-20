@@ -899,7 +899,7 @@
 
         // on connection close
         conn.onclose = function() {
-            md.append('<br /><span class="text-danger">Connection to NeoCortex network lost - check https://wiki.h4x0r4g3.com for server status</span>');
+            md.append('<br /><span class="text-danger">Connection to NeoCortex network lost - check <a href="https://wiki.h4x0r4g3.com" target="_blank">the WIKI</a> for server status</span>');
             $('#command-input').remove();
             clearInterval(ticker);
         };
