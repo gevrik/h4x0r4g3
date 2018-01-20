@@ -175,7 +175,9 @@ class HangmanService extends BaseService
         $ws->clearClientHangmanData($resourceId);
         $nodeId = $hangmanData['nodeid'];
         $fileId = $hangmanData['fileid'];
+        /** @var Node $node */
         $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
+        /** @var File $file */
         $file = $this->entityManager->find('Netrunners\Entity\File', $fileId);
         if ($node && $file && $hangmanData['word'] == $guess) {
             // player has guessed correctly
@@ -194,7 +196,15 @@ class HangmanService extends BaseService
         }
         else {
             $message = $this->translate('You fail to break in to the target system');
-            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+            $closePanelResponse = new GameClientResponse($resourceId);
+            $closePanelResponse->setCommand(GameClientResponse::COMMAND_CLOSEPANEL)->setSilent(true)->send();
+            $this->gameClientResponse->send();
+            $file = $this->triggerProgramExecutionReaction($file, $node);
+            if ($file->getIntegrity() <= 0) {
+                $message = $this->translate('Critical integrity failure - program shutdown initiated');
+                $this->gameClientResponse->addMessage($message);
+            }
         }
         return $this->gameClientResponse->send();
     }

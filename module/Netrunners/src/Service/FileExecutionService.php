@@ -13,7 +13,6 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
-use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
@@ -900,6 +899,7 @@ class FileExecutionService extends BaseService
             $response = $this->translate('Please specify the miner that you want to siphon from');
         }
         $minerId = NULL;
+        $miner = NULL;
         if (!$response) {
             // try to get target file via repo method
             $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
@@ -909,6 +909,11 @@ class FileExecutionService extends BaseService
             if (!$response) {
                 $miner = array_shift($targetFiles);
                 /** @var File $miner */
+                if ($miner->getProfile() == $profile) {
+                    $response = $this->translate('Unable to siphon from own miners');
+                }
+            }
+            if (!$response && $miner) {
                 switch ($miner->getFileType()->getId()) {
                     default:
                         $response = $this->translate('Invalid file type to siphon from');
@@ -1679,36 +1684,6 @@ class FileExecutionService extends BaseService
     }
 
     /**
-     * @param File $file
-     * @param Node $node
-     * @return File
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    private function triggerProgramExecutionReaction(File $file, Node $node)
-    {
-        $fileType = $file->getFileType();
-        switch ($fileType->getId()) {
-            default:
-                break;
-            case FileType::ID_PORTSCANNER:
-                $reactingPrograms = $this->fileRepo->findRunningInNodeByMod($node, FileMod::ID_BACKSLASH);
-                foreach ($reactingPrograms as $reactingProgram) {
-                    /** @var File $reactingProgram */
-                    if ($this->makePercentRollAgainstTarget($reactingProgram->getLevel())) {
-                        $integrityDamage = $reactingProgram->getIntegrity();
-                        $file->setIntegrity($file->getIntegrity() - $integrityDamage);
-                        if ($file->getIntegrity()<0) $file->setIntegrity(0);
-                        $this->lowerIntegrityOfFile($reactingProgram, 100, 1, true);
-                    }
-                }
-                break;
-        }
-        return $file;
-    }
-
-    /**
      * @param $resourceId
      * @param File $file
      * @param System $system
@@ -1727,8 +1702,8 @@ class FileExecutionService extends BaseService
         $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
         $difficulty = $this->getNodeAttackDifficulty($node, $file);
         if (!$difficulty) $difficulty = 0;
-        $roll = mt_rand(1, 100);
-        if ($roll <= $baseChance - $difficulty) {
+        $chance = $baseChance - $difficulty;
+        if ($this->makePercentRollAgainstTarget($chance)) {
             $message = sprintf(
                 $this->translate('JACKHAMMER RESULTS FOR %s:%s'),
                 $system->getAddy(),
@@ -1759,6 +1734,11 @@ class FileExecutionService extends BaseService
             $response->addMessage($message, GameClientResponse::CLASS_SYSMSG);
             $message = $this->translate('You fail to break in to the target system');
             $response->addMessage($message);
+            $file = $this->triggerProgramExecutionReaction($file, $node);
+            if ($file->getIntegrity() <= 0) {
+                $message = $this->translate('Critical integrity failure - program shutdown initiated');
+                $response->addMessage($message);
+            }
         }
         $this->lowerIntegrityOfFile($file);
         return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
@@ -1784,39 +1764,63 @@ class FileExecutionService extends BaseService
             return $response->addMessage($this->translate('No resources to siphon in that miner'));
         }
         $fileLevel = $file->getLevel();
+        $fileIntegrity = $file->getIntegrity();
         $availableResources = $minerData->value;
         $amountSiphoned = ($availableResources < $fileLevel) ? $availableResources : $fileLevel;
         $minerData->value = $minerData->value - $amountSiphoned;
         $profile = $file->getProfile();
-        switch ($miner->getFileType()->getId()) {
-            default:
-                $message = NULL;
-                break;
-            case FileType::ID_DATAMINER:
-                $profile->setSnippets($profile->getSnippets() + $amountSiphoned);
-                $message = sprintf(
-                    $this->translate('You siphon [%s] snippets from [%s]'),
-                    $amountSiphoned,
-                    $miner->getName()
-                );
-                $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
-                break;
-            case FileType::ID_COINMINER:
-                $profile->setCredits($profile->getCredits() + $amountSiphoned);
-                $message = sprintf(
-                    $this->translate('You siphon [%s] credits from [%s]'),
-                    $amountSiphoned,
-                    $miner->getName()
-                );
-                $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
-                break;
+        // calc chance for roll
+        $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
+        $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
+        $difficulty = $this->getFileAttackDifficulty($miner, $file);
+        if (!$difficulty) $difficulty = 0;
+        $chance = $baseChance - $difficulty;
+        // skill roll
+        if ($this->makePercentRollAgainstTarget($chance)) {
+            // success determine what happend depending on file type
+            switch ($miner->getFileType()->getId()) {
+                default:
+                    $message = NULL;
+                    break;
+                case FileType::ID_DATAMINER:
+                    $profile->setSnippets($profile->getSnippets() + $amountSiphoned);
+                    $message = sprintf(
+                        $this->translate('You siphon [%s] snippets from [%s]'),
+                        $amountSiphoned,
+                        $miner->getName()
+                    );
+                    $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                    break;
+                case FileType::ID_COINMINER:
+                    $profile->setCredits($profile->getCredits() + $amountSiphoned);
+                    $message = sprintf(
+                        $this->translate('You siphon [%s] credits from [%s]'),
+                        $amountSiphoned,
+                        $miner->getName()
+                    );
+                    $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                    break;
+            }
+            if (!$message) {
+                return $response->addMessage($this->translate('Unable to siphon at this moment'), GameClientResponse::CLASS_DANGER);
+            }
+            $miner->setData(json_encode($minerData));
+            $this->entityManager->flush($profile);
+            $this->entityManager->flush($miner);
         }
-        if (!$message) {
-            return $response->addMessage($this->translate('Unable to siphon at this moment'), GameClientResponse::CLASS_DANGER);
+        else {
+            $message = sprintf(
+                $this->translate('You fail to siphon from %s'),
+                $miner->getName()
+            );
+            $response->addMessage($message);
+            $node = $profile->getCurrentNode();
+            $file = $this->triggerProgramExecutionReaction($file, $node);
+            if ($file->getIntegrity() <= 0) {
+                $message = $this->translate('Critical integrity failure - program shutdown initiated');
+                $response->addMessage($message);
+            }
         }
-        $miner->setData(json_encode($minerData));
-        $this->entityManager->flush($profile);
-        $this->entityManager->flush($miner);
         $this->lowerIntegrityOfFile($file, 100, 1, true);
         return $response;
     }

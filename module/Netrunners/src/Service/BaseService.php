@@ -16,6 +16,7 @@ use Netrunners\Entity\Connection;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
@@ -1946,6 +1947,41 @@ class BaseService
     }
 
     /**
+     * @param File $file
+     * @param Node $node
+     * @return File
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    protected function triggerProgramExecutionReaction(File $file, Node $node)
+    {
+        $fileType = $file->getFileType();
+        switch ($fileType->getId()) {
+            default:
+                break;
+            case FileType::ID_PORTSCANNER:
+            case FileType::ID_JACKHAMMER:
+            case FileType::ID_WORMER:
+            case FileType::ID_SIPHON:
+                /** @var FileRepository $fileRepo */
+                $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+                $reactingPrograms = $fileRepo->findRunningInNodeByMod($node, FileMod::ID_BACKSLASH);
+                foreach ($reactingPrograms as $reactingProgram) {
+                    /** @var File $reactingProgram */
+                    if ($this->makePercentRollAgainstTarget($reactingProgram->getLevel())) {
+                        $integrityDamage = $reactingProgram->getIntegrity();
+                        $file->setIntegrity($file->getIntegrity() - $integrityDamage);
+                        if ($file->getIntegrity()<0) $file->setIntegrity(0);
+                        $this->lowerIntegrityOfFile($reactingProgram, 100, 1, true);
+                    }
+                }
+                break;
+        }
+        return $file;
+    }
+
+    /**
      * @param Profile $profile
      * @param $amount
      * @param bool $flush
@@ -3483,10 +3519,40 @@ class BaseService
                         break;
                     case FileType::ID_PORTSCANNER:
                     case FileType::ID_JACKHAMMER:
+                    case FileType::ID_WORMER:
                         $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
                         /** @var FileRepository $fileRepo */
                         $icmpBlockerLevels = $fileRepo->getTotalRunningLevelInNodeByType($node, FileType::ID_ICMP_BLOCKER);
                         $result += $icmpBlockerLevels;
+                        break;
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param File $targetFile
+     * @param File|NULL $attackingFile
+     * @return bool|int
+     */
+    protected function getFileAttackDifficulty(File $targetFile, File $attackingFile = NULL)
+    {
+        $result = false;
+        if ($targetFile) {
+            switch ($targetFile->getFileType()->getId()) {
+                default:
+                    break;
+                case FileType::ID_DATAMINER:
+                case FileType::ID_COINMINER:
+                    $result = (($targetFile->getNode()->getLevel() * FileService::DEFAULT_DIFFICULTY_MOD) + $targetFile->getLevel() + $targetFile->getIntegrity()) / 2;
+                    break;
+            }
+            // check for file mods that are effective against the attacking program
+            if ($result && $attackingFile) {
+                // determine what happens depending on the attacking file's type
+                switch ($attackingFile->getFileType()->getId()) {
+                    default:
                         break;
                 }
             }
