@@ -54,6 +54,12 @@ class ServerSetting
      */
     protected $motd;
 
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     * @var int
+     */
+    protected $nixNpcId;
+
 
     /**
      * @return int
@@ -160,6 +166,24 @@ class ServerSetting
     public function setMotd($motd)
     {
         $this->motd = $motd;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNixNpcId()
+    {
+        return $this->nixNpcId;
+    }
+
+    /**
+     * @param int $nixNpcId
+     * @return ServerSetting
+     */
+    public function setNixNpcId($nixNpcId)
+    {
+        $this->nixNpcId = $nixNpcId;
         return $this;
     }
 

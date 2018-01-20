@@ -179,6 +179,15 @@ return array(
                         )
                     )
                 ),
+                'create-main-campaign-npcs' => array(
+                    'options' => array(
+                        'route'    => 'create-main-campaign-npcs',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-create-main-campaign-npcs'
+                        )
+                    )
+                ),
                 'create-admin-account' => array(
                     'options' => array(
                         'route'    => 'create-admin-account',

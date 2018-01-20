@@ -62,6 +62,26 @@ class MailMessage
     protected $recipient;
 
     /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance")
+     */
+    protected $npcAuthor;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\NpcInstance")
+     */
+    protected $npcRecipient;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $fileAuthor;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $fileRecipient;
+
+    /**
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\MailMessage", inversedBy="children")
      */
     protected $parent;
@@ -210,6 +230,78 @@ class MailMessage
     public function setRecipient($recipient)
     {
         $this->recipient = $recipient;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getNpcAuthor()
+    {
+        return $this->npcAuthor;
+    }
+
+    /**
+     * @param mixed $npcAuthor
+     * @return MailMessage
+     */
+    public function setNpcAuthor($npcAuthor)
+    {
+        $this->npcAuthor = $npcAuthor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getNpcRecipient()
+    {
+        return $this->npcRecipient;
+    }
+
+    /**
+     * @param mixed $npcRecipient
+     * @return MailMessage
+     */
+    public function setNpcRecipient($npcRecipient)
+    {
+        $this->npcRecipient = $npcRecipient;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getFileAuthor()
+    {
+        return $this->fileAuthor;
+    }
+
+    /**
+     * @param mixed $fileAuthor
+     * @return MailMessage
+     */
+    public function setFileAuthor($fileAuthor)
+    {
+        $this->fileAuthor = $fileAuthor;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getFileRecipient()
+    {
+        return $this->fileRecipient;
+    }
+
+    /**
+     * @param mixed $fileRecipient
+     * @return MailMessage
+     */
+    public function setFileRecipient($fileRecipient)
+    {
+        $this->fileRecipient = $fileRecipient;
         return $this;
     }
 

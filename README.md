@@ -8,7 +8,8 @@ Installation commands after using latest _fresh db:
 php public/index.php init-server<br/>
 php public/index.php create-chatsubo<br/>
 php public/index.php create-faction-systems<br/>
-php public/index.php create-admin-account
+php public/index.php create-admin-account<br/>
+php public/index.php create-main-campaign-npcs
 
 Now you can start the server:
 

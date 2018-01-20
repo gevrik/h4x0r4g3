@@ -71,6 +71,7 @@ return array(
             'Netrunners\Service\NotificationService' => 'Netrunners\Factory\NotificationServiceFactory',
             'Netrunners\Service\NpcInstanceService' => 'Netrunners\Factory\NpcInstanceServiceFactory',
             'Netrunners\Service\MailMessageService' => 'Netrunners\Factory\MailMessageServiceFactory',
+            'Netrunners\Service\MainCampaignService' => 'Netrunners\Factory\MainCampaignServiceFactory',
             'Netrunners\Service\MilkrunService' => 'Netrunners\Factory\MilkrunServiceFactory',
             'Netrunners\Service\MilkrunAivatarService' => 'Netrunners\Factory\MilkrunAivatarServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',

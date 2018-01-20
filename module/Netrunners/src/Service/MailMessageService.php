@@ -11,7 +11,9 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\File;
 use Netrunners\Entity\MailMessage;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\MailMessageRepository;
@@ -48,6 +50,8 @@ class MailMessageService extends BaseService
      * Returns the total number of mails for the given profile.
      * @param Profile $profile
      * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     protected function getAmountMails(Profile $profile)
     {
@@ -117,11 +121,12 @@ class MailMessageService extends BaseService
             /** @var MailMessage $mail */
             $mailNumber++;
             $preTag = ($mail->getReadDateTime()) ? '<span>' : '<span class="text-white">';
+            $fromString = $this->getFromString($mail);
             $message = sprintf(
                 '%s%-3s | %-20s | %-20s | %s</span>',
                 $preTag,
                 $mailNumber,
-                ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : $this->translate("[SYSTEM-MAIL]"),
+                $fromString,
                 $mail->getSentDateTime()->format('Y/m/d H:i:s'),
                 $mail->getSubject()
             );
@@ -135,6 +140,25 @@ class MailMessageService extends BaseService
         );
         $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param MailMessage $mail
+     * @return string
+     */
+    private function getFromString(MailMessage $mail)
+    {
+        $result = "[SYSTEM-MAIL]";
+        if ($mail->getAuthor()) {
+            $result = $mail->getAuthor()->getUser()->getDisplayName();
+        }
+        if ($mail->getNpcAuthor()) {
+            $result = $mail->getNpcAuthor()->getName();
+        }
+        if ($mail->getFileAuthor()) {
+            $result = $mail->getFileAuthor()->getName();
+        }
+        return $result;
     }
 
     /**
@@ -188,8 +212,7 @@ class MailMessageService extends BaseService
             $mail->setReadDateTime(new \DateTime());
             $this->entityManager->flush($mail);
         }
-        /** @var MailMessage $mail */
-        $authorName = ($mail->getAuthor()) ? $mail->getAuthor()->getUser()->getDisplayName() : 'SYSTEM';
+        $authorName = $this->getFromString($mail);
         $message = sprintf(
             $this->translate('Message: %s'),
             $mailOptions->currentMailNumber
@@ -252,6 +275,55 @@ class MailMessageService extends BaseService
         $this->entityManager->remove($mail);
         $this->entityManager->flush();
         return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param Profile $recipient
+     * @param Profile|NpcInstance|File NULL $author
+     * @param string $subject
+     * @param string $content
+     * @param bool $flush
+     * @return MailMessage
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function createMail(
+        Profile $recipient,
+        $author = NULL,
+        $subject = 'INVALID SUBJECT',
+        $content = 'EMPTY CONTENT',
+        $flush = false
+    )
+    {
+        $mailMessage = new MailMessage();
+        $mailMessage->setContent($content);
+        if ($author instanceof Profile) {
+            $mailMessage->setAuthor($author);
+        }
+        else {
+            $mailMessage->setAuthor(NULL);
+        }
+        if ($author instanceof NpcInstance) {
+            $mailMessage->setNpcAuthor($author);
+        }
+        else {
+            $mailMessage->setNpcAuthor(NULL);
+        }
+        if ($author instanceof File) {
+            $mailMessage->setFileAuthor($author);
+        }
+        else {
+            $mailMessage->setFileAuthor(NULL);
+        }
+        $mailMessage->setParent(NULL);
+        $mailMessage->setReadDateTime(NULL);
+        $mailMessage->setRecipient($recipient);
+        $mailMessage->setSentDateTime(new \DateTime());
+        $mailMessage->setSubject($subject);
+        $this->entityManager->persist($mailMessage);
+        if ($flush) {
+            $this->entityManager->flush($mailMessage);
+        }
+        return $mailMessage;
     }
 
 }

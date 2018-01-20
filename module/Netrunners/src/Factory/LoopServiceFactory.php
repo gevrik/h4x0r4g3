@@ -16,6 +16,7 @@ use Netrunners\Service\CodingService;
 use Netrunners\Service\CombatService;
 use Netrunners\Service\FileService;
 use Netrunners\Service\LoopService;
+use Netrunners\Service\MainCampaignService;
 use Netrunners\Service\SystemService;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
@@ -40,6 +41,7 @@ class LoopServiceFactory implements FactoryInterface
             $container->get(CodingService::class),
             $container->get(CombatService::class),
             $container->get(SystemService::class),
+            $container->get(MainCampaignService::class),
             $container->get(Translator::class)
         );
     }

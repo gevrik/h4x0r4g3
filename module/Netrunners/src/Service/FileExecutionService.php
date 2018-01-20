@@ -11,16 +11,20 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
+use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -48,6 +52,16 @@ class FileExecutionService extends BaseService
      */
     protected $fileRepo;
 
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
+    /**
+     * @var ConnectionRepository
+     */
+    protected $connectionRepo;
+
 
     /**
      * FileExecutionService constructor.
@@ -72,6 +86,8 @@ class FileExecutionService extends BaseService
         $this->missionService = $missionService;
         $this->hangmanService = $hangmanService;
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
     }
 
     /**
@@ -172,6 +188,7 @@ class FileExecutionService extends BaseService
             case FileType::ID_SIPHON:
             case FileType::ID_MEDKIT:
             case FileType::ID_PROXIFIER:
+            case FileType::ID_CROWBAR:
                 return $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
                 break;
             case FileType::ID_CODEBREAKER:
@@ -761,6 +778,18 @@ class FileExecutionService extends BaseService
                     $file->getName()
                 );
                 break;
+            case FileType::ID_CROWBAR:
+                list($executeWarning, $connectionId) = $this->executeWarningCrowbar($file, $contentArray);
+                $parameterArray = [
+                    'connectionId' => $connectionId,
+                    'fileId' => $file->getId(),
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('You start using [%s] on the codegate - please wait'),
+                    $file->getName()
+                );
+                break;
         }
         if ($executeWarning) {
             $this->gameClientResponse->addMessage($executeWarning);
@@ -932,6 +961,41 @@ class FileExecutionService extends BaseService
             }
         }
         return [$response, $minerId];
+    }
+
+    /**
+     * @param File $file
+     * @param $contentArray
+     * @return array|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function executeWarningCrowbar(File $file, $contentArray)
+    {
+        $response = false;
+        $profile = $this->user->getProfile();
+        $connectionParameter = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$connectionParameter) {
+            $response = $this->translate('Please specify a connection by name or number');
+        }
+        $connection = $this->findConnectionByNameOrNumber($connectionParameter, $profile->getCurrentNode());
+        if (!$connection) {
+            $response = $this->translate('Unable to find connection');
+        }
+        if ($connection && $connection->getType() != Connection::TYPE_CODEGATE) {
+            $response = $this->translate('That connection is not protected by a code-gate');
+        }
+        if ($connection && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
+            $response = $this->translate('The connection is already open');
+        }
+        if ($connection && $file->getLevel() < ($connection->getLevel()-1)*10) {
+            return $this->gameClientResponse->addMessage($this->translate('The level of your crowbar is too low for this codegate'))->send();
+        }
+        // check if there are hostile npc in the node
+        if ($this->npcInstanceRepo->countByHostileToProfileInNode($profile) >= 1) {
+            $response = $this->translate('Unable to use crowbar when there are hostile entities in the node');
+        }
+        return [$response, $connection->getId()];
     }
 
     /**
@@ -1685,6 +1749,57 @@ class FileExecutionService extends BaseService
             ));
         }
         $response->addMessages($messages);
+        $this->lowerIntegrityOfFile($file);
+        return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+    }
+
+    /**
+     * @param $resourceId
+     * @param File $file
+     * @param Connection $connection
+     * @return GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function executeCrowbar($resourceId, File $file, Connection $connection)
+    {
+        $response = new GameClientResponse($resourceId);
+        $fileLevel = $file->getLevel();
+        $fileIntegrity = $file->getIntegrity();
+        $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
+        $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
+        $difficulty = $this->getNodeAttackDifficulty($connection->getSourceNode(), $file);
+        if (!$difficulty) $difficulty = 0;
+        $chance = $baseChance - $difficulty;
+        if ($this->makePercentRollAgainstTarget($chance)) {
+            $connection->setIsOpen(true);
+            /** @var Connection $otherConnection */
+            $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
+            $otherConnection->setIsOpen(true);
+            $this->entityManager->flush();
+            $this->updateMap($resourceId);
+            $response->addMessage(
+                    $this->translate('Crowbar attempt success - you have opened the codegate'),
+                    GameClientResponse::CLASS_SUCCESS
+                );
+        }
+        else {
+            $response->addMessage($this->translate('Crowbar attempt failed - security rating and alert level raised'));
+            $this->raiseProfileSecurityRating($file->getProfile(), $connection->getLevel());
+            $targetSystem = $connection->getSourceNode()->getSystem();
+            $this->raiseSystemAlertLevel($targetSystem, $connection->getLevel()); // TODO use system alert level in other places
+            $this->writeSystemLogEntry(
+                $targetSystem,
+                'Crowbar attempt failed',
+                Notification::SEVERITY_WARNING,
+                NULL,
+                NULL,
+                $connection->getSourceNode()
+            );
+        }
         $this->lowerIntegrityOfFile($file);
         return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
     }

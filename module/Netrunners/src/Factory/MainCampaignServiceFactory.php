@@ -1,8 +1,8 @@
 <?php
 
 /**
- * LoginService Factory.
- * Factory for the LoginService.
+ * MainCampaignService Factory.
+ * MainCampaignService Factory.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -12,29 +12,29 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
-use Netrunners\Service\LoginService;
 use Netrunners\Service\MailMessageService;
+use Netrunners\Service\MainCampaignService;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
-class LoginServiceFactory implements FactoryInterface
+class MainCampaignServiceFactory implements FactoryInterface
 {
 
     /**
      * @param ContainerInterface $container
      * @param string $requestedName
      * @param array|null $options
-     * @return LoginService|object
+     * @return MainCampaignService|object
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-        return new LoginService(
+        return new MainCampaignService(
             $container->get(EntityManager::class),
+            $container->get(MailMessageService::class),
             $container->get('ViewRenderer'),
-            $container->get(Translator::class),
-            $container->get(MailMessageService::class)
+            $container->get(Translator::class)
         );
     }
 

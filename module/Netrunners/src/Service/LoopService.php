@@ -72,6 +72,11 @@ class LoopService extends BaseService
     protected $systemService;
 
     /**
+     * @var MainCampaignService
+     */
+    protected $mainCampaignService;
+
+    /**
      * @var NodeRepository
      */
     protected $nodeRepo;
@@ -105,6 +110,7 @@ class LoopService extends BaseService
      * @param CodingService $codingService
      * @param CombatService $combatService
      * @param SystemService $systemService
+     * @param MainCampaignService $mainCampaignService
      * @param Translator $translator
      */
     public function __construct(
@@ -114,6 +120,7 @@ class LoopService extends BaseService
         CodingService $codingService,
         CombatService $combatService,
         SystemService $systemService,
+        MainCampaignService $mainCampaignService,
         Translator $translator
     )
     {
@@ -122,6 +129,7 @@ class LoopService extends BaseService
         $this->codingService = $codingService;
         $this->combatService = $combatService;
         $this->systemService = $systemService;
+        $this->mainCampaignService = $mainCampaignService;
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
@@ -220,27 +228,27 @@ class LoopService extends BaseService
                     break;
                 case 'executeprogram':
                     $parameter = (object)$actionData->parameter;
-                    $file = $this->entityManager->find('Netrunners\Entity\File', $parameter->fileId);
                     /** @var File $file */
+                    $file = $this->entityManager->find('Netrunners\Entity\File', $parameter->fileId);
                     switch ($file->getFileType()->getId()) {
                         default:
                             break;
                         case FileType::ID_PORTSCANNER:
-                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             /** @var System $system */
+                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             $gameClientResponse = $this->fileService->executePortscanner($file, $system);
                             break;
                         case FileType::ID_JACKHAMMER:
-                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             /** @var System $system */
+                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             $nodeId = $parameter->nodeId;
-                            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
                             /** @var Node $node */
+                            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
                             $gameClientResponse = $this->fileService->executeJackhammer($resourceId, $file, $system, $node);
                             break;
                         case FileType::ID_SIPHON:
-                            $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
                             /** @var File $miner */
+                            $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
                             $gameClientResponse = $this->fileService->executeSiphon($file, $miner);
                             break;
                         case FileType::ID_MEDKIT:
@@ -248,6 +256,11 @@ class LoopService extends BaseService
                             break;
                         case FileType::ID_PROXIFIER:
                             $gameClientResponse = $this->fileService->executeProxifier($file);
+                            break;
+                        case FileType::ID_CROWBAR:
+                            /** @var Connection $connection */
+                            $connection = $this->entityManager->find('Netrunners\Entity\Connection', $parameter->connectionId);
+                            $gameClientResponse = $this->fileService->executeCrowbar($resourceId, $file, $connection);
                             break;
                     }
                     break;
@@ -734,6 +747,32 @@ class LoopService extends BaseService
     }
 
     /**
+     * Loop that checks for main campaign updates - default time is every 5m.
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function loopMainCampaign()
+    {
+        $ws = $this->getWebsocketServer();
+        foreach ($ws->getClients() as $wsClient) {
+            /** @var ConnectionInterface $wsClient */
+            /** @noinspection PhpUndefinedFieldInspection */
+            $resourceId = $wsClient->resourceId;
+            $clientData = $ws->getClientData($resourceId);
+            // skip sockets that are not properly connected yet
+            if (!$clientData) continue;
+            if (!$clientData->hash) continue;
+            // skip sockets that are done with the main campaign
+            if ($clientData->mainCampaignStep >= MainCampaignService::STEP_COMPLETED) continue;
+            // check campaign step
+            $this->mainCampaignService->checkMainCampaignStep($resourceId, $clientData);
+        }
+        // flush changes to db
+        $this->entityManager->flush();
+    }
+
+    /**
      * @param Profile $profile
      */
     private function regenerateEeg(Profile $profile)
@@ -861,6 +900,11 @@ class LoopService extends BaseService
 
     /**
      * @param System $system
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function calcSystemResourcesProfile(System $system)
     {
@@ -873,6 +917,11 @@ class LoopService extends BaseService
 
     /**
      * @param System $system
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function calcSystemResourcesGroup(System $system)
     {
@@ -885,6 +934,11 @@ class LoopService extends BaseService
 
     /**
      * @param System $system
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function calcSystemResourcesFaction(System $system)
     {

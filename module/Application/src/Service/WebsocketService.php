@@ -66,6 +66,11 @@ class WebsocketService implements MessageComponentInterface {
     const LOOP_REGENERATION = 120;
 
     /**
+     * @const LOOP_MAIN_CAMPAIGN the amount of seconds between main campaign checks
+     */
+    const LOOP_MAIN_CAMPAIGN = 20;
+
+    /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
      */
     const LOOP_NPC_ROAM = 30;
@@ -630,6 +635,11 @@ class WebsocketService implements MessageComponentInterface {
             $this->loopService->loopRegeneration();
         });
 
+        $this->loop->addPeriodicTimer(self::LOOP_MAIN_CAMPAIGN, function(){
+            $this->log(Logger::INFO, 'looping main campaign');
+            $this->loopService->loopMainCampaign();
+        });
+
         /* INIT SINGLETON */
 
         self::$instance = $this;
@@ -1028,7 +1038,7 @@ class WebsocketService implements MessageComponentInterface {
         // Store the new connection to send messages to later
         $this->clients->attach($conn);
         echo "New connection! ({$resourceId})\n";
-        $this->clientsData[$resourceId] = array(
+        $this->clientsData[$resourceId] = [
             'socketId' => $resourceId,
             'username' => false,
             'userId' => false,
@@ -1054,8 +1064,10 @@ class WebsocketService implements MessageComponentInterface {
             ],
             'captchasolution' => NULL,
             'invitationid' => NULL,
-            'replyId' => NULL
-        );
+            'replyId' => NULL,
+            'newbieStatusDate' => NULL,
+            'mainCampaignStep' => NULL
+        ];
         $response = new GameClientResponse($resourceId);
         $response->setCommand(GameClientResponse::COMMAND_GETIPADDY);
         $response->send();

@@ -133,6 +133,18 @@ class Profile
      */
     protected $currentResourceId;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $mainCampaignStep;
+
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $newbieStatusDate;
+
     // ORM
 
     /**
@@ -548,6 +560,42 @@ class Profile
     public function setCurrentResourceId($currentResourceId)
     {
         $this->currentResourceId = $currentResourceId;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMainCampaignStep()
+    {
+        return $this->mainCampaignStep;
+    }
+
+    /**
+     * @param int $mainCampaignStep
+     * @return Profile
+     */
+    public function setMainCampaignStep($mainCampaignStep)
+    {
+        $this->mainCampaignStep = $mainCampaignStep;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getNewbieStatusDate()
+    {
+        return $this->newbieStatusDate;
+    }
+
+    /**
+     * @param \DateTime $newbieStatusDate
+     * @return Profile
+     */
+    public function setNewbieStatusDate($newbieStatusDate)
+    {
+        $this->newbieStatusDate = $newbieStatusDate;
         return $this;
     }
 

@@ -59,9 +59,12 @@ class CodebreakerService extends BaseService
      * @param File $file
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function startCodebreaker($resourceId, File $file, $contentArray)
     {
@@ -148,13 +151,13 @@ class CodebreakerService extends BaseService
         if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $codebreakerData = $this->clientData->codebreaker;
-        $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
         /** @var Connection $connection */
+        $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
         if ($guess == $codebreakerData['thePassword']) {
             //$this->movePlayerToTargetNode($resourceId, $profile, $connection);
             $connection->setIsOpen(true);
-            $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
             /** @var Connection $otherConnection */
+            $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
             $otherConnection->setIsOpen(true);
             $this->entityManager->flush();
             $this->updateMap($resourceId);

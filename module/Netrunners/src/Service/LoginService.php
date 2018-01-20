@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Application\Service\WebsocketService;
+use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\MilkrunAivatar;
 use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
@@ -29,9 +30,27 @@ use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Crypt\Password\Bcrypt;
 use Zend\I18n\Validator\Alnum;
+use Zend\Mvc\I18n\Translator;
+use Zend\View\Renderer\PhpRenderer;
 
 class LoginService extends BaseService
 {
+
+    /**
+     * @var MailMessageService
+     */
+    protected $mailMessageService;
+
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        MailMessageService $mailMessageService
+    )
+    {
+        parent::__construct($entityManager, $viewRenderer, $translator);
+        $this->mailMessageService = $mailMessageService;
+    }
 
     /**
      * @param $resourceId
@@ -55,6 +74,7 @@ class LoginService extends BaseService
             $response->setCommand(GameClientResponse::COMMAND_CONFIRMUSERCREATE);
         }
         else {
+            /** @var User $user */
             $this->setUser($user);
             // check if they are banned
             if ($user->getBanned()) {
@@ -73,9 +93,12 @@ class LoginService extends BaseService
             }
             else {
                 // not banned, populate ws client data
+                $profile = $user->getProfile();
                 $ws->setClientData($resourceId, 'username', $user->getUsername());
                 $ws->setClientData($resourceId, 'userId', $user->getId());
-                $ws->setClientData($resourceId, 'profileId', $user->getProfile()->getId());
+                $ws->setClientData($resourceId, 'profileId', $profile->getId());
+                $ws->setClientData($resourceId, 'newbieStatusDate', $profile->getNewbieStatusDate());
+                $ws->setClientData($resourceId, 'mainCampaignStep', $profile->getMainCampaignStep());
                 $response->setCommand(GameClientResponse::COMMAND_PROMPTFORPASSWORD);
             }
         }
@@ -86,6 +109,9 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function confirmUserCreate($resourceId, $content)
     {
@@ -146,6 +172,9 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function solveCaptcha($resourceId, $content)
     {
@@ -164,6 +193,15 @@ class LoginService extends BaseService
     }
 
 
+    /**
+     * @param $resourceId
+     * @param $content
+     * @return array
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     public function enterInvitationCode($resourceId, $content)
     {
         $ws = $this->getWebsocketServer();
@@ -187,6 +225,9 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function createPassword($resourceId, $content)
     {
@@ -225,6 +266,7 @@ class LoginService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function createPasswordConfirm($resourceId, $content)
     {
@@ -285,6 +327,10 @@ class LoginService extends BaseService
             $profile->setTorsoArmor(NULL);
             $profile->setUpperArmArmor(NULL);
             $profile->setStealthing(false);
+            $newbieStatusDate = new \DateTime();
+            $newbieStatusDate->add(new \DateInterval('P7D'));
+            $profile->setNewbieStatusDate($newbieStatusDate);
+            $profile->setMainCampaignStep(NULL);
             // add skills
             $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
             foreach ($skills as $skill) {
@@ -387,6 +433,10 @@ class LoginService extends BaseService
             $playSession->setSocketId($resourceId);
             $this->entityManager->persist($playSession);
             $this->entityManager->flush($playSession);
+            // send welcome mail
+            $subject = $this->translate("Welcome to the NeoCortex Network");
+            $content = $this->translate("Please use the \"help\" or \"newbie\" commands to get help. You will be receiving additional instructions shortly...");
+            $this->mailMessageService->createMail($profile, NULL, $subject, $content, true);
         }
         return [$disconnect, $response];
     }
@@ -469,6 +519,8 @@ class LoginService extends BaseService
                     }
                 }
             }
+            // show amount of new mail messages
+            $this->mailMessageService->displayAmountUnreadMails($resourceId);
             // create a new play-session
             $playSession = new PlaySession();
             $playSession->setProfile($profile);

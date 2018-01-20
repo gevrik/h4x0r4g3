@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\System;
@@ -268,6 +269,7 @@ class FileService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function executeFile($resourceId, $contentArray)
     {
@@ -290,6 +292,22 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @param File $file
+     * @param Connection $connection
+     * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function executeCrowbar($resourceId, File $file, Connection $connection)
+    {
+        return $this->fileExecutionService->executeCrowbar($resourceId, $file, $connection);
+    }
+
+    /**
+     * @param $resourceId
+     * @param File $file
      * @param System $system
      * @param Node $node
      * @return \Netrunners\Model\GameClientResponse
@@ -306,7 +324,9 @@ class FileService extends BaseService
      * @param File $file
      * @param File $miner
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeSiphon(File $file, File $miner)
     {
@@ -316,7 +336,9 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeMedkit(File $file)
     {
@@ -326,7 +348,9 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeProxifier(File $file)
     {

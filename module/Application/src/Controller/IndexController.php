@@ -11,6 +11,8 @@ use Netrunners\Entity\MilkrunAivatar;
 use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Npc;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
@@ -33,6 +35,7 @@ use React\EventLoop\Factory;
 use React\Socket\Server;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
+use Zend\Console\Adapter\AdapterInterface;
 use Zend\Console\ColorInterface;
 use Zend\Console\Request;
 use Zend\Crypt\Password\Bcrypt;
@@ -73,7 +76,7 @@ class IndexController extends AbstractActionController
     protected $config;
 
     /**
-     * @var
+     * @var AdapterInterface
      */
     protected $console;
 
@@ -378,6 +381,63 @@ class IndexController extends AbstractActionController
         // flush to db
         $this->entityManager->flush();
         $this->console->writeLine('DONE CREATING ADMIN ACCOUNT', ColorInterface::GREEN);
+        return true;
+    }
+
+    /**
+     * @return bool
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function cliCreateMainCampaignNpcsAction()
+    {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        $this->console->writeLine('CREATING MAIN CAMPAIGN NPCS', ColorInterface::GREEN);
+        // get server settings
+        /** @var ServerSetting $serverSetting */
+        $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
+        if (!$serverSetting) {
+            $this->console->writeLine('SERVER SETTINGS NEED TO BE INITIALIZED FIRST', ColorInterface::LIGHT_RED);
+            return true;
+        }
+        // create nix
+        $storyNpc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_STORY_NPC);
+        $nix = new NpcInstance();
+        $nix->setHomeSystem(NULL);
+        $nix->setGroup(NULL);
+        $nix->setSystem(NULL);
+        $nix->setNode(NULL);
+        $nix->setHomeNode(NULL);
+        $nix->setStealthing(true);
+        $nix->setSlots(10);
+        $nix->setBypassCodegates(false);
+        $nix->setRoaming(false);
+        $nix->setDescription("Nix main campaign npc");
+        $nix->setName("Nix");
+        $nix->setCurrentEeg(100);
+        $nix->setMaxEeg(100);
+        $nix->setCredits(0);
+        $nix->setSnippets(0);
+        $nix->setAggressive(false);
+        $nix->setFaction(NULL);
+        $nix->setBlasterModule(NULL);
+        $nix->setBladeModule(NULL);
+        $nix->setShieldModule(NULL);
+        $nix->setNpc($storyNpc);
+        $nix->setLevel(1);
+        $nix->setAdded(new \DateTime());
+        $nix->setProfile(NULL);
+        $this->entityManager->persist($nix);
+        $this->entityManager->flush($nix);
+        $serverSetting->setNixNpcId($nix->getId());
+        $this->entityManager->flush($serverSetting);
+        $this->console->writeLine('DONE CREATING MAIN CAMPAIGN NPCS', ColorInterface::GREEN);
         return true;
     }
 
@@ -719,6 +779,7 @@ class IndexController extends AbstractActionController
         $serverSetting->setChatsuboNodeId(NULL);
         $serverSetting->setWildernessSystemId(NULL);
         $serverSetting->setWildernessHubNodeId(NULL);
+        $serverSetting->setNixNpcId(NULL);
         $this->entityManager->persist($serverSetting);
         $system = new System();
         $system->setProfile(NULL);
@@ -766,12 +827,12 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
+        /** @var ServerSetting $serverSetting */
         $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
         if (!$serverSetting) {
             $this->console->writeLine('SERVER SETTINGS NEED TO BE INITIALIZED FIRST', ColorInterface::LIGHT_RED);
             return true;
         }
-        /** @var ServerSetting $serverSetting */
         $chatsuboSystemId = $serverSetting->getChatsuboSystemId();
         if ($chatsuboSystemId !== NULL) {
             $this->console->writeLine('CHATUSBO SYSTEM HAS ALREADY BEEN CREATED', ColorInterface::LIGHT_RED);
