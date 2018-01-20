@@ -846,6 +846,14 @@ class FileExecutionService extends BaseService
                 $file->getName()
             );
         }
+        /** @var Profile $profile */
+        $profile = $file->getProfile();
+        if (!$response && $profile->getStealthing()) {
+            $response = sprintf(
+                $this->translate('%s can not be used while stealthing'),
+                $file->getName()
+            );
+        }
         list($contentArray, $addy) = $this->getNextParameter($contentArray, true);
         if (!$response && !$addy) {
             $response = $this->translate('Please specify a system address to break in to');
@@ -866,8 +874,6 @@ class FileExecutionService extends BaseService
             }
         }
         /** @var System $system */
-        $profile = $file->getProfile();
-        /** @var Profile $profile */
         if (!$response && $system->getProfile() === $profile) {
             $response = $this->translate('Invalid system - unable to break in to your own systems');
         }
