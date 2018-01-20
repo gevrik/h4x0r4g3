@@ -406,37 +406,43 @@ class IndexController extends AbstractActionController
             $this->console->writeLine('SERVER SETTINGS NEED TO BE INITIALIZED FIRST', ColorInterface::LIGHT_RED);
             return true;
         }
-        // create nix
-        $storyNpc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_STORY_NPC);
-        $nix = new NpcInstance();
-        $nix->setHomeSystem(NULL);
-        $nix->setGroup(NULL);
-        $nix->setSystem(NULL);
-        $nix->setNode(NULL);
-        $nix->setHomeNode(NULL);
-        $nix->setStealthing(true);
-        $nix->setSlots(10);
-        $nix->setBypassCodegates(false);
-        $nix->setRoaming(false);
-        $nix->setDescription("Nix main campaign npc");
-        $nix->setName("Nix");
-        $nix->setCurrentEeg(100);
-        $nix->setMaxEeg(100);
-        $nix->setCredits(0);
-        $nix->setSnippets(0);
-        $nix->setAggressive(false);
-        $nix->setFaction(NULL);
-        $nix->setBlasterModule(NULL);
-        $nix->setBladeModule(NULL);
-        $nix->setShieldModule(NULL);
-        $nix->setNpc($storyNpc);
-        $nix->setLevel(1);
-        $nix->setAdded(new \DateTime());
-        $nix->setProfile(NULL);
-        $this->entityManager->persist($nix);
-        $this->entityManager->flush($nix);
-        $serverSetting->setNixNpcId($nix->getId());
-        $this->entityManager->flush($serverSetting);
+        // check if nix already exists
+        if (!$serverSetting->getNixNpcId()) {
+            // create nix
+            $storyNpc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_STORY_NPC);
+            $nix = new NpcInstance();
+            $nix->setHomeSystem(NULL);
+            $nix->setGroup(NULL);
+            $nix->setSystem(NULL);
+            $nix->setNode(NULL);
+            $nix->setHomeNode(NULL);
+            $nix->setStealthing(true);
+            $nix->setSlots(10);
+            $nix->setBypassCodegates(false);
+            $nix->setRoaming(false);
+            $nix->setDescription("Nix main campaign npc");
+            $nix->setName("Nix");
+            $nix->setCurrentEeg(100);
+            $nix->setMaxEeg(100);
+            $nix->setCredits(0);
+            $nix->setSnippets(0);
+            $nix->setAggressive(false);
+            $nix->setFaction(NULL);
+            $nix->setBlasterModule(NULL);
+            $nix->setBladeModule(NULL);
+            $nix->setShieldModule(NULL);
+            $nix->setNpc($storyNpc);
+            $nix->setLevel(1);
+            $nix->setAdded(new \DateTime());
+            $nix->setProfile(NULL);
+            $this->entityManager->persist($nix);
+            $this->entityManager->flush($nix);
+            $serverSetting->setNixNpcId($nix->getId());
+            $this->entityManager->flush($serverSetting);
+        }
+        else {
+            $this->console->writeLine('NIX ALREADY EXISTS IN THE DATABASE', ColorInterface::MAGENTA);
+        }
         $this->console->writeLine('DONE CREATING MAIN CAMPAIGN NPCS', ColorInterface::GREEN);
         return true;
     }

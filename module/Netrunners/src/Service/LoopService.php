@@ -40,6 +40,7 @@ use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use Netrunners\Repository\SystemRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
+use Zend\Log\Logger;
 use Zend\Mvc\I18n\Translator;
 
 class LoopService extends BaseService
@@ -660,8 +661,8 @@ class LoopService extends BaseService
             $intrusionNodes = $this->nodeRepo->findBySystemAndType($system, NodeType::ID_INTRUSION);
             foreach ($intrusionNodes as $intrusionNode) {
                 /** @var Node $intrusionNode */
-                $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WILDERSPACE_INTRUDER);
-                if ($this->makePercentRollAgainstTarget($this->getBonusForFileLevel($intrusionNode->getLevel()))) {
+                if ($this->makePercentRollAgainstTarget($intrusionNode->getLevel())) {
+                    $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WILDERSPACE_INTRUDER);
                     $npcInstance = $this->spawnNpcInstance($npc, $intrusionNode);
                     $this->checkNpcAggro($npcInstance);
                     $this->checkAggro($npcInstance);
@@ -841,8 +842,9 @@ class LoopService extends BaseService
             $connectionsCount = count($connections);
             if ($connectionsCount - 1 < 0) continue;
             $randConnectionIndex = mt_rand(0, $connectionsCount - 1);
-            $connection = $connections[$randConnectionIndex];
             /** @var Connection $connection */
+            $connection = $connections[$randConnectionIndex];
+            $this->getWebsocketServer()->log(Logger::INFO, sprintf("roaming: %s|%s", $roamingNpc->getName(), $roamingNpc->getId()));
             // now we need to check a few things if the connection is secured
             if ($connection->getType() == Connection::TYPE_CODEGATE) {
                 if ($roamingNpc->getProfile() && !$roamingNpc->getBypassCodegates()) continue;
@@ -872,6 +874,7 @@ class LoopService extends BaseService
             }
             $this->updatedSockets = [];
         }
+        $this->getWebsocketServer()->log(Logger::INFO, "end npcroam");
     }
 
     /**

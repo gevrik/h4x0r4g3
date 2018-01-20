@@ -63,12 +63,15 @@ class MailMessageService extends BaseService
     /**
      * Returns a string that shows how many unread messages a profile has in its inbox.
      * @param $resourceId
+     * @param bool $silent
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function displayAmountUnreadMails($resourceId)
+    public function displayAmountUnreadMails($resourceId, $silent = false)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
@@ -82,7 +85,8 @@ class MailMessageService extends BaseService
             $this->translate('You have %s unread mails in your inbox'),
             $countUnreadMails
         );
-        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_INFO)->send();
+        if ($silent) $this->gameClientResponse->setSilent(true);
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_ATTENTION)->send();
     }
 
     /**

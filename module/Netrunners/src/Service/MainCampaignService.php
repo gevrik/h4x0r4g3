@@ -12,7 +12,6 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Profile;
-use Zend\Log\Logger;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -57,13 +56,14 @@ class MainCampaignService extends BaseService
      */
     public function checkMainCampaignStep($resourceId, $clientData)
     {
-        $this->getWebsocketServer()->log(Logger::INFO, 'CHECKING MAIN CAMPAIGN STATUS FOR ' . $resourceId);
         switch ($clientData->mainCampaignStep) {
             default:
                 break;
             case self::STEP_NOT_STARTED:
-                $this->getWebsocketServer()->log(Logger::INFO, 'SENDING STARTER MAIL');
                 $this->sendStarterMail($resourceId, $clientData);
+                break;
+            case self::STEP_STARTED:
+                $this->sendFollowUpMail($resourceId, $clientData);
                 break;
         }
     }
@@ -91,6 +91,11 @@ EOD;
         $this->mailMessageService->createMail($profile, NULL, $subject, $content);
         $profile->setMainCampaignStep(self::STEP_STARTED);
         $this->getWebsocketServer()->setClientData($resourceId, self::MAIN_CAMPAIGN_STEP, self::STEP_STARTED);
+    }
+
+    private function sendFollowUpMail($resourceId, $clientData)
+    {
+
     }
 
 }

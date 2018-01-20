@@ -520,7 +520,7 @@ class LoginService extends BaseService
                 }
             }
             // show amount of new mail messages
-            $this->mailMessageService->displayAmountUnreadMails($resourceId);
+            $this->mailMessageService->displayAmountUnreadMails($resourceId, true);
             // create a new play-session
             $playSession = new PlaySession();
             $playSession->setProfile($profile);

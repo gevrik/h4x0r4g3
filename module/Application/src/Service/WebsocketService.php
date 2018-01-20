@@ -73,7 +73,7 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
      */
-    const LOOP_NPC_ROAM = 30;
+    const LOOP_NPC_ROAM = 5;
 
     /**
      * @const MAX_CLIENTS the maximum amount of clients that can be connected at the same time
