@@ -20,6 +20,7 @@ class GameClientResponse {
     const CLASS_ATTENTION = 'attention';
     const CLASS_USERS = 'users';
     const CLASS_NPCS = 'npcs';
+    const CLASS_RAW = 'raw';
 
     const COMMAND_FLYTO = 'flytocoords';
     const COMMAND_SHOWMESSAGE = 'showmessage';
@@ -220,7 +221,12 @@ class GameClientResponse {
         }
         // populate returned messages
         foreach ($this->messages as $message) {
-            $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-%s">%s</pre>', $message['class'], $message['text']);
+            if ($message['class'] == self::CLASS_RAW) {
+                $messages[] = $message['text'];
+            }
+            else {
+                $messages[] = sprintf('<pre style="white-space: pre-wrap;" class="text-%s">%s</pre>', $message['class'], $message['text']);
+            }
         }
         // set response
         $this->response = [

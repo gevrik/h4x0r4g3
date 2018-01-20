@@ -130,8 +130,12 @@ class ManpageService extends BaseService
             }
             $command = GameClientResponse::COMMAND_OPENMANPAGEMENU;
             $message = $this->viewRenderer->render($view);
+            $class = GameClientResponse::CLASS_RAW;
         }
-        $this->gameClientResponse->setCommand($command)->addMessage($message, GameClientResponse::CLASS_MUTED);
+        else {
+            $class = GameClientResponse::CLASS_MUTED;
+        }
+        $this->gameClientResponse->setCommand($command)->addMessage($message, $class);
         return $this->gameClientResponse->send();
     }
 
@@ -222,7 +226,8 @@ class ManpageService extends BaseService
         $view->setVariable('manpage', $manpage);
         $view->setVariable('showstatusdropdown', $this->hasRole(NULL, Role::ROLE_ID_ADMIN));
         $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_OPENMANPAGEMENU);
-        $this->gameClientResponse->addMessage($this->viewRenderer->render($view), GameClientResponse::CLASS_MUTED);
+        // add the rendered view as the gmr message with css-class raw so that it will not wrap it in pre
+        $this->gameClientResponse->addMessage($this->viewRenderer->render($view), GameClientResponse::CLASS_RAW);
         return $this->gameClientResponse->send();
     }
 
