@@ -2,6 +2,8 @@
 
 namespace TmoAuth;
 
+use TmoAuth\Factory\UserControllerFactory;
+
 return array(
     'router' => array(
         'routes' => array(
@@ -86,11 +88,15 @@ return array(
         ),
         'factories' => array(
             'TmoAuth\Controller\User' => 'TmoAuth\Factory\UserControllerFactory',
+            'zfcuser' => UserControllerFactory::class,
         ),
     ),
     'view_manager' => array(
         'template_path_stack' => array(
             __DIR__ . '/../view',
+        ),
+        'template_map' => array(
+            'zfc-user/user/login'   => __DIR__ . '/../view/tmo-auth/user/login.phtml',
         ),
     ),
     'navigation' => array(

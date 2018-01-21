@@ -1,0 +1,61 @@
+<?php echo $this->doctype(); ?>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <?php echo $this->headTitle('H4X0R4G3')->setSeparator(' - ')->setAutoEscape(false) ?>
+
+    <?php echo $this->headMeta()
+        ->appendName('viewport', 'width=device-width, initial-scale=1.0')
+        ->appendHttpEquiv('X-UA-Compatible', 'IE=edge')
+    ?>
+
+    <!-- Le styles -->
+    <?php echo $this->headLink(array('rel' => 'shortcut icon', 'type' => 'image/vnd.microsoft.icon', 'href' => $this->basePath() . '/img/favicon.ico'))
+        ->prependStylesheet($this->basePath('css/dashboard.css'))
+        ->prependStylesheet($this->basePath('css/jquery.contextMenu.min.css'))
+        ->prependStylesheet($this->basePath('font-awesome/css/font-awesome.min.css'))
+        ->prependStylesheet($this->basePath('DataTables/datatables.min.css'))
+        ->prependStylesheet($this->basePath('css/jquery-ui.min.css'))
+        ->prependStylesheet($this->basePath('css/bootstrap4.min.css')) ?>
+
+    <!-- Scripts -->
+    <?php echo $this->headScript()
+        ->prependFile($this->basePath('js/jquery.contextMenu.min.js'))
+        ->prependFile($this->basePath('DataTables/datatables.min.js'))
+        ->prependFile($this->basePath('js/d3.min.js'))
+        ->prependFile($this->basePath('js/ckeditor/ckeditor.js'))
+        ->prependFile($this->basePath('js/bootstrap4.min.js'))
+        ->prependFile($this->basePath('js/popper.min.js'))
+        ->prependFile($this->basePath('js/jquery-ui.min.js'))
+        ->prependFile($this->basePath('js/jquery.min.js'))
+        ->prependFile($this->basePath('js/respond.min.js'), 'text/javascript', array('conditional' => 'lt IE 9',))
+        ->prependFile($this->basePath('js/html5shiv.min.js'),   'text/javascript', array('conditional' => 'lt IE 9',))
+    ; ?>
+
+</head>
+<body>
+
+<nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">H4X0R4G3
+    <?php if ($this->zfcUserIdentity()) : ?>
+        - <?php echo $this->zfcUserIdentity()->getDisplayname(); ?>
+    <?php endif; ?>
+    </a>
+    <ul class="navbar-nav px-3">
+        <li class="nav-item text-nowrap">
+            <?php if(!$this->zfcUserIdentity()): ?>
+                <a class="nav-link" href="login">Sign in</a>
+            <?php else : ?>
+                <a class="nav-link" href="/user/logout">Sign out</a>
+            <?php endif; ?>
+        </li>
+    </ul>
+</nav>
+
+<div class="container-fluid">
+    <?php echo $this->content; ?>
+</div>
+<?php echo $this->inlineScript() ?>
+</body>
+</html>

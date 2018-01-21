@@ -16,7 +16,22 @@ return array(
                     'defaults' => array(
                         '__NAMESPACE__' => 'Netrunners\Controller',
                         'controller'    => 'Netrunners\Controller\Profile',
-                        'action'        => 'index',
+                        'action'        => 'profile',
+                    ),
+                ),
+            ),
+            'system' => array(
+                'type' => 'segment',
+                'options' => array(
+                    'route' => '/system[/:action][/:id]',
+                    'constraints' => array(
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id' => '[0-9]+',
+                    ),
+                    'defaults' => array(
+                        '__NAMESPACE__' => 'Netrunners\Controller',
+                        'controller'    => 'Netrunners\Controller\System',
+                        'action'        => 'profileIndex',
                     ),
                 ),
             ),
@@ -42,6 +57,7 @@ return array(
         ),
         'factories' => array(
             'Netrunners\Controller\Profile' => 'Netrunners\Factory\ProfileControllerFactory',
+            'Netrunners\Controller\System' => 'Netrunners\Factory\SystemControllerFactory',
             'Netrunners\Controller\Feedback' => 'Netrunners\Factory\FeedbackControllerFactory',
         ),
     ),

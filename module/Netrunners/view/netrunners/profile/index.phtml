@@ -1,0 +1,31 @@
+<h1>Profiles</h1>
+
+<div class="table-responsive">
+    <table id="profile-table" class="table table-sm table-bordered table-striped display" cellspacing="0" width="100%">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>USERNAME</th>
+            <th>CREDITS</th>
+            <th>SNIPPETS</th>
+            <th>RES-ID</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+
+<script type="application/javascript">
+    $('#profile-table').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "pageLength": 25,
+        "ajax": "<?php echo $this->url('profile', array('action' => 'xhrData')); ?>",
+        "columns": [
+            { "data": "id" },
+            { "data": "username" },
+            { "data": "credits" },
+            { "data": "snippets" },
+            { "data": "resourceid" }
+        ]
+    });
+</script>

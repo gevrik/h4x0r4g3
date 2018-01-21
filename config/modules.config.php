@@ -28,7 +28,7 @@ return [
     'DoctrineORMModule',
     'ZfcUserDoctrineORM',
     'BjyAuthorize',
-    'Application',
     'TmoAuth',
     'Netrunners',
+    'Application',
 ];

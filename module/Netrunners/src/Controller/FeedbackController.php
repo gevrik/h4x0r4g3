@@ -39,8 +39,10 @@ class FeedbackController extends AbstractActionController
      */
     public function indexAction()
     {
+        $this->layout('layout/web');
         // get user
         $user = $this->zfcUserAuthentication()->getIdentity();
+        // get all feedbacks
         $feedbacks = $this->entityManager->getRepository('Netrunners\Entity\Feedback')->findAll();
         return new ViewModel(array(
             'feedbacks' => $feedbacks

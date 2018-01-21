@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\QueryBuilder;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\Feedback;
 use Netrunners\Entity\File;
@@ -35,7 +36,7 @@ use Zend\Validator\EmailAddress;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class ProfileService extends BaseService
+class ProfileService extends NetrunnersAbstractService implements NetrunnersEntityServiceInterface
 {
 
     const SKILL_CODING_STRING = 'coding';
@@ -136,6 +137,65 @@ class ProfileService extends BaseService
         $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+    }
+
+    /**
+     * @return string
+     */
+    public function getEntityName()
+    {
+        return 'Netrunners\Entity\Profile';
+    }
+
+    /**
+     * @return string
+     */
+    public function getSectionName()
+    {
+        return 'dashboard';
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param string $searchValue
+     * @return QueryBuilder
+     */
+    public function getSearchWhere(QueryBuilder $qb, $searchValue)
+    {
+        $qb->where($qb->expr()->like('u.username', $qb->expr()->literal($searchValue . '%')));
+        return $qb;
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @return QueryBuilder
+     */
+    public function initQueryBuilder(QueryBuilder $qb)
+    {
+        $qb->leftJoin('e.user', 'u');
+        return $qb;
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param $columnName
+     * @param $dir
+     * @return QueryBuilder
+     */
+    public function addOrderBy(QueryBuilder $qb, $columnName, $dir)
+    {
+        switch ($columnName) {
+            default:
+                $qb->addOrderBy('e.' . $columnName, $dir);
+                break;
+            case 'username':
+                $qb->addOrderBy('u.' . $columnName, $dir);
+                break;
+            case 'resourceid':
+                $qb->addOrderBy('e.currentResourceId', $dir);
+                break;
+        }
+        return $qb;
     }
 
     /**

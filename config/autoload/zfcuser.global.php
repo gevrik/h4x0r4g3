@@ -154,7 +154,7 @@ $settings = array(
      * Accepted values: A valid route name within your application
      *
      */
-    'login_redirect_route' => 'home',
+    'login_redirect_route' => 'profile',
 
     /**
      * Logout Redirect Route
