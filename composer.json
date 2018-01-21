@@ -40,7 +40,8 @@
         "psr-4": {
             "Application\\": "module/Application/src/",
             "Netrunners\\": "module/Netrunners/src/",
-            "TmoAuth\\": "module/TmoAuth/src/"
+            "TmoAuth\\": "module/TmoAuth/src/",
+            "TwistyPassages\\": "module/TwistyPassages/src/"
         }
     },
     "extra": [],

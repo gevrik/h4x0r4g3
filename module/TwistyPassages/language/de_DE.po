@@ -1,0 +1,1383 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: H4X0R4G3 0.1 - german\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-07-02 16:33+0200\n"
+"PO-Revision-Date: 2017-07-02 17:18+0200\n"
+"Last-Translator: Evan Coury <me@evancoury.com>\n"
+"Language-Team: TMO\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: translate\n"
+"X-Poedit-Basepath: .\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 2.0.2\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-SearchPath-0: ..\n"
+
+#: ../config/module.config.php:78
+msgid "Profiles"
+msgstr "Profile"
+
+#: ../config/module.config.php:82
+msgid "Detail"
+msgstr "Detail"
+
+#: ../src/Netrunners/Form/ProfileEditForm.php:34
+msgid "Save profile"
+msgstr "Profil speichern"
+
+#: ../src/Netrunners/Service/AdminService.php:100
+msgid "unknown command"
+msgstr "unbekannter befehl"
+
+# 6 chars max
+#: ../src/Netrunners/Service/AdminService.php:108
+msgid "socket"
+msgstr "socket"
+
+#: ../src/Netrunners/Service/AdminService.php:109
+msgid "user"
+msgstr "user"
+
+#: ../src/Netrunners/Service/AdminService.php:110
+#: ../src/Netrunners/Service/FileService.php:1042
+#: ../src/Netrunners/Service/FileService.php:1071
+msgid "name"
+msgstr "name"
+
+#: ../src/Netrunners/Service/AdminService.php:111
+msgid "ip"
+msgstr "ip"
+
+#: ../src/Netrunners/Service/AdminService.php:124
+#, php-format
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-addon\">%s sockets do not "
+"have user data yet</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s sockets haben "
+"noch keine benutzerdaten</pre>"
+
+#: ../src/Netrunners/Service/AdminService.php:148
+#: ../src/Netrunners/Service/AdminService.php:213
+#: ../src/Netrunners/Service/ParserService.php:199
+msgid "Unknown command"
+msgstr "unbekannter befehl"
+
+#: ../src/Netrunners/Service/AdminService.php:159
+#: ../src/Netrunners/Service/AdminService.php:172
+#: ../src/Netrunners/Service/AdminService.php:224
+msgid "Please specify a user id (use \"clients\" to get a list)"
+msgstr ""
+
+#: ../src/Netrunners/Service/AdminService.php:182
+#: ../src/Netrunners/Service/AdminService.php:246
+msgid "Please specify the amount"
+msgstr ""
+
+#: ../src/Netrunners/Service/AdminService.php:237
+msgid "Unable to find a user for that ID"
+msgstr ""
+
+#: ../src/Netrunners/Service/BaseService.php:663
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s has used the "
+"connection to %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/BaseService.php:674
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s has connected "
+"to this node from %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/BaseService.php:712
+msgid "You are curently busy with something else"
+msgstr ""
+
+#: ../src/Netrunners/Service/ChatService.php:61
+msgid "You need a running chatclient to use global chat"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodebreakerService.php:44
+msgid "Please specify a connection by name or number"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodebreakerService.php:55
+msgid "Unable to find connection"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodebreakerService.php:101
+#, php-format
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+"password: %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodebreakerService.php:135
+msgid "Codebreaking attempt success - you have bypassed the codegate"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodebreakerService.php:145
+msgid "Codebreaking attempt failed - security rating and alert level raised"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:86
+msgid "You must be in a coding node to enter coding mode"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:93
+msgid "NeoCode - version 0.1 - \"?\" for help, \"q\" to quit"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:128
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">mode set to "
+"[%s]</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:157
+#: ../src/Netrunners/Service/CodingService.php:166
+msgid "Choose a number between 1 and 100"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:172
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">level set to "
+"[%s]</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:202
+msgid "mode"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:207
+msgid "level"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:208
+#: ../src/Netrunners/Service/CodingService.php:218
+#: ../src/Netrunners/Service/CodingService.php:268
+msgid "not set"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:217
+#: ../src/Netrunners/Service/CodingService.php:267
+msgid "type"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:222
+#: ../src/Netrunners/Service/CodingService.php:272
+msgid "snippets"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:223
+#: ../src/Netrunners/Service/CodingService.php:273
+msgid "unknown"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:243
+msgid "resources"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:256
+msgid "optional"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:282
+msgid "skills"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:287
+msgid "chance"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:352
+msgid "Invalid type given"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:412
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">type set to "
+"[%s]</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:441
+msgid "Invalid code mode"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:474
+#: ../src/Netrunners/Service/CodingService.php:573
+msgid "You need to specify a type first"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:484
+#: ../src/Netrunners/Service/CodingService.php:583
+msgid "You need to specify a level first"
+msgstr ""
+
+#: ../src/Netrunners/Service/CodingService.php:495
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">Invalid file "
+"part: %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:504
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You need %s "
+"snippets to code the %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:540
+#: ../src/Netrunners/Service/CodingService.php:678
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You start coding "
+"the %s for %s snippets</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:594
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">Unknown file "
+"type: %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:603
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You need %s "
+"snippets to code: %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:623
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You need this "
+"resource with at least level %s to code the %s : [%s]</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/CodingService.php:642
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You do not have "
+"storage to code the %s - you need %s more storage units - build more storage "
+"nodes</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ConnectionService.php:56
+#: ../src/Netrunners/Service/ConnectionService.php:279
+msgid "No such connection"
+msgstr ""
+
+#: ../src/Netrunners/Service/ConnectionService.php:68
+msgid "Access denied"
+msgstr ""
+
+#: ../src/Netrunners/Service/ConnectionService.php:105
+msgid "Please choose the target node:"
+msgstr ""
+
+#: ../src/Netrunners/Service/ConnectionService.php:124
+#: ../src/Netrunners/Service/ConnectionService.php:238
+#: ../src/Netrunners/Service/FileService.php:314
+#: ../src/Netrunners/Service/NodeService.php:127
+#: ../src/Netrunners/Service/NodeService.php:231
+#: ../src/Netrunners/Service/NodeService.php:321
+#: ../src/Netrunners/Service/NodeService.php:407
+#: ../src/Netrunners/Service/NodeService.php:452
+#: ../src/Netrunners/Service/NodeService.php:518
+#: ../src/Netrunners/Service/NodeService.php:653
+msgid "Permission denied"
+msgstr ""
+
+#: ../src/Netrunners/Service/ConnectionService.php:134
+msgid "Unable to add a connection to a home node"
+msgstr ""
+
+#: ../src/Netrunners/Service/ConnectionService.php:143
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You need %s "
+"credits to add a connection to the node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ConnectionService.php:155
+#: ../src/Netrunners/Service/ConnectionService.php:166
+#: ../src/Netrunners/Service/ConnectionService.php:176
+msgid "Invalid target node"
+msgstr ""
+
+#: ../src/Netrunners/Service/ConnectionService.php:204
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">The connection "
+"has been created for %s credits</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ConnectionService.php:247
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You need %s "
+"credits to add a connection to the node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ConnectionService.php:297
+msgid "The connection has been secured"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:98
+msgid "Name"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:103
+msgid "Size"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:108
+msgid "Level"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:112
+msgid "Version"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:117
+msgid "Type"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:122
+msgid "Integrity"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:128
+msgid "Slots"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:133
+msgid "Birth"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:138
+msgid "Modified"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:139
+msgid "---"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:182
+msgid "You need 1 snippet to create an empty text file"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:191
+msgid "A file with that name already exists in this node"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:202
+msgid "The file name contains non-alphanumeric characters"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:212
+msgid "Invalid file name (32-characters-max)"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:244
+#, php-format
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s has been "
+"created</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s wurde "
+"erstellt</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:283
+#: ../src/Netrunners/Service/FileService.php:378
+msgid "No such file"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:293
+msgid "File not found"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:304
+msgid "Please specify a new name (alpha-numeric only, 32-chars-max)"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:388
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You are not "
+"allowed to execute %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:398
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s is already "
+"running</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:408
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You do not have "
+"enough memory to execute %s - build more memory nodes</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:420
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s is not "
+"executable, yet</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:472
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You start "
+"portscanning with [%s] - please wait</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:485
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You start "
+"breaking into the system with [%s] - please wait</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:525
+#: ../src/Netrunners/Service/FileService.php:560
+#: ../src/Netrunners/Service/FileService.php:594
+#: ../src/Netrunners/Service/FileService.php:628
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s has been "
+"started as process %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:547
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s can only be "
+"used in a database node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:581
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s can only be "
+"used in a terminal node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:615
+#: ../src/Netrunners/Service/FileService.php:651
+#: ../src/Netrunners/Service/FileService.php:716
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">%s can only be "
+"used in an I/O node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:662
+msgid "Please specify a system address to scan"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:679
+#: ../src/Netrunners/Service/FileService.php:744
+#: ../src/Netrunners/Service/NodeService.php:748
+msgid "Invalid system address"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:695
+msgid "Invalid system - unable to scan own systems"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:727
+msgid "Please specify a system address to break in to"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:760
+msgid "Invalid system - unable to break in to your own systems"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:771
+msgid "Please specify a node ID to break in to"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:783
+msgid "Invalid node ID"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:828
+#: ../src/Netrunners/Service/FileService.php:838
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">PORTSCANNER "
+"RESULTS FOR %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:833
+msgid "No vulnerable nodes detected"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:843
+msgid "address"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:844
+msgid "id"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:845
+msgid "nodetype"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:846
+msgid "nodename"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:878
+#: ../src/Netrunners/Service/FileService.php:891
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">JACKHAMMER "
+"RESULTS FOR %s:%s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:883
+#, fuzzy
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You break in to "
+"the target system's node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:897
+msgid "You fail to break in to the target system"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:931
+msgid "Please specify the process id to kill (ps for list)"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:941
+#: ../src/Netrunners/Service/FileService.php:950
+msgid "Invalid process id"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:959
+msgid "No process with that id"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:968
+msgid "That process needs to be killed in the system that it is running in"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:977
+msgid "That process needs to be killed in the node that it is running in"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:989
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">Process with id "
+"%s has been killed</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/FileService.php:1043
+msgid "size"
+msgstr ""
+
+#: ../src/Netrunners/Service/FileService.php:1044
+#: ../src/Netrunners/Service/FileService.php:1072
+msgid "description"
+msgstr "beschreibung"
+
+#: ../src/Netrunners/Service/GameOptionService.php:71
+msgid "Unknown game option"
+msgstr ""
+
+#: ../src/Netrunners/Service/GameOptionService.php:81
+#: ../src/Netrunners/Service/GameOptionService.php:109
+msgid "on"
+msgstr "an"
+
+#: ../src/Netrunners/Service/GameOptionService.php:81
+#: ../src/Netrunners/Service/GameOptionService.php:109
+msgid "off"
+msgstr "aus"
+
+#: ../src/Netrunners/Service/GameOptionService.php:101
+msgid "Please specify which option to toggle:"
+msgstr "Welche Option soll umgestellt werden:"
+
+#: ../src/Netrunners/Service/LoginService.php:253
+#, php-format
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-info\">a new user [%s] "
+"has connected</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">ein neuer user "
+"hat sich angemeldet: [%s]</pre>"
+
+#: ../src/Netrunners/Service/LoginService.php:307
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s has logged in "
+"to this node</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/LoopService.php:196
+msgid "Your current milkrun has expired before you could complete it"
+msgstr ""
+
+#: ../src/Netrunners/Service/LoopService.php:243
+msgid "Codebreaker attempt failed"
+msgstr ""
+
+#: ../src/Netrunners/Service/LoopService.php:397
+msgid ""
+"<br />The file could not be stored in storage - it has been added to the "
+"node that it was coded in"
+msgstr ""
+
+#: ../src/Netrunners/Service/LoopService.php:403
+#, php-format
+msgid "[%s] Coding project complete: %s [level: %s]%s"
+msgstr ""
+
+#: ../src/Netrunners/Service/LoopService.php:436
+#, php-format
+msgid "[%s] Coding project failed: %s [level: %s] %s"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:60
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You have %s "
+"unread mails in your inbox</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/MailMessageService.php:87
+msgid "NeoMail - version 0.1 - '?' for help, 'q' to quit"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:90
+msgid "#"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:91
+msgid "FROM"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:92
+msgid "RECEIVED"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:93
+msgid "SUBJECT"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:104
+msgid "[SYSTEM-MAIL]"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:171
+#, php-format
+msgid "<pre class=\"text-white\">Message: %s</pre>"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:175
+#, php-format
+msgid "<pre class=\"text-white\">From: %s %s</pre>"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:180
+#, php-format
+msgid "<pre class=\"text-white\">Subject: %s</pre>"
+msgstr ""
+
+#: ../src/Netrunners/Service/MailMessageService.php:234
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">Mail #%s has "
+"been deleted</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/MilkrunService.php:55
+msgid "You need to be in an agent node to request a milkrun"
+msgstr ""
+
+#: ../src/Netrunners/Service/MilkrunService.php:460
+msgid "You have completed your current milkrun"
+msgstr ""
+
+#: ../src/Netrunners/Service/MilkrunService.php:485
+msgid "You have failed your current milkrun"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:136
+#: ../src/Netrunners/Service/NodeService.php:364
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">You need %s "
+"credits to add a node to the system</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/NodeService.php:147
+msgid "You can not add nodes to a home node"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:186
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You have added a "
+"new node to the system for %s credits</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/NodeService.php:221
+msgid ""
+"Please specify a new name for the node (alpha-numeric-only, 32-chars-max)"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:242
+msgid "Invalid node name (alpha-numeric only)"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:252
+msgid "Invalid node name (32-characters-max)"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:264
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">Node name "
+"changed to %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/NodeService.php:298
+msgid "Please choose a node type:"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:343
+msgid "No such node type"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:354
+msgid "There is already a home node around this node"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:378
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">Node type "
+"changed to %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/NodeService.php:464
+msgid "Node description saved"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:529
+msgid "Unable to remove node with more than one connection"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:540
+msgid "Unable to remove node which still contains files"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:551
+msgid "Unable to remove node which still contains other users"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:574
+msgid "The node has been removed"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:616
+msgid ""
+"This is a raw Cyberspace node, white walls, white ceiling, white floor - no "
+"efforts have been made to customize it."
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:661
+#: ../src/Netrunners/Service/NodeService.php:723
+#: ../src/Netrunners/Service/ProfileService.php:213
+#: ../src/Netrunners/Service/ProfileService.php:304
+msgid "ID"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:662
+#: ../src/Netrunners/Service/ProfileService.php:214
+#: ../src/Netrunners/Service/ProfileService.php:305
+msgid "TYPE"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:663
+#: ../src/Netrunners/Service/ProfileService.php:308
+msgid "LVL"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:664
+#: ../src/Netrunners/Service/NodeService.php:724
+#: ../src/Netrunners/Service/ProfileService.php:215
+#: ../src/Netrunners/Service/ProfileService.php:306
+msgid "NAME"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:711
+msgid "You must be in an I/O node to connect to another system"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:722
+msgid "ADDRESS"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:761
+#: ../src/Netrunners/Service/NodeService.php:770
+#: ../src/Netrunners/Service/NodeService.php:779
+msgid "Invalid node id"
+msgstr ""
+
+#: ../src/Netrunners/Service/NodeService.php:790
+msgid "You have connected to the target system"
+msgstr ""
+
+#: ../src/Netrunners/Service/ParserService.php:371
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">current server "
+"time: %s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:163
+msgid "skillpoints"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:206
+msgid "No running jobs"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:216
+msgid "TIME"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:217
+msgid "DIFFICULTY"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:267
+msgid "You have no file parts"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:307
+msgid "INT"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:309
+msgid "SZE"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:310
+msgid "R"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:311
+msgid "S"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:312
+msgid "SYSTEM"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:313
+msgid "NODE"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:332
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-addon\">mem: %s/%s sto: "
+"%s/%s</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:362
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">Please specify "
+"the skill that you want to improve (%s skillpoints available) :</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:394
+msgid "Unknown skill"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:406
+msgid "Please specify how many skill points you want to invest"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:415
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You can only "
+"spend up to %s skillpoints</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:432
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You can only "
+"spend up to %s skillpoints on that skill</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:446
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">You have raised "
+"[%s] to %s by spending %s skillpoints</pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:475
+msgid "FACTION"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:476
+msgid "RATING"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:510
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-white\">your current e-"
+"mail address on record: <span class=\"text-%s\">%s</span></pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:512
+msgid "no e-mail address set"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:524
+msgid "Invalid e-mail address"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:535
+msgid "E-mail address set"
+msgstr ""
+
+#: ../src/Netrunners/Service/ProfileService.php:554
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-white\">your current "
+"locale on record: <span class=\"text-info\">%s</span></pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:565
+#, fuzzy, php-format
+#| msgid ""
+#| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#| "password: %s</pre>"
+msgid ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-warning\">Invalid locale, "
+"available locales: <span class=\"text-muted\">%s</span></pre>"
+msgstr ""
+"<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+"passwort: %s</pre>"
+
+#: ../src/Netrunners/Service/ProfileService.php:577
+msgid "Locale set"
+msgstr ""
+
+#: ../src/Netrunners/Service/SystemService.php:204
+msgid "You are already there"
+msgstr ""
+
+#: ../src/Netrunners/Service/SystemService.php:216
+msgid "You recall to your home node"
+msgstr ""
+
+#: ../view/netrunners/node/edit-description.phtml:5
+msgid "edit node description"
+msgstr ""
+
+#: ../view/netrunners/notification/list.phtml:12
+msgid "dismiss all"
+msgstr ""
+
+#: ../view/netrunners/partials/map.phtml:4
+msgid "system map"
+msgstr ""
+
+#, fuzzy
+#~| msgid ""
+#~| "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">find the "
+#~| "password: %s</pre>"
+#~ msgid "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">%s</pre>"
+#~ msgstr ""
+#~ "<pre style=\"white-space: pre-wrap;\" class=\"text-sysmsg\">finde das "
+#~ "passwort: %s</pre>"
+
+#~ msgid "Home"
+#~ msgstr "Startseite"
+
+#~ msgid "All rights reserved."
+#~ msgstr "Alle Rechte vorbehalten."
+
+#~ msgid "Welcome to %sZend Framework 2%s"
+#~ msgstr "Willkommen zu dem %sZend Framework 2%s"
+
+#~ msgid ""
+#~ "Congratulations! You have successfully installed the %sZF2 Skeleton "
+#~ "Application%s. You are currently running Zend Framework version %s. This "
+#~ "skeleton can serve as a simple starting point for you to begin building "
+#~ "your application on ZF2."
+#~ msgstr ""
+#~ "Herzlichen Glückwunsch! Sie haben die %sZF2 Skeleton Application%s "
+#~ "erfolgreich installiert und benutzen gerade die Version %s des Zend "
+#~ "Frameworks. Dieses Gerüst kann Ihnen als Einstiegspunkt, für Ihre weitere "
+#~ "Entwicklung, basierend auf dem Zend Framework 2, dienen."
+
+#~ msgid "Fork Zend Framework 2 on GitHub"
+#~ msgstr "Fork Zend Framework 2 auf GitHub"
+
+#~ msgid "Follow Development"
+#~ msgstr "Folge der Entwicklung"
+
+#~ msgid ""
+#~ "Zend Framework 2 is under active development. If you are interested in "
+#~ "following the development of ZF2, there is a special ZF2 portal on the "
+#~ "official Zend Framework website which provides links to the ZF2 %swiki%s, "
+#~ "%sdev blog%s, %sissue tracker%s, and much more. This is a great resource "
+#~ "for staying up to date with the latest developments!"
+#~ msgstr ""
+#~ "Das Zend Framework 2 wird z.Z. aktiv weiterentwickelt.  Sollten Sie daran "
+#~ "interessiert sein, die Entwicklung von ZF2 zu verfolgen, so bietet Ihnen "
+#~ "die offizielle Webseite einen eigens für das Zend Framework 2 "
+#~ "eingerichteten Bereich, auf der Sie Verlinkungen zum ZF2 %sWiki%s, "
+#~ "%sEntwickler Blog%s, einem %sFehlerverfolgungssystem%s und noch vielem "
+#~ "mehr finden. Dieser Bereich ist eine hervorragende Quelle um stets "
+#~ "aktuell zu bleiben."
+
+#~ msgid "ZF2 Development Portal"
+#~ msgstr "ZF2 Entwickler Portal"
+
+#~ msgid "Discover Modules"
+#~ msgstr "Entdecken Sie Module"
+
+#~ msgid ""
+#~ "The community is working on developing a community site to serve as a "
+#~ "repository and gallery for ZF2 modules. The project is available %son "
+#~ "GitHub%s. The site is currently live and currently contains a list of "
+#~ "some of the modules already available for ZF2."
+#~ msgstr ""
+#~ "Die Community arbeitet momentan an einer Community Seite, welche als "
+#~ "Galerie für ZF2 Module dient. Dieses Projekt ist %sauf GitHub%s "
+#~ "verfügbar. Die Webseite ist bereits Online und enthält eine Liste mit "
+#~ "schon veröffentlichten Modulen für das Zend Framework 2."
+
+#~ msgid "Explore ZF2 Modules"
+#~ msgstr "Erkunden Sie ZF2 Module"
+
+#~ msgid "Help &amp; Support"
+#~ msgstr "Hilfe &amp; Support"
+
+#~ msgid ""
+#~ "If you need any help or support while developing with ZF2, you may reach "
+#~ "us via IRC: %s#zftalk on Freenode%s. We'd love to hear any questions or "
+#~ "feedback you may have regarding the beta releases. Alternatively, you may "
+#~ "subscribe and post questions to the %smailing lists%s."
+#~ msgstr ""
+#~ "Sollten Sie Hilfe jeglicher Art bei der Entwicklung mit dem Zend "
+#~ "Framework 2 benötigen, kontaktieren Sie uns doch einfach über das IRC: "
+#~ "%s#zftalk on Freenode%s. Wir freuen uns darauf, Ihnen bei Ihren Fragen zu "
+#~ "helfen oder aber auch Ihre Meinung bezüglich der Beta Versionen zu hören. "
+#~ "Alternativ können Sie auch die %smailing lists%s abonnieren und Ihre "
+#~ "Fragen dort stellen."
+
+#~ msgid "Ping us on IRC"
+#~ msgstr "Schreiben Sie uns im IRC an"
+
+#~ msgid "An error occurred"
+#~ msgstr "Ein Fehler ist aufgetreten"
+
+#~ msgid "Additional information"
+#~ msgstr "Zusätzliche Information"
+
+#~ msgid "File"
+#~ msgstr "Datei"
+
+#~ msgid "Message"
+#~ msgstr "Meldung"
+
+#~ msgid "Stack trace"
+#~ msgstr "Stapelüberwachung"
+
+#~ msgid "Previous exceptions"
+#~ msgstr "Vorherige Ausnahme"
+
+#~ msgid "No Exception available"
+#~ msgstr "Es ist keine Ausnahme verfügbar"
+
+#~ msgid "A 404 error occurred"
+#~ msgstr "Es trat ein 404 Fehler auf"
+
+#~ msgid "The requested controller was unable to dispatch the request."
+#~ msgstr ""
+#~ "Der angeforderte Controller war nicht in der Lage die Anfrage zu "
+#~ "verarbeiten."
+
+#~ msgid ""
+#~ "The requested controller could not be mapped to an existing controller "
+#~ "class."
+#~ msgstr ""
+#~ "Der angeforderte Controller konnte keiner Controller Klasse zugeordnet "
+#~ "werden."
+
+#~ msgid "The requested controller was not dispatchable."
+#~ msgstr "Der angeforderte Controller ist nicht aufrufbar."
+
+#~ msgid "The requested URL could not be matched by routing."
+#~ msgstr ""
+#~ "Für die angeforderte URL konnte keine Übereinstimmung gefunden werden."
+
+#~ msgid "We cannot determine at this time why a 404 was generated."
+#~ msgstr ""
+#~ "Zu diesem Zeitpunkt ist es uns nicht möglich zu bestimmen, warum ein 404 "
+#~ "Fehler aufgetreten ist."
+
+#~ msgid "Controller"
+#~ msgstr "Controller"
+
+#~ msgid "resolves to %s"
+#~ msgstr "wird aufgelöst in %s"

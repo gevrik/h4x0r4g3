@@ -30,5 +30,6 @@ return [
     'BjyAuthorize',
     'TmoAuth',
     'Netrunners',
+    'TwistyPassages',
     'Application',
 ];
