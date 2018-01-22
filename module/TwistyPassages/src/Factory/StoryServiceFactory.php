@@ -15,7 +15,7 @@ use Interop\Container\ContainerInterface;
 use TwistyPassages\Service\StoryService;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
-class SystemServiceFactory implements FactoryInterface
+class StoryServiceFactory implements FactoryInterface
 {
 
     /**

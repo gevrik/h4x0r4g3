@@ -33,6 +33,7 @@ use React\EventLoop\Factory;
 use React\Socket\Server;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
+use Zend\Console\Adapter\AdapterInterface;
 use Zend\Console\ColorInterface;
 use Zend\Console\Request;
 use Zend\Crypt\Password\Bcrypt;
@@ -73,7 +74,7 @@ class IndexController extends AbstractActionController
     protected $config;
 
     /**
-     * @var
+     * @var AdapterInterface
      */
     protected $console;
 

@@ -52,6 +52,7 @@ return [
                 ['controller' => 'Netrunners\Controller\System', 'action' => ['profileIndex'],'roles' => ['user']],
                 ['controller' => 'Netrunners\Controller\System', 'action' => ['index', 'xhrData'],'roles' => ['admin']],
                 ['controller' => 'Netrunners\Controller\Feedback', 'roles' => ['admin']],
+                ['controller' => 'TwistyPassages\Controller\Story', 'roles' => ['admin']],
                 ['controller' => 'DoctrineModule\Controller\Cli', 'roles' => ['guest', 'user']],
             ],
 
