@@ -60,4 +60,5 @@ class UserControllerFactory implements FactoryInterface
 
         return $this->__invoke($serviceManager, null);
     }
+
 }

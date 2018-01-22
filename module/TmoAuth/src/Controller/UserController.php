@@ -78,10 +78,7 @@ class UserController extends \ZfcUser\Controller\UserController
      */
     public function __construct($redirectCallback)
     {
-        if (!is_callable($redirectCallback)) {
-            throw new \InvalidArgumentException('You must supply a callable redirectCallback');
-        }
-        $this->redirectCallback = $redirectCallback;
+        parent::__construct($redirectCallback);
     }
 
     /**

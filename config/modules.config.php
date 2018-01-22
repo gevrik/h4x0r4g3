@@ -4,6 +4,10 @@
  * List of enabled modules for this application.
  */
 return [
+    'Zend\Mvc\Plugin\Prg',
+    'Zend\Filter',
+    'Zend\Hydrator',
+    'Zend\Paginator',
     'Zend\Log',
     'Zend\Mvc\Plugin\Identity',
     'Zend\Mvc\I18n',
@@ -11,7 +15,6 @@ return [
     'Zend\Mvc\Plugin\FlashMessenger',
     'Zend\Navigation',
     'Zend\Serializer',
-    'Zend\Log',
     'Zend\I18n',
     'Zend\Session',
     'Zend\Db',

@@ -147,4 +147,36 @@ return array(
             ),
         ),
     ),
+    'bjyauthorize' => [
+
+        'resource_providers' => [
+            'BjyAuthorize\Provider\Resource\Config' => [
+//                'adminactions' => []
+            ],
+        ],
+
+        'rule_providers' => [
+            'BjyAuthorize\Provider\Rule\Config' => [
+                'allow' => [
+//                    ['superadmin', 'adminactions', ['canuse']],
+                ],
+
+                'deny' => [
+                    // ...
+                ],
+            ],
+        ],
+
+        'guards' => [
+
+            'BjyAuthorize\Guard\Controller' => [
+                ['controller' => 'Netrunners\Controller\Profile', 'action' => ['profile'],'roles' => ['user']],
+                ['controller' => 'Netrunners\Controller\Profile', 'action' => ['index', 'xhrData'],'roles' => ['admin']],
+                ['controller' => 'Netrunners\Controller\System', 'action' => ['profileIndex'],'roles' => ['user']],
+                ['controller' => 'Netrunners\Controller\System', 'action' => ['index', 'xhrData'],'roles' => ['admin']],
+                ['controller' => 'Netrunners\Controller\Feedback', 'roles' => ['admin']],
+            ],
+
+        ],
+    ],
 );

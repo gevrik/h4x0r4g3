@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit colors="true">
+    <testsuites>
+        <testsuite name="TwistyPassages">
+            <directory>./module/TwistyPassages/test</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <ini name="max_execution_time" value="10"/>
+    </php>
+</phpunit>

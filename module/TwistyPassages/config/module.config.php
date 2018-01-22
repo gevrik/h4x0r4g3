@@ -83,4 +83,30 @@ return array(
             ),
         ),
     ),
+    'bjyauthorize' => [
+        'resource_providers' => [
+            'BjyAuthorize\Provider\Resource\Config' => [
+                'story' => [],
+            ],
+        ],
+
+        'rule_providers' => [
+            'BjyAuthorize\Provider\Rule\Config' => [
+                'allow' => [
+                    ['admin', 'story', ['admin']],
+                ],
+
+                'deny' => [
+                    // ...
+                ],
+            ],
+        ],
+        'guards' => [
+
+            'BjyAuthorize\Guard\Controller' => [
+                ['controller' => 'TwistyPassages\Controller\Story', 'roles' => ['admin']],
+            ],
+
+        ],
+    ],
 );
