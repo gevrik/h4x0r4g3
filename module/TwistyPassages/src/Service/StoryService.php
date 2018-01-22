@@ -13,6 +13,8 @@ namespace TwistyPassages\Service;
 class StoryService extends TwistyPassagesAbstractService implements TwistyPassagesServiceInterface
 {
 
+    protected $entityManager;
+
     /**
      * StoryService constructor.
      * @param $entityManager
@@ -20,6 +22,11 @@ class StoryService extends TwistyPassagesAbstractService implements TwistyPassag
     public function __construct($entityManager)
     {
         parent::__construct($entityManager);
+    }
+
+    public function returnTrue($var = true)
+    {
+        return ($var == true) ? true : false;
     }
 
 }

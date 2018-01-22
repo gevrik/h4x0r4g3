@@ -59,7 +59,8 @@
         "datatables/datatables": "^1.10",
         "components/jqueryui": "^1.12",
         "zfcampus/zf-development-mode": "^3.1",
-        "zendframework/zend-captcha": "^2.7"
+        "zendframework/zend-captcha": "^2.7",
+        "imsky/holder": "^2.9"
     },
     "autoload": {
         "psr-4": {

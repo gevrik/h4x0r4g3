@@ -1,0 +1,90 @@
+<?php echo $this->doctype(); ?>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <?php echo $this->headTitle('H4X0R4G3 - TWISTY PASSAGES')->setSeparator(' - ')->setAutoEscape(false) ?>
+
+    <?php echo $this->headMeta()
+        ->appendName('viewport', 'width=device-width, initial-scale=1.0')
+        ->appendHttpEquiv('X-UA-Compatible', 'IE=edge')
+    ?>
+
+    <!-- Le styles -->
+    <?php echo $this->headLink(array('rel' => 'shortcut icon', 'type' => 'image/vnd.microsoft.icon', 'href' => $this->basePath() . '/img/favicon.ico'))
+        ->prependStylesheet($this->basePath('css/tp-layout.css'))
+        ->prependStylesheet($this->basePath('css/jquery.contextMenu.min.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/font-awesome/css/font-awesome.min.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/datatables/css/dataTables.bootstrap4.min.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/datatables/css/jquery.dataTables.min.css'))
+        ->prependStylesheet($this->basePath('css/bootstrap4.min.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/jqueryui/themes/base/menu.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/jqueryui/themes/base/sortable.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/jqueryui/themes/base/selectable.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/jqueryui/themes/base/resizable.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/jqueryui/themes/base/draggable.css'))
+        ->prependStylesheet($this->basePath('assets/vendor/jqueryui/themes/base/core.css')); ?>
+
+    <!-- Scripts -->
+    <?php echo $this->headScript()
+        ->prependFile($this->basePath('assets/vendor/holder/holder.min.js'))
+        ->prependFile($this->basePath('js/jquery.contextMenu.min.js'))
+        ->prependFile($this->basePath('assets/vendor/datatables/js/dataTables.bootstrap4.min.js'))
+        ->prependFile($this->basePath('assets/vendor/datatables/js/jquery.dataTables.min.js'))
+        ->prependFile($this->basePath('js/d3.min.js'))
+        ->prependFile($this->basePath('assets/vendor/ckeditor/ckeditor.js'))
+        ->prependFile($this->basePath('assets/vendor/bootstrap/js/bootstrap.min.js'))
+        ->prependFile($this->basePath('js/popper.min.js'))
+        ->prependFile($this->basePath('assets/vendor/jqueryui/jquery-ui.min.js'))
+        ->prependFile($this->basePath('assets/vendor/jquery/jquery.min.js'))
+        ->prependFile($this->basePath('js/respond.min.js'), 'text/javascript', array('conditional' => 'lt IE 9',))
+        ->prependFile($this->basePath('js/html5shiv.min.js'), 'text/javascript', array('conditional' => 'lt IE 9',)); ?>
+
+</head>
+<body>
+
+<header>
+    <div class="collapse bg-dark" id="navbarHeader">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-8 col-md-7 py-4">
+                    <h4 class="text-white"><?php echo $this->translate("ABOUT"); ?></h4>
+                    <p class="text-muted"><?php echo $this->translate("lorem ipsum dolor sit amet"); ?></p>
+                </div>
+                <div class="col-sm-4 offset-md-1 py-4">
+                    <h4 class="text-white"><?php echo $this->translate("CONTACT"); ?></h4>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">H4X0R4G3.COM</a></li>
+                        <li><a href="#" class="text-white">TOTALMADOWNAGE.COM</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="navbar navbar-dark bg-dark box-shadow">
+        <div class="container d-flex justify-content-between">
+            <a href="#" class="navbar-brand d-flex align-items-center">
+                <strong>H4X0R4G3 - TWISTY PASSAGES</strong>
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarHeader" aria-controls="navbarHeader" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<?php echo $this->content; ?>
+
+<footer class="text-muted">
+    <div class="container">
+        <p class="float-right">
+            <a href="#">BACK TO TOP</a>
+        </p>
+        <p>TWISTY PASSAGES IS BROUGHT TO YOU BY TOTAL MAD OWNAGE!</p>
+        <p>WANT TO GET BACK TO H4X0R4G3? <a href="/">CLICK HERE</a></p>
+    </div>
+</footer>
+
+<?php echo $this->inlineScript() ?>
+</body>
+</html>

@@ -12,6 +12,7 @@ namespace TwistyPassages\Controller;
 
 use TwistyPassages\Service\TwistyPassagesServiceInterface;
 use Zend\Mvc\Controller\AbstractActionController;
+use Zend\View\Model\ViewModel;
 
 class TwistyPassagesAbstractController extends AbstractActionController
 {
@@ -34,7 +35,9 @@ class TwistyPassagesAbstractController extends AbstractActionController
 
     public function indexAction()
     {
-
+        $this->layout('layout/tp');
+        $viewModel = new ViewModel();
+        return $viewModel;
     }
 
 }

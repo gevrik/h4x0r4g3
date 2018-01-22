@@ -49,6 +49,11 @@ class Composer
         );
 
         self::copyFiles(
+            $baseDir . '/holder/',
+            getcwd() . '/vendor/imsky/holder/*'
+        );
+
+        self::copyFiles(
             $baseDir . '/jquery/',
             getcwd() . '/vendor/frameworks/jquery/*'
         );

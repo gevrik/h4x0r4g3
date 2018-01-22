@@ -96,6 +96,7 @@ return array(
             'error/404'               => __DIR__ . '/../view/error/404.phtml',
             'error/index'             => __DIR__ . '/../view/error/index.phtml',
             'layout/web'             => __DIR__ . '/../view/layout/web.phtml',
+            'layout/tp'             => __DIR__ . '/../view/layout/tp.phtml',
         ),
         'template_path_stack' => array(
             __DIR__ . '/../view',
