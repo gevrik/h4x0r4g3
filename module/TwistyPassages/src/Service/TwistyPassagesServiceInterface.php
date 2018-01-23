@@ -10,14 +10,7 @@
 
 namespace TwistyPassages\Service;
 
-use Doctrine\ORM\EntityManager;
-
 interface TwistyPassagesServiceInterface
 {
-
-    /**
-     * @return EntityManager
-     */
-    public function getEntityManager();
 
 }

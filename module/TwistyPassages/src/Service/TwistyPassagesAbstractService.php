@@ -30,12 +30,4 @@ abstract class TwistyPassagesAbstractService
         $this->entityManager = $entityManager;
     }
 
-    /**
-     * @return \Doctrine\ORM\EntityManager
-     */
-    public function getEntityManager()
-    {
-        return $this->entityManager;
-    }
-
 }

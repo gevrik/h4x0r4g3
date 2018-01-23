@@ -37,8 +37,8 @@ class Story
     protected $description;
 
     /**
-     * @ORM\Column(type="string")
-     * @var string
+     * @ORM\Column(type="integer")
+     * @var int
      */
     protected $status;
 

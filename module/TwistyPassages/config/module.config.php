@@ -16,7 +16,7 @@ return array(
                     'defaults' => array(
                         '__NAMESPACE__' => 'TwistyPassages\Controller',
                         'controller'    => 'TwistyPassages\Controller\Story',
-                        'action'        => 'index',
+                        'action'        => 'welcome',
                     ),
                 ),
             ),
