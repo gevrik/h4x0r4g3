@@ -11,8 +11,9 @@
 namespace TwistyPassages\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use TmoAuth\Entity\User;
 
-/** @ORM\Entity(repositoryClass="TwistyPassages\Repository\StoryRepository") */
+/** @ORM\Entity */
 class Story
 {
 
@@ -55,11 +56,10 @@ class Story
      */
     protected $author;
 
-
     /**
      * @return int
      */
-    public function getId()
+    public function getId(): int
     {
         return $this->id;
     }
@@ -68,7 +68,7 @@ class Story
      * @param int $id
      * @return Story
      */
-    public function setId($id)
+    public function setId(int $id): Story
     {
         $this->id = $id;
         return $this;
@@ -77,7 +77,7 @@ class Story
     /**
      * @return string
      */
-    public function getTitle()
+    public function getTitle(): string
     {
         return $this->title;
     }
@@ -86,7 +86,7 @@ class Story
      * @param string $title
      * @return Story
      */
-    public function setTitle($title)
+    public function setTitle(string $title): Story
     {
         $this->title = $title;
         return $this;
@@ -95,7 +95,7 @@ class Story
     /**
      * @return string
      */
-    public function getDescription()
+    public function getDescription(): string
     {
         return $this->description;
     }
@@ -104,25 +104,25 @@ class Story
      * @param string $description
      * @return Story
      */
-    public function setDescription($description)
+    public function setDescription(string $description): Story
     {
         $this->description = $description;
         return $this;
     }
 
     /**
-     * @return string
+     * @return int
      */
-    public function getStatus()
+    public function getStatus(): int
     {
         return $this->status;
     }
 
     /**
-     * @param string $status
+     * @param int $status
      * @return Story
      */
-    public function setStatus($status)
+    public function setStatus(int $status): Story
     {
         $this->status = $status;
         return $this;
@@ -131,7 +131,7 @@ class Story
     /**
      * @return \DateTime
      */
-    public function getAdded()
+    public function getAdded(): \DateTime
     {
         return $this->added;
     }
@@ -140,27 +140,25 @@ class Story
      * @param \DateTime $added
      * @return Story
      */
-    public function setAdded($added)
+    public function setAdded(\DateTime $added): Story
     {
         $this->added = $added;
         return $this;
     }
 
-    // ORM
-
     /**
-     * @return mixed
+     * @return User
      */
-    public function getAuthor()
+    public function getAuthor(): User
     {
         return $this->author;
     }
 
     /**
-     * @param mixed $author
+     * @param User $author
      * @return Story
      */
-    public function setAuthor($author)
+    public function setAuthor(User $author): Story
     {
         $this->author = $author;
         return $this;

@@ -2,8 +2,24 @@
     <h1>Add a story</h1>
 
     <?php
+    /** @var \Zend\Form\Form $form */
     $form = $this->form;
     $form->setAttribute('action', $this->url('story', array('action' => 'create')));
+
+    /** @var \Zend\Form\Fieldset $fieldset */
+    $fieldset = $form->get('story');
+
+    $title = $fieldset->get('title');
+    $title->setAttribute('class', 'form-control');
+    $title->setAttribute('placeholder', 'Story title');
+
+    $description = $fieldset->get('description');
+    $description->setAttribute('class', 'form-control');
+    $description->setAttribute('placeholder', 'Story description');
+
+    $submit = $form->get('submit');
+    $submit->setAttribute('class', 'btn btn-primary');
+
     $form->prepare();
 
     echo $this->form()->openTag($form);
@@ -12,11 +28,11 @@
 
     <div class="form-group">
         <div class="col-md-3">
-            <?php echo $this->formLabel($form->get('story')->get('title')); ?>
+            <?php echo $this->translate($this->formLabel($title)); ?>
         </div>
         <div class=" col-md-9">
-            <?php echo $this->formElement($form->get('story')->get('title')->setAttribute('class', 'form-control form-control-dark')); ?>
-            <?php echo $this->formElementErrors($form->get('story')->get('title'), array('class' => 'text-danger')) ?>
+            <?php echo $this->formElement($title); ?>
+            <?php echo $this->formElementErrors($title, array('class' => 'text-danger')) ?>
         </div>
     </div>
 

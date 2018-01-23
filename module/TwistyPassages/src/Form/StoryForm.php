@@ -17,8 +17,6 @@ class StoryForm extends Form
         $fieldset->setUseAsBaseFieldset(true);
         $this->add($fieldset);
 
-        // … add CSRF and submit elements
-
         $this->add(array(
             'type' => 'submit',
             'name' => 'submit',
@@ -26,8 +24,6 @@ class StoryForm extends Form
                 'value' => _('Create story'),
             ),
         ));
-
-        // Optionally set your validation group here
 
     }
 

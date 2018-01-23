@@ -10,7 +10,7 @@
 
 namespace TwistyPassages\Controller;
 
-use TwistyPassages\Entity\Story;
+use Doctrine\ORM\OptimisticLockException;
 use TwistyPassages\Service\StoryService;
 use Zend\View\Model\ViewModel;
 
@@ -33,31 +33,45 @@ class StoryController extends TwistyPassagesAbstractController
         $this->service = $service;
     }
 
-    public function indexAction()
+    /**
+     * @return ViewModel
+     */
+    public function welcomeAction(): ViewModel
     {
-        $this->layout('layout/tp');
-        $viewModel = new ViewModel();
-        return $viewModel;
-    }
-
-    public function welcomeAction()
-    {
-        $this->layout('layout/tp');
         $topStories = $this->service->getForTopList();
         $viewModel = new ViewModel();
         $viewModel->setVariable('topStories', $topStories);
         return $viewModel;
     }
 
+    /**
+     * @return \Zend\Http\Response|ViewModel
+     * @throws OptimisticLockException
+     */
     public function createAction()
     {
-        $this->layout('layout/tp');
+        $request   = $this->getRequest();
         $form = $this->service->getForm();
-        $entity = new Story();
+        $viewModel = new ViewModel(['form' => $form]);
+        $entity = $this->service->getEntity();
         $form->bind($entity);
-        $view = new ViewModel();
-        $view->setVariable('form', $form);
-        return $view;
+        // show form if no post
+        if (!$request->isPost()) {
+            return $viewModel;
+        }
+        // set form data from post
+        $form->setData($request->getPost());
+        // if form is not valid show form again
+        if (!$form->isValid()) {
+            return $viewModel;
+        }
+        $this->service->persist($entity);
+        try {
+            $this->service->flush($entity);
+        } catch (OptimisticLockException $e) {
+            throw $e;
+        }
+        return $this->redirect()->toRoute('story/detail', ['id' => $entity->getId()]);
     }
 
 }

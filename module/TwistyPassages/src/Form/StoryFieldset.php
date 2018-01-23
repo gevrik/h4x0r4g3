@@ -12,6 +12,10 @@ use Zend\InputFilter\InputFilterProviderInterface;
 class StoryFieldset extends Fieldset implements InputFilterProviderInterface
 {
 
+    /**
+     * StoryFieldset constructor.
+     * @param ObjectManager $objectManager
+     */
     public function __construct(ObjectManager $objectManager)
     {
         parent::__construct('story');
@@ -70,7 +74,10 @@ class StoryFieldset extends Fieldset implements InputFilterProviderInterface
 
     }
 
-    public function getInputFilterSpecification()
+    /**
+     * @return array
+     */
+    public function getInputFilterSpecification(): array
     {
         return array(
             'id' => array(

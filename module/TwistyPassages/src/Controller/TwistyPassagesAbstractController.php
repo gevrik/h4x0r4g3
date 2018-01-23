@@ -11,14 +11,29 @@
 namespace TwistyPassages\Controller;
 
 use Zend\Mvc\Controller\AbstractActionController;
+use Zend\Mvc\MvcEvent;
 use Zend\View\Model\ViewModel;
 
 class TwistyPassagesAbstractController extends AbstractActionController
 {
 
-    public function indexAction()
+    /**
+     * Override the parent's onDispatch() method.
+     * @param MvcEvent $e
+     * @return mixed
+     */
+    public function onDispatch(MvcEvent $e)
     {
-        $this->layout('layout/tp');
+        $response = parent::onDispatch($e);
+        $this->layout()->setTemplate('layout/tp');
+        return $response;
+    }
+
+    /**
+     * @return ViewModel
+     */
+    public function indexAction(): ViewModel
+    {
         $viewModel = new ViewModel();
         return $viewModel;
     }

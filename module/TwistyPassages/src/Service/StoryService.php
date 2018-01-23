@@ -12,9 +12,8 @@ namespace TwistyPassages\Service;
 
 use TwistyPassages\Entity\Story;
 use TwistyPassages\Form\StoryForm;
-use TwistyPassages\Repository\StoryRepository;
 
-class StoryService extends TwistyPassagesAbstractService
+class StoryService extends TwistyPassagesAbstractEntityService
 {
 
     const STATUS_INVALID = 0;
@@ -31,10 +30,18 @@ class StoryService extends TwistyPassagesAbstractService
     const STRING_CHANGED = 'changed';
     const STRING_APPROVED = 'approved';
 
+    const WELCOME_STORY_AMOUNT = 9;
+
     /**
-     * @var StoryRepository
+     * @var Story
      */
-    protected $repository;
+    protected $entity;
+
+    /**
+     * @var StoryForm
+     */
+    protected $form;
+
 
     /**
      * StoryService constructor.
@@ -43,23 +50,63 @@ class StoryService extends TwistyPassagesAbstractService
     public function __construct($entityManager)
     {
         parent::__construct($entityManager);
-        $this->repository = $this->entityManager->getRepository(Story::class);
-    }
-
-    /**
-     * @return StoryForm
-     */
-    public function getForm()
-    {
-        return new StoryForm($this->entityManager);
+        $this->entity = new Story();
+        $this->form = new StoryForm($entityManager);
     }
 
     /**
      * @return array
      */
-    public function getForTopList()
+    public function getForTopList(): array
     {
-        return $this->repository->findForTopList();
+        $qb = $this->repository->createQueryBuilder('s');
+        $qb->select('s.id, s.title, s.description, s.added, a.id as user_id, a.username as author');
+        $qb->leftJoin('s.author', 'a');
+        $qb->where($qb->expr()->gte('s.status', self::STATUS_APPROVED));
+        $qb->orderBy('s.id', 'ASC');
+        $qb->setMaxResults(self::WELCOME_STORY_AMOUNT);
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return Story
+     */
+    public function getEntity(): Story
+    {
+        return $this->entity;
+    }
+
+    /**
+     * @return StoryForm
+     */
+    public function getForm(): StoryForm
+    {
+        return $this->form;
+    }
+
+    /**
+     * @return string
+     */
+    public function getClassName(): string
+    {
+        return Story::class;
+    }
+
+    /**
+     * @param Story $entity
+     */
+    public function persist(Story $entity)
+    {
+        $this->entityManager->persist($entity);
+    }
+
+    /**
+     * @param Story $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function flush(Story $entity)
+    {
+        $this->entityManager->flush($entity);
     }
 
 }
