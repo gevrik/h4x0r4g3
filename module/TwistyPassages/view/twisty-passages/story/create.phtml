@@ -1,51 +1,54 @@
-<div class="container">
-    <h1>Add a story</h1>
+<?php
+/** @var \Zend\Form\Form $form */
+$form = $this->form;
+$form->setAttribute('action', $this->url('story', array('action' => 'create')));
 
-    <?php
-    /** @var \Zend\Form\Form $form */
-    $form = $this->form;
-    $form->setAttribute('action', $this->url('story', array('action' => 'create')));
+/** @var \Zend\Form\Fieldset $fieldset */
+$fieldset = $form->get('story');
 
-    /** @var \Zend\Form\Fieldset $fieldset */
-    $fieldset = $form->get('story');
+$title = $fieldset->get('title');
+$title->setAttribute('class', 'form-control');
+$title->setAttribute('placeholder', 'Story title');
+$description = $fieldset->get('description');
+$description->setAttribute('class', 'form-control');
+$description->setAttribute('placeholder', 'Story description');
 
-    $title = $fieldset->get('title');
-    $title->setAttribute('class', 'form-control');
-    $title->setAttribute('placeholder', 'Story title');
+$submit = $form->get('submit');
+$submit->setAttribute('class', 'btn btn-primary');
 
-    $description = $fieldset->get('description');
-    $description->setAttribute('class', 'form-control');
-    $description->setAttribute('placeholder', 'Story description');
+$form->prepare();
 
-    $submit = $form->get('submit');
-    $submit->setAttribute('class', 'btn btn-primary');
+?>
 
-    $form->prepare();
+<main role="main">
 
-    echo $this->form()->openTag($form);
-
-    ?>
-
-    <div class="form-group">
-        <div class="col-md-3">
-            <?php echo $this->translate($this->formLabel($title)); ?>
+    <section class="jumbotron jumbotron-fluid text-center">
+        <div class="container">
+            <h1 class="jumbotron-heading"><?php echo $this->translate("Create a new story"); ?></h1>
+            <p class="lead text-muted"><?php echo $this->translate("TODO add instructions"); ?></p>
         </div>
-        <div class=" col-md-9">
-            <?php echo $this->formElement($title); ?>
-            <?php echo $this->formElementErrors($title, array('class' => 'text-danger')) ?>
+    </section>
+
+    <div class="story-create-form py-3 bg-light">
+        <div class="container">
+            <?php echo $this->form()->openTag($form); ?>
+            <div class="form-group row">
+                <div class="col-sm-8">
+                    <?php echo $this->formElement($title); ?>
+                    <?php echo $this->formElementErrors($title, array('class' => 'text-danger')) ?>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class=" col-sm-8">
+                    <?php echo $this->formElement($form->get('story')->get('description')->setAttribute('class', 'form-control form-control-dark')); ?>
+                    <?php echo $this->formElementErrors($form->get('story')->get('description'), array('class' => 'text-danger')) ?>
+                </div>
+            </div>
+            <div class="row">
+                <?php echo $this->formSubmit($form->get('submit')); ?>
+            </div>
+            <?php echo $this->form()->closeTag(); ?>
         </div>
     </div>
 
-    <div class="form-group">
-        <div class="col-md-3">
-            <?php echo $this->formLabel($form->get('story')->get('description')); ?>
-        </div>
-        <div class=" col-md-9">
-            <?php echo $this->formElement($form->get('story')->get('description')->setAttribute('class', 'form-control form-control-dark')); ?>
-            <?php echo $this->formElementErrors($form->get('story')->get('description'), array('class' => 'text-danger')) ?>
-        </div>
-    </div>
-
-    <?php echo $this->formSubmit($form->get('submit')); ?>
-    <?php echo $this->form()->closeTag(); ?>
-</div>
+</main>

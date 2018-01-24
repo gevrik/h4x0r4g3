@@ -12,15 +12,18 @@ namespace TwistyPassages\Controller;
 
 use Doctrine\ORM\OptimisticLockException;
 use TwistyPassages\Service\StoryService;
+use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
+use Zend\Http\Request;
 use Zend\View\Model\ViewModel;
 
-class StoryController extends TwistyPassagesAbstractController
+class StoryController extends TwistyPassagesAbstractEntityController
 {
 
     /**
      * @var StoryService
      */
     protected $service;
+
 
     /**
      * TwistyPassagesAbstractController constructor.
@@ -31,6 +34,14 @@ class StoryController extends TwistyPassagesAbstractController
     )
     {
         $this->service = $service;
+    }
+
+    /**
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    protected function getService()
+    {
+        return $this->service;
     }
 
     /**
@@ -50,10 +61,15 @@ class StoryController extends TwistyPassagesAbstractController
      */
     public function createAction()
     {
-        $request   = $this->getRequest();
+        $user = $this->getUserIdentity();
+        /** @var Request $request */
+        $request = $this->getRequest();
         $form = $this->service->getForm();
         $viewModel = new ViewModel(['form' => $form]);
-        $entity = $this->service->getEntity();
+        $entity = $this->service->getEntity()
+            ->setStatus(StoryService::STATUS_CREATED)
+            ->setAdded(new \DateTime())
+            ->setAuthor($user);
         $form->bind($entity);
         // show form if no post
         if (!$request->isPost()) {
@@ -68,10 +84,11 @@ class StoryController extends TwistyPassagesAbstractController
         $this->service->persist($entity);
         try {
             $this->service->flush($entity);
-        } catch (OptimisticLockException $e) {
+        }
+        catch (OptimisticLockException $e) {
             throw $e;
         }
-        return $this->redirect()->toRoute('story/detail', ['id' => $entity->getId()]);
+        return $this->redirect()->toRoute('story', ['action' => 'detail', 'id' => $entity->getId()]);
     }
 
 }

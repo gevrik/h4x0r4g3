@@ -1,42 +1,21 @@
 <main role="main">
 
-    <section class="jumbotron text-center">
+    <section class="jumbotron jumbotron-fluid text-center">
         <div class="container">
             <h1 class="jumbotron-heading">TWISTY PASSAGES</h1>
             <p class="lead text-muted"><?php echo $this->translate("Interactive fiction from the H4X0R4G3 game universe that also has subtle effects on your character in H4X0R4G3 itself! Please find a selection of stories below. Have fun and please consider to get involved by writing your own story."); ?></p>
             <p>
                 <a href="#" class="btn btn-primary my-2"><?php echo $this->translate("Browse all stories"); ?></a>
-                <a href="#" class="btn btn-secondary my-2"><?php echo $this->translate("Create a story"); ?></a>
+                <a href="<?php echo $this->url('story', ['action' => 'create']); ?>" class="btn btn-secondary my-2"><?php echo $this->translate("Create a story"); ?></a>
             </p>
         </div>
     </section>
 
-    <div class="album py-5 bg-dark">
+    <div class="topnine py-3 bg-light">
         <div class="container">
             <div class="row">
                 <?php foreach ($this->topStories as $topStory) : ?>
-                    <div class="col-md-4">
-                        <div class="card mb-4 box-shadow">
-                            <img class="card-img-top"
-                                 data-src="holder.js/100px225?theme=thumb&bg=55595c&fg=eceeef&text=<?php echo $topStory['title']; ?>"
-                                 alt="<?php echo $topStory['title']; ?>">
-                            <div class="card-body">
-                                <p class="card-text"><?php echo $topStory['description']; ?></p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary">Start</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary">Details</button>
-                                        <?php if($this->zfcUserIdentity()): ?>
-                                            <?php if($this->zfcUserIdentity()->getId() == $topStory['user_id']) : ?>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                    </div>
-                                    <small class="text-muted"><?php echo $this->translate("author: "); ?><?php echo $topStory['author']; ?></small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <?php echo $this->partial('twisty-passages/partials/card', ['topStory' => $topStory]); ?>
                 <?php endforeach; ?>
             </div>
         </div>

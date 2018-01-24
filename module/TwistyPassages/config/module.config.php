@@ -2,6 +2,9 @@
 
 namespace TwistyPassages;
 
+use TwistyPassages\Factory\StoryControllerFactory;
+use TwistyPassages\Factory\StoryEditorControllerFactory;
+
 return array(
     'router' => array(
         'routes' => array(
@@ -20,13 +23,29 @@ return array(
                     ),
                 ),
             ),
+            'story-editor' => array(
+                'type' => 'segment',
+                'options' => array(
+                    'route' => '/story-editor[/:action][/:id]',
+                    'constraints' => array(
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id' => '[0-9]+',
+                    ),
+                    'defaults' => array(
+                        '__NAMESPACE__' => 'TwistyPassages\Controller',
+                        'controller'    => 'TwistyPassages\Controller\StoryEditor',
+                        'action'        => 'index',
+                    ),
+                ),
+            ),
         ),
     ),
     'controllers' => array(
         'invokables' => array(
         ),
         'factories' => array(
-            'TwistyPassages\Controller\Story' => 'TwistyPassages\Factory\StoryControllerFactory',
+            'TwistyPassages\Controller\Story' => StoryControllerFactory::class,
+            'TwistyPassages\Controller\StoryEditor' => StoryEditorControllerFactory::class,
         ),
     ),
     'service_manager' => array(
@@ -104,7 +123,8 @@ return array(
         'guards' => [
 
             'BjyAuthorize\Guard\Controller' => [
-                ['controller' => 'TwistyPassages\Controller\Story', 'roles' => ['admin']],
+                ['controller' => 'TwistyPassages\Controller\Story', 'roles' => ['user']],
+                ['controller' => 'TwistyPassages\Controller\StoryEditor', 'roles' => ['user']],
             ],
 
         ],

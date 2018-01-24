@@ -1,0 +1,28 @@
+<div class="col-md-4">
+    <div class="card mb-4 box-shadow">
+        <img class="card-img-top"
+             data-src="holder.js/100px225?theme=thumb&bg=55595c&fg=eceeef&text=<?php echo $this->topStory['title']; ?>"
+             alt="<?php echo $this->topStory['title']; ?>">
+        <div class="card-body">
+            <p class="card-text"><?php echo $this->topStory['description']; ?></p>
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                    <a href="#" type="button" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Start"); ?></a>
+                    <a href="<?php echo $this->url('story', ['action' => 'detail', 'id' => $this->topStory['id']]); ?>"
+                       type="button"
+                       class="btn btn-sm btn-outline-secondary">
+                        <?php echo $this->translate("Details"); ?>
+                    </a>
+                    <?php if($this->zfcUserIdentity()): ?>
+                        <?php if($this->zfcUserIdentity()->getId() == $this->topStory['user_id']) : ?>
+                            <a href="<?php echo $this->url('story-editor', ['id' => $this->topStory['id']]); ?>" type="button" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Editor"); ?></a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+                <small class="text-muted">
+                    <?php echo $this->translate("author: "); ?><?php echo $this->topStory['author']; ?>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>

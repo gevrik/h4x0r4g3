@@ -109,4 +109,13 @@ class StoryService extends TwistyPassagesAbstractEntityService
         $this->entityManager->flush($entity);
     }
 
+    /**
+     * @param int $id
+     * @return null|object
+     */
+    public function find(int $id)
+    {
+        return $this->repository->find($id);
+    }
+
 }

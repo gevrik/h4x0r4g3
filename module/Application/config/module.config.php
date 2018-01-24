@@ -97,6 +97,7 @@ return array(
             'error/index'             => __DIR__ . '/../view/error/index.phtml',
             'layout/web'             => __DIR__ . '/../view/layout/web.phtml',
             'layout/tp'             => __DIR__ . '/../view/layout/tp.phtml',
+            'layout/tp-editor'             => __DIR__ . '/../view/layout/tp-editor.phtml',
         ),
         'template_path_stack' => array(
             __DIR__ . '/../view',

@@ -59,7 +59,7 @@ class Story
     /**
      * @return int
      */
-    public function getId(): int
+    public function getId()
     {
         return $this->id;
     }
@@ -68,7 +68,7 @@ class Story
      * @param int $id
      * @return Story
      */
-    public function setId(int $id): Story
+    public function setId(int $id)
     {
         $this->id = $id;
         return $this;
@@ -77,7 +77,7 @@ class Story
     /**
      * @return string
      */
-    public function getTitle(): string
+    public function getTitle()
     {
         return $this->title;
     }
@@ -86,7 +86,7 @@ class Story
      * @param string $title
      * @return Story
      */
-    public function setTitle(string $title): Story
+    public function setTitle(string $title)
     {
         $this->title = $title;
         return $this;
@@ -95,7 +95,7 @@ class Story
     /**
      * @return string
      */
-    public function getDescription(): string
+    public function getDescription()
     {
         return $this->description;
     }
@@ -104,7 +104,7 @@ class Story
      * @param string $description
      * @return Story
      */
-    public function setDescription(string $description): Story
+    public function setDescription(string $description)
     {
         $this->description = $description;
         return $this;
@@ -113,7 +113,7 @@ class Story
     /**
      * @return int
      */
-    public function getStatus(): int
+    public function getStatus()
     {
         return $this->status;
     }
@@ -122,7 +122,7 @@ class Story
      * @param int $status
      * @return Story
      */
-    public function setStatus(int $status): Story
+    public function setStatus(int $status)
     {
         $this->status = $status;
         return $this;
@@ -131,7 +131,7 @@ class Story
     /**
      * @return \DateTime
      */
-    public function getAdded(): \DateTime
+    public function getAdded()
     {
         return $this->added;
     }
@@ -140,7 +140,7 @@ class Story
      * @param \DateTime $added
      * @return Story
      */
-    public function setAdded(\DateTime $added): Story
+    public function setAdded(\DateTime $added)
     {
         $this->added = $added;
         return $this;
@@ -149,7 +149,7 @@ class Story
     /**
      * @return User
      */
-    public function getAuthor(): User
+    public function getAuthor()
     {
         return $this->author;
     }
@@ -158,7 +158,7 @@ class Story
      * @param User $author
      * @return Story
      */
-    public function setAuthor(User $author): Story
+    public function setAuthor(User $author)
     {
         $this->author = $author;
         return $this;

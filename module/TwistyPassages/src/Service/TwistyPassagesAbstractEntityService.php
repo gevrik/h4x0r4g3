@@ -12,7 +12,7 @@ namespace TwistyPassages\Service;
 
 use Doctrine\ORM\EntityManager;
 
-abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstractService
+abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstractService implements TwistyPassagesEntityServiceInterface
 {
 
     /**

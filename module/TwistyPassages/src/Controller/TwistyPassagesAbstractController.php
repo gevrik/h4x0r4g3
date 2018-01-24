@@ -10,12 +10,18 @@
 
 namespace TwistyPassages\Controller;
 
+use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\Mvc\MvcEvent;
 use Zend\View\Model\ViewModel;
 
-class TwistyPassagesAbstractController extends AbstractActionController
+abstract class TwistyPassagesAbstractController extends AbstractActionController
 {
+
+    /**
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    abstract protected function getService();
 
     /**
      * Override the parent's onDispatch() method.
@@ -30,12 +36,12 @@ class TwistyPassagesAbstractController extends AbstractActionController
     }
 
     /**
-     * @return ViewModel
+     * @return mixed
      */
-    public function indexAction(): ViewModel
+    protected function getUserIdentity()
     {
-        $viewModel = new ViewModel();
-        return $viewModel;
+        /** @noinspection PhpUndefinedMethodInspection */
+        return $this->zfcUserAuthentication()->getIdentity();
     }
 
 }
