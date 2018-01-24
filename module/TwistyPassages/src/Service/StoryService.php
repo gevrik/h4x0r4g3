@@ -12,6 +12,7 @@ namespace TwistyPassages\Service;
 
 use TwistyPassages\Entity\Story;
 use TwistyPassages\Form\StoryForm;
+use Zend\Form\Form;
 
 class StoryService extends TwistyPassagesAbstractEntityService
 {
@@ -36,11 +37,6 @@ class StoryService extends TwistyPassagesAbstractEntityService
      * @var Story
      */
     protected $entity;
-
-    /**
-     * @var StoryForm
-     */
-    protected $form;
 
 
     /**
@@ -77,19 +73,19 @@ class StoryService extends TwistyPassagesAbstractEntityService
     }
 
     /**
-     * @return StoryForm
-     */
-    public function getForm(): StoryForm
-    {
-        return $this->form;
-    }
-
-    /**
      * @return string
      */
     public function getClassName(): string
     {
         return Story::class;
+    }
+
+    /**
+     * @return StoryForm|Form
+     */
+    public function getForm()
+    {
+        return $this->form;
     }
 
     /**

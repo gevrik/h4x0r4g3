@@ -11,6 +11,7 @@
 namespace TwistyPassages\Service;
 
 use Doctrine\ORM\EntityManager;
+use Zend\Form\Form;
 
 abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstractService implements TwistyPassagesEntityServiceInterface
 {
@@ -20,6 +21,10 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      */
     protected $repository;
 
+    /**
+     * @var Form
+     */
+    protected $form;
 
     /**
      * TwistyPassagesAbstractEntityService constructor.
@@ -35,5 +40,10 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      * @return string
      */
     abstract public function getClassName(): string;
+
+    /**
+     * @return Form
+     */
+    abstract public function getForm();
 
 }

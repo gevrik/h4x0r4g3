@@ -19,9 +19,18 @@ interface TwistyPassagesEntityServiceInterface
     public function getClassName(): string;
 
     /**
-     * @param int $id
-     * @return null|object
+     * {@inheritdoc}
      */
     public function find(int $id);
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getForm();
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getEntity();
 
 }

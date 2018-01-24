@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Story Fieldset.
- * Story Fieldset.
+ * Passage Fieldset.
+ * Passage Fieldset.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -12,12 +12,12 @@ namespace TwistyPassages\Form;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use DoctrineModule\Stdlib\Hydrator\DoctrineObject as DoctrineHydrator;
-use TmoAuth\Entity\User;
 use TwistyPassages\Entity\Story;
 use TwistyPassages\Filter\HtmlAwed;
 use TwistyPassages\Form\Element\ObjectHidden;
 use Zend\Filter\StringTrim;
 use Zend\Filter\ToInt;
+use Zend\Form\Element\Checkbox;
 use Zend\Form\Element\DateTime;
 use Zend\Form\Element\Hidden;
 use Zend\Form\Element\Select;
@@ -28,16 +28,16 @@ use Zend\InputFilter\InputFilterProviderInterface;
 use Zend\Validator\Date;
 use Zend\Validator\Digits;
 
-class StoryFieldset extends Fieldset implements InputFilterProviderInterface
+class PassageFieldset extends Fieldset implements InputFilterProviderInterface
 {
 
     /**
-     * StoryFieldset constructor.
+     * PassageFieldset constructor.
      * @param ObjectManager $objectManager
      */
     public function __construct(ObjectManager $objectManager)
     {
-        parent::__construct('story');
+        parent::__construct('passage');
 
         $this->setHydrator(new DoctrineHydrator($objectManager))->setObject(new Story());
 
@@ -67,11 +67,16 @@ class StoryFieldset extends Fieldset implements InputFilterProviderInterface
         ]);
 
         $this->add([
+            'type' => Checkbox::class,
+            'name' => 'allowChoiceSubmissions',
+        ]);
+
+        $this->add([
             'type' => ObjectHidden::class,
-            'name' => 'author',
+            'name' => 'story',
             'options' => [
                 'object_manager' => $objectManager,
-                'target_class' => User::class,
+                'target_class' => Story::class,
             ],
         ]);
 
@@ -134,7 +139,16 @@ class StoryFieldset extends Fieldset implements InputFilterProviderInterface
                     ['name' => Digits::class]
                 ],
             ],
-            'author' => [
+            'allowChoiceSubmissions' => [
+                'required' => true,
+                'filters'  => [
+                    ['name' => ToInt::class],
+                ],
+                'validators' => [
+                    ['name' => Digits::class]
+                ],
+            ],
+            'story' => [
                 'required' => true,
                 'filters'  => [
                     ['name' => ToInt::class],

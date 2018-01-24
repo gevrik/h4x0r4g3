@@ -10,6 +10,8 @@
 
 namespace TwistyPassages\Controller;
 
+use Doctrine\ORM\OptimisticLockException;
+use Zend\Http\Request;
 use Zend\View\Model\ViewModel;
 
 abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbstractController
@@ -34,6 +36,39 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
         $viewModel = new ViewModel();
         $viewModel->setVariable('entity', $entity);
         return $viewModel;
+    }
+
+    /**
+     * @return \Zend\Http\Response|ViewModel
+     * @throws OptimisticLockException
+     */
+    public function createAction()
+    {
+        $user = $this->getUserIdentity();
+        /** @var Request $request */
+        $request = $this->getRequest();
+        $form = $this->getService()->getForm();
+        $viewModel = new ViewModel(['form' => $form]);
+        $entity = $this->getService()->getEntity();
+        $form->bind($entity);
+        // show form if no post
+        if (!$request->isPost()) {
+            return $viewModel;
+        }
+        // set form data from post
+        $form->setData($request->getPost());
+        // if form is not valid show form again
+        if (!$form->isValid()) {
+            return $viewModel;
+        }
+        $this->getService()->persist($entity);
+        try {
+            $this->getService()->flush($entity);
+        }
+        catch (OptimisticLockException $e) {
+            throw $e;
+        }
+        return $this->redirect()->toRoute('story', ['action' => 'detail', 'id' => $entity->getId()]);
     }
 
 }

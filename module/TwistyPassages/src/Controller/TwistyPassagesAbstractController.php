@@ -13,7 +13,6 @@ namespace TwistyPassages\Controller;
 use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\Mvc\MvcEvent;
-use Zend\View\Model\ViewModel;
 
 abstract class TwistyPassagesAbstractController extends AbstractActionController
 {
