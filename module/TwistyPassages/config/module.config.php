@@ -2,106 +2,124 @@
 
 namespace TwistyPassages;
 
+use TwistyPassages\Factory\PassageControllerFactory;
 use TwistyPassages\Factory\StoryControllerFactory;
 use TwistyPassages\Factory\StoryEditorControllerFactory;
+use TwistyPassages\Factory\StoryServiceFactory;
 
-return array(
-    'router' => array(
-        'routes' => array(
-            'story' => array(
+return [
+    'router' => [
+        'routes' => [
+            'passage' => [
                 'type' => 'segment',
-                'options' => array(
-                    'route' => '/story[/:action][/:id]',
-                    'constraints' => array(
+                'options' => [
+                    'route' => '/passage[/:action][/:id]',
+                    'constraints' => [
                         'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
                         'id' => '[0-9]+',
-                    ),
-                    'defaults' => array(
+                    ],
+                    'defaults' => [
+                        '__NAMESPACE__' => 'TwistyPassages\Controller',
+                        'controller'    => 'TwistyPassages\Controller\Passage',
+                        'action'        => 'index',
+                    ],
+                ],
+            ],
+            'story' => [
+                'type' => 'segment',
+                'options' => [
+                    'route' => '/story[/:action][/:id]',
+                    'constraints' => [
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id' => '[0-9]+',
+                    ],
+                    'defaults' => [
                         '__NAMESPACE__' => 'TwistyPassages\Controller',
                         'controller'    => 'TwistyPassages\Controller\Story',
                         'action'        => 'welcome',
-                    ),
-                ),
-            ),
-            'story-editor' => array(
+                    ],
+                ],
+            ],
+            'story-editor' => [
                 'type' => 'segment',
-                'options' => array(
+                'options' => [
                     'route' => '/story-editor[/:action][/:id]',
-                    'constraints' => array(
+                    'constraints' => [
                         'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
                         'id' => '[0-9]+',
-                    ),
-                    'defaults' => array(
+                    ],
+                    'defaults' => [
                         '__NAMESPACE__' => 'TwistyPassages\Controller',
                         'controller'    => 'TwistyPassages\Controller\StoryEditor',
                         'action'        => 'index',
-                    ),
-                ),
-            ),
-        ),
-    ),
-    'controllers' => array(
-        'invokables' => array(
-        ),
-        'factories' => array(
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'controllers' => [
+        'invokables' => [
+        ],
+        'factories' => [
+            'TwistyPassages\Controller\Passage' => PassageControllerFactory::class,
             'TwistyPassages\Controller\Story' => StoryControllerFactory::class,
             'TwistyPassages\Controller\StoryEditor' => StoryEditorControllerFactory::class,
-        ),
-    ),
-    'service_manager' => array(
-        'factories' => array(
-            'TwistyPassages\Service\StoryService' => 'TwistyPassages\Factory\StoryServiceFactory',
-        ),
-    ),
-    'translator' => array(
+        ],
+    ],
+    'service_manager' => [
+        'factories' => [
+            'TwistyPassages\Service\StoryService' => StoryServiceFactory::class,
+        ],
+    ],
+    'translator' => [
         'locale' => 'en_US',
-        'translation_file_patterns' => array(
-            array(
+        'translation_file_patterns' => [
+            [
                 'type'     => 'gettext',
                 'base_dir' => __DIR__ . '/../language',
                 'pattern'  => '%s.mo',
-            ),
-        ),
-    ),
-    'view_helpers' => array(
-        'invokables'=> array(
-        ),
-        'factories' => array(
-        ),
-    ),
-    'view_manager' => array(
-        'template_path_stack' => array(
+            ],
+        ],
+    ],
+    'view_helpers' => [
+        'invokables'=> [
+        ],
+        'factories' => [
+        ],
+    ],
+    'view_manager' => [
+        'template_path_stack' => [
             __DIR__ . '/../view',
-        ),
-    ),
-    'navigation' => array(
-        'default' => array(
-            array(
+        ],
+    ],
+    'navigation' => [
+        'default' => [
+            [
                 'label' => _('Stories'),
                 'route' => 'story',
-                'pages' => array(
-                    array(
+                'pages' => [
+                    [
                         'label' => _('Stories'),
                         'route' => 'story',
                         'action' => 'index',
-                    ),
-                ),
-            ),
-        ),
-    ),
-    'doctrine' => array(
-        'driver' => array(
-            'twisty_passages' => array(
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'doctrine' => [
+        'driver' => [
+            'twisty_passages' => [
                 'class' => 'Doctrine\ORM\Mapping\Driver\AnnotationDriver',
                 'paths' => __DIR__ . '/../src/Entity',
-            ),
-            'orm_default' => array(
-                'drivers' => array(
+            ],
+            'orm_default' => [
+                'drivers' => [
                     'TwistyPassages\Entity' => 'twisty_passages',
-                ),
-            ),
-        ),
-    ),
+                ],
+            ],
+        ],
+    ],
     'bjyauthorize' => [
         'resource_providers' => [
             'BjyAuthorize\Provider\Resource\Config' => [
@@ -129,4 +147,4 @@ return array(
 
         ],
     ],
-);
+];

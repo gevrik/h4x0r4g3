@@ -25,10 +25,10 @@ class StoryForm extends Form
         $fieldset->setUseAsBaseFieldset(true);
         $this->add($fieldset);
 
-        $this->add(array(
+        $this->add([
             'type' => 'submit',
             'name' => 'submit',
-        ));
+        ]);
 
     }
 
