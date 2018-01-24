@@ -44,7 +44,6 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
      */
     public function createAction()
     {
-        $user = $this->getUserIdentity();
         /** @var Request $request */
         $request = $this->getRequest();
         $form = $this->getService()->getForm();

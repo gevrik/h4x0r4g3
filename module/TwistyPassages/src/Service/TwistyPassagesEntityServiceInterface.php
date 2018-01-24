@@ -10,27 +10,41 @@
 
 namespace TwistyPassages\Service;
 
+use Zend\Form\Form;
+
 interface TwistyPassagesEntityServiceInterface
 {
 
     /**
-     * {@inheritdoc}
+     * @return string
      */
     public function getClassName(): string;
 
     /**
-     * {@inheritdoc}
+     * @param int $id
+     * @return mixed
      */
     public function find(int $id);
 
     /**
-     * {@inheritdoc}
+     * @return Form
      */
     public function getForm();
 
     /**
-     * {@inheritdoc}
+     * @return mixed
      */
     public function getEntity();
+
+    /**
+     * @param $entity
+     */
+    public function persist($entity);
+
+    /**
+     * @param $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function flush($entity);
 
 }

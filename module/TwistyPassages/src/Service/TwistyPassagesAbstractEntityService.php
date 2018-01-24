@@ -46,4 +46,21 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      */
     abstract public function getForm();
 
+    /**
+     * @param $entity
+     */
+    public function persist($entity)
+    {
+        $this->entityManager->persist($entity);
+    }
+
+    /**
+     * @param $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function flush($entity)
+    {
+        $this->entityManager->flush($entity);
+    }
+
 }

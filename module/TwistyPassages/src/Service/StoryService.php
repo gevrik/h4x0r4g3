@@ -89,23 +89,6 @@ class StoryService extends TwistyPassagesAbstractEntityService
     }
 
     /**
-     * @param Story $entity
-     */
-    public function persist(Story $entity)
-    {
-        $this->entityManager->persist($entity);
-    }
-
-    /**
-     * @param Story $entity
-     * @throws \Doctrine\ORM\OptimisticLockException
-     */
-    public function flush(Story $entity)
-    {
-        $this->entityManager->flush($entity);
-    }
-
-    /**
      * @param int $id
      * @return null|object
      */

@@ -10,10 +10,8 @@
 
 namespace TwistyPassages\Controller;
 
-use Doctrine\ORM\OptimisticLockException;
 use TwistyPassages\Service\StoryService;
 use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
-use Zend\Http\Request;
 use Zend\View\Model\ViewModel;
 
 class StoryController extends TwistyPassagesAbstractEntityController

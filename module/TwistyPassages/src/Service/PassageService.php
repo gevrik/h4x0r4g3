@@ -66,23 +66,6 @@ class PassageService extends TwistyPassagesAbstractEntityService
     }
 
     /**
-     * @param Passage $entity
-     */
-    public function persist(Passage $entity)
-    {
-        $this->entityManager->persist($entity);
-    }
-
-    /**
-     * @param Passage $entity
-     * @throws \Doctrine\ORM\OptimisticLockException
-     */
-    public function flush(Passage $entity)
-    {
-        $this->entityManager->flush($entity);
-    }
-
-    /**
      * @param int $id
      * @return null|object
      */
