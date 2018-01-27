@@ -1,7 +1,7 @@
 <?php
 /** @var \Zend\Form\Form $form */
 $form = $this->form;
-$form->setAttribute('action', $this->url('story', ['action' => 'create']));
+$form->setAttribute('action', $this->url('story', ['action' => 'update', 'id' => $this->entity->getId()]));
 
 /** @var \Zend\Form\Fieldset $fieldset */
 $fieldset = $form->get('story');
@@ -18,18 +18,15 @@ $description->setAttribute('placeholder', $this->translate("Story description"))
 $description->setLabel($this->translate("Description"));
 
 $status = $fieldset->get('status');
-$status->setValue(\TwistyPassages\Service\StoryService::STATUS_CREATED);
 
 $added = $fieldset->get('added');
-$now = new DateTime();
-$added->setValue($now->format('Y-m-d H:i:s'));
+$added->setValue($this->entity->getAdded()->format('Y-m-d H:i:s'));
 
 $author = $fieldset->get('author');
-$author->setValue($this->zfcUserIdentity());
 
 $submit = $form->get('submit');
 $submit->setAttribute('class', 'btn btn-primary');
-$submit->setValue($this->translate("Create story"));
+$submit->setValue($this->translate("Edit story"));
 
 $form->prepare();
 
@@ -43,7 +40,7 @@ $form->prepare();
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
 
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                <h1 class="jumbotron-heading"><?php echo $this->translate("Create a new story"); ?></h1>
+                <h1 class="jumbotron-heading"><?php echo $this->translate("Update story"); ?></h1>
                 <p class="lead text-muted"><?php echo $this->translate("TODO add instructions"); ?></p>
             </div>
 
@@ -63,8 +60,11 @@ $form->prepare();
                         </div>
                     </div>
                     <?php echo $this->formHidden($author); ?>
+                    <?php echo $this->formElementErrors($author, array('class' => 'text-danger')) ?>
                     <?php echo $this->formHidden($status); ?>
+                    <?php echo $this->formElementErrors($status, array('class' => 'text-danger')) ?>
                     <?php echo $this->formHidden($added); ?>
+                    <?php echo $this->formElementErrors($added, array('class' => 'text-danger')) ?>
                     <div class="row">
                         <?php echo $this->formSubmit($submit); ?>
                     </div>

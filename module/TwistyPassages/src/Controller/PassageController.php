@@ -144,4 +144,9 @@ class PassageController extends TwistyPassagesAbstractEntityController
     {
         return "passages";
     }
+
+    public function updateAction()
+    {
+        // TODO: Implement updateAction() method.
+    }
 }

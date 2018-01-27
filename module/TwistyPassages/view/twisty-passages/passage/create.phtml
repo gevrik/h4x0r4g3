@@ -13,6 +13,7 @@ $title->setLabel($this->translate("Title"));
 
 $description = $fieldset->get('description');
 $description->setAttribute('class', 'form-control');
+$description->setAttribute('id', 'passage-description');
 $description->setAttribute('placeholder', $this->translate("Passage description"));
 $description->setLabel($this->translate("Description"));
 
@@ -92,3 +93,9 @@ $form->prepare();
 
     </div>
 </div>
+
+<script type="application/javascript">
+
+    CKEDITOR.replace( 'passage-description', {customConfig: '../../../../js/ck_default_config.js'} );
+
+</script>

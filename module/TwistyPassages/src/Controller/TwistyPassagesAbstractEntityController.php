@@ -37,6 +37,8 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
      */
     abstract public function createAction();
 
+    abstract public function updateAction();
+
     /**
      * @param array $entities
      * @return array
