@@ -12,9 +12,12 @@ namespace TwistyPassages\Service;
 
 use TwistyPassages\Entity\Passage;
 use TwistyPassages\Form\PassageForm;
+use Zend\Form\Form;
 
 class PassageService extends TwistyPassagesAbstractEntityService
 {
+
+    const ROUTE = 'passage';
 
     const STATUS_INVALID = 0;
     const STATUS_CREATED = 1;
@@ -23,6 +26,15 @@ class PassageService extends TwistyPassagesAbstractEntityService
     const STRING_INVALID = 'invalid';
     const STRING_CREATED = 'created';
     const STRING_APPROVED = 'approved';
+
+    /**
+     * @var array
+     */
+    static $status = [
+        self::STATUS_INVALID => self::STRING_INVALID,
+        self::STATUS_CREATED => self::STRING_CREATED,
+        self::STATUS_APPROVED => self::STRING_APPROVED,
+    ];
 
     /**
      * @var Passage
@@ -58,20 +70,48 @@ class PassageService extends TwistyPassagesAbstractEntityService
     }
 
     /**
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    public function initQueryBuilder(): TwistyPassagesEntityServiceInterface
+    {
+        $this->queryBuilder->leftJoin('e.story', 's');
+        return $this;
+    }
+
+    /**
+     * @param $columnName
+     * @param $dir
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface
+    {
+        switch ($columnName) {
+            default:
+                $this->queryBuilder->addOrderBy('e.' . $columnName, $dir);
+                break;
+            case 'storytitle':
+                $this->queryBuilder->addOrderBy('s.title', $dir);
+                break;
+        }
+        return $this;
+    }
+
+    /**
      * @return PassageForm|\Zend\Form\Form
      */
-    public function getForm()
+    public function getForm(): Form
     {
         return $this->form;
     }
 
     /**
-     * @param int $id
-     * @return null|object
+     * @param string $searchValue
+     * @return TwistyPassagesEntityServiceInterface
      */
-    public function find(int $id)
+    public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface
     {
-        return $this->repository->find($id);
+        $this->queryBuilder->where($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
+        return $this;
     }
 
 }

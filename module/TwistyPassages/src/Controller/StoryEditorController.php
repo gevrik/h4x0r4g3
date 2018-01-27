@@ -58,19 +58,26 @@ class StoryEditorController extends TwistyPassagesAbstractController
 
     /**
      * @return ViewModel
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function indexAction()
     {
         $user = $this->getUserIdentity();
         $id = $this->params()->fromRoute('id');
-        $entity = $this->getService()->find($id);
-        if ($user != $entity->getAuthor()) {
+        $story = $this->getService()->find($id);
+        if (!$story) {
+            /** @noinspection PhpUndefinedMethodInspection */
+            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
+        }
+        if ($user != $story->getAuthor()) {
             /** @noinspection PhpUndefinedMethodInspection */
             return $this->getResponse()->setStatusCode(Response::STATUS_CODE_403);
         }
         $viewModel = new ViewModel();
         $viewModel->setVariables([
-            'entity' => $entity,
+            'story' => $story,
             'section' => 'overview'
         ]);
         return $viewModel;

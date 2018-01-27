@@ -3,13 +3,31 @@
 namespace TwistyPassages;
 
 use TwistyPassages\Factory\PassageControllerFactory;
+use TwistyPassages\Factory\PassageServiceFactory;
 use TwistyPassages\Factory\StoryControllerFactory;
 use TwistyPassages\Factory\StoryEditorControllerFactory;
 use TwistyPassages\Factory\StoryServiceFactory;
+use TwistyPassages\Factory\WelcomeControllerFactory;
+use TwistyPassages\Factory\WelcomeServiceFactory;
 
 return [
     'router' => [
         'routes' => [
+            'tp' => [
+                'type' => 'segment',
+                'options' => [
+                    'route' => '/tp[/:action][/:id]',
+                    'constraints' => [
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id' => '[0-9]+',
+                    ],
+                    'defaults' => [
+                        '__NAMESPACE__' => 'TwistyPassages\Controller',
+                        'controller'    => 'TwistyPassages\Controller\Welcome',
+                        'action'        => 'index',
+                    ],
+                ],
+            ],
             'passage' => [
                 'type' => 'segment',
                 'options' => [
@@ -36,7 +54,7 @@ return [
                     'defaults' => [
                         '__NAMESPACE__' => 'TwistyPassages\Controller',
                         'controller'    => 'TwistyPassages\Controller\Story',
-                        'action'        => 'welcome',
+                        'action'        => 'index',
                     ],
                 ],
             ],
@@ -64,11 +82,14 @@ return [
             'TwistyPassages\Controller\Passage' => PassageControllerFactory::class,
             'TwistyPassages\Controller\Story' => StoryControllerFactory::class,
             'TwistyPassages\Controller\StoryEditor' => StoryEditorControllerFactory::class,
+            'TwistyPassages\Controller\Welcome' => WelcomeControllerFactory::class,
         ],
     ],
     'service_manager' => [
         'factories' => [
+            'TwistyPassages\Service\PassageService' => PassageServiceFactory::class,
             'TwistyPassages\Service\StoryService' => StoryServiceFactory::class,
+            'TwistyPassages\Service\WelcomeService' => WelcomeServiceFactory::class,
         ],
     ],
     'translator' => [
@@ -105,6 +126,17 @@ return [
                     ],
                 ],
             ],
+            [
+                'label' => _('Passages'),
+                'route' => 'passage',
+                'pages' => [
+                    [
+                        'label' => _('Passages'),
+                        'route' => 'passage',
+                        'action' => 'index',
+                    ],
+                ],
+            ],
         ],
     ],
     'doctrine' => [
@@ -123,6 +155,8 @@ return [
     'bjyauthorize' => [
         'resource_providers' => [
             'BjyAuthorize\Provider\Resource\Config' => [
+                'adminstuff' => [],
+                'passage' => [],
                 'story' => [],
             ],
         ],
@@ -130,6 +164,8 @@ return [
         'rule_providers' => [
             'BjyAuthorize\Provider\Rule\Config' => [
                 'allow' => [
+                    ['admin', 'adminstuff', ['admin']],
+                    ['admin', 'passage', ['admin']],
                     ['admin', 'story', ['admin']],
                 ],
 
@@ -141,6 +177,8 @@ return [
         'guards' => [
 
             'BjyAuthorize\Guard\Controller' => [
+                ['controller' => 'TwistyPassages\Controller\Welcome', 'roles' => ['user']],
+                ['controller' => 'TwistyPassages\Controller\Passage', 'roles' => ['user']],
                 ['controller' => 'TwistyPassages\Controller\Story', 'roles' => ['user']],
                 ['controller' => 'TwistyPassages\Controller\StoryEditor', 'roles' => ['user']],
             ],

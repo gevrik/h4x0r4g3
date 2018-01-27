@@ -1,10 +1,23 @@
-<main role="main">
+<div class="container-fluid">
+    <div class="row">
 
-    <section class="jumbotron jumbotron-fluid text-center">
-        <div class="container">
-            <h1 class="jumbotron-heading"><?php echo $this->entity->getTitle(); ?></h1>
-            <p class="lead text-muted"><?php echo $this->entity->getDescription(); ?></p>
-        </div>
-    </section>
+        <?php echo $this->partial('twisty-passages/partials/editor-sidebar'); ?>
 
-</main>
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h1 class="h2"><?php echo $this->translate(sprintf("Details: %s", $this->entity->getTitle())); ?></h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <a href="" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Create passage"); ?></a>
+                        <a href="" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Create choice"); ?></a>
+                        <a href="" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Create character"); ?></a>
+                        <a href="" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Create variable"); ?></a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+</div>

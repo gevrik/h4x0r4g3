@@ -1,0 +1,48 @@
+<div class="container-fluid">
+    <div class="row">
+
+        <?php echo $this->partial('twisty-passages/partials/editor-sidebar'); ?>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h1 class="jumbotron-heading"><?php echo $this->translate("Passages"); ?></h1>
+                <p class="lead text-muted"><?php echo $this->translate("TODO add menu"); ?></p>
+            </div>
+
+            <div class="table-responsive">
+                <table id="passage-table" class="table table-sm table-bordered table-striped display" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>TITLE</th>
+                        <th>DESCRIPTION</th>
+                        <th>STATUS</th>
+                        <th>ADDED</th>
+                        <th>SUB</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+
+        </main>
+
+    </div>
+</div>
+
+<script type="application/javascript">
+    $('#passage-table').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "pageLength": 25,
+        "ajax": "<?php echo $this->url('passage', array('action' => 'xhrData')); ?>",
+        "columns": [
+            { "data": "id" },
+            { "data": "title" },
+            { "data": "description" },
+            { "data": "status" },
+            { "data": "added" },
+            { "data": "sub" }
+        ]
+    });
+</script>

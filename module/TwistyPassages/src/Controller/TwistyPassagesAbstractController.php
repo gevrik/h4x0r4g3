@@ -30,7 +30,7 @@ abstract class TwistyPassagesAbstractController extends AbstractActionController
     public function onDispatch(MvcEvent $e)
     {
         $response = parent::onDispatch($e);
-        $this->layout()->setTemplate('layout/tp');
+        $this->layout()->setTemplate('layout/tp-editor');
         return $response;
     }
 

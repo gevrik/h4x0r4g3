@@ -17,6 +17,8 @@ use Zend\Form\Form;
 class StoryService extends TwistyPassagesAbstractEntityService
 {
 
+    const ROUTE = 'story';
+
     const STATUS_INVALID = 0;
     const STATUS_CREATED = 1;
     const STATUS_SUBMITTED = 2;
@@ -30,8 +32,6 @@ class StoryService extends TwistyPassagesAbstractEntityService
     const STRING_REVIEW = 'review';
     const STRING_CHANGED = 'changed';
     const STRING_APPROVED = 'approved';
-
-    const WELCOME_STORY_AMOUNT = 9;
 
     /**
      * @var Story
@@ -48,20 +48,6 @@ class StoryService extends TwistyPassagesAbstractEntityService
         parent::__construct($entityManager);
         $this->entity = new Story();
         $this->form = new StoryForm($entityManager);
-    }
-
-    /**
-     * @return array
-     */
-    public function getForTopList(): array
-    {
-        $qb = $this->repository->createQueryBuilder('s');
-        $qb->select('s.id, s.title, s.description, s.added, a.id as user_id, a.username as author');
-        $qb->leftJoin('s.author', 'a');
-        $qb->where($qb->expr()->gte('s.status', self::STATUS_APPROVED));
-        $qb->orderBy('s.id', 'ASC');
-        $qb->setMaxResults(self::WELCOME_STORY_AMOUNT);
-        return $qb->getQuery()->getResult();
     }
 
     /**
@@ -83,18 +69,43 @@ class StoryService extends TwistyPassagesAbstractEntityService
     /**
      * @return StoryForm|Form
      */
-    public function getForm()
+    public function getForm(): Form
     {
         return $this->form;
     }
 
     /**
-     * @param int $id
-     * @return null|object
+     * @return TwistyPassagesEntityServiceInterface
      */
-    public function find(int $id)
+    public function initQueryBuilder(): TwistyPassagesEntityServiceInterface
     {
-        return $this->repository->find($id);
+        $this->queryBuilder->leftJoin('e.author', 'a');
+        return $this;
+    }
+
+    /**
+     * @param $columnName
+     * @param $dir
+     * @return $this|TwistyPassagesEntityServiceInterface
+     */
+    public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface
+    {
+        switch ($columnName) {
+            default:
+                $this->queryBuilder->addOrderBy('e.' . $columnName, $dir);
+                break;
+        }
+        return $this;
+    }
+
+    /**
+     * @param string $searchValue
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface
+    {
+        $this->queryBuilder->where($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
+        return $this;
     }
 
 }

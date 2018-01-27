@@ -144,7 +144,7 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
      */
     public function getEntityName()
     {
-        return 'Netrunners\Entity\Profile';
+        return Profile::class;
     }
 
     /**

@@ -21,15 +21,14 @@ interface TwistyPassagesEntityServiceInterface
     public function getClassName(): string;
 
     /**
-     * @param int $id
-     * @return mixed
+     * @return string
      */
-    public function find(int $id);
+    public function getRouteName(): string;
 
     /**
      * @return Form
      */
-    public function getForm();
+    public function getForm(): Form;
 
     /**
      * @return mixed
@@ -46,5 +45,59 @@ interface TwistyPassagesEntityServiceInterface
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function flush($entity);
+
+    /**
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    public function initQueryBuilder(): self;
+
+    /**
+     * @param string $searchValue
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    public function getSearchWhere($searchValue): self;
+
+    /**
+     * @param $columnName
+     * @param $dir
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    public function addOrderBy($columnName, $dir): self;
+
+    /**
+     * @param int $id
+     * @return mixed|null|object
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function find(int $id);
+
+    /**
+     * @param string $class
+     * @param int $id
+     * @return null|object
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function findEntity(string $class, int $id);
+
+    /**
+     * @param int $start
+     * @param int $length
+     * @param array $columns
+     * @param array $order
+     * @param string $searchValue
+     * @return array
+     */
+    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = ""): array;
+
+    /**
+     * @return int
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function countAll();
 
 }

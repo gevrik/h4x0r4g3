@@ -8,7 +8,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div class="btn-group">
                     <a href="#" type="button" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Start"); ?></a>
-                    <a href="<?php echo $this->url('story', ['action' => 'detail', 'id' => $this->topStory['id']]); ?>"
+                    <a href="<?php echo $this->url('tp', ['action' => 'detail-story', 'id' => $this->topStory['id']]); ?>"
                        type="button"
                        class="btn btn-sm btn-outline-secondary">
                         <?php echo $this->translate("Details"); ?>
