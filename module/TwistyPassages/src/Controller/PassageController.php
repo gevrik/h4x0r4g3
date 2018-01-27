@@ -12,7 +12,7 @@ namespace TwistyPassages\Controller;
 
 use Doctrine\ORM\OptimisticLockException;
 use TwistyPassages\Entity\Passage;
-use TwistyPassages\Entity\Story;
+use TwistyPassages\Filter\StringLengthFilter;
 use TwistyPassages\Service\PassageService;
 use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
 use Zend\Http\Request;
@@ -48,33 +48,50 @@ class PassageController extends TwistyPassagesAbstractEntityController
     }
 
     /**
+     * @return ViewModel
+     */
+    public function indexEditorAction(): ViewModel
+    {
+        $user = $this->getUserIdentity();
+        $story = $user->getProfile()->getCurrentEditorStory();
+        if (!$story) {
+            /** @noinspection PhpUndefinedMethodInspection */
+            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
+        }
+        $viewModel = new ViewModel();
+        $viewModel->setVariables([
+            'story' => $story,
+            'section' => self::SECTION_PASSAGES
+        ]);
+        return $viewModel;
+    }
+
+    /**
      * @return \Zend\Http\Response|ViewModel
      * @throws OptimisticLockException
      * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function createAction()
     {
         $user = $this->getUserIdentity();
         /** @var Request $request */
         $request = $this->getRequest();
-        $form = $this->getService()->getForm();
-        $storyId = $this->params()->fromQuery('sid');
-        $story = $this->service->findEntity(Story::class, $storyId);
+        $form = $this->service->getForm();
+        $story = $user->getProfile()->getCurrentEditorStory();
         if (!$story) {
             /** @noinspection PhpUndefinedMethodInspection */
             return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
         }
-        if ($story->getAuthor() != $user) {
+        if ($story->getAuthor() !== $user) {
             /** @noinspection PhpUndefinedMethodInspection */
             return $this->getResponse()->setStatusCode(Response::STATUS_CODE_403);
         }
         $viewModel = new ViewModel([
             'form' => $form,
             'story' => $story,
-            'section' => self::ACTION_PASSAGES
+            'section' => self::SECTION_PASSAGES
         ]);
-        $entity = $this->getService()->getEntity();
+        $entity = $this->service->getEntity();
         $form->bind($entity);
         // show form if no post
         if (!$request->isPost()) {
@@ -86,29 +103,32 @@ class PassageController extends TwistyPassagesAbstractEntityController
         if (!$form->isValid()) {
             return $viewModel;
         }
-        $this->getService()->persist($entity);
+        $this->service->persist($entity);
         try {
-            $this->getService()->flush($entity);
+            $this->service->flush($entity);
         }
         catch (OptimisticLockException $e) {
             throw $e;
         }
-        return $this->redirect()->toRoute($this->getService()->getRouteName(), ['action' => self::ACTION_DETAIL, 'id' => $entity->getId()]);
+        return $this->redirect()->toRoute($this->service->getRouteName(), ['action' => self::STRING_DETAIL, 'id' => $entity->getId()]);
     }
 
     /**
      * @param array $entities
      * @return array
      */
-    protected function populateXhrData($entities)
+    protected function populateXhrData($entities): array
     {
         $data = [];
         foreach ($entities as $entity) {
             /** @var Passage $entity */
+            $description = $entity->getDescription();
+            $filter = new StringLengthFilter();
+            $description = $filter->filter($description);
             $data[] = [
-                'id' => $entity->getId(),
+                'actions' => $this->service->getActionButtonsDefinitions($entity->getId()),
                 'title' => $entity->getTitle(),
-                'description' => $entity->getDescription(),
+                'description' => $description,
                 'status' => PassageService::$status[$entity->getStatus()],
                 'added' => $entity->getAdded()->format('Y/m/d H:i:s'),
                 'sub' => ($entity->getAllowChoiceSubmissions()) ? "yes" : "no",
@@ -117,4 +137,11 @@ class PassageController extends TwistyPassagesAbstractEntityController
         return $data;
     }
 
+    /**
+     * @return string
+     */
+    public function getSectionname(): string
+    {
+        return "passages";
+    }
 }

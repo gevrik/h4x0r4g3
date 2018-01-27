@@ -53,9 +53,9 @@ class StoryController extends TwistyPassagesAbstractEntityController
     {
         /** @var Request $request */
         $request = $this->getRequest();
-        $form = $this->getService()->getForm();
+        $form = $this->service->getForm();
         $viewModel = new ViewModel(['form' => $form]);
-        $entity = $this->getService()->getEntity();
+        $entity = $this->service->getEntity();
         $form->bind($entity);
         // show form if no post
         if (!$request->isPost()) {
@@ -67,21 +67,21 @@ class StoryController extends TwistyPassagesAbstractEntityController
         if (!$form->isValid()) {
             return $viewModel;
         }
-        $this->getService()->persist($entity);
+        $this->service->persist($entity);
         try {
-            $this->getService()->flush($entity);
+            $this->service->flush($entity);
         }
         catch (OptimisticLockException $e) {
             throw $e;
         }
-        return $this->redirect()->toRoute($this->getService()->getRouteName(), ['action' => 'detail', 'id' => $entity->getId()]);
+        return $this->redirect()->toRoute($this->service->getRouteName(), ['action' => self::STRING_DETAIL, 'id' => $entity->getId()]);
     }
 
     /**
      * @param array $entities
      * @return array
      */
-    protected function populateXhrData($entities)
+    protected function populateXhrData($entities): array
     {
         $data = [];
         foreach ($entities as $entity) {
@@ -92,6 +92,22 @@ class StoryController extends TwistyPassagesAbstractEntityController
             ];
         }
         return $data;
+    }
+
+    /**
+     * @return ViewModel
+     */
+    public function indexEditorAction(): ViewModel
+    {
+        return new ViewModel();
+    }
+
+    /**
+     * @return string
+     */
+    public function getSectionname(): string
+    {
+        return "stories";
     }
 
 }

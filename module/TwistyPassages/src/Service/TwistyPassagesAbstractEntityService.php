@@ -12,6 +12,7 @@ namespace TwistyPassages\Service;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\QueryBuilder;
+use TwistyPassages\Entity\Story;
 use Zend\Form\Form;
 
 abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstractService implements TwistyPassagesEntityServiceInterface
@@ -137,18 +138,30 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      * @param array $columns
      * @param array $order
      * @param string $searchValue
+     * @param int|null $storyId
      * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = ""): array
+    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = "", int $storyId = null): array
     {
         $this->initQueryBuilder();
         $this->queryBuilder->select('e');
+        if ($storyId) {
+            $story = $this->findEntity(Story::class, $storyId);
+            if ($story) {
+                $this->queryBuilder->where('e.story = :story');
+                $this->queryBuilder->setParameter('story', $story);
+            }
+        }
         if (!empty($searchValue)) {
             $this->getSearchWhere($searchValue);
         }
         foreach ($order as $orderData) {
             $column = $orderData['column'];
             $columnName = $columns[$column]['data'];
+            if ($columnName == 'actions') continue;
             $dir = $orderData['dir'];
             $this->addOrderBy($columnName, $dir);
         }

@@ -75,6 +75,9 @@ class StoryEditorController extends TwistyPassagesAbstractController
             /** @noinspection PhpUndefinedMethodInspection */
             return $this->getResponse()->setStatusCode(Response::STATUS_CODE_403);
         }
+        $profile = $user->getProfile();
+        $profile->setCurrentEditorStory($story);
+        $this->getService()->flush($profile);
         $viewModel = new ViewModel();
         $viewModel->setVariables([
             'story' => $story,

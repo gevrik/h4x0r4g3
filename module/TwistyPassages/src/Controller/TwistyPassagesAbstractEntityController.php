@@ -17,8 +17,19 @@ use Zend\View\Model\ViewModel;
 abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbstractController
 {
 
-    const ACTION_DETAIL = 'detail';
-    const ACTION_PASSAGES = 'passages';
+    const STRING_DETAIL = 'detail';
+
+    const SECTION_PASSAGES = 'passages';
+
+    /**
+     * @return ViewModel
+     */
+    abstract public function indexEditorAction(): ViewModel;
+
+    /**
+     * @return string
+     */
+    abstract public function getSectionname(): string;
 
     /**
      * @return \Zend\Http\Response|ViewModel
@@ -30,7 +41,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
      * @param array $entities
      * @return array
      */
-    abstract protected function populateXhrData($entities);
+    abstract protected function populateXhrData($entities): array;
 
     /**
      * @return ViewModel
@@ -49,13 +60,15 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
      */
     public function detailAction(): ViewModel
     {
+        $user = $this->getUserIdentity();
         $id = $this->params()->fromRoute('id');
         $entity = $this->getService()->find($id);
+        $story = $user->getProfile()->getCurrentEditorStory();
         $viewModel = new ViewModel();
         $viewModel->setVariables([
-            'story' => $entity,
+            'story' => $story,
             'entity' => $entity,
-            'section' => self::ACTION_DETAIL
+            'section' => $this->getSectionName()
         ]);
         return $viewModel;
     }
@@ -67,6 +80,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
      */
     public function xhrDataAction()
     {
+        $storyId = $this->params()->fromRoute('id');
         $draw = $this->params()->fromQuery('draw');
         $start = $this->params()->fromQuery('start');
         $length = $this->params()->fromQuery('length');
@@ -74,7 +88,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
         $columns = $this->params()->fromQuery('columns');
         $order = $this->params()->fromQuery('order');
         $searchValue = $search['value'];
-        $entities = $this->getService()->getEntities($start, $length, $columns, $order, $searchValue);
+        $entities = $this->getService()->getEntities($start, $length, $columns, $order, $searchValue, $storyId);
         $data = [];
         $data['draw'] = (int)$draw;
         $recordsTotal = (int)$this->getService()->countAll();

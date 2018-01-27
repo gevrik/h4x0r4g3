@@ -10,6 +10,7 @@
 
 namespace TwistyPassages\Controller;
 
+use TmoAuth\Entity\User;
 use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\Mvc\MvcEvent;
@@ -35,7 +36,7 @@ abstract class TwistyPassagesAbstractController extends AbstractActionController
     }
 
     /**
-     * @return mixed
+     * @return null|User
      */
     protected function getUserIdentity()
     {

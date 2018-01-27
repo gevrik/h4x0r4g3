@@ -12,6 +12,7 @@ namespace TwistyPassages\Factory;
 
 use Interop\Container\ContainerInterface;
 use TwistyPassages\Controller\PassageController;
+use TwistyPassages\Filter\StringLengthFilter;
 use TwistyPassages\Service\PassageService;
 use Zend\ServiceManager\Factory\FactoryInterface;
 

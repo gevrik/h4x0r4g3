@@ -27,6 +27,7 @@
 
     <!-- Scripts -->
     <?php echo $this->headScript()
+        ->prependFile($this->basePath('js/tp.js'))
         ->prependFile($this->basePath('assets/vendor/holder/holder.min.js'))
         ->prependFile($this->basePath('js/jquery.contextMenu.min.js'))
         ->prependFile($this->basePath('assets/vendor/datatables/js/dataTables.bootstrap4.min.js'))

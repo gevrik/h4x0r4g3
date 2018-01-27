@@ -42,13 +42,6 @@ class Choice
      */
     protected $added;
 
-    // ORM
-
-    /**
-     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Story")
-     */
-    protected $passage;
-
 
     /**
      * @return int
@@ -119,26 +112,6 @@ class Choice
     public function setAdded(\DateTime $added)
     {
         $this->added = $added;
-        return $this;
-    }
-
-    // ORM
-
-    /**
-     * @return null|Passage
-     */
-    public function getPassage()
-    {
-        return $this->passage;
-    }
-
-    /**
-     * @param Passage $passage
-     * @return Choice
-     */
-    public function setPassage($passage)
-    {
-        $this->passage = $passage;
         return $this;
     }
 

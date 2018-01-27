@@ -27,6 +27,7 @@
 
     <!-- Scripts -->
     <?php echo $this->headScript()
+        ->prependFile($this->basePath('js/tp-editor.js'))
         ->prependFile($this->basePath('assets/vendor/holder/holder.min.js'))
         ->prependFile($this->basePath('js/jquery.contextMenu.min.js'))
         ->prependFile($this->basePath('assets/vendor/datatables/js/dataTables.bootstrap4.min.js'))
@@ -44,7 +45,7 @@
 <body>
 
 <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
-    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">TWISTY PASSAGES - EDITOR</a>
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="/tp">TWISTY PASSAGES</a>
     <?php if ($this->entity) : ?>
         <input class="form-control form-control-dark w-100" type="text" placeholder="Search" aria-label="Search">
     <?php endif; ?>
@@ -53,6 +54,7 @@
             <?php if(!$this->zfcUserIdentity()): ?>
                 <a class="nav-link" href="login">Sign in</a>
             <?php else : ?>
+
                 <a class="nav-link" href="/user/logout">Sign out</a>
             <?php endif; ?>
         </li>

@@ -15,7 +15,7 @@ class HtmlAwed extends AbstractFilter
 
     /**
      * HtmlAwed constructor.
-     * @param null $options
+     * @param null|array|\Traversable $options
      */
     public function __construct($options = NULL)
     {
@@ -30,7 +30,7 @@ class HtmlAwed extends AbstractFilter
      */
     public function filter($value)
     {
-        $value = htmLawed($value, ['safe'=>1,'elements'=>'strong']);
+        $value = htmLawed($value, $this->options);
         return $value;
     }
 

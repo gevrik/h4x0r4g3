@@ -104,7 +104,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
      */
     public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface
     {
-        $this->queryBuilder->where($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
+        $this->queryBuilder->andWhere($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
         return $this;
     }
 

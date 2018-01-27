@@ -89,9 +89,10 @@ interface TwistyPassagesEntityServiceInterface
      * @param array $columns
      * @param array $order
      * @param string $searchValue
+     * @param int|null $storyId
      * @return array
      */
-    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = ""): array;
+    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = "", int $storyId = null): array;
 
     /**
      * @return int

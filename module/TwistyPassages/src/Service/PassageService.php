@@ -110,8 +110,20 @@ class PassageService extends TwistyPassagesAbstractEntityService
      */
     public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface
     {
-        $this->queryBuilder->where($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
+        $this->queryBuilder->andWhere($this->queryBuilder->expr()->like('e.title', $this->queryBuilder->expr()->literal($searchValue . '%')));
         return $this;
+    }
+
+    /**
+     * @param int $entityId
+     * @return array
+     */
+    public function getActionButtonsDefinitions(int $entityId)
+    {
+        return [
+            ['route' => 'passage', 'action' => 'detail', 'id' => $entityId, 'icon' => 'fa-info'],
+            ['route' => 'passage', 'action' => 'update', 'id' => $entityId, 'icon' => 'fa-pencil'],
+        ];
     }
 
 }
