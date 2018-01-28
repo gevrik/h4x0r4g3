@@ -10,6 +10,7 @@
 
 namespace TwistyPassages\Service;
 
+use TwistyPassages\Entity\Passage;
 use TwistyPassages\Entity\Story;
 use TwistyPassages\Form\StoryForm;
 use Zend\Form\Form;
@@ -106,6 +107,23 @@ class StoryService extends TwistyPassagesAbstractEntityService
     {
         $this->queryBuilder->andWhere($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
         return $this;
+    }
+
+    /**
+     * @param $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function delete($entity)
+    {
+        $passages = $this->entityManager->getRepository($this->getClassName())->findBy([
+            'story' => $entity
+        ]);
+        foreach ($passages as $passage) {
+            /** @var Passage $passage */
+            $this->entityManager->remove($passage);
+        }
+        $this->entityManager->remove($entity);
+        $this->flush();
     }
 
 }

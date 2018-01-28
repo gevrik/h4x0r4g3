@@ -71,6 +71,13 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
 
     /**
      * @param $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    abstract public function delete($entity);
+
+    /**
+     * @param $entity
      */
     public function persist($entity)
     {
@@ -78,12 +85,17 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
     }
 
     /**
-     * @param $entity
+     * @param mixed $entity
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    public function flush($entity)
+    public function flush($entity = null)
     {
-        $this->entityManager->flush($entity);
+        if ($entity) {
+            $this->entityManager->flush($entity);
+        }
+        else {
+            $this->entityManager->flush();
+        }
     }
 
     /**
@@ -169,6 +181,19 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
         $this->queryBuilder->setMaxResults($length);
         $entities = $this->queryBuilder->getQuery()->getResult();
         return $entities;
+    }
+
+    /**
+     * @param int $entityId
+     * @return array
+     */
+    protected function getDefaultActionButtons(int $entityId)
+    {
+        return [
+            ['route' => $this->getRouteName(), 'action' => 'detail', 'id' => $entityId, 'icon' => 'fa-info', 'class' => 'btn-primary'],
+            ['route' => $this->getRouteName(), 'action' => 'update', 'id' => $entityId, 'icon' => 'fa-pencil', 'class' => 'btn-primary'],
+            ['route' => $this->getRouteName(), 'action' => 'delete', 'id' => $entityId, 'icon' => 'fa-trash', 'class' => 'btn-danger'],
+        ];
     }
 
 }

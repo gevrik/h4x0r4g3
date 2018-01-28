@@ -82,14 +82,12 @@ class StoryController extends TwistyPassagesAbstractEntityController
      * @return Response|ViewModel
      * @throws OptimisticLockException
      * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function updateAction()
     {
         $user = $this->getUserIdentity();
         /** @var Request $request */
-        $id = $this->params()->fromRoute('id');
-        $entity = $this->service->find($id);
+        $entity = $user->getProfile()->getCurrentEditorStory();
         if (!$entity) {
             /** @noinspection PhpUndefinedMethodInspection */
             return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
@@ -101,7 +99,12 @@ class StoryController extends TwistyPassagesAbstractEntityController
         $request = $this->getRequest();
         $form = $this->service->getForm();
         $form->bind($entity);
-        $viewModel = new ViewModel(['form' => $form, 'entity' => $entity]);
+        $viewModel = new ViewModel([
+            'form' => $form,
+            'entity' => $entity,
+            'section' => self::SECTION_STORIES,
+            'story' => $entity
+        ]);
         // show form if no post
         if (!$request->isPost()) {
             return $viewModel;

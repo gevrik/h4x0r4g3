@@ -1,5 +1,9 @@
 $.fn.dataTable.render.actionButtons = function () {
     return function ( data, type, row ) {
-        return '<a href="/' + data[0].route + '/' + data[0].action + '/' + data[0].id + '" class="btn btn-primary btn-sm"><i class="fa ' + data[0].icon + '"></i></a>';
+        var actionHtml = '';
+        for (var i = 0, len = data.length; i < len; i++) {
+            actionHtml += '<a href="/' + data[i].route + '/' + data[i].action + '/' + data[i].id + '" class="btn btn-sm ' + data[i].class +  '"><i class="fa fa-fw ' + data[i].icon + '"></i></a> ';
+        }
+        return actionHtml;
     };
 };

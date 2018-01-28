@@ -13,6 +13,7 @@ namespace TwistyPassages\Service;
 use TwistyPassages\Entity\Passage;
 use TwistyPassages\Form\PassageForm;
 use Zend\Form\Form;
+use Zend\Http\Response;
 
 class PassageService extends TwistyPassagesAbstractEntityService
 {
@@ -120,10 +121,22 @@ class PassageService extends TwistyPassagesAbstractEntityService
      */
     public function getActionButtonsDefinitions(int $entityId)
     {
-        return [
-            ['route' => 'passage', 'action' => 'detail', 'id' => $entityId, 'icon' => 'fa-info'],
-            ['route' => 'passage', 'action' => 'update', 'id' => $entityId, 'icon' => 'fa-pencil'],
-        ];
+        $buttonDefinitions = $this->getDefaultActionButtons($entityId);
+        return $buttonDefinitions;
+    }
+
+    /**
+     * @param $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    public function delete($entity)
+    {
+        if (!$entity instanceof Passage) {
+            throw new \Exception("request to delete passage but no valid passage given", Response::STATUS_CODE_400);
+        }
+        $this->entityManager->remove($entity);
+        $this->flush();
     }
 
 }

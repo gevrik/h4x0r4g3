@@ -37,14 +37,21 @@ interface TwistyPassagesEntityServiceInterface
 
     /**
      * @param $entity
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    public function delete($entity);
+
+    /**
+     * @param $entity
      */
     public function persist($entity);
 
     /**
-     * @param $entity
+     * @param mixed $entity
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    public function flush($entity);
+    public function flush($entity = null);
 
     /**
      * @return TwistyPassagesEntityServiceInterface

@@ -18,8 +18,10 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
 {
 
     const STRING_DETAIL = 'detail';
+    const STRING_INDEX_EDITOR = 'index-editor';
 
     const SECTION_PASSAGES = 'passages';
+    const SECTION_STORIES = 'stories';
 
     /**
      * @return ViewModel

@@ -9,6 +9,9 @@ use TwistyPassages\Factory\StoryEditorControllerFactory;
 use TwistyPassages\Factory\StoryServiceFactory;
 use TwistyPassages\Factory\WelcomeControllerFactory;
 use TwistyPassages\Factory\WelcomeServiceFactory;
+use TwistyPassages\Service\PassageService;
+use TwistyPassages\Service\StoryService;
+use TwistyPassages\Service\WelcomeService;
 
 return [
     'router' => [
@@ -87,9 +90,9 @@ return [
     ],
     'service_manager' => [
         'factories' => [
-            'TwistyPassages\Service\PassageService' => PassageServiceFactory::class,
-            'TwistyPassages\Service\StoryService' => StoryServiceFactory::class,
-            'TwistyPassages\Service\WelcomeService' => WelcomeServiceFactory::class,
+            PassageService::class => PassageServiceFactory::class,
+            StoryService::class => StoryServiceFactory::class,
+            WelcomeService::class => WelcomeServiceFactory::class,
         ],
     ],
     'translator' => [

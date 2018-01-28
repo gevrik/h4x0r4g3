@@ -1,7 +1,7 @@
 <?php
 /** @var \Zend\Form\Form $form */
 $form = $this->form;
-$form->setAttribute('action', $this->url('passage', ['action' => 'create']));
+$form->setAttribute('action', $this->url('passage', ['action' => 'update', 'id' => $this->entity->getId()]));
 
 /** @var \Zend\Form\Fieldset $fieldset */
 $fieldset = $form->get('passage');
@@ -18,14 +18,11 @@ $description->setAttribute('placeholder', $this->translate("Passage description"
 $description->setLabel($this->translate("Description"));
 
 $status = $fieldset->get('status');
-$status->setValue(\TwistyPassages\Service\PassageService::STATUS_CREATED);
 
 $added = $fieldset->get('added');
-$now = new DateTime();
-$added->setValue($now->format('Y-m-d H:i:s'));
+$added->setValue($this->entity->getAdded()->format('Y-m-d H:i:s'));
 
 $storyElement = $fieldset->get('story');
-$storyElement->setValue($this->story);
 
 $allowChoiceSubmissions = $fieldset->get('allowChoiceSubmissions');
 $allowChoiceSubmissions->setAttribute('class', 'form-control');
@@ -33,7 +30,7 @@ $allowChoiceSubmissions->setLabel($this->translate("allow choice submissions?"))
 
 $submit = $form->get('submit');
 $submit->setAttribute('class', 'btn btn-primary');
-$submit->setValue($this->translate("Create passage"));
+$submit->setValue($this->translate("Edit passage"));
 
 $form->prepare();
 
@@ -47,7 +44,7 @@ $form->prepare();
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
 
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                <h1 class="jumbotron-heading"><?php echo $this->translate(sprintf("Create a new passage in %s", $this->story->getTitle())); ?></h1>
+                <h1 class="jumbotron-heading"><?php echo $this->translate(sprintf("Edit a passage in %s", $this->story->getTitle())); ?></h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
                     <div class="btn-group mr-2">
                         <?php echo $this->partial('twisty-passages/partials/editor-button-menu'); ?>
@@ -80,8 +77,11 @@ $form->prepare();
                         </div>
                     </div>
                     <?php echo $this->formHidden($storyElement); ?>
+                    <?php echo $this->formElementErrors($storyElement, array('class' => 'text-danger')) ?>
                     <?php echo $this->formHidden($status); ?>
+                    <?php echo $this->formElementErrors($status, array('class' => 'text-danger')) ?>
                     <?php echo $this->formHidden($added); ?>
+                    <?php echo $this->formElementErrors($added, array('class' => 'text-danger')) ?>
                     <div class="row">
                         <?php echo $this->formSubmit($submit); ?>
                     </div>
