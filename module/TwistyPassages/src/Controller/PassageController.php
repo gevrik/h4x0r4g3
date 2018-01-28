@@ -10,14 +10,10 @@
 
 namespace TwistyPassages\Controller;
 
-use Doctrine\ORM\OptimisticLockException;
 use TwistyPassages\Entity\Passage;
 use TwistyPassages\Filter\StringLengthFilter;
 use TwistyPassages\Service\PassageService;
 use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
-use Zend\Http\Request;
-use Zend\Http\Response;
-use Zend\View\Model\ViewModel;
 
 class PassageController extends TwistyPassagesAbstractEntityController
 {
@@ -45,72 +41,6 @@ class PassageController extends TwistyPassagesAbstractEntityController
     protected function getService()
     {
         return $this->service;
-    }
-
-    /**
-     * @return ViewModel
-     */
-    public function indexEditorAction(): ViewModel
-    {
-        $user = $this->getUserIdentity();
-        $story = $user->getProfile()->getCurrentEditorStory();
-        if (!$story) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
-        }
-        $viewModel = new ViewModel();
-        $viewModel->setVariables([
-            'story' => $story,
-            'section' => self::SECTION_PASSAGES
-        ]);
-        return $viewModel;
-    }
-
-    /**
-     * @return \Zend\Http\Response|ViewModel
-     * @throws OptimisticLockException
-     * @throws \Doctrine\ORM\ORMException
-     */
-    public function createAction()
-    {
-        $user = $this->getUserIdentity();
-        /** @var Request $request */
-        $request = $this->getRequest();
-        $form = $this->service->getForm();
-        $story = $user->getProfile()->getCurrentEditorStory();
-        if (!$story) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
-        }
-        if ($story->getAuthor() !== $user) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_403);
-        }
-        $viewModel = new ViewModel([
-            'form' => $form,
-            'story' => $story,
-            'section' => self::SECTION_PASSAGES
-        ]);
-        $entity = $this->service->getEntity();
-        $form->bind($entity);
-        // show form if no post
-        if (!$request->isPost()) {
-            return $viewModel;
-        }
-        // set form data from post
-        $form->setData($request->getPost());
-        // if form is not valid show form again
-        if (!$form->isValid()) {
-            return $viewModel;
-        }
-        $this->service->persist($entity);
-        try {
-            $this->service->flush($entity);
-        }
-        catch (OptimisticLockException $e) {
-            throw $e;
-        }
-        return $this->redirect()->toRoute($this->service->getRouteName(), ['action' => self::STRING_DETAIL, 'id' => $entity->getId()]);
     }
 
     /**
@@ -142,95 +72,7 @@ class PassageController extends TwistyPassagesAbstractEntityController
      */
     public function getSectionname(): string
     {
-        return "passages";
-    }
-
-    /**
-     * @return Response|ViewModel
-     * @throws OptimisticLockException
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function updateAction()
-    {
-        $user = $this->getUserIdentity();
-        /** @var Request $request */
-        $entityId = $this->params()->fromRoute('id');
-        $entity = $this->service->find($entityId);
-        if (!$entity) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
-        }
-        if ($entity->getStory()->getAuthor() !== $user) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_403);
-        }
-        $request = $this->getRequest();
-        $form = $this->service->getForm();
-        $form->bind($entity);
-        $viewModel = new ViewModel([
-            'form' => $form,
-            'entity' => $entity,
-            'section' => self::SECTION_PASSAGES,
-            'story' => $entity->getStory()
-        ]);
-        // show form if no post
-        if (!$request->isPost()) {
-            return $viewModel;
-        }
-        // set form data from post
-        $form->setData($request->getPost());
-        // if form is not valid show form again
-        if (!$form->isValid()) {
-            return $viewModel;
-        }
-        try {
-            $this->service->flush($entity);
-        }
-        catch (OptimisticLockException $e) {
-            throw $e;
-        }
-        return $this->redirect()->toRoute($this->service->getRouteName(), ['action' => self::STRING_DETAIL, 'id' => $entity->getId()]);
-    }
-
-    /**
-     * @return Response|ViewModel
-     * @throws OptimisticLockException
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function deleteAction()
-    {
-        $user = $this->getUserIdentity();
-        /** @var Request $request */
-        $entityId = $this->params()->fromRoute('id');
-        $confirm = $this->params()->fromQuery('confirm');
-        $entity = $this->service->find($entityId);
-        if (!$entity) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_404);
-        }
-        if ($entity->getStory()->getAuthor() !== $user) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_403);
-        }
-        $viewModel = new ViewModel([
-            'entity' => $entity,
-            'section' => self::SECTION_PASSAGES,
-            'story' => $entity->getStory()
-        ]);
-        // show form if no post
-        if (!$confirm) {
-            return $viewModel;
-        }
-        try {
-            $this->service->delete($entity);
-        }
-        catch (\Exception $e) {
-            /** @noinspection PhpUndefinedMethodInspection */
-            return $this->getResponse()->setStatusCode(Response::STATUS_CODE_400);
-        }
-        return $this->redirect()->toRoute($this->service->getRouteName(), ['action' => self::STRING_INDEX_EDITOR]);
+        return self::SECTION_PASSAGES;
     }
 
 }
