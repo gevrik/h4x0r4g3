@@ -30,6 +30,11 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      */
     protected $queryBuilder;
 
+    /**
+     * @var array
+     */
+    static $status = [];
+
 
     /**
      * TwistyPassagesAbstractEntityService constructor.
@@ -50,24 +55,6 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      * @return Form
      */
     abstract public function getForm(): Form;
-
-    /**
-     * @param string $searchValue
-     * @return TwistyPassagesEntityServiceInterface
-     */
-    abstract public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface;
-
-    /**
-     * @return TwistyPassagesEntityServiceInterface
-     */
-    abstract public function initQueryBuilder(): TwistyPassagesEntityServiceInterface;
-
-    /**
-     * @param $columnName
-     * @param $dir
-     * @return TwistyPassagesEntityServiceInterface
-     */
-    abstract public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface;
 
     /**
      * @param $entity
@@ -111,19 +98,6 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
     }
 
     /**
-     * @param string $class
-     * @param int $id
-     * @return null|object
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function findEntity(string $class, int $id)
-    {
-        return $this->entityManager->find($class, $id);
-    }
-
-    /**
      * @return int
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
@@ -134,14 +108,6 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
         $qb->select($qb->expr()->count('e.id'));
         $qb->from($this->getClassName(), 'e');
         return $qb->getQuery()->getSingleScalarResult();
-    }
-
-    /**
-     * @return string
-     */
-    public function getRouteName(): string
-    {
-        return $this::ROUTE;
     }
 
     /**
@@ -184,6 +150,37 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
     }
 
     /**
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    abstract public function initQueryBuilder(): TwistyPassagesEntityServiceInterface;
+
+    /**
+     * @param string $class
+     * @param int $id
+     * @return null|object
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function findEntity(string $class, int $id)
+    {
+        return $this->entityManager->find($class, $id);
+    }
+
+    /**
+     * @param string $searchValue
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    abstract public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface;
+
+    /**
+     * @param $columnName
+     * @param $dir
+     * @return TwistyPassagesEntityServiceInterface
+     */
+    abstract public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface;
+
+    /**
      * @param int $entityId
      * @return array
      */
@@ -194,6 +191,14 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
             ['route' => $this->getRouteName(), 'action' => 'update', 'id' => $entityId, 'icon' => 'fa-pencil', 'class' => 'btn-primary'],
             ['route' => $this->getRouteName(), 'action' => 'delete', 'id' => $entityId, 'icon' => 'fa-trash', 'class' => 'btn-danger'],
         ];
+    }
+
+    /**
+     * @return string
+     */
+    public function getRouteName(): string
+    {
+        return $this::ROUTE;
     }
 
 }

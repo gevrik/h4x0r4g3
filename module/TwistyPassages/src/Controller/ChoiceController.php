@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Controller for Entity Story.
- * Controller for Entity Story.
+ * Controller for Entity Passage.
+ * Controller for Entity Passage.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,25 +10,25 @@
 
 namespace TwistyPassages\Controller;
 
-use TwistyPassages\Entity\Story;
-use TwistyPassages\Service\StoryService;
+use TwistyPassages\Entity\Choice;
+use TwistyPassages\Service\ChoiceService;
 use TwistyPassages\Service\TwistyPassagesEntityServiceInterface;
 
-class StoryController extends TwistyPassagesAbstractEntityController
+class ChoiceController extends TwistyPassagesAbstractEntityController
 {
 
     /**
-     * @var StoryService
+     * @var ChoiceService
      */
     protected $service;
 
 
     /**
-     * StoryController constructor.
-     * @param StoryService $service
+     * ChoiceController constructor.
+     * @param ChoiceService $service
      */
     public function __construct(
-        StoryService $service
+        ChoiceService $service
     )
     {
         $this->service = $service;
@@ -50,10 +50,13 @@ class StoryController extends TwistyPassagesAbstractEntityController
     {
         $data = [];
         foreach ($entities as $entity) {
-            /** @var Story $entity */
+            /** @var Choice $entity */
             $data[] = [
-                'id' => $entity->getId(),
-                'title' => $entity->getTitle()
+                'actions' => $this->service->getActionButtonsDefinitions($entity->getId()),
+                'title' => $entity->getTitle(),
+                'description' => $entity->getDescription(),
+                'status' => ChoiceService::$status[$entity->getStatus()],
+                'added' => $entity->getAdded()->format('Y/m/d H:i:s'),
             ];
         }
         return $data;
@@ -64,7 +67,7 @@ class StoryController extends TwistyPassagesAbstractEntityController
      */
     public function getSectionname(): string
     {
-        return self::SECTION_STORIES;
+        return self::SECTION_CHOICES;
     }
 
 }

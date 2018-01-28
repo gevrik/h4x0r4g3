@@ -21,7 +21,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($this->section == 'choices') ? 'active' : ''; ?>" href="<?php echo $this->url('story-editor', ['action']); ?>">
+                    <a class="nav-link <?php echo ($this->section == 'choices') ? 'active' : ''; ?>" href="<?php echo $this->url('choice', ['action' => 'index-editor']); ?>">
                         <i class="fa fa-bars"></i>
                         <?php echo $this->translate("Choices"); ?> <?php echo ($this->section == 'choices') ? '<span class="sr-only">(current)</span>' : ''; ?>
                     </a>

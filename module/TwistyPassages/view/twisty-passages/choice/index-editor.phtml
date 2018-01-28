@@ -1,0 +1,50 @@
+<div class="container-fluid">
+    <div class="row">
+
+        <?php echo $this->partial('twisty-passages/partials/editor-sidebar'); ?>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h1 class="h2"><?php echo $this->translate(sprintf("Choices in %s", $this->story->getTitle())); ?></h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <?php echo $this->partial('twisty-passages/partials/editor-button-menu'); ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table id="choice-table" class="table table-sm table-bordered table-striped display" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>ACTIONS</th>
+                        <th>TITLE</th>
+                        <th>DESCRIPTION</th>
+                        <th>STATUS</th>
+                        <th>ADDED</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+
+        </main>
+
+    </div>
+</div>
+
+<script type="application/javascript">
+    $('#choice-table').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "pageLength": 25,
+        "ajax": "<?php echo $this->url('choice', array('action' => 'xhrData', 'id' => $this->story->getId())); ?>",
+        "columns": [
+            { "data": "actions", "render": $.fn.dataTable.render.actionButtons(), "orderable": false },
+            { "data": "title" },
+            { "data": "description", "orderable": false },
+            { "data": "status" },
+            { "data": "added" }
+        ]
+    });
+</script>

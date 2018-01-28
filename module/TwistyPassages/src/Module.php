@@ -5,6 +5,7 @@ use Zend\Config\Factory;
 use Zend\ModuleManager\Feature\ConfigProviderInterface;
 use Zend\ModuleManager\Feature\InitProviderInterface;
 use Zend\ModuleManager\ModuleManagerInterface;
+use Zend\Mvc\MvcEvent;
 
 class Module implements ConfigProviderInterface, InitProviderInterface
 {

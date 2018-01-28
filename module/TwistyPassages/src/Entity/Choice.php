@@ -31,6 +31,12 @@ class Choice
     protected $title;
 
     /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $description;
+
+    /**
      * @ORM\Column(type="integer")
      * @var int
      */
@@ -41,6 +47,13 @@ class Choice
      * @var \DateTime
      */
     protected $added;
+
+    // ORM
+
+    /**
+     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Story")
+     */
+    protected $story;
 
 
     /**
@@ -80,6 +93,24 @@ class Choice
     }
 
     /**
+     * @return null|string
+     */
+    public function getDescription()
+    {
+        return $this->description;
+    }
+
+    /**
+     * @param null|string $description
+     * @return Choice
+     */
+    public function setDescription($description): Choice
+    {
+        $this->description = $description;
+        return $this;
+    }
+
+    /**
      * @return int
      */
     public function getStatus()
@@ -112,6 +143,26 @@ class Choice
     public function setAdded(\DateTime $added)
     {
         $this->added = $added;
+        return $this;
+    }
+
+    // ORM
+
+    /**
+     * @return null|Story
+     */
+    public function getStory()
+    {
+        return $this->story;
+    }
+
+    /**
+     * @param Story $story
+     * @return Choice
+     */
+    public function setStory($story)
+    {
+        $this->story = $story;
         return $this;
     }
 

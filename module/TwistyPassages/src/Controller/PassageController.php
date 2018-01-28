@@ -25,7 +25,7 @@ class PassageController extends TwistyPassagesAbstractEntityController
 
 
     /**
-     * TwistyPassagesAbstractController constructor.
+     * PassageController constructor.
      * @param PassageService $service
      */
     public function __construct(

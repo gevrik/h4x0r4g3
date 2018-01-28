@@ -25,6 +25,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
 
     const SECTION_PASSAGES = 'passages';
     const SECTION_STORIES = 'stories';
+    const SECTION_CHOICES = 'choices';
 
     /**
      * @return string
@@ -228,7 +229,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
             'form' => $form,
             'entity' => $entity,
             'section' => $this->getSectionname(),
-            'story' => $story
+            'story' => $story,
         ]);
         // show form if no post
         if (!$request->isPost()) {

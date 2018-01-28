@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Passage Service.
- * Passage Service.
+ * Choice Service.
+ * Choice Service.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -10,15 +10,15 @@
 
 namespace TwistyPassages\Service;
 
-use TwistyPassages\Entity\Passage;
-use TwistyPassages\Form\PassageForm;
+use TwistyPassages\Entity\Choice;
+use TwistyPassages\Form\ChoiceForm;
 use Zend\Form\Form;
 use Zend\Http\Response;
 
-class PassageService extends TwistyPassagesAbstractEntityService
+class ChoiceService extends TwistyPassagesAbstractEntityService
 {
 
-    const ROUTE = 'passage';
+    const ROUTE = 'choice';
 
     const STATUS_INVALID = 0;
     const STATUS_CREATED = 1;
@@ -37,26 +37,26 @@ class PassageService extends TwistyPassagesAbstractEntityService
     ];
 
     /**
-     * @var Passage
+     * @var Choice
      */
     protected $entity;
 
 
     /**
-     * PassageService constructor.
+     * ChoiceService constructor.
      * @param $entityManager
      */
     public function __construct($entityManager)
     {
         parent::__construct($entityManager);
-        $this->entity = new Passage();
-        $this->form = new PassageForm($entityManager);
+        $this->entity = new Choice();
+        $this->form = new ChoiceForm($entityManager);
     }
 
     /**
-     * @return Passage
+     * @return Choice
      */
-    public function getEntity(): Passage
+    public function getEntity(): Choice
     {
         return $this->entity;
     }
@@ -66,7 +66,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
      */
     public function getClassName(): string
     {
-        return Passage::class;
+        return Choice::class;
     }
 
     /**
@@ -94,7 +94,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
     }
 
     /**
-     * @return PassageForm|\Zend\Form\Form
+     * @return ChoiceForm|\Zend\Form\Form
      */
     public function getForm(): Form
     {
@@ -128,8 +128,8 @@ class PassageService extends TwistyPassagesAbstractEntityService
      */
     public function delete($entity)
     {
-        if (!$entity instanceof Passage) {
-            throw new \Exception("request to delete passage but no valid passage given", Response::STATUS_CODE_400);
+        if (!$entity instanceof Choice) {
+            throw new \Exception("request to delete choice but no valid choice given", Response::STATUS_CODE_400);
         }
         $this->entityManager->remove($entity);
         $this->flush();

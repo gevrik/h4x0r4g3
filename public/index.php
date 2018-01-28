@@ -14,7 +14,7 @@ chdir(dirname(__DIR__));
 //if ('development' === $_SERVER['APPLICATION_ENV']) {
     error_reporting(E_ALL);
     ini_set("display_errors", 1);
-    ini_set("max_execution_time", 5);
+    ini_set("max_execution_time", 10);
 //}
 
 //error_reporting(E_ERROR | E_WARNING | E_PARSE | E_NOTICE);

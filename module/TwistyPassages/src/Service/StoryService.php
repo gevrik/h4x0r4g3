@@ -39,6 +39,16 @@ class StoryService extends TwistyPassagesAbstractEntityService
      */
     protected $entity;
 
+    /**
+     * @var array
+     */
+    static $status = [
+        self::STATUS_CREATED => self::STRING_CREATED,
+        self::STATUS_SUBMITTED => self::STRING_SUBMITTED,
+        self::STATUS_REVIEW => self::STRING_REVIEW,
+        self::STATUS_CHANGED => self::STRING_CHANGED,
+        self::STATUS_APPROVED => self::STRING_APPROVED,
+    ];
 
     /**
      * StoryService constructor.
@@ -57,14 +67,6 @@ class StoryService extends TwistyPassagesAbstractEntityService
     public function getEntity(): Story
     {
         return $this->entity;
-    }
-
-    /**
-     * @return string
-     */
-    public function getClassName(): string
-    {
-        return Story::class;
     }
 
     /**
@@ -124,6 +126,14 @@ class StoryService extends TwistyPassagesAbstractEntityService
         }
         $this->entityManager->remove($entity);
         $this->flush();
+    }
+
+    /**
+     * @return string
+     */
+    public function getClassName(): string
+    {
+        return Story::class;
     }
 
 }
