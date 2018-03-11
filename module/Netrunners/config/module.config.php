@@ -92,6 +92,7 @@ return array(
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',
             'Netrunners\Service\ProfileService' => 'Netrunners\Factory\ProfileServiceFactory',
             'Netrunners\Service\ResearchService' => 'Netrunners\Factory\ResearchServiceFactory',
+            'Netrunners\Service\ServerDataService' => 'Netrunners\Factory\ServerDataServiceFactory',
             'Netrunners\Service\SystemService' => 'Netrunners\Factory\SystemServiceFactory',
             'Netrunners\Service\SystemGeneratorService' => 'Netrunners\Factory\SystemGeneratorServiceFactory',
             'Netrunners\Service\UtilityService' => 'Netrunners\Factory\UtilityServiceFactory',

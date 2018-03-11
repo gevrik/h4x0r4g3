@@ -33,7 +33,6 @@ class ConnectionRepository extends EntityRepository
     /**
      * @param Node $node
      * @return mixed
-     * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function countBySourceNode(Node $node)

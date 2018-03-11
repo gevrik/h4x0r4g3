@@ -26,28 +26,24 @@ class UtilityService extends BaseService
     /**
      * @param null|object $clientData
      * @return bool|string
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function showPrompt($clientData = NULL)
     {
         if (!$clientData) return false;
-        $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
+        $userId = $clientData->userId;
+        $user = $this->getWebsocketServer()->findById('users', $userId);
         if (!$user) return false;
-        $profile = $user->getProfile();
-        /** @var Profile $profile */
-        $currentNode = $profile->getCurrentNode();
-        /** @var Node $currentNode */
-        $currentSystem = $currentNode->getSystem();
-        /** @var System $currentSystem */
+        $profile = $this->getWebsocketServer()->findById('profiles', $user['profileId']);
+        $currentNode = $this->getWebsocketServer()->findById('nodes', $profile['currentNodeId']);
+        $currentNodeType = $this->getWebsocketServer()->findById('nodetypes', $currentNode['nodeTypeId']);
+        $currentSystem = $this->getWebsocketServer()->findById('systems', $currentNode['systemId']);
         // init prompt string
-        $promptString = $currentNode->getName();
-        $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
-        $sneaking = ($profile->getStealthing()) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
-        $fullPromptString = '[<span class="eeg">' . $profile->getEeg() . '/100</span>][<span class="willpower">' .
-            $profile->getWillpower() . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
-            '][' . $currentNode->getNodeType()->getShortName() . '][' . $currentNode->getLevel() . ']</span>' . $sneaking .  ' ';
+        $promptString = $currentNode['name'];
+        $userAtHostString = $user['username'] . '@' . $currentSystem['name'];
+        $sneaking = ($profile['stealthing']) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
+        $fullPromptString = '[<span class="eeg">' . $profile['eeg'] . '/100</span>][<span class="willpower">' .
+            $profile['willpower'] . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
+            '][' . $currentNodeType['shortName'] . '][' . $currentNode['level'] . ']</span>' . $sneaking .  ' ';
         return $fullPromptString;
     }
 

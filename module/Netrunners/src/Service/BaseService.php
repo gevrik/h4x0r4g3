@@ -77,11 +77,6 @@ class BaseService
     const VALUE_TYPE_STORAGELEVELS = 'storagelevels';
 
     /**
-     * @var \Doctrine\ORM\EntityManager
-     */
-    protected $entityManager;
-
-    /**
      * @var PhpRenderer
      */
     protected $viewRenderer;
@@ -102,7 +97,7 @@ class BaseService
     protected $clientData;
 
     /**
-     * @var User
+     * @var array
      */
     protected $user;
 
@@ -124,17 +119,14 @@ class BaseService
 
     /**
      * BaseService constructor.
-     * @param EntityManager $entityManager
      * @param $viewRenderer
      * @param $translator
      */
     public function __construct(
-        EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator
     )
     {
-        $this->entityManager = $entityManager;
         $this->viewRenderer = $viewRenderer;
         $this->translator = $translator;
     }
@@ -175,7 +167,6 @@ class BaseService
     /**
      * @param System $system
      * @param int $amount
-     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function raiseSystemAlertLevel(System $system, $amount = 0)
     {
@@ -2202,45 +2193,39 @@ class BaseService
 
     /**
      * @param $resourceId
-     * @param Profile|NULL $profile
+     * @param int $profileId
      * @param bool $silent
      * @return GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function updateMap($resourceId, Profile $profile = NULL, $silent = true)
+    public function updateMap($resourceId, int $profileId = NULL, $silent = true)
     {
         $updatedMapPackage = new GameClientResponse($resourceId, GameClientResponse::COMMAND_SHOWMAP, [], $silent);
-        $updatedMapPackage->addOption(GameClientResponse::OPT_CONTENT, $this->generateAreaMap($profile));
+        $updatedMapPackage->addOption(GameClientResponse::OPT_CONTENT, $this->generateAreaMap($profileId));
         return $updatedMapPackage->send();
     }
 
     /**
-     * @param Profile|NULL $xprofile
+     * @param int $xprofileId
      * @return string
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
      */
-    public function generateAreaMap(Profile $xprofile = NULL)
+    public function generateAreaMap(int $xprofileId = NULL)
     {
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        /** @var FileRepository $fileRepo */
-        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
-        /** @var NpcInstanceRepository $npcInstanceRepo */
-        $knRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
-        /** @var KnownNodeRepository $knRepo */
-        $profile = ($xprofile) ? $xprofile : $this->user->getProfile();
-        $currentNode = $profile->getCurrentNode();
+        $profileId = ($xprofileId) ? $xprofileId : $this->user['profileId'];
+        $profile = $this->getWebsocketServer()->findById('profiles', $profileId);
+        $currentNode = $this->getWebsocketServer()->findById('nodes', $profile['currentNodeId']);
         // if the profile or its faction or group owns this system, show them the full map
-        $currentSystem = $currentNode->getSystem();
+        $currentSystem = $this->getWebsocketServer()->findById('systems', $currentNode['systemId']);
         if (
-            $profile === $currentSystem->getProfile() ||
-            ($profile->getFaction() && $profile->getFaction() == $currentSystem->getFaction()) ||
-            ($profile->getGroup() && $profile->getGroup() == $currentSystem->getGroup())
+            $profileId === $currentSystem['profileId'] ||
+            ($profile['factionId'] && $profile['factionId'] == $currentSystem['factionId']) ||
+            ($profile['groupId'] && $profile['groupId'] == $currentSystem['groupId'])
         ) {
-            return $this->generateSystemMap($xprofile);
+            return $this->generateSystemMap($xprofileId);
         }
         $mapArray = [
             'nodes' => [],
@@ -2248,29 +2233,27 @@ class BaseService
         ];
         $nodes = [];
         $nodes[] = $currentNode;
-        $connections = $connectionRepo->findBySourceNode($currentNode);
+        $connections = $this->getWebsocketServer()->findByPropertyValue('connections', 'sourceNodeId', $currentNode['id']);
         foreach ($connections as $xconnection) {
-            /** @var Connection $xconnection */
-            $nodes[] = $xconnection->getTargetNode();
+            $nodes[] = $this->getWebsocketServer()->findById('nodes', $xconnection['targetNodeId']);
         }
-        $knownNodes = $knRepo->findByProfileAndSystem($profile, $currentSystem);
+        $knownNodes = $this->getWebsocketServer()->executeDataServiceMethod('findKnownNodesByProfileAndSystem', $profile['id'], $currentSystem['id']);
         foreach ($knownNodes as $knownNode) {
-            /** @var KnownNode $knownNode */
-            $knownNodeNode = $knownNode->getNode();
+            $knownNodeNode = $this->getWebsocketServer()->findById('nodes', $knownNode['nodeId']);
             if (in_array($knownNodeNode, $nodes)) continue;
-            $kconnections = $connectionRepo->findBySourceNode($knownNodeNode);
+            $kconnections = $this->getWebsocketServer()->findByPropertyValue('connections', 'sourceNodeId', $knownNodeNode['id']);
             foreach ($kconnections as $kconnection) {
-                /** @var Connection $kconnection */
                 $typeValue = 'A';
-                if ($kconnection->getType() == Connection::TYPE_CODEGATE) {
-                    if ($kconnection->getisOpen()) {
+                if ($kconnection['type'] == Connection::TYPE_CODEGATE) {
+                    if ($kconnection['isOpen']) {
                         $typeValue = 'Y';
                     }
                     else {
                         $typeValue = 'E';
                     }
                 }
-                if (in_array($kconnection->getTargetNode(), $nodes)) {
+                if (in_array($this->getWebsocketServer()->findById('nodes', $kconnection['targetNodeId']), $nodes)) {
+                    // TODO CONTINUE WORK HERE
                     $mapArray['links'][] = [
                         'source' => (string)$kconnection->getSourceNode()->getId() . '_' . $kconnection->getSourceNode()->getNodeType()->getShortName() . '_' . $kconnection->getSourceNode()->getName(),
                         'target' => (string)$kconnection->getTargetNode()->getId() . '_' . $kconnection->getTargetNode()->getNodeType()->getShortName() . '_' . $kconnection->getTargetNode()->getName(),
@@ -2959,6 +2942,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function initService($resourceId)
     {
@@ -2979,19 +2963,21 @@ class BaseService
 
     /**
      * Sets the user from the client data.
-     * @param User|NULL $user
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @param array $user
      */
-    protected function setUser(User $user = NULL)
+    protected function setUser(array $user = NULL)
     {
-        $this->user = ($user) ? $user : $this->entityManager->find('TmoAuth\Entity\User', $this->clientData->userId);
+        $this->user = ($user) ? $user : $this->getWebsocketServer()->findById('users', $this->clientData->userId);
     }
 
+    /**
+     * @throws \Exception
+     */
     private function setProfileLocale()
     {
-        if ($this->user && $this->user->getProfile()) $this->profileLocale = $this->user->getProfile()->getLocale();
+        if ($this->user && $this->user['profileId']) {
+            $this->profileLocale = $this->getWebsocketServer()->getPropertyValueById('profiles', 'locale', $this->user['profileId']);
+        }
     }
 
     /**

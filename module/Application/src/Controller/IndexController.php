@@ -25,6 +25,7 @@ use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\ParserService;
 use Application\Service\WebsocketService;
+use Netrunners\Service\ServerDataService;
 use Netrunners\Service\UtilityService;
 use Ratchet\Http\HttpServer;
 use Ratchet\Server\IoServer;
@@ -69,6 +70,11 @@ class IndexController extends AbstractActionController
     protected $loginService;
 
     /**
+     * @var ServerDataService
+     */
+    protected $serverDataService;
+
+    /**
      * @var
      */
     protected $config;
@@ -86,6 +92,7 @@ class IndexController extends AbstractActionController
      * @param ParserService $parserService
      * @param LoopService $loopService
      * @param LoginService $loginService
+     * @param ServerDataService $serverDataService
      * @param $config
      * @param $console
      */
@@ -95,6 +102,7 @@ class IndexController extends AbstractActionController
         ParserService $parserService,
         LoopService $loopService,
         LoginService $loginService,
+        ServerDataService $serverDataService,
         $config,
         $console
     )
@@ -104,6 +112,7 @@ class IndexController extends AbstractActionController
         $this->parserService = $parserService;
         $this->loopService = $loopService;
         $this->loginService = $loginService;
+        $this->serverDataService = $serverDataService;
         $this->config = $config;
         $this->console = $console;
     }
@@ -125,6 +134,7 @@ class IndexController extends AbstractActionController
     // CLI
 
     /**
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliStartWebsocketAction()
@@ -148,6 +158,7 @@ class IndexController extends AbstractActionController
                         $this->parserService,
                         $this->loopService,
                         $this->loginService,
+                        $this->serverDataService,
                         $loop,
                         $this->config['hashmod'],
                         $adminMode
@@ -162,6 +173,7 @@ class IndexController extends AbstractActionController
 
     /**
      * Used to add skill ratings for new skills to existing users.
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliResetSkillsAction()
@@ -218,6 +230,7 @@ class IndexController extends AbstractActionController
 
     /**
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliPopulateWordTableAction()
@@ -251,6 +264,7 @@ class IndexController extends AbstractActionController
     /**
      * To populate the company name table after a new server installation.
      * @return bool
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliPopulateCompanyNamesTableAction()
@@ -861,6 +875,7 @@ class IndexController extends AbstractActionController
     }
 
     /**
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliHarvestGeocoordsAction()
@@ -941,6 +956,7 @@ class IndexController extends AbstractActionController
     }
 
     /**
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliUpgradeConnectionsAction()

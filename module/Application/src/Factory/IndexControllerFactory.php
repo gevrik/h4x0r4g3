@@ -13,9 +13,12 @@ namespace Application\Factory;
 use Application\Controller\IndexController;
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
+use Netrunners\Mapper\BannedIpMapper;
+use Netrunners\Mapper\GeocoordMapper;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\ParserService;
+use Netrunners\Service\ServerDataService;
 use Netrunners\Service\UtilityService;
 use Zend\Console\Console;
 use Zend\ServiceManager\Factory\FactoryInterface;
@@ -39,6 +42,7 @@ class IndexControllerFactory implements FactoryInterface
             $container->get(ParserService::class),
             $container->get(LoopService::class),
             $container->get(LoginService::class),
+            $container->get(ServerDataService::class),
             $container->get('configuration'),
             $container->get('console')
         );

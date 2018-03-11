@@ -194,9 +194,6 @@ class GameClientResponse {
      * @param bool $silent
      * @param array $options
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function reset($command = self::COMMAND_SHOWOUTPUT, $messages = [], $silent = false, $options = [])
     {
@@ -275,9 +272,6 @@ class GameClientResponse {
     /**
      * @param bool|int $resourceId
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function setResourceId($resourceId)
     {

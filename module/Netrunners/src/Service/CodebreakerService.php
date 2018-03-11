@@ -140,23 +140,29 @@ class CodebreakerService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function solveCodebreaker($resourceId, $guess)
     {
         $ws = $this->getWebsocketServer();
         $this->initService($resourceId);
         if (!$this->user) return false;
-        $profile = $this->user->getProfile();
+        $profile = $this->getWebsocketServer()->findById('profiles', $this->user['profileId']);
         $codebreakerData = $this->clientData->codebreaker;
-        $connection = $this->entityManager->find('Netrunners\Entity\Connection', $codebreakerData['connectionId']);
-        /** @var Connection $connection */
+        $connection = $this->getWebsocketServer()->findById('connections', $codebreakerData['connectionId']);
         if ($guess == $codebreakerData['thePassword']) {
-            //$this->movePlayerToTargetNode($resourceId, $profile, $connection);
-            $connection->setIsOpen(true);
-            $otherConnection = $this->connectionRepo->findBySourceNodeAndTargetNode($connection->getTargetNode(), $connection->getSourceNode());
-            /** @var Connection $otherConnection */
-            $otherConnection->setIsOpen(true);
-            $this->entityManager->flush();
+            $connection['isOpen'] = true;
+            $otherConnection = $this->getWebsocketServer()->executeDataServiceMethod('findConnectionBySourceNodeAndTargetNode', [
+                $connection['targetNodeId'],
+                $connection['sourceNodeId']
+            ]);
+            if (!$otherConnection) {
+                throw new \Exception(sprintf(
+                    "Unable to find connection for source: %s - target: %s",
+                    $connection['targetNodeId'],
+                    $connection['sourceNodeId']));
+            }
+            $otherConnection['isOpen'] = true;
             $this->updateMap($resourceId);
             $this->gameClientResponse
                 ->addMessage(
