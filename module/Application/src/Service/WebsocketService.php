@@ -1665,6 +1665,23 @@ class WebsocketService implements MessageComponentInterface {
     }
 
     /**
+     * @param string $name
+     * @param int $id
+     * @return null
+     * @throws \Exception
+     */
+    public function findById(string $name, int $id)
+    {
+        if (!method_exists(self::class, 'get' . ucfirst($name))) {
+            throw new \Exception("Invalid object name");
+        }
+        if (array_key_exists($id, $this->$name)) {
+            return $this->$name[$id];
+        }
+        return NULL;
+    }
+
+    /**
      * @param $priority
      * @param $message
      */
@@ -2460,6 +2477,464 @@ class WebsocketService implements MessageComponentInterface {
         $response = new GameClientResponse($resourceId);
         $response->addMessage('Feedback saved', GameClientResponse::CLASS_SUCCESS);
         return $response->send();
+    }
+
+    /** GETTERS FOR DB RECORDS */
+
+    /**
+     * @return array
+     */
+    public function getUsers(): array
+    {
+        return $this->users;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRoles(): array
+    {
+        return $this->roles;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAivatars(): array
+    {
+        return $this->aivatars;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAuctions(): array
+    {
+        return $this->auctions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAuctionbids(): array
+    {
+        return $this->auctionbids;
+    }
+
+    /**
+     * @return array
+     */
+    public function getBannedips(): array
+    {
+        return $this->bannedips;
+    }
+
+    /**
+     * @return array
+     */
+    public function getChatchannels(): array
+    {
+        return $this->chatchannels;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCompanynames(): array
+    {
+        return $this->companynames;
+    }
+
+    /**
+     * @return array
+     */
+    public function getConnections(): array
+    {
+        return $this->connections;
+    }
+
+    /**
+     * @return array
+     */
+    public function getEffects(): array
+    {
+        return $this->effects;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFactions(): array
+    {
+        return $this->factions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFactionroles(): array
+    {
+        return $this->factionroles;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFeedbacks(): array
+    {
+        return $this->feedbacks;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFiles(): array
+    {
+        return $this->files;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilecategories(): array
+    {
+        return $this->filecategories;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilemods(): array
+    {
+        return $this->filemods;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilemodinstances(): array
+    {
+        return $this->filemodinstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFactionroleinstances(): array
+    {
+        return $this->factionroleinstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFileparts(): array
+    {
+        return $this->fileparts;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilepartinstances(): array
+    {
+        return $this->filepartinstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilepartskills(): array
+    {
+        return $this->filepartskills;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFiletypes(): array
+    {
+        return $this->filetypes;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFiletypemods(): array
+    {
+        return $this->filetypemods;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFiletypeskills(): array
+    {
+        return $this->filetypeskills;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGameoptions(): array
+    {
+        return $this->gameoptions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGameoptioninstances(): array
+    {
+        return $this->gameoptioninstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGeocoords(): array
+    {
+        return $this->geocoords;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGroups(): array
+    {
+        return $this->groups;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGrouproles(): array
+    {
+        return $this->grouproles;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGrouproleinstances(): array
+    {
+        return $this->grouproleinstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getInvitations(): array
+    {
+        return $this->invitations;
+    }
+
+    /**
+     * @return array
+     */
+    public function getKnownnodes(): array
+    {
+        return $this->knownnodes;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMailmessages(): array
+    {
+        return $this->mailmessages;
+    }
+
+    /**
+     * @return array
+     */
+    public function getManpages(): array
+    {
+        return $this->manpages;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMilkruns(): array
+    {
+        return $this->milkruns;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMilkrunaivatars(): array
+    {
+        return $this->milkrunaivatars;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMilkrunaivatarinstances(): array
+    {
+        return $this->milkrunaivatarinstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMilkrunice(): array
+    {
+        return $this->milkrunice;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMilkruninstances(): array
+    {
+        return $this->milkruninstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMissions(): array
+    {
+        return $this->missions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMissionarchetypes(): array
+    {
+        return $this->missionarchetypes;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNodes(): array
+    {
+        return $this->nodes;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNodetypes(): array
+    {
+        return $this->nodetypes;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNotifications(): array
+    {
+        return $this->notifications;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNpcs(): array
+    {
+        return $this->npcs;
+    }
+
+    /**
+     * @return array
+     */
+    public function getNpcinstances(): array
+    {
+        return $this->npcinstances;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPlaysessions(): array
+    {
+        return $this->playsessions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getProfiles(): array
+    {
+        return $this->profiles;
+    }
+
+    /**
+     * @return array
+     */
+    public function getProfileeffects(): array
+    {
+        return $this->profileeffects;
+    }
+
+    /**
+     * @return array
+     */
+    public function getProfilefactionratings(): array
+    {
+        return $this->profilefactionratings;
+    }
+
+    /**
+     * @return array
+     */
+    public function getProfileratings(): array
+    {
+        return $this->profileratings;
+    }
+
+    /**
+     * @return array
+     */
+    public function getServersettings(): array
+    {
+        return $this->serversettings;
+    }
+
+    /**
+     * @return array
+     */
+    public function getSkills(): array
+    {
+        return $this->skills;
+    }
+
+    /**
+     * @return array
+     */
+    public function getSkillratings(): array
+    {
+        return $this->skillratings;
+    }
+
+    /**
+     * @return array
+     */
+    public function getSystems(): array
+    {
+        return $this->systems;
+    }
+
+    /**
+     * @return array
+     */
+    public function getSystemlogs(): array
+    {
+        return $this->systemlogs;
+    }
+
+    /**
+     * @return array
+     */
+    public function getWords(): array
+    {
+        return $this->words;
     }
 
 }
