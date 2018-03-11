@@ -306,9 +306,12 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function addNode($resourceId)
     {
@@ -368,7 +371,7 @@ class NodeService extends BaseService
             $this->user->getUsername()
         );
         $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
-        return $this->gameClientResponse->send();
+        return $this->gameClientResponse;
     }
 
     /**
@@ -504,6 +507,7 @@ class NodeService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function changeNodeName($resourceId, $contentArray)
     {
@@ -558,9 +562,12 @@ class NodeService extends BaseService
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function changeNodeType($resourceId, $contentArray)
     {
@@ -598,15 +605,18 @@ class NodeService extends BaseService
         );
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         $this->updateMap($resourceId);
-        return $this->gameClientResponse->send();
+        return $this->gameClientResponse;
     }
 
     /**
      * @param $contentArray
      * @return NodeType|null|object|string
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function changeNodeTypeChecks($contentArray)
     {
@@ -905,6 +915,7 @@ class NodeService extends BaseService
      * @param $property
      * @param $valueString
      * @return string
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     private function setNodeProperty(Node $node, $property, $valueString)
@@ -937,9 +948,12 @@ class NodeService extends BaseService
     /**
      * @param $resourceId
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function removeNode($resourceId)
     {
@@ -1155,6 +1169,7 @@ class NodeService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function systemConnect($resourceId, $contentArray)
     {

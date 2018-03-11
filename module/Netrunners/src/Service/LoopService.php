@@ -648,7 +648,7 @@ class LoopService extends BaseService
             foreach ($intrusionNodes as $intrusionNode) {
                 /** @var Node $intrusionNode */
                 $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_WILDERSPACE_INTRUDER);
-                if ($this->makePercentRollAgainstTarget($this->getBonusForFileLevel($intrusionNode->getLevel()))) {
+                if ($this->makePercentRollAgainstTarget($intrusionNode->getLevel())) {
                     $npcInstance = $this->spawnNpcInstance($npc, $intrusionNode);
                     $this->checkNpcAggro($npcInstance);
                     $this->checkAggro($npcInstance);

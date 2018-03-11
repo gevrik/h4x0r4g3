@@ -2,6 +2,8 @@
 
 namespace Netrunners;
 
+use Netrunners\View\Helper\ImageUrlHelper;
+
 return array(
     'router' => array(
         'routes' => array(
@@ -111,7 +113,10 @@ return array(
         'invokables'=> array(
         ),
         'factories' => array(
-            'image_url_helper' => 'Netrunners\Factory\ImageUrlHelperFactory',
+            ImageUrlHelper::class => 'Netrunners\Factory\ImageUrlHelperFactory',
+        ),
+        'aliases' => array(
+            'imageUrlHelper' => ImageUrlHelper::class,
         ),
     ),
     'view_manager' => array(

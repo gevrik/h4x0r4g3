@@ -2205,9 +2205,8 @@ class BaseService
      * @param Profile|NULL $profile
      * @param bool $silent
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function updateMap($resourceId, Profile $profile = NULL, $silent = true)
     {
