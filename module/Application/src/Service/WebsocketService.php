@@ -3,6 +3,7 @@
 namespace Application\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Aivatar;
 use Netrunners\Entity\Auction;
 use Netrunners\Entity\AuctionBid;
 use Netrunners\Entity\BannedIp;
@@ -19,9 +20,46 @@ use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FilePart;
+use Netrunners\Entity\FilePartInstance;
+use Netrunners\Entity\FilePartSkill;
+use Netrunners\Entity\FileType;
+use Netrunners\Entity\FileTypeMod;
+use Netrunners\Entity\FileTypeSkill;
+use Netrunners\Entity\GameOption;
+use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Geocoord;
+use Netrunners\Entity\Group;
+use Netrunners\Entity\GroupRole;
+use Netrunners\Entity\GroupRoleInstance;
+use Netrunners\Entity\Invitation;
+use Netrunners\Entity\KnownNode;
+use Netrunners\Entity\MailMessage;
+use Netrunners\Entity\Manpage;
+use Netrunners\Entity\Milkrun;
+use Netrunners\Entity\MilkrunAivatar;
+use Netrunners\Entity\MilkrunAivatarInstance;
+use Netrunners\Entity\MilkrunIce;
+use Netrunners\Entity\MilkrunInstance;
+use Netrunners\Entity\Mission;
+use Netrunners\Entity\MissionArchetype;
+use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Notification;
+use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
+use Netrunners\Entity\PlaySession;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\ProfileEffect;
+use Netrunners\Entity\ProfileFactionRating;
+use Netrunners\Entity\ProfileRating;
+use Netrunners\Entity\ServerSetting;
+use Netrunners\Entity\Skill;
+use Netrunners\Entity\SkillRating;
+use Netrunners\Entity\System;
+use Netrunners\Entity\SystemLog;
+use Netrunners\Entity\Word;
+use TmoAuth\Entity\Role;
+use TmoAuth\Entity\User;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\BannedIpRepository;
 use Netrunners\Repository\GeocoordRepository;
@@ -33,8 +71,6 @@ use Netrunners\Service\UtilityService;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 use React\EventLoop\LoopInterface;
-use TmoAuth\Entity\Role;
-use TmoAuth\Entity\User;
 use Zend\Log\Logger;
 use Zend\Validator\Ip;
 
@@ -156,6 +192,11 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @var array
      */
+    protected $aivatars = [];
+
+    /**
+     * @var array
+     */
     protected $auctions = [];
 
     /**
@@ -229,6 +270,201 @@ class WebsocketService implements MessageComponentInterface {
     protected $factionroleinstances = [];
 
     /**
+     * @var array
+     */
+    protected $fileparts = [];
+
+    /**
+     * @var array
+     */
+    protected $filepartinstances = [];
+
+    /**
+     * @var array
+     */
+    protected $filepartskills = [];
+
+    /**
+     * @var array
+     */
+    protected $filetypes = [];
+
+    /**
+     * @var array
+     */
+    protected $filetypemods = [];
+
+    /**
+     * @var array
+     */
+    protected $filetypeskills = [];
+
+    /**
+     * @var array
+     */
+    protected $gameoptions = [];
+
+    /**
+     * @var array
+     */
+    protected $gameoptioninstances = [];
+
+    /**
+     * @var array
+     */
+    protected $geocoords = [];
+
+    /**
+     * @var array
+     */
+    protected $groups = [];
+
+    /**
+     * @var array
+     */
+    protected $grouproles = [];
+
+    /**
+     * @var array
+     */
+    protected $grouproleinstances = [];
+
+    /**
+     * @var array
+     */
+    protected $invitations = [];
+
+    /**
+     * @var array
+     */
+    protected $knownnodes = [];
+
+    /**
+     * @var array
+     */
+    protected $mailmessages = [];
+
+    /**
+     * @var array
+     */
+    protected $manpages = [];
+
+    /**
+     * @var array
+     */
+    protected $milkruns = [];
+
+    /**
+     * @var array
+     */
+    protected $milkrunaivatars = [];
+
+    /**
+     * @var array
+     */
+    protected $milkrunaivatarinstances = [];
+
+    /**
+     * @var array
+     */
+    protected $milkrunice = [];
+
+    /**
+     * @var array
+     */
+    protected $milkruninstances = [];
+
+    /**
+     * @var array
+     */
+    protected $missions = [];
+
+    /**
+     * @var array
+     */
+    protected $missionarchetypes = [];
+
+    /**
+     * @var array
+     */
+    protected $nodes = [];
+
+    /**
+     * @var array
+     */
+    protected $nodetypes = [];
+
+    /**
+     * @var array
+     */
+    protected $notifications = [];
+
+    /**
+     * @var array
+     */
+    protected $npcs = [];
+
+    /**
+     * @var array
+     */
+    protected $npcinstances = [];
+
+    /**
+     * @var array
+     */
+    protected $playsessions = [];
+
+    /**
+     * @var array
+     */
+    protected $profiles = [];
+
+    /**
+     * @var array
+     */
+    protected $profileeffects = [];
+
+    /**
+     * @var array
+     */
+    protected $profilefactionratings = [];
+
+    /**
+     * @var array
+     */
+    protected $profileratings = [];
+
+    /**
+     * @var array
+     */
+    protected $serversettings = [];
+
+    /**
+     * @var array
+     */
+    protected $skills = [];
+
+    /**
+     * @var array
+     */
+    protected $skillratings = [];
+
+    /**
+     * @var array
+     */
+    protected $systems = [];
+
+    /**
+     * @var array
+     */
+    protected $systemlogs = [];
+
+    /**
+     * @var array
+     */
+    protected $words = [];
+
+    /**
      * WebsocketService constructor.
      * @param EntityManager $entityManager
      * @param UtilityService $utilityService
@@ -238,6 +474,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param LoopInterface $loop
      * @param $hash
      * @param $adminMode
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function __construct(
@@ -319,6 +556,26 @@ class WebsocketService implements MessageComponentInterface {
             ];
         }
 
+        // aivatar
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('a');
+        $qb->from('Netrunners\Entity\Aivatar', 'a');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Aivatar $entity */
+            $this->aivatars[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'nodeId' => $entity->getNode()->getId(),
+                'coderId' => $entity->getCoder()->getId(),
+                'profileId' => $entity->getProfile()->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'level' => $entity->getLevel(),
+                'added' => $entity->getAdded(),
+                'modified' => $entity->getModified(),
+            ];
+        }
+
         // auction
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('a');
@@ -387,9 +644,9 @@ class WebsocketService implements MessageComponentInterface {
                 'description' => $entity->getDescription(),
                 'joinable' => $entity->getJoinable(),
                 'added' => $entity->getAdded(),
-                'owner' => ($entity->getOwner()) ? $entity->getOwner()->getId() : NULL,
-                'faction' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
-                'group' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
+                'ownerId' => ($entity->getOwner()) ? $entity->getOwner()->getId() : NULL,
+                'factionId' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'groupId' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
             ];
         }
 
@@ -419,8 +676,8 @@ class WebsocketService implements MessageComponentInterface {
                 'level' => $entity->getLevel(),
                 'created' => $entity->getCreated(),
                 'isOpen' => $entity->getisOpen(),
-                'sourceNode' => ($entity->getSourceNode()) ? $entity->getSourceNode()->getId() : NULL,
-                'targetNode' => ($entity->getTargetNode()) ? $entity->getTargetNode()->getId() : NULL,
+                'sourceNodeId' => ($entity->getSourceNode()) ? $entity->getSourceNode()->getId() : NULL,
+                'targetNodeId' => ($entity->getTargetNode()) ? $entity->getTargetNode()->getId() : NULL,
             ];
         }
 
@@ -484,13 +741,13 @@ class WebsocketService implements MessageComponentInterface {
         $entities = $qb->getQuery()->getResult();
         foreach ($entities as $entity) {
             /** @var FactionRoleInstance $entity */
-            $this->factionroles[$entity->getId()] = [
+            $this->factionroleinstances[$entity->getId()] = [
                 'id' => $entity->getId(),
                 'added' => $entity->getAdded(),
-                'faction' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
-                'factionRole' => ($entity->getFactionRole()) ? $entity->getFactionRole()->getId() : NULL,
-                'member' => ($entity->getMember()) ? $entity->getMember()->getId() : NULL,
-                'changer' => ($entity->getChanger()) ? $entity->getChanger()->getId() : NULL,
+                'factionId' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'factionRoleId' => ($entity->getFactionRole()) ? $entity->getFactionRole()->getId() : NULL,
+                'memberId' => ($entity->getMember()) ? $entity->getMember()->getId() : NULL,
+                'changerId' => ($entity->getChanger()) ? $entity->getChanger()->getId() : NULL,
             ];
         }
 
@@ -509,7 +766,7 @@ class WebsocketService implements MessageComponentInterface {
                 'type' => $entity->getType(),
                 'status' => $entity->getStatus(),
                 'internalData' => $entity->getInternalData(),
-                'profile' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
             ];
         }
 
@@ -535,13 +792,13 @@ class WebsocketService implements MessageComponentInterface {
                 'slots' => $entity->getSlots(),
                 'data' => $entity->getData(),
                 'content' => $entity->getContent(),
-                'fileType' => ($entity->getFileType()) ? $entity->getFileType()->getId() : NULL,
-                'coder' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
-                'profile' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
-                'system' => ($entity->getSystem()) ? $entity->getSystem()->getId() : NULL,
-                'node' => ($entity->getNode()) ? $entity->getNode()->getId() : NULL,
-                'mailMessage' => ($entity->getMailMessage()) ? $entity->getMailMessage()->getId() : NULL,
-                'npc' => ($entity->getNpc()) ? $entity->getNpc()->getId() : NULL,
+                'fileTypeId' => ($entity->getFileType()) ? $entity->getFileType()->getId() : NULL,
+                'coderId' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'systemId' => ($entity->getSystem()) ? $entity->getSystem()->getId() : NULL,
+                'nodeId' => ($entity->getNode()) ? $entity->getNode()->getId() : NULL,
+                'mailMessageId' => ($entity->getMailMessage()) ? $entity->getMailMessage()->getId() : NULL,
+                'npcId' => ($entity->getNpc()) ? $entity->getNpc()->getId() : NULL,
             ];
         }
 
@@ -590,10 +847,781 @@ class WebsocketService implements MessageComponentInterface {
                 'id' => $entity->getId(),
                 'level' => $entity->getLevel(),
                 'added' => $entity->getAdded(),
-                'file' => ($entity->getFile()) ? $entity->getFile()->getId() : NULL,
-                'fileMod' => ($entity->getFileMod()) ? $entity->getFileMod()->getId() : NULL,
-                'coder' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
-                'profile' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'fileId' => ($entity->getFile()) ? $entity->getFile()->getId() : NULL,
+                'fileModId' => ($entity->getFileMod()) ? $entity->getFileMod()->getId() : NULL,
+                'coderId' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+            ];
+        }
+
+        // file part
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fp');
+        $qb->from('Netrunners\Entity\FilePart', 'fp');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FilePart $entity */
+            $this->fileparts[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'type' => $entity->getType(),
+                'level' => $entity->getLevel(),
+            ];
+        }
+
+        // file part instances
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fpi');
+        $qb->from('Netrunners\Entity\FilePartInstance', 'fpi');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FilePartInstance $entity */
+            $this->filepartinstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'coderId' => ($entity->getCoder()) ? $entity->getCoder()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'filePartId' => ($entity->getFilePart()) ? $entity->getFilePart()->getId() : NULL,
+                'level' => $entity->getLevel(),
+            ];
+        }
+
+        // file part skills
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fps');
+        $qb->from('Netrunners\Entity\FilePartSkill', 'fps');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FilePartSkill $entity */
+            $this->filepartskills[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'skillId' => ($entity->getSkill()) ? $entity->getSkill()->getId() : NULL,
+                'filePartId' => ($entity->getFilePart()) ? $entity->getFilePart()->getId() : NULL,
+            ];
+        }
+
+        // file types
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ft');
+        $qb->from('Netrunners\Entity\FileType', 'ft');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FileType $entity */
+            $this->filetypes[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'codeable' => $entity->getCodable(),
+                'executable' => $entity->getExecutable(),
+                'size' => $entity->getSize(),
+                'executionTime' => $entity->getExecutionTime(),
+                'fullblock' => $entity->getFullblock(),
+                'blocking' => $entity->getBlocking(),
+                'stealthing' => $entity->getStealthing(),
+                'needRecipe' => $entity->getNeedRecipe(),
+            ];
+            foreach ($entity->getFileCategories() as $fileCategory) {
+                /** @var FileCategory $fileCategory */
+                $this->filetypes[$entity->getId()]['filecategories'][] = $fileCategory->getId();
+            }
+            foreach ($entity->getFileParts() as $filePart) {
+                /** @var FilePart $filePart */
+                $this->filetypes[$entity->getId()]['fileparts'][] = $filePart->getId();
+            }
+            foreach ($entity->getOptionalFileParts() as $optionalFilePart) {
+                /** @var FilePart $optionalFilePart */
+                $this->filetypes[$entity->getId()]['optionalfileparts'][] = $optionalFilePart->getId();
+            }
+        }
+
+        // file type mods
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ftm');
+        $qb->from('Netrunners\Entity\FileTypeMod', 'ftm');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FileTypeMod $entity */
+            $this->filetypemods[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'fileTypeId' => ($entity->getFileType()) ? $entity->getFileType()->getId() : NULL,
+                'fileModId' => ($entity->getFileMod()) ? $entity->getFileMod()->getId() : NULL,
+            ];
+        }
+
+        // file type skills
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('fts');
+        $qb->from('Netrunners\Entity\FileTypeSkill', 'fts');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var FileTypeSkill $entity */
+            $this->filetypeskills[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'skillId' => ($entity->getSkill()) ? $entity->getSkill()->getId() : NULL,
+                'fileTypeId' => ($entity->getFileType()) ? $entity->getFileType()->getId() : NULL,
+            ];
+        }
+
+        // game options
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('go');
+        $qb->from('Netrunners\Entity\GameOption', 'go');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var GameOption $entity */
+            $this->gameoptions[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'defaultStatus' => $entity->getDefaultStatus(),
+                'defaultValue' => $entity->getDefaultValue(),
+            ];
+        }
+
+        // game option instances
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('goi');
+        $qb->from('Netrunners\Entity\GameOptionInstance', 'goi');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var GameOptionInstance $entity */
+            $this->gameoptioninstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'status' => $entity->getStatus(),
+                'changed' => $entity->getChanged(),
+                'gameOptionId' => ($entity->getGameOption()) ? $entity->getGameOption()->getId() : NULL,
+                'value' => $entity->getValue(),
+            ];
+        }
+
+        // geocoords
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('geo');
+        $qb->from('Netrunners\Entity\Geocoord', 'geo');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Geocoord $entity */
+            $this->geocoords[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'lat' => $entity->getLat(),
+                'lng' => $entity->getLng(),
+                'placeId' => $entity->getPlaceId(),
+                'added' => $entity->getAdded(),
+                'data' => $entity->getData(),
+                'zone' => $entity->getZone(),
+            ];
+        }
+
+        // groups
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('g');
+        $qb->from('Netrunners\Entity\Group', 'g');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Group $entity */
+            $this->groups[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'credits' => $entity->getCredits(),
+                'snippets' => $entity->getSnippets(),
+                'added' => $entity->getAdded(),
+                'factionid' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+            ];
+        }
+
+        // group roles
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('gr');
+        $qb->from('Netrunners\Entity\GroupRole', 'gr');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var GroupRole $entity */
+            $this->grouproles[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+            ];
+        }
+
+        // group role instances
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('gri');
+        $qb->from('Netrunners\Entity\GroupRoleInstance', 'gri');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var GroupRoleInstance $entity */
+            $this->grouproleinstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'groupId' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
+                'memberId' => ($entity->getMember()) ? $entity->getMember()->getId() : NULL,
+                'changerId' => ($entity->getChanger()) ? $entity->getChanger()->getId() : NULL,
+                'added' => $entity->getAdded(),
+                'groupRoleId' => ($entity->getGroupRole()) ? $entity->getGroupRole()->getId() : NULL,
+            ];
+        }
+
+        // invitation codes
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('i');
+        $qb->from('Netrunners\Entity\Invitation', 'i');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Invitation $entity */
+            $this->invitations[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'code' => $entity->getCode(),
+                'given' => $entity->getGiven(),
+                'used' => $entity->getUsed(),
+                'special' => $entity->getSpecial(),
+                'givenToId' => ($entity->getGivenTo()) ? $entity->getGivenTo()->getId() : NULL,
+                'usedById' => ($entity->getUsedBy()) ? $entity->getUsedBy()->getId() : NULL,
+            ];
+        }
+
+        // known nodes
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('kn');
+        $qb->from('Netrunners\Entity\KnownNode', 'kn');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var KnownNode $entity */
+            $this->knownnodes[$entity->getId()] = [
+                'nodeId' => ($entity->getNode()) ? $entity->getNode()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'created' => $entity->getCreated(),
+                'type' => $entity->getType(),
+            ];
+        }
+
+        // mail messages
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('mm');
+        $qb->from('Netrunners\Entity\MailMessage', 'mm');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var MailMessage $entity */
+            $this->mailmessages[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'authorId' => ($entity->getAuthor()) ? $entity->getAuthor()->getId() : NULL,
+                'recipientId' => ($entity->getRecipient()) ? $entity->getRecipient()->getId() : NULL,
+                'parentId' => ($entity->getParent()) ? $entity->getParent()->getId() : NULL,
+                'subject' => $entity->getSubject(),
+                'content' => $entity->getContent(),
+                'sentDateTime' => $entity->getSentDateTime(),
+                'readDateTime' => $entity->getReadDateTime(),
+            ];
+        }
+
+        // manpages
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('man');
+        $qb->from('Netrunners\Entity\Manpage', 'man');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Manpage $entity */
+            $this->manpages[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'authorId' => ($entity->getAuthor()) ? $entity->getAuthor()->getId() : NULL,
+                'parentId' => ($entity->getParent()) ? $entity->getParent()->getId() : NULL,
+                'subject' => $entity->getSubject(),
+                'content' => $entity->getContent(),
+                'createdDateTime' => $entity->getCreatedDateTime(),
+                'updatedDateTime' => $entity->getUpdatedDateTime(),
+                'status' => $entity->getStatus(),
+            ];
+        }
+
+        // milkruns
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('milk');
+        $qb->from('Netrunners\Entity\Milkrun', 'milk');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Milkrun $entity */
+            $this->milkruns[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'credits' => $entity->getCredits(),
+                'snippets' => $entity->getSnippets(),
+                'level' => $entity->getLevel(),
+                'timer' => $entity->getTimer(),
+                'factionRoleId' => ($entity->getFactionRole()) ? $entity->getFactionRole()->getId() : NULL,
+            ];
+        }
+
+        // milkrun aivatars
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('milkai');
+        $qb->from('Netrunners\Entity\MilkrunAivatar', 'milkai');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var MilkrunAivatar $entity */
+            $this->milkrunaivatars[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'baseEeg' => $entity->getBaseEeg(),
+                'baseAttack' => $entity->getBaseAttack(),
+                'baseArmor' => $entity->getBaseArmor(),
+                'specials' => $entity->getSpecials(),
+            ];
+        }
+
+        // milkrun aivatar instances
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('mai');
+        $qb->from('Netrunners\Entity\MilkrunAivatarInstance', 'mai');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var MilkrunAivatarInstance $entity */
+            $this->milkrunaivatarinstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'name' => $entity->getName(),
+                'maxEeg' => $entity->getMaxEeg(),
+                'currentEeg' => $entity->getCurrentEeg(),
+                'maxAttack' => $entity->getMaxAttack(),
+                'currentAttack' => $entity->getCurrentAttack(),
+                'maxArmor' => $entity->getMaxArmor(),
+                'currentArmor' => $entity->getCurrentArmor(),
+                'specials' => $entity->getSpecials(),
+                'completed' => $entity->getCompleted(),
+                'pointsearned' => $entity->getPointsearned(),
+                'pointsused' => $entity->getPointsused(),
+                'created' => $entity->getCreated(),
+                'modified' => $entity->getModified(),
+                'upgrades' => $entity->getUpgrades(),
+                'milkrunAivatarId' => ($entity->getMilkrunAivatar()) ? $entity->getMilkrunAivatar()->getId() : NULL,
+            ];
+        }
+
+        // milkrun ice
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('mri');
+        $qb->from('Netrunners\Entity\MilkrunIce', 'mri');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var MilkrunIce $entity */
+            $this->milkrunice[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'baseEeg' => $entity->getBaseEeg(),
+                'baseAttack' => $entity->getBaseAttack(),
+                'baseArmor' => $entity->getBaseArmor(),
+                'specials' => $entity->getSpecials(),
+            ];
+        }
+
+        // milkrun instances
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('mrinst');
+        $qb->from('Netrunners\Entity\MilkrunInstance', 'mrinst');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var MilkrunInstance $entity */
+            $this->milkruninstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'added' => $entity->getAdded(),
+                'expires' => $entity->getExpires(),
+                'level' => $entity->getLevel(),
+                'sourceFactionId' => ($entity->getSourceFaction()) ? $entity->getSourceFaction()->getId() : NULL,
+                'targetFactionId' => ($entity->getTargetFaction()) ? $entity->getTargetFaction()->getId() : NULL,
+                'completed' => $entity->getCompleted(),
+                'milkrunId' => ($entity->getMilkrun()) ? $entity->getMilkrun()->getId() : NULL,
+                'expired' => $entity->getExpired(),
+                'milkrunAvaitarInstanceId' => ($entity->getMilkrunAivatarInstance()) ? $entity->getMilkrunAivatarInstance()->getId() : NULL,
+            ];
+        }
+
+        // missions
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('m');
+        $qb->from('Netrunners\Entity\Mission', 'm');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Mission $entity */
+            $this->missions[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'missionid' => ($entity->getMission()) ? $entity->getMission()->getId() : NULL,
+                'added' => $entity->getAdded(),
+                'completed' => $entity->getCompleted(),
+                'expires' => $entity->getExpires(),
+                'level' => $entity->getLevel(),
+                'expired' => $entity->getExpired(),
+                'sourceFactionId' => ($entity->getSourceFaction()) ? $entity->getSourceFaction()->getId() : NULL,
+                'targetFactionId' => ($entity->getTargetFaction()) ? $entity->getTargetFaction()->getId() : NULL,
+                'targetSystemId' => ($entity->getTargetSystem()) ? $entity->getTargetSystem()->getId() : NULL,
+                'targetFileId' => ($entity->getTargetFile()) ? $entity->getTargetFile()->getId() : NULL,
+                'targetNodeId' => ($entity->getTargetNode()) ? $entity->getTargetNode()->getId() : NULL,
+            ];
+        }
+
+        // mission archetypes
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ma');
+        $qb->from('Netrunners\Entity\MissionArchetype', 'ma');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var MissionArchetype $entity */
+            $this->missionarchetypes[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'subtype' => $entity->getSubtype(),
+            ];
+        }
+
+        // nodes
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('n');
+        $qb->from('Netrunners\Entity\Node', 'n');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Node $entity */
+            $this->nodes[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'systemId' => ($entity->getSystem()) ? $entity->getSystem()->getId() : NULL,
+                'name' => $entity->getName(),
+                'level' => $entity->getLevel(),
+                'created' => $entity->getCreated(),
+                'description' => $entity->getDescription(),
+                'nodeTypeId' => ($entity->getNodeType()) ? $entity->getNodeType()->getId() : NULL,
+                'nomob' => $entity->getNomob(),
+                'nopvp' => $entity->getNopvp(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'noclaim' => $entity->getNoclaim(),
+                'integrity' => $entity->getIntegrity(),
+                'data' => $entity->getData(),
+            ];
+        }
+
+        // node types
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('nt');
+        $qb->from('Netrunners\Entity\NodeType', 'nt');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var NodeType $entity */
+            $this->nodetypes[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'shortName' => $entity->getShortName(),
+                'description' => $entity->getDescription(),
+                'cost' => $entity->getCost(),
+            ];
+        }
+
+        // notifications
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('note');
+        $qb->from('Netrunners\Entity\Notification', 'note');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Notification $entity */
+            $this->notifications[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'subject' => $entity->getSubject(),
+                'sentDateTime' => $entity->getSentDateTime(),
+                'readDateTime' => $entity->getReadDateTime(),
+                'severity' => $entity->getSeverity(),
+            ];
+        }
+
+        // npcs
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('npc');
+        $qb->from('Netrunners\Entity\Npc', 'npc');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Npc $entity */
+            $this->npcs[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'baseEeg' => $entity->getBaseEeg(),
+                'baseSnippets' => $entity->getBaseSnippets(),
+                'baseCredits' => $entity->getBaseCredits(),
+                'level' => $entity->getLevel(),
+                'baseBlade' => $entity->getBaseBlade(),
+                'baseBlaster' => $entity->getBaseBlaster(),
+                'baseShield' => $entity->getBaseShield(),
+                'baseDetection' => $entity->getBaseDetection(),
+                'baseStealth' => $entity->getBaseStealth(),
+                'baseSlots' => $entity->getBaseSlots(),
+                'aggressive' => $entity->getAggressive(),
+                'roaming' => $entity->getRoaming(),
+                'type' => $entity->getType(),
+                'stealthing' => $entity->getStealthing(),
+                'social' => $entity->getSocial(),
+            ];
+        }
+
+        // npc instances
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('npci');
+        $qb->from('Netrunners\Entity\NpcInstance', 'npci');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var NpcInstance $entity */
+            $this->npcinstances[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'npcId' => ($entity->getNpc()) ? $entity->getNpc()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'nodeId' => ($entity->getNode()) ? $entity->getNode()->getId() : NULL,
+                'groupId' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
+                'factionId' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'maxEeg' => $entity->getMaxEeg(),
+                'currentEeg' => $entity->getCurrentEeg(),
+                'snippets' => $entity->getSnippets(),
+                'credits' => $entity->getCredits(),
+                'level' => $entity->getLevel(),
+                'slots' => $entity->getSlots(),
+                'aggressive' => $entity->getAggressive(),
+                'added' => $entity->getAdded(),
+                'homeNodeId' => ($entity->getHomeNode()) ? $entity->getHomeNode()->getId() : NULL,
+                'roaming' => $entity->getRoaming(),
+                'systemId' => ($entity->getSystem()) ? $entity->getSystem()->getId() : NULL,
+                'homeSystemId' => ($entity->getHomeSystem()) ? $entity->getHomeSystem()->getId() : NULL,
+                'stealthing' => $entity->getStealthing(),
+                'bypassCodegates' => $entity->getBypassCodegates(),
+                'bladeModuleId' => ($entity->getBladeModule()) ? $entity->getBladeModule()->getId() : NULL,
+                'blasterModuleId' => ($entity->getBlasterModule()) ? $entity->getBlasterModule()->getId() : NULL,
+                'shieldModuleId' => ($entity->getShieldModule()) ? $entity->getShieldModule()->getId() : NULL,
+            ];
+        }
+
+        // play sessions
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ps');
+        $qb->from('Netrunners\Entity\PlaySession', 'ps');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var PlaySession $entity */
+            $this->playsessions[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'start' => $entity->getStart(),
+                'end' => $entity->getEnd(),
+                'ipAddy' => $entity->getIpAddy(),
+                'socketId' => $entity->getSocketId(),
+            ];
+        }
+
+        // profiles
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('p');
+        $qb->from('Netrunners\Entity\Profile', 'p');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Profile $entity */
+            $this->profiles[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'userId' => ($entity->getUser()) ? $entity->getUser()->getId() : NULL,
+                'credits' => $entity->getCredits(),
+                'snippets' => $entity->getSnippets(),
+                'currentNodeId' => ($entity->getCurrentNode()) ? $entity->getCurrentNode()->getId() : NULL,
+                'skillPoints' => $entity->getSkillPoints(),
+                'homeNodeId' => ($entity->getHomeNode()) ? $entity->getHomeNode()->getId() : NULL,
+                'eeg' => $entity->getEeg(),
+                'willpower' => $entity->getWillpower(),
+                'factionId' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'groupId' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
+                'securityRating' => $entity->getSecurityRating(),
+                'email' => $entity->getEmail(),
+                'locale' => $entity->getLocale(),
+                'bladeId' => ($entity->getBlade()) ? $entity->getBlade()->getId() : NULL,
+                'blasterId' => ($entity->getBlaster()) ? $entity->getBlaster()->getId() : NULL,
+                'shieldId' => ($entity->getShield()) ? $entity->getShield()->getId() : NULL,
+                'headArmorId' => ($entity->getHeadArmor()) ? $entity->getHeadArmor()->getId() : NULL,
+                'shoulderArmorId' => ($entity->getShoulderArmor()) ? $entity->getShoulderArmor()->getId() : NULL,
+                'upperArmArmorId' => ($entity->getUpperArmArmor()) ? $entity->getUpperArmArmor()->getId() : NULL,
+                'lowerArmArmorId' => ($entity->getLowerArmArmor()) ? $entity->getLowerArmArmor()->getId() : NULL,
+                'handArmorId' => ($entity->getHandArmor()) ? $entity->getHandArmor()->getId() : NULL,
+                'torsoArmorId' => ($entity->getTorsoArmor()) ? $entity->getTorsoArmor()->getId() : NULL,
+                'legArmorId' => ($entity->getLegArmor()) ? $entity->getLegArmor()->getId() : NULL,
+                'shoesArmorId' => ($entity->getShoesArmor()) ? $entity->getShoesArmor()->getId() : NULL,
+                'stealthing' => $entity->getStealthing(),
+                'factionJoinBlockData' => $entity->getFactionJoinBlockDate(),
+                'completedMilkruns' => $entity->getCompletedMilkruns(),
+                'failedMilkruns' => $entity->getFaileddMilkruns(),
+                'bankBalance' => $entity->getBankBalance(),
+                'bgopacity' => $entity->getBgopacity(),
+                'currentResourceId' => $entity->getCurrentResourceId(),
+                'defaultMilkrunAivatarId' => ($entity->getDefaultMilkrunAivatar()) ? $entity->getDefaultMilkrunAivatar()->getId() : NULL,
+                'completedMissions' => $entity->getCompletedMissions(),
+                'failedMissions' => $entity->getFailedMissions(),
+                'currentPlayStoryId' => ($entity->getCurrentPlayStory()) ? $entity->getCurrentPlayStory()->getId() : NULL,
+                'currentEditorStoryId' => ($entity->getCurrentEditorStory()) ? $entity->getCurrentEditorStory()->getId() : NULL,
+            ];
+        }
+
+        // profile effects
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('pe');
+        $qb->from('Netrunners\Entity\ProfileEffect', 'pe');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var ProfileEffect $entity */
+            $this->profileeffects[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'effectId' => ($entity->getEffect()) ? $entity->getEffect()->getId() : NULL,
+                'expires' => $entity->getExpires(),
+                'rating' => $entity->getRating(),
+                'npcInstanceId' => ($entity->getNpcInstance()) ? $entity->getNpcInstance()->getId() : NULL,
+                'diminishUntil' => $entity->getDimishUntil(),
+                'immuneUntil' => $entity->getImmuneUntil(),
+            ];
+        }
+
+        // profile faction ratings
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('pfr');
+        $qb->from('Netrunners\Entity\ProfileFactionRating', 'pfr');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var ProfileFactionRating $entity */
+            $this->profilefactionratings[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'raterId' => ($entity->getRater()) ? $entity->getRater()->getId() : NULL,
+                'added' => $entity->getAdded(),
+                'sourceRating' => $entity->getSourceRating(),
+                'targetRating' => $entity->getTargetRating(),
+                'source' => $entity->getSource(),
+                'milkrunInstanceId' => ($entity->getMilkrunInstance()) ? $entity->getMilkrunInstance()->getId() : NULL,
+                'sourceFactionId' => ($entity->getSourceFaction()) ? $entity->getSourceFaction()->getId() : NULL,
+                'targetFactionId' => ($entity->getTargetFaction()) ? $entity->getTargetFaction()->getId() : NULL,
+                'missionId' => ($entity->getMission()) ? $entity->getMission()->getId() : NULL,
+            ];
+        }
+
+        // profile ratings
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('pr');
+        $qb->from('Netrunners\Entity\ProfileRating', 'pr');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var ProfileRating $entity */
+            $this->profileratings[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'sourceProfileId' => ($entity->getSourceProfile()) ? $entity->getSourceProfile()->getId() : NULL,
+                'targetProfileId' => ($entity->getTargetProfile()) ? $entity->getTargetProfile()->getId() : NULL,
+                'changed' => $entity->getChanged(),
+                'rating' => $entity->getRating(),
+            ];
+        }
+
+        // server settings
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ss');
+        $qb->from('Netrunners\Entity\ServerSetting', 'ss');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var ServerSetting $entity */
+            $this->serversettings[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'wildernessSystemId' => $entity->getWildernessSystemId(),
+                'chatsuboSystemId' => $entity->getChatsuboSystemId(),
+                'wildernessHubNodeId' => $entity->getWildernessHubNodeId(),
+                'chatsuboNodeId' => $entity->getChatsuboNodeId(),
+                'motd' => $entity->getMotd(),
+            ];
+        }
+
+        // skills
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('sk');
+        $qb->from('Netrunners\Entity\Skill', 'sk');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Skill $entity */
+            $this->skills[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'name' => $entity->getName(),
+                'description' => $entity->getDescription(),
+                'advanced' => $entity->getAdvanced(),
+                'added' => $entity->getAdded(),
+                'level' => $entity->getLevel(),
+            ];
+        }
+
+        // skill ratings
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('skr');
+        $qb->from('Netrunners\Entity\SkillRating', 'skr');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var SkillRating $entity */
+            $this->skillratings[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'skillId' => ($entity->getSkill()) ? $entity->getSkill()->getId() : NULL,
+                'rating' => $entity->getRating(),
+                'npcId' => ($entity->getNpc()) ? $entity->getNpc()->getId() : NULL,
+            ];
+        }
+
+        // systems
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('sys');
+        $qb->from('Netrunners\Entity\System', 'sys');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var System $entity */
+            $this->systems[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'name' => $entity->getName(),
+                'addy' => $entity->getAddy(),
+                'alertLevel' => $entity->getAlertLevel(),
+                'factionId' => ($entity->getFaction()) ? $entity->getFaction()->getId() : NULL,
+                'groupId' => ($entity->getGroup()) ? $entity->getGroup()->getId() : NULL,
+                'maxSize' => $entity->getMaxSize(),
+                'noclaim' => $entity->getNoclaim(),
+                'integrity' => $entity->getIntegrity(),
+                'geocoords' => $entity->getGeocoords(),
+            ];
+        }
+
+        // system logs
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('sl');
+        $qb->from('Netrunners\Entity\SystemLog', 'sl');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var SystemLog $entity */
+            $this->systemlogs[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'systemId' => ($entity->getSystem()) ? $entity->getSystem()->getId() : NULL,
+                'profileId' => ($entity->getProfile()) ? $entity->getProfile()->getId() : NULL,
+                'nodeId' => ($entity->getNode()) ? $entity->getNode()->getId() : NULL,
+                'fileId' => ($entity->getFile()) ? $entity->getFile()->getId() : NULL,
+                'subject' => $entity->getSubject(),
+                'severity' => $entity->getSeverity(),
+                'added' => $entity->getAdded(),
+                'details' => $entity->getDetails(),
+            ];
+        }
+
+        // words
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('w');
+        $qb->from('Netrunners\Entity\Word', 'w');
+        $entities = $qb->getQuery()->getResult();
+        foreach ($entities as $entity) {
+            /** @var Word $entity */
+            $this->words[$entity->getId()] = [
+                'id' => $entity->getId(),
+                'content' => $entity->getContent(),
+                'length' => $entity->getLength(),
             ];
         }
 
