@@ -647,6 +647,8 @@ class ParserService
                 return $this->adminService->invokeNpc($resourceId, $contentArray);
             case 'setnpcproperty':
                 return $this->adminService->setnpcproperty($resourceId, $contentArray);
+            case 'setfiletypeproperty':
+                return $this->adminService->setfiletypeproperty($resourceId, $contentArray);
         }
         if (!is_array($response)) {
             if (!$silent) {

@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\BannedIp;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileModInstance;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
@@ -433,6 +434,7 @@ class AdminService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function kickClient($resourceId, $contentArray)
     {
@@ -501,6 +503,7 @@ class AdminService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function gotoNodeCommand($resourceId, $contentArray)
     {
@@ -866,6 +869,7 @@ class AdminService extends BaseService
                 $targetFile->setProfile($targetUser->getProfile());
                 break;
         }
+        $this->entityManager->flush();
         $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $targetFile->getName(), $property, $newValue));
         return $this->gameClientResponse->send();
     }
@@ -953,6 +957,7 @@ class AdminService extends BaseService
                 $fmi->setProfile($targetUser->getProfile());
                 break;
         }
+        $this->entityManager->flush();
         $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $fmi->getFileMod()->getName(), $property, $newValue));
         return $this->gameClientResponse->send();
     }
@@ -1117,7 +1122,49 @@ class AdminService extends BaseService
                 $npci->setFaction($faction);
                 break;
         }
+        $this->entityManager->flush();
         $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $npci->getName(), $property, $newValue));
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function setfiletypeproperty($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        list($contentArray, $fileTypeId) = $this->getNextParameter($contentArray, true, true);
+        // try to get target ft via repo method
+        /** @var FileType $ft */
+        $ft = $this->fileTypeRepo->find($fileTypeId);
+        if (!$ft) {
+            return $this->gameClientResponse->addMessage($this->translate('Filetype not found'))->send();
+        }
+        /* start logic */
+        list($contentArray, $property) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$property) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid property (one of "needrecipe")'))->send();
+        }
+        $newValue = $this->getNextParameter($contentArray, false, false, true, true);
+        if ($newValue === null) $newValue = 1;
+        switch ($property) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Invalid property (one of "needrecipe")'))->send();
+            case 'needrecipe':
+                $ft->setNeedRecipe($newValue);
+                break;
+        }
+        $this->entityManager->flush($ft);
+        $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $ft->getName(), $property, $newValue));
         return $this->gameClientResponse->send();
     }
 
