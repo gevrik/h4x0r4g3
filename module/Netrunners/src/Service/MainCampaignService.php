@@ -63,7 +63,7 @@ class MainCampaignService extends BaseService
                 $this->sendStarterMail($resourceId, $clientData);
                 break;
             case self::STEP_STARTED:
-                $this->sendFollowUpMail($resourceId, $clientData);
+                //$this->sendFollowUpMail($resourceId, $clientData); TODO continue here
                 break;
         }
     }
