@@ -152,6 +152,7 @@ class LoopService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function loopJobs()
     {
@@ -711,6 +712,7 @@ class LoopService extends BaseService
     /**
      * Loop that regenerates eeg, willpower and security rating. Default loop time is 5 minutes.
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\ORMException
      */
     public function loopRegeneration()
     {
@@ -863,6 +865,11 @@ class LoopService extends BaseService
 
     /**
      * @param System $system
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function calcSystemResourcesProfile(System $system)
     {
@@ -875,6 +882,11 @@ class LoopService extends BaseService
 
     /**
      * @param System $system
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function calcSystemResourcesGroup(System $system)
     {
@@ -887,6 +899,11 @@ class LoopService extends BaseService
 
     /**
      * @param System $system
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     private function calcSystemResourcesFaction(System $system)
     {
