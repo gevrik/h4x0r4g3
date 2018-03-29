@@ -1288,11 +1288,12 @@ class FileUtilityService extends BaseService
             $this->translate('DESCRIPTION')
         );
         $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
-        foreach ($fileTypes as $fileType) {
             /** @var FileType $fileType */
+        foreach ($fileTypes as $fileType) {
+            if (!$fileType->getCodable()) continue;
             $categories = '';
-            foreach ($fileType->getFileCategories() as $fileCategory) {
                 /** @var FileCategory $fileCategory */
+            foreach ($fileType->getFileCategories() as $fileCategory) {
                 $categories .= $fileCategory->getName() . ' ';
             }
             $returnMessage = sprintf(
