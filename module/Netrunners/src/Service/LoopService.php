@@ -461,8 +461,10 @@ class LoopService extends BaseService
             }
         }
         foreach ($combatants['npcs'] as $npcId => $combatData) {
-            $npc = $this->entityManager->find('Netrunners\Entity\NpcInstance', $npcId);
             /** @var NpcInstance $npc */
+            $npc = $this->entityManager->find('Netrunners\Entity\NpcInstance', $npcId);
+            // skip if no longer exists
+            if (!$npc) continue;
             // skip if they are stunned
             if ($this->isUnderEffect($npc, Effect::ID_STUNNED)) continue;
             // get combat data
