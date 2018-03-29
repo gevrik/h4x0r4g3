@@ -46,7 +46,7 @@ class PassageChoice
     /**
      * @return int
      */
-    public function getId(): int
+    public function getId()
     {
         return $this->id;
     }
@@ -55,7 +55,7 @@ class PassageChoice
      * @param int $id
      * @return PassageChoice
      */
-    public function setId(int $id): PassageChoice
+    public function setId(int $id)
     {
         $this->id = $id;
         return $this;
@@ -64,7 +64,7 @@ class PassageChoice
     /**
      * @return \DateTime
      */
-    public function getAdded(): \DateTime
+    public function getAdded()
     {
         return $this->added;
     }
@@ -73,7 +73,7 @@ class PassageChoice
      * @param \DateTime $added
      * @return PassageChoice
      */
-    public function setAdded(\DateTime $added): PassageChoice
+    public function setAdded(\DateTime $added)
     {
         $this->added = $added;
         return $this;
