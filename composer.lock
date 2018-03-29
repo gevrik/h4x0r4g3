@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "b4cb72a602772c5a51d690fb5ab39870",
+    "content-hash": "8fd91607c4b12e484a9359de1c5f25e2",
     "packages": [
         {
             "name": "brianlmoon/gearmanmanager",
@@ -95,16 +95,16 @@
         },
         {
             "name": "ckeditor/ckeditor",
-            "version": "4.8.0",
+            "version": "4.9.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ckeditor/ckeditor-releases.git",
-                "reference": "3e0ba2fa7361e0e425b73b2e4400af4a7f767ec5"
+                "reference": "e0b461194197838f9ee52f11b2b469dde9e1b8f8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ckeditor/ckeditor-releases/zipball/3e0ba2fa7361e0e425b73b2e4400af4a7f767ec5",
-                "reference": "3e0ba2fa7361e0e425b73b2e4400af4a7f767ec5",
+                "url": "https://api.github.com/repos/ckeditor/ckeditor-releases/zipball/e0b461194197838f9ee52f11b2b469dde9e1b8f8",
+                "reference": "e0b461194197838f9ee52f11b2b469dde9e1b8f8",
                 "shasum": ""
             },
             "type": "library",
@@ -132,7 +132,7 @@
                 "text",
                 "wysiwyg"
             ],
-            "time": "2017-12-13T16:47:19+00:00"
+            "time": "2018-03-26T17:19:45+00:00"
         },
         {
             "name": "components/jquery",
@@ -764,24 +764,24 @@
         },
         {
             "name": "doctrine/doctrine-orm-module",
-            "version": "1.1.5",
+            "version": "1.1.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/DoctrineORMModule.git",
-                "reference": "8cb46190022ac71ef644416bd422ce2fb54d4823"
+                "reference": "2205a3ccaf25dc5d9793bf5b7295bb7eb1a861c3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/DoctrineORMModule/zipball/8cb46190022ac71ef644416bd422ce2fb54d4823",
-                "reference": "8cb46190022ac71ef644416bd422ce2fb54d4823",
+                "url": "https://api.github.com/repos/doctrine/DoctrineORMModule/zipball/2205a3ccaf25dc5d9793bf5b7295bb7eb1a861c3",
+                "reference": "2205a3ccaf25dc5d9793bf5b7295bb7eb1a861c3",
                 "shasum": ""
             },
             "require": {
-                "doctrine/dbal": ">=2.4,<2.7",
+                "doctrine/dbal": "^2.6.0",
                 "doctrine/doctrine-module": "^1.2",
-                "doctrine/orm": ">=2.5,<2.7",
-                "php": "^5.6 || ^7.0",
-                "symfony/console": "^2.3 || ^3.0",
+                "doctrine/orm": "^2.6.0",
+                "php": "^7.1",
+                "symfony/console": "^2.3 || ^3.0 || ^4.0",
                 "zendframework/zend-hydrator": "^1.1 || ^2.2.1",
                 "zendframework/zend-mvc": "^2.7.10 || ^3.0.1",
                 "zendframework/zend-servicemanager": "^2.7.6 || ^3.1",
@@ -790,7 +790,7 @@
             "require-dev": {
                 "doctrine/data-fixtures": "^1.2.1",
                 "doctrine/migrations": "^1.4.1",
-                "phpunit/phpunit": "^5.7.17 || ^6.2.1",
+                "phpunit/phpunit": "^6.5",
                 "squizlabs/php_codesniffer": "^2.7",
                 "zendframework/zend-console": "^2.6",
                 "zendframework/zend-developer-tools": "^1.1",
@@ -848,7 +848,7 @@
                 "orm",
                 "zf"
             ],
-            "time": "2017-09-20T01:06:34+00:00"
+            "time": "2018-03-27T21:02:52+00:00"
         },
         {
             "name": "doctrine/inflector",
@@ -6875,30 +6875,30 @@
         },
         {
             "name": "zendframework/zend-dom",
-            "version": "2.6.0",
+            "version": "2.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/zendframework/zend-dom.git",
-                "reference": "a9e145b2b52fe6de5a7a6b0ddb5c773c2c72d59e"
+                "reference": "7a2d3ac8722951dc5ec8eec49f794afbe6a34ff8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/zendframework/zend-dom/zipball/a9e145b2b52fe6de5a7a6b0ddb5c773c2c72d59e",
-                "reference": "a9e145b2b52fe6de5a7a6b0ddb5c773c2c72d59e",
+                "url": "https://api.github.com/repos/zendframework/zend-dom/zipball/7a2d3ac8722951dc5ec8eec49f794afbe6a34ff8",
+                "reference": "7a2d3ac8722951dc5ec8eec49f794afbe6a34ff8",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.5"
+                "php": "^5.6 || ^7.0"
             },
             "require-dev": {
-                "fabpot/php-cs-fixer": "1.7.*",
-                "phpunit/phpunit": "~4.0"
+                "phpunit/phpunit": "^5.7.23 || ^6.4.3",
+                "zendframework/zend-coding-standard": "~1.0.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.5-dev",
-                    "dev-develop": "2.6-dev"
+                    "dev-master": "2.7.x-dev",
+                    "dev-develop": "2.8.x-dev"
                 }
             },
             "autoload": {
@@ -6911,12 +6911,12 @@
                 "BSD-3-Clause"
             ],
             "description": "provides tools for working with DOM documents and structures",
-            "homepage": "https://github.com/zendframework/zend-dom",
             "keywords": [
+                "ZendFramework",
                 "dom",
-                "zf2"
+                "zf"
             ],
-            "time": "2015-10-14T03:37:48+00:00"
+            "time": "2018-03-27T21:03:04+00:00"
         },
         {
             "name": "zendframework/zend-test",
@@ -6999,8 +6999,6 @@
     },
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": {
-        "php": "^7.0"
-    },
+    "platform": [],
     "platform-dev": []
 }
