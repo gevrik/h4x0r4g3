@@ -11,11 +11,11 @@
 namespace TmoAuth\Factory;
 
 use Interop\Container\ContainerInterface;
+use TmoAuth\Controller\UserController;
 use Zend\Mvc\Controller\ControllerManager;
 use Zend\ServiceManager\Factory\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 use ZfcUser\Controller\RedirectCallback;
-use ZfcUser\Controller\UserController;
 
 class UserControllerFactory implements FactoryInterface
 {
@@ -60,4 +60,5 @@ class UserControllerFactory implements FactoryInterface
 
         return $this->__invoke($serviceManager, null);
     }
+
 }

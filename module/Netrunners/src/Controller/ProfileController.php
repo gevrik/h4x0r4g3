@@ -10,45 +10,54 @@
 
 namespace Netrunners\Controller;
 
-use Zend\Mvc\Controller\AbstractActionController;
+use Netrunners\Entity\Profile;
 use Zend\View\Model\ViewModel;
 
-class ProfileController extends AbstractActionController
+class ProfileController extends NetrunnersAbstractController
 {
 
     /**
-     * @var \Doctrine\ORM\EntityManager
-     */
-    protected $entityManager;
-
-    /**
-     * @var \Netrunners\Service\ProfileService
-     */
-    protected $profileService;
-
-    /**
      * ProfileController constructor.
-     * @param \Doctrine\ORM\EntityManager $entityManager
-     * @param \Netrunners\Service\ProfileService $profileService
+     * @param $entityManager
+     * @param $entityService
      */
-    public function __construct(
-        $entityManager,
-        $profileService
-    )
+    public function __construct($entityManager, $entityService)
     {
-        $this->entityManager = $entityManager;
-        $this->profileService = $profileService;
+        parent::__construct($entityManager, $entityService);
+    }
+
+    /**
+     * @param array $entities
+     * @return array
+     */
+    protected function populateXhrData($entities)
+    {
+        $this->init();
+        $data = [];
+        $locale = ($this->profile) ? $this->profile->getLocale() : 'en-US';
+        foreach ($entities as $entity) {
+            /** @var Profile $entity */
+            $data[] = [
+                'id' => $entity->getId(),
+                'username' => $entity->getUser()->getUsername(),
+                'credits' => $this->entityService->getNumberFormat($locale, $entity->getCredits()),
+                'snippets' => $this->entityService->getNumberFormat($locale, $entity->getSnippets()),
+                'resourceid' => ($entity->getCurrentResourceId()) ? $entity->getCurrentResourceId() : '---',
+            ];
+        }
+        return $data;
     }
 
     /**
      * @return ViewModel
      */
-    public function indexAction()
+    public function profileAction()
     {
-        // get user
-        $user = $this->zfcUserAuthentication()->getIdentity();
+        $this->init();
+        $this->layout(self::LAYOUT_NAME);
         return new ViewModel(array(
-            'user' => $user
+            'section' => $this->entityService->getSectionName(),
+            'profile' => $this->profile
         ));
     }
 

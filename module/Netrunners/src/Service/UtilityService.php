@@ -52,6 +52,31 @@ class UtilityService extends BaseService
     }
 
     /**
+     * @param null|object $clientData
+     * @return bool|string
+     * @throws \Exception
+     */
+    public function showPromptMemory($clientData = NULL)
+    {
+        if (!$clientData) return false;
+        $user = $this->getWebsocketServer()->findById('users', $clientData->userId);
+        if (!$user) return false;
+        $profile = $this->getWebsocketServer()->findById('profiles', $user['profileId']);
+        if (!$profile) return false;
+        $currentNode = $this->getWebsocketServer()->findById('nodes', $profile['currentNodeId']);
+        $currentNodeType = $this->getWebsocketServer()->findById('nodetypes', $currentNode['nodeTypeId']);
+        $currentSystem = $this->getWebsocketServer()->findById('systems', $currentNode['systemId']);
+        // init prompt string
+        $promptString = $currentNode['name'];
+        $userAtHostString = $user['username'] . '@' . $currentSystem['name'];
+        $sneaking = ($profile['stealthing']) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
+        $fullPromptString = '[<span class="eeg">' . $profile['eeg'] . '/100</span>][<span class="willpower">' .
+            $profile['willpower'] . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
+            '][' . $currentNodeType['shortName'] . '][' . $currentNode['level'] . ']</span>' . $sneaking .  ' ';
+        return $fullPromptString;
+    }
+
+    /**
      * @param ConnectionInterface $from
      * @param $clientData
      * @param string $content

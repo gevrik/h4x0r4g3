@@ -1,0 +1,62 @@
+<nav class="col-md-2 d-none d-md-block bg-light sidebar">
+    <div class="sidebar-sticky">
+        <?php if ($this->story) : ?>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($this->section == 'overview') ? 'active' : ''; ?>" href="<?php echo $this->url('story-editor', ['id' => $this->story->getId()]); ?>">
+                        <i class="fa fa-home"></i>
+                        <?php echo $this->translate("Overview"); ?> <?php echo ($this->section == 'overview') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($this->section == 'stories') ? 'active' : ''; ?>" href="<?php echo $this->url('story', ['action' => 'detail', 'id' => $this->story->getId()]); ?>">
+                        <i class="fa fa-info-circle"></i>
+                        <?php echo $this->translate("Details"); ?> <?php echo ($this->section == 'detail') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($this->section == 'passages') ? 'active' : ''; ?>" href="<?php echo $this->url('passage', ['action' => 'index-editor']); ?>">
+                        <i class="fa fa-file-text"></i>
+                        <?php echo $this->translate("Passages"); ?> <?php echo ($this->section == 'passages') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($this->section == 'choices') ? 'active' : ''; ?>" href="<?php echo $this->url('choice', ['action' => 'index-editor']); ?>">
+                        <i class="fa fa-bars"></i>
+                        <?php echo $this->translate("Choices"); ?> <?php echo ($this->section == 'choices') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($this->section == 'characters') ? 'active' : ''; ?>" href="<?php echo $this->url('story-editor', ['action']); ?>">
+                        <i class="fa fa-address-book"></i>
+                        <?php echo $this->translate("Characters"); ?> <?php echo ($this->section == 'characters') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($this->section == 'variables') ? 'active' : ''; ?>" href="<?php echo $this->url('story-editor', ['action']); ?>">
+                        <i class="fa fa-cog"></i>
+                        <?php echo $this->translate("Variables"); ?> <?php echo ($this->section == 'variables') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                    </a>
+                </li>
+            </ul>
+
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span><?php echo $this->translate("Other sections"); ?></span>
+            </h6>
+            <ul class="nav flex-column mb-2">
+                <li class="nav-item">
+                    <a class="nav-link" href="<?php echo $this->url('story-editor', ['action' => 'sitemap']); ?>">
+                        <i class="fa fa-sitemap"></i>
+                        <?php echo $this->translate("Storymap"); ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?php echo $this->url('story-editor', ['action' => 'stats']); ?>">
+                        <i class="fa fa-area-chart"></i>
+                        <?php echo $this->translate("Statistics"); ?>
+                    </a>
+                </li>
+            </ul>
+        <?php endif; ?>
+    </div>
+</nav>

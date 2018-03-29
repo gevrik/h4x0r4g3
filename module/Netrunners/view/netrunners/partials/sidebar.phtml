@@ -1,0 +1,54 @@
+<nav class="col-md-2 d-none d-md-block bg-dark sidebar">
+    <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link <?php echo ($this->section == 'dashboard') ? 'active' : ''; ?>" href="profile">
+                    <i class="fa fa-home"></i>
+                    <?php echo $this->translate("Dashboard"); ?> <?php echo ($this->section == 'dashboard') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo ($this->section == 'systems') ? 'active' : ''; ?>" href="system">
+                    <i class="fa fa-address-card"></i>
+                    <?php echo $this->translate("Systems"); ?> <?php echo ($this->section == 'systems') ? '<span class="sr-only">(current)</span>' : ''; ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="auction">
+                    <i class="fa fa-shopping-cart"></i>
+                    <?php echo $this->translate("Auctions"); ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="mail-message">
+                    <i class="fa fa-envelope"></i>
+                    <?php echo $this->translate("Mails"); ?>
+                </a>
+            </li>
+        </ul>
+
+        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+            <span><?php echo $this->translate("Other sections"); ?></span>
+        </h6>
+        <ul class="nav flex-column mb-2">
+            <li class="nav-item">
+                <a class="nav-link" href="manpage">
+                    <i class="fa fa-question-circle"></i>
+                    <?php echo $this->translate("Help"); ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="https://wiki.h4x0r4g3.com">
+                    <i class="fa fa-info-circle"></i>
+                    <?php echo $this->translate("Wiki"); ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="https://reddit.com/r/h4x0r4g3">
+                    <i class="fa fa-reddit"></i>
+                    Reddit
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

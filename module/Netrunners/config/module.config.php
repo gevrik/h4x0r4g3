@@ -2,6 +2,8 @@
 
 namespace Netrunners;
 
+use Netrunners\View\Helper\ImageUrlHelper;
+
 return array(
     'router' => array(
         'routes' => array(
@@ -16,7 +18,22 @@ return array(
                     'defaults' => array(
                         '__NAMESPACE__' => 'Netrunners\Controller',
                         'controller'    => 'Netrunners\Controller\Profile',
-                        'action'        => 'index',
+                        'action'        => 'profile',
+                    ),
+                ),
+            ),
+            'system' => array(
+                'type' => 'segment',
+                'options' => array(
+                    'route' => '/system[/:action][/:id]',
+                    'constraints' => array(
+                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        'id' => '[0-9]+',
+                    ),
+                    'defaults' => array(
+                        '__NAMESPACE__' => 'Netrunners\Controller',
+                        'controller'    => 'Netrunners\Controller\System',
+                        'action'        => 'profileIndex',
                     ),
                 ),
             ),
@@ -42,6 +59,7 @@ return array(
         ),
         'factories' => array(
             'Netrunners\Controller\Profile' => 'Netrunners\Factory\ProfileControllerFactory',
+            'Netrunners\Controller\System' => 'Netrunners\Factory\SystemControllerFactory',
             'Netrunners\Controller\Feedback' => 'Netrunners\Factory\FeedbackControllerFactory',
         ),
     ),
@@ -96,7 +114,10 @@ return array(
         'invokables'=> array(
         ),
         'factories' => array(
-            'image_url_helper' => 'Netrunners\Factory\ImageUrlHelperFactory',
+            ImageUrlHelper::class => 'Netrunners\Factory\ImageUrlHelperFactory',
+        ),
+        'aliases' => array(
+            'imageUrlHelper' => ImageUrlHelper::class,
         ),
     ),
     'view_manager' => array(
@@ -132,4 +153,36 @@ return array(
             ),
         ),
     ),
+    'bjyauthorize' => [
+
+        'resource_providers' => [
+            'BjyAuthorize\Provider\Resource\Config' => [
+//                'adminactions' => []
+            ],
+        ],
+
+        'rule_providers' => [
+            'BjyAuthorize\Provider\Rule\Config' => [
+                'allow' => [
+//                    ['superadmin', 'adminactions', ['canuse']],
+                ],
+
+                'deny' => [
+                    // ...
+                ],
+            ],
+        ],
+
+        'guards' => [
+
+            'BjyAuthorize\Guard\Controller' => [
+                ['controller' => 'Netrunners\Controller\Profile', 'action' => ['profile'],'roles' => ['user']],
+                ['controller' => 'Netrunners\Controller\Profile', 'action' => ['index', 'xhrData'],'roles' => ['admin']],
+                ['controller' => 'Netrunners\Controller\System', 'action' => ['profileIndex'],'roles' => ['user']],
+                ['controller' => 'Netrunners\Controller\System', 'action' => ['index', 'xhrData'],'roles' => ['admin']],
+                ['controller' => 'Netrunners\Controller\Feedback', 'roles' => ['admin']],
+            ],
+
+        ],
+    ],
 );

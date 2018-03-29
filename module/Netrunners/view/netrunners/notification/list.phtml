@@ -7,10 +7,9 @@
         <div id="notification-container" class="notification-container">
             <?php foreach ($this->notifications as $notification) : /** @var \Netrunners\Entity\Notification $notification */ ?>
 
-                <div class="alert alert-<?php echo $notification->getSeverity(); ?>">
-                    <button type="button" class="close close-btn" data-notification-id="<?php echo $notification->getId(); ?>" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <p class="text-<?php echo $notification->getSeverity(); ?>">
                     <?php echo $notification->getSubject(); ?>
-                </div>
+                </p>
 
             <?php endforeach; ?>
 

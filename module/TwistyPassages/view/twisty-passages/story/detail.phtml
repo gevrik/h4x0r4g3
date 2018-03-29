@@ -1,0 +1,27 @@
+<div class="container-fluid">
+    <div class="row">
+
+        <?php echo $this->partial('twisty-passages/partials/editor-sidebar'); ?>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h1 class="h2"><?php echo $this->translate(sprintf("Details: %s", $this->entity->getTitle())); ?></h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <a href="<?php echo $this->url('story', ['action' => 'update', 'id' => $this->entity->getId()]); ?>" class="btn btn-sm btn-outline-secondary"><?php echo $this->translate("Edit story"); ?></a>
+                        <?php echo $this->partial('twisty-passages/partials/editor-button-menu'); ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="jumbotron p-3 p-md-5 text-white rounded bg-dark">
+                <div class="col-md-6 px-0">
+                    <p class="lead my-3"><?php echo $this->entity->getDescription(); ?></p>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+</div>

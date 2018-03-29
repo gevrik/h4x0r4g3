@@ -10,7 +10,6 @@
 
 namespace Netrunners\Repository;
 
-use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\Node;
@@ -18,7 +17,7 @@ use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
-class ProfileRepository extends EntityRepository
+class ProfileRepository extends NetrunnersAbstractRepo implements NetrunnersRepoInterface
 {
 
     /**

@@ -1,0 +1,84 @@
+<?php
+/** @var \Zend\Form\Form $form */
+$form = $this->form;
+$form->setAttribute('action', $this->url('story', ['action' => 'update', 'id' => $this->entity->getId()]));
+
+/** @var \Zend\Form\Fieldset $fieldset */
+$fieldset = $form->get('story');
+
+$title = $fieldset->get('title');
+$title->setAttribute('class', 'form-control');
+$title->setAttribute('placeholder', $this->translate("Story title"));
+$title->setLabel($this->translate("Title"));
+
+$description = $fieldset->get('description');
+$description->setAttribute('class', 'form-control');
+$description->setAttribute('id', 'story-description');
+$description->setAttribute('placeholder', $this->translate("Story description"));
+$description->setLabel($this->translate("Description"));
+
+$status = $fieldset->get('status');
+
+$added = $fieldset->get('added');
+$added->setValue($this->entity->getAdded()->format('Y-m-d H:i:s'));
+
+$author = $fieldset->get('author');
+
+$submit = $form->get('submit');
+$submit->setAttribute('class', 'btn btn-primary');
+$submit->setValue($this->translate("Edit story"));
+
+$form->prepare();
+
+?>
+
+<div class="container-fluid">
+    <div class="row">
+
+        <?php echo $this->partial('twisty-passages/partials/editor-sidebar'); ?>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h1 class="jumbotron-heading"><?php echo $this->translate("Update story"); ?></h1>
+                <p class="lead text-muted"><?php echo $this->translate("TODO add instructions"); ?></p>
+            </div>
+
+            <div class="story-create-form py-3 bg-light">
+                <div class="container-fluid">
+                    <?php echo $this->form()->openTag($form); ?>
+                    <div class="form-group row">
+                        <div class="col-sm-8">
+                            <?php echo $this->formElement($title); ?>
+                            <?php echo $this->formElementErrors($title, array('class' => 'text-danger')) ?>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class=" col-sm-8">
+                            <?php echo $this->formElement($description); ?>
+                            <?php echo $this->formElementErrors($description, array('class' => 'text-danger')) ?>
+                        </div>
+                    </div>
+                    <?php echo $this->formHidden($author); ?>
+                    <?php echo $this->formElementErrors($author, array('class' => 'text-danger')) ?>
+                    <?php echo $this->formHidden($status); ?>
+                    <?php echo $this->formElementErrors($status, array('class' => 'text-danger')) ?>
+                    <?php echo $this->formHidden($added); ?>
+                    <?php echo $this->formElementErrors($added, array('class' => 'text-danger')) ?>
+                    <div class="row">
+                        <?php echo $this->formSubmit($submit); ?>
+                    </div>
+                    <?php echo $this->form()->closeTag(); ?>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+</div>
+
+<script type="application/javascript">
+
+    CKEDITOR.replace( 'story-description', {customConfig: '../../../../js/ck_default_config.js'} );
+
+</script>

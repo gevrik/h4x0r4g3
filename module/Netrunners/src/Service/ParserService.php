@@ -791,9 +791,12 @@ class ParserService
      * @param ConnectionInterface $from
      * @param string $content
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function parseConfirmInput(ConnectionInterface $from, $content = '')
     {

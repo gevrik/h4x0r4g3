@@ -9,6 +9,7 @@
 
 namespace Application;
 
+use TmoAuth\Factory\UserControllerFactory;
 use Zend\ServiceManager\Factory\InvokableFactory;
 
 return array(
@@ -66,9 +67,6 @@ return array(
             'navigation' => 'Zend\Navigation\Service\DefaultNavigationFactory',
             'Application\Service\WebsocketService' => InvokableFactory::class
         ),
-//        'invokables' => array(
-//            'Application\Service\WebsocketService' => 'Application\Service\WebsocketService'
-//        ),
     ),
     'translator' => array(
         'locale' => 'en_US',
@@ -82,12 +80,13 @@ return array(
     ),
     'controllers' => array(
         'factories' => array(
-            'Application\Controller\Index' => 'Application\Factory\IndexControllerFactory'
+            'Application\Controller\Index' => 'Application\Factory\IndexControllerFactory',
+            'zfcuser' => UserControllerFactory::class
         ),
     ),
     'view_manager' => array(
-        'display_not_found_reason' => true,
-        'display_exceptions'       => true,
+        'display_not_found_reason' => false,
+        'display_exceptions'       => false,
         'doctype'                  => 'HTML5',
         'not_found_template'       => 'error/404',
         'exception_template'       => 'error/index',
@@ -95,7 +94,11 @@ return array(
             'layout/layout'           => __DIR__ . '/../view/layout/layout.phtml',
             'application/index/index' => __DIR__ . '/../view/application/index/index.phtml',
             'error/404'               => __DIR__ . '/../view/error/404.phtml',
+            'error/403'               => __DIR__ . '/../view/error/403.phtml',
             'error/index'             => __DIR__ . '/../view/error/index.phtml',
+            'layout/web'             => __DIR__ . '/../view/layout/web.phtml',
+            'layout/tp'             => __DIR__ . '/../view/layout/tp.phtml',
+            'layout/tp-editor'             => __DIR__ . '/../view/layout/tp-editor.phtml',
         ),
         'template_path_stack' => array(
             __DIR__ . '/../view',

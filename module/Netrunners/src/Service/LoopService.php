@@ -161,6 +161,7 @@ class LoopService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function loopJobs()
     {
@@ -475,8 +476,10 @@ class LoopService extends BaseService
             }
         }
         foreach ($combatants['npcs'] as $npcId => $combatData) {
-            $npc = $this->entityManager->find('Netrunners\Entity\NpcInstance', $npcId);
             /** @var NpcInstance $npc */
+            $npc = $this->entityManager->find('Netrunners\Entity\NpcInstance', $npcId);
+            // skip if no longer exists
+            if (!$npc) continue;
             // skip if they are stunned
             if ($this->isUnderEffect($npc, Effect::ID_STUNNED)) continue;
             // get combat data
@@ -723,6 +726,7 @@ class LoopService extends BaseService
     /**
      * Loop that regenerates eeg, willpower and security rating. Default loop time is 5 minutes.
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\ORMException
      */
     public function loopRegeneration()
     {
@@ -874,7 +878,6 @@ class LoopService extends BaseService
             }
             $this->updatedSockets = [];
         }
-        $this->getWebsocketServer()->log(Logger::INFO, "end npcroam");
     }
 
     /**

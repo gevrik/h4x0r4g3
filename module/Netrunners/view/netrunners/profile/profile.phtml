@@ -1,0 +1,112 @@
+<div class="container-fluid">
+    <div class="row">
+        <?php echo $this->partial('netrunners/partials/sidebar'); ?>
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                <h1 class="h2">Dashboard</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <button class="btn btn-sm btn-outline-secondary">Share</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-deck mb-3">
+
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h4 class="my-0 font-weight-normal">Score Info</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                <tr>
+                                    <td><?php echo $this->translate("credits:"); ?></td>
+                                    <td><?php echo $this->profile->getCredits(); ?></td>
+                                </tr>
+                                <tr>
+                                    <td><?php echo $this->translate("snippets:"); ?></td>
+                                    <td><?php echo $this->profile->getSnippets(); ?></td>
+                                </tr>
+                                <tr>
+                                    <td><?php echo $this->translate("skillpoints:"); ?></td>
+                                    <td><?php echo $this->profile->getSkillpoints(); ?></td>
+                                </tr>
+                                <tr>
+                                    <td><?php echo $this->translate("eeg:"); ?></td>
+                                    <td><?php echo $this->profile->getEeg(); ?></td>
+                                </tr>
+                                <tr>
+                                    <td><?php echo $this->translate("willpower:"); ?></td>
+                                    <td><?php echo $this->profile->getWillpower(); ?></td>
+                                </tr>
+                                <tr>
+                                    <td><?php echo $this->translate("security rating:"); ?></td>
+                                    <td><?php echo $this->profile->getSecurityRating(); ?></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h4 class="my-0 font-weight-normal">Meta Info</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                <tr>
+                                    <td><?php echo $this->translate("e-mail:"); ?></td>
+                                    <td><?php echo ($this->profile->getEmail()) ? $this->profile->getEmail() : $this->translate('no e-mail given'); ?></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h4 class="my-0 font-weight-normal">Faction Info</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                <tr>
+                                    <td><?php echo $this->translate("name:"); ?></td>
+                                    <td><?php echo ($this->profile->getFaction()) ? $this->profile->getFaction()->getName() : $this->translate('not in faction'); ?></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h4 class="my-0 font-weight-normal">Group Info</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                <tr>
+                                    <td><?php echo $this->translate("name:"); ?></td>
+                                    <td><?php echo ($this->profile->getGroup()) ? $this->profile->getGroup()->getName() : $this->translate('not in group'); ?></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+</div>

@@ -2,6 +2,8 @@
 
 namespace TmoAuth;
 
+use TmoAuth\Factory\UserControllerFactory;
+
 return array(
     'router' => array(
         'routes' => array(
@@ -86,11 +88,15 @@ return array(
         ),
         'factories' => array(
             'TmoAuth\Controller\User' => 'TmoAuth\Factory\UserControllerFactory',
+            'zfcuser' => UserControllerFactory::class,
         ),
     ),
     'view_manager' => array(
         'template_path_stack' => array(
             __DIR__ . '/../view',
+        ),
+        'template_map' => array(
+            'zfc-user/user/login'   => __DIR__ . '/../view/tmo-auth/user/login.phtml',
         ),
     ),
     'navigation' => array(
@@ -128,16 +134,30 @@ return array(
         ),
     ),
     'bjyauthorize' => array(
-        // Using the authentication identity provider, which basically reads the roles from the auth service's identity
-        'identity_provider' => 'BjyAuthorize\Provider\Identity\AuthenticationIdentityProvider',
+        'resource_providers' => [
+            'BjyAuthorize\Provider\Resource\Config' => [
+                'profile' => [],
+            ],
+        ],
+        'rule_providers' => [
+            'BjyAuthorize\Provider\Rule\Config' => [
+                'allow' => [
+                    ['user', 'profile', ['detail']],
+                    ['admin', 'profile', ['update']],
+                ],
 
-        'role_providers'        => array(
-            // using an object repository (entity repository) to load all roles into our ACL
-            'BjyAuthorize\Provider\Role\ObjectRepositoryProvider' => array(
-                'object_manager'    => 'doctrine.entity_manager.orm_default',
-                'role_entity_class' => 'TmoAuth\Entity\Role',
-            ),
-        ),
+                'deny' => [
+                    // ...
+                ],
+            ],
+        ],
+        'guards' => [
+            'BjyAuthorize\Guard\Controller' => [
+                ['controller' => 'TmoAuth\Controller\User', 'action' => ['login', 'index', 'register'], 'roles' => ['guest', 'user']],
+                ['controller' => 'TmoAuth\Controller\User', 'action' => ['logout', 'changepassword'], 'roles' => 'user'],
+            ],
+
+        ],
     ),
     'zfcuser' => array(
         'new_user_default_role' => 'user',

@@ -12,6 +12,7 @@ namespace Netrunners\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use TmoAuth\Entity\User;
+use TwistyPassages\Entity\Story;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\ProfileRepository") */
 class Profile
@@ -231,6 +232,16 @@ class Profile
      * @ORM\OneToOne(targetEntity="Netrunners\Entity\MilkrunAivatarInstance")
      */
     protected $defaultMilkrunAivatar;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Story")
+     */
+    protected $currentPlayStory;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Story")
+     */
+    protected $currentEditorStory;
 
 
     /**
@@ -904,6 +915,42 @@ class Profile
     public function setDefaultMilkrunAivatar($defaultMilkrunAivatar)
     {
         $this->defaultMilkrunAivatar = $defaultMilkrunAivatar;
+        return $this;
+    }
+
+    /**
+     * @return null|Story
+     */
+    public function getCurrentPlayStory()
+    {
+        return $this->currentPlayStory;
+    }
+
+    /**
+     * @param Story $currentPlayStory
+     * @return Profile
+     */
+    public function setCurrentPlayStory($currentPlayStory)
+    {
+        $this->currentPlayStory = $currentPlayStory;
+        return $this;
+    }
+
+    /**
+     * @return null|Story
+     */
+    public function getCurrentEditorStory()
+    {
+        return $this->currentEditorStory;
+    }
+
+    /**
+     * @param Story $currentEditorStory
+     * @return Profile
+     */
+    public function setCurrentEditorStory($currentEditorStory)
+    {
+        $this->currentEditorStory = $currentEditorStory;
         return $this;
     }
 

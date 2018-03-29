@@ -158,6 +158,21 @@ class BaseService
     }
 
     /**
+     * @param string $locale
+     * @param int $value
+     * @param int $min
+     * @param int $max
+     * @return string
+     */
+    public function getNumberFormat($locale = 'en-US', $value = 0, $min = 0, $max = 0)
+    {
+        $formatter = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+        $formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $min);
+        $formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, $max);
+        return $formatter->format($value);
+    }
+
+    /**
      * @param System $system
      * @param int $amount
      * @throws \Doctrine\ORM\OptimisticLockException
@@ -2190,9 +2205,8 @@ class BaseService
      * @param Profile|NULL $profile
      * @param bool $silent
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function updateMap($resourceId, Profile $profile = NULL, $silent = true)
     {

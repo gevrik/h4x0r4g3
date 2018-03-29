@@ -78,10 +78,7 @@ class UserController extends \ZfcUser\Controller\UserController
      */
     public function __construct($redirectCallback)
     {
-        if (!is_callable($redirectCallback)) {
-            throw new \InvalidArgumentException('You must supply a callable redirectCallback');
-        }
-        $this->redirectCallback = $redirectCallback;
+        parent::__construct($redirectCallback);
     }
 
     /**
@@ -100,6 +97,8 @@ class UserController extends \ZfcUser\Controller\UserController
      */
     public function loginAction()
     {
+        $this->layout('layout/web');
+
         if ($this->zfcUserAuthentication()->hasIdentity()) {
             return $this->redirect()->toRoute($this->getOptions()->getLoginRedirectRoute());
         }
@@ -157,6 +156,8 @@ class UserController extends \ZfcUser\Controller\UserController
         if ($this->zfcUserAuthentication()->hasIdentity()) {
             return $this->redirect()->toRoute($this->getOptions()->getLoginRedirectRoute());
         }
+
+        $this->layout('layout/web');
 
         $adapter = $this->zfcUserAuthentication()->getAuthAdapter();
         $redirect = $this->params()->fromPost('redirect', $this->params()->fromQuery('redirect', false));

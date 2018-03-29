@@ -17,6 +17,7 @@ use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\ParserService;
 use Netrunners\Service\UtilityService;
+use Zend\Console\Console;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
 class IndexControllerFactory implements FactoryInterface
