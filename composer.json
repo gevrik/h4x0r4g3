@@ -9,6 +9,11 @@
         "websockets",
         "gearman"
     ],
+    "config": {
+        "platform": {
+            "php": "5.6.33"
+        }
+    },
     "repositories": [
         {
             "type": "vcs",
@@ -21,6 +26,7 @@
     ],
     "homepage": "http://netrunners.totalmadownage.com/",
     "require": {
+        "php": "^5.6 || ^7.0",
         "zendframework/zend-component-installer": "^1.1",
         "zf-commons/zfc-user": "^3.0",
         "kokspflanze/bjy-authorize": "^1.6.3",
