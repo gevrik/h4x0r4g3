@@ -231,6 +231,11 @@ class Profile
      */
     protected $currentEditorStory;
 
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\MorphInstance")
+     */
+    protected $morph;
+
 
     /**
      * Constructor for Profile.
@@ -903,6 +908,24 @@ class Profile
     public function setCurrentEditorStory($currentEditorStory)
     {
         $this->currentEditorStory = $currentEditorStory;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMorph()
+    {
+        return $this->morph;
+    }
+
+    /**
+     * @param mixed $morph
+     * @return Profile
+     */
+    public function setMorph($morph)
+    {
+        $this->morph = $morph;
         return $this;
     }
 
