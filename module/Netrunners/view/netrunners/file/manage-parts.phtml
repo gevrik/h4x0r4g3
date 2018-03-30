@@ -1,0 +1,77 @@
+<div class="panel panel-default draggable manage-parts-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manage-parts" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate("manage file parts"); ?></h3>
+    </div>
+    <div class="panel-body table-responsive" style="padding: 0;">
+        <table id="parts-table" class="display cell-border compact" cellspacing="0" width="100%">
+            <thead>
+            <tr>
+                <th>ACTIONS</th>
+                <th>NAME</th>
+                <th>LEVEL</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($this->parts as $part) : /** @var \Netrunners\Entity\FilePartInstance $part */ ?>
+                <tr>
+                    <td>
+                        <button type="button"
+                                class="btn btn-primary btn-xs btn-recycle-fpi"
+                                data-fpiid="<?php echo $part->getId(); ?>">
+                            <i class="fa fa-recycle"></i>
+                        </button>
+                        <button type="button"
+                                class="btn btn-danger btn-xs btn-trash-fpi"
+                                data-fpiid="<?php echo $part->getId(); ?>">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <?php echo $part->getFilePart()->getName(); ?>
+                    </td>
+                    <td>
+                        <?php echo $part->getLevel(); ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<?php echo $this->headLink()->appendStylesheet('/css/nh_tables.css'); ?>
+
+<script>
+
+    $('.panel-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    $(document).ready(function() {
+
+       var table = $('#parts-table').DataTable({
+            "pageLength": 10
+        });
+
+        $('.btn-trash-fpi').on('click', function (e) {
+            var fpiid = $(this).data('fpiid');
+            table
+                .row( $(this).parents('tr') )
+                .remove()
+                .draw();
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'rmres ' + fpiid
+            };
+            conn.send(JSON.stringify(command));
+        })
+
+    } );
+
+</script>

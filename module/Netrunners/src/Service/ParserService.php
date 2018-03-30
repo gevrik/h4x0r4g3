@@ -450,6 +450,9 @@ class ParserService
                 return $this->nodeService->showNodeInfoNew($resourceId, NULL, true);
             case 'mail':
                 return $this->mailMessageService->enterMailMode($resourceId);
+            case 'manageparts':
+                return $this->codingService->managePartsCommand($resourceId);
+                break;
             case 'map':
                 return $this->systemService->updateMap($resourceId, $user->getProfile(), false);
             case 'showmra':
@@ -501,6 +504,9 @@ class ParserService
             case 'removepasskey':
             case 'rmpasskey':
                 return $this->fileService->removePasskeyCommand($resourceId, $contentArray);
+            case 'removeresource':
+            case 'rmres':
+                return $this->codingService->removeResourceCommand($resourceId, $contentArray);
             case 'reply':
                 return $this->chatService->replyChat($resourceId, $contentArray);
             case 'research':
