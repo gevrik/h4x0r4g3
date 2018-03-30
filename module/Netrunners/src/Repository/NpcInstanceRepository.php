@@ -118,4 +118,20 @@ class NpcInstanceRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @param $spawnerId
+     * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function findBySpawner($spawnerId)
+    {
+        $file = $this->_em->find('Netrunners\Entity\File', $spawnerId);
+        $qb = $this->createQueryBuilder('ni');
+        $qb->where('ni.spawner = :spawner');
+        $qb->setParameter('spawner', $file);
+        return $qb->getQuery()->getResult();
+    }
+
 }

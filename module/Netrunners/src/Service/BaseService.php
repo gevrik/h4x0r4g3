@@ -1874,6 +1874,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function learnFromSuccess(Profile $profile, $jobData, $modifier = 0)
     {
@@ -1955,9 +1956,6 @@ class BaseService
      * @param $message
      * @param string $textClass
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      * @throws \Exception
      */
     protected function messageProfileNew(Profile $profile, $message, $textClass = GameClientResponse::CLASS_MUTED)
@@ -2007,9 +2005,8 @@ class BaseService
      * @param Profile $profile
      * @param $amount
      * @param bool $flush
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function gainSkillpoints(Profile $profile, $amount, $flush = false)
     {
@@ -2025,9 +2022,8 @@ class BaseService
     /**
      * @param Profile $profile
      * @param null|int $special
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function gainInvitation(Profile $profile, $special = NULL)
     {
@@ -2060,6 +2056,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function learnFromFailure(Profile $profile, $jobData, $modifier = 0)
     {
@@ -2641,6 +2638,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function checkMoveFileTriggers(Profile $profile, Node $previousNode = NULL)
     {
@@ -2967,6 +2965,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function initService($resourceId)
     {
@@ -3012,9 +3011,6 @@ class BaseService
 
     /**
      * @param $resourceId
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      * @throws \Exception
      */
     private function initResponse($resourceId)

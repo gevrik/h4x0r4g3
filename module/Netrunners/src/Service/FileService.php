@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\System;
@@ -303,10 +304,26 @@ class FileService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @param File $file
+     * @param Connection $connection
+     * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function executeLockpick($resourceId, File $file, Connection $connection)
+    {
+        return $this->fileExecutionService->executeLockpick($resourceId, $file, $connection);
+    }
+
+    /**
      * @param File $file
      * @param File $miner
      * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeSiphon(File $file, File $miner)
     {

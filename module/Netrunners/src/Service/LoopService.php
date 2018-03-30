@@ -221,27 +221,32 @@ class LoopService extends BaseService
                     break;
                 case 'executeprogram':
                     $parameter = (object)$actionData->parameter;
-                    $file = $this->entityManager->find('Netrunners\Entity\File', $parameter->fileId);
                     /** @var File $file */
+                    $file = $this->entityManager->find('Netrunners\Entity\File', $parameter->fileId);
                     switch ($file->getFileType()->getId()) {
                         default:
                             break;
                         case FileType::ID_PORTSCANNER:
-                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             /** @var System $system */
+                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             $gameClientResponse = $this->fileService->executePortscanner($file, $system);
                             break;
                         case FileType::ID_JACKHAMMER:
-                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             /** @var System $system */
+                            $system = $this->entityManager->find('Netrunners\Entity\System', $parameter->systemId);
                             $nodeId = $parameter->nodeId;
-                            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
                             /** @var Node $node */
+                            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
                             $gameClientResponse = $this->fileService->executeJackhammer($resourceId, $file, $system, $node);
                             break;
+                        case FileType::ID_LOCKPICK:
+                            /** @var Connection $connection */
+                            $connection = $this->entityManager->find('Netrunners\Entity\Connection', $parameter->connectionId);
+                            $gameClientResponse = $this->fileService->executeLockpick($resourceId, $file, $connection);
+                            break;
                         case FileType::ID_SIPHON:
-                            $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
                             /** @var File $miner */
+                            $miner = $this->entityManager->find('Netrunners\Entity\File', $parameter->minerId);
                             $gameClientResponse = $this->fileService->executeSiphon($file, $miner);
                             break;
                         case FileType::ID_MEDKIT:

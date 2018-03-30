@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
@@ -21,6 +22,7 @@ use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -48,6 +50,11 @@ class FileExecutionService extends BaseService
      */
     protected $fileRepo;
 
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
 
     /**
      * FileExecutionService constructor.
@@ -72,6 +79,7 @@ class FileExecutionService extends BaseService
         $this->missionService = $missionService;
         $this->hangmanService = $hangmanService;
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
     }
 
     /**
@@ -170,6 +178,7 @@ class FileExecutionService extends BaseService
                 return $this->executeBeartrap($file, $profile->getCurrentNode());
             case FileType::ID_PORTSCANNER:
             case FileType::ID_JACKHAMMER:
+            case FileType::ID_LOCKPICK:
             case FileType::ID_SIPHON:
             case FileType::ID_MEDKIT:
             case FileType::ID_PROXIFIER:
@@ -728,6 +737,18 @@ class FileExecutionService extends BaseService
                     $file->getName()
                 );
                 break;
+            case FileType::ID_LOCKPICK:
+                list($executeWarning, $connectionId) = $this->executeWarningLockpick($file, $contentArray);
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'connectionId' => $connectionId,
+                    'contentArray' => $contentArray
+                ];
+                $message = sprintf(
+                    $this->translate('You start breaking the codegate with [%s] - please wait'),
+                    $file->getName()
+                );
+                break;
             case FileType::ID_SIPHON:
                 list($executeWarning, $minerId) = $this->executeWarningSiphon($contentArray);
                 $parameterArray = [
@@ -891,6 +912,52 @@ class FileExecutionService extends BaseService
             }
         }
         return [$response, $systemId, $nodeId];
+    }
+
+    /**
+     * @param File $file
+     * @param $contentArray
+     * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function executeWarningLockpick(File $file, $contentArray)
+    {
+        $response = false;
+        /** @var Profile $profile */
+        $profile = $file->getProfile();
+        if ($profile->getStealthing()) {
+            $response = sprintf(
+                $this->translate('%s can not be used while stealthing'),
+                $file->getName()
+            );
+        }
+        $connectionParameter = $this->getNextParameter($contentArray, false);
+        if (!$connectionParameter) {
+            $response = $this->translate('Please specify a connection by name or number');
+        }
+        $connection = null;
+        if (!$response) {
+            $connection = $this->findConnectionByNameOrNumber($connectionParameter, $profile->getCurrentNode());
+            if (!$connection) {
+                $response = $this->translate('Unable to find connection');
+            }
+        }
+
+        if (!$response && $connection && $connection->getType() != Connection::TYPE_CODEGATE) {
+            $response = $this->translate('That connection is not protected by a code-gate');
+        }
+        if (!$response && $connection && $connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
+            $response = $this->translate('The connection is already open');
+        }
+        if (!$response && $connection && $file->getLevel() < ($connection->getLevel()-1)*10) {
+            $response = $this->translate('The level of your lockpick is too low for this codegate');
+        }
+        // check if there are hostile npc in the node
+        if (!$response && $this->npcInstanceRepo->countByHostileToProfileInNode($profile) >= 1) {
+            $this->translate('Unable to use lockpick when there are hostile entities in the node');
+        }
+        return [$response, $connection->getId()];
     }
 
     /**
@@ -1745,6 +1812,62 @@ class FileExecutionService extends BaseService
             $message = $this->translate('You fail to break in to the target system');
             $response->addMessage($message);
             $file = $this->triggerProgramExecutionReaction($file, $node);
+            if ($file->getIntegrity() <= 0) {
+                $message = $this->translate('Critical integrity failure - program shutdown initiated');
+                $response->addMessage($message);
+            }
+        }
+        $this->lowerIntegrityOfFile($file);
+        return $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+    }
+
+    /**
+     * @param $resourceId
+     * @param File $file
+     * @param Connection $connection
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function executeLockpick($resourceId, File $file, Connection $connection)
+    {
+        $response = new GameClientResponse($resourceId);
+        $fileLevel = $file->getLevel();
+        $fileIntegrity = $file->getIntegrity();
+        $skillRating = $this->getSkillRating($file->getProfile(), Skill::ID_COMPUTING);
+        $baseChance = ($fileLevel + $fileIntegrity + $skillRating) / 2;
+        $difficulty = $this->getNodeAttackDifficulty($connection->getSourceNode(), $file);
+        if (!$difficulty) $difficulty = 0;
+        $chance = $baseChance - $difficulty;
+        if ($this->makePercentRollAgainstTarget($chance)) {
+            $message = sprintf(
+                $this->translate('LOCKPICK RESULTS FOR [%s]'),
+                $connection->getTargetNode()->getName()
+            );
+            $response->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+            $message = sprintf(
+                $this->translate('You break the code gate with your lockpick')
+            );
+            $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+            /** @var Profile $profile */
+            $profile = $file->getProfile();
+            $this->updateMap($resourceId, $profile);
+            $nodeInfoResponse = $this->showNodeInfoNew($resourceId, NULL, false);
+            if ($nodeInfoResponse instanceof GameClientResponse) return $nodeInfoResponse;
+        }
+        else {
+            $message = sprintf(
+                $this->translate('LOCKPICK RESULTS FOR [%s]'),
+                $connection->getTargetNode()->getName()
+            );
+            $response->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+            $message = $this->translate('You fail to break the codegate');
+            $response->addMessage($message);
+            $file = $this->triggerProgramExecutionReaction($file, $connection->getSourceNode());
             if ($file->getIntegrity() <= 0) {
                 $message = $this->translate('Critical integrity failure - program shutdown initiated');
                 $response->addMessage($message);
