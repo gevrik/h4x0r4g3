@@ -162,7 +162,8 @@ class FileExecutionService extends BaseService
             case FileType::ID_COINMINER:
                 return $this->executeCoinminer($file, $profile->getCurrentNode());
             case FileType::ID_GUARD_SPAWNER:
-                return $this->executeGuardSpawner($file, $profile->getCurrentNode());
+            case FileType::ID_SPIDER_SPAWNER:
+                return $this->executeSpawner($file, $profile->getCurrentNode());
             case FileType::ID_ICMP_BLOCKER:
                 return $this->executeIcmpBlocker($file, $profile->getCurrentNode());
             case FileType::ID_BEARTRAP:
@@ -593,7 +594,7 @@ class FileExecutionService extends BaseService
      * @return GameClientResponse
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    protected function executeGuardSpawner(File $file, Node $node)
+    protected function executeSpawner(File $file, Node $node)
     {
         $profile = $this->user->getProfile();
         if (!$this->canExecuteInNodeType($file, $node)) {
@@ -1627,6 +1628,7 @@ class FileExecutionService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function executePortscanner(File $file, System $system)
     {
@@ -1698,6 +1700,8 @@ class FileExecutionService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function executeJackhammer($resourceId, File $file, System $system, Node $node)
     {
@@ -1757,6 +1761,7 @@ class FileExecutionService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function executeSiphon(File $file, File $miner)
     {
@@ -1834,9 +1839,8 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function executeMedkit(File $file)
     {
@@ -1865,9 +1869,8 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function executeProxifier(File $file)
     {

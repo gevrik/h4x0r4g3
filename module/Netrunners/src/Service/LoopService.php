@@ -667,7 +667,7 @@ class LoopService extends BaseService
                     break;
                 case FileType::ID_GUARD_SPAWNER:
                     $fileData = $this->getFileData($spawner);
-                    if ($fileData->npcid == 0) {
+                    if ($fileData->npcid == 0) { // TODO reset this when npc dies
                         $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_GUARDIAN_ICE);
                         $npcInstance = $this->spawnNpcInstance(
                             $npc,
@@ -679,6 +679,29 @@ class LoopService extends BaseService
                             NULL,
                             true
                         );
+                        $npcInstance->setSpawner($spawner);
+                        $fileData->npcid = $npcInstance->getId();
+                        $spawner->setData(json_encode($fileData));
+                        $this->lowerIntegrityOfFile($spawner, 100, 10);
+                        $this->checkNpcAggro($npcInstance);
+                        $this->checkAggro($npcInstance);
+                    }
+                    break;
+                case FileType::ID_SPIDER_SPAWNER:
+                    $fileData = $this->getFileData($spawner);
+                    if ($fileData->npcid == 0) {
+                        $npc = $this->entityManager->find('Netrunners\Entity\Npc', Npc::ID_SPIDER_ICE);
+                        $npcInstance = $this->spawnNpcInstance(
+                            $npc,
+                            $spawner->getNode(),
+                            $spawner->getProfile(),
+                            NULL,
+                            NULL,
+                            NULL,
+                            NULL,
+                            true
+                        );
+                        $npcInstance->setSpawner($spawner);
                         $fileData->npcid = $npcInstance->getId();
                         $spawner->setData(json_encode($fileData));
                         $this->lowerIntegrityOfFile($spawner, 100, 10);

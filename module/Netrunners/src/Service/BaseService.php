@@ -1131,6 +1131,12 @@ class BaseService
                 $result['codegates'] = 0;
                 $result['npcid'] = 0;
                 break;
+            case FileType::ID_SPIDER_SPAWNER:
+                $result['roaming'] = 0;
+                $result['aggressive'] = 0;
+                $result['codegates'] = 0;
+                $result['npcid'] = 0;
+                break;
             case FileType::ID_DATAMINER:
             case FileType::ID_COINMINER:
                 $result['value'] = 0;
@@ -1248,9 +1254,7 @@ class BaseService
      * @param array $adds
      * @param bool $sendNow
      * @return bool|GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function updateDivHtml(Profile $profile, $element, $content, $adds = [], $sendNow = false)
     {
@@ -1661,6 +1665,8 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function messageEveryoneInNodeNew(
         Node $node,
@@ -1952,6 +1958,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function messageProfileNew(Profile $profile, $message, $textClass = GameClientResponse::CLASS_MUTED)
     {
@@ -2598,6 +2605,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function cancelAction($resourceId, $messageSocket = false, $asActiveCommand = false)
     {
@@ -2732,6 +2740,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function flatlineProfile(Profile $profile)
     {
@@ -3006,6 +3015,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function initResponse($resourceId)
     {
@@ -4014,9 +4024,16 @@ class BaseService
             $file->setNode($npcInstance->getNode());
             $file->setSystem($npcInstance->getNode()->getSystem());
         }
+        $spawner = $npcInstance->getSpawner();
+        if ($spawner) {
+            $fileData = $this->getFileData($spawner);
+            $fileData->npcid = 0;
+            $spawner->setData(json_encode($fileData));
+        }
         $npcInstance->setBlasterModule(NULL);
         $npcInstance->setBladeModule(NULL);
         $npcInstance->setShieldModule(NULL);
+        $npcInstance->setSpawner(NULL);
         $this->entityManager->flush();
         // give snippets and credits to attacker
         $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
