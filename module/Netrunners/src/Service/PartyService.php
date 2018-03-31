@@ -63,7 +63,7 @@ class PartyService extends BaseService
         // all good - we can create the party
         $party = [
             'leader' => $profile->getId(),
-            'members' => [$profile->getId() => []],
+            'members' => [$profile->getId() => ['following'=>false]],
             'invitations' => [],
             'requests' => [],
             'created' => new \DateTime(),
@@ -117,6 +117,7 @@ class PartyService extends BaseService
                 end($partyData['members']);
                 $newLeaderId = key($partyData['members']);
                 $partyData['leader'] = $newLeaderId;
+                $partyData['members'][$newLeaderId]['following'] = false;
             }
         }
         $this->getWebsocketServer()->setClientData($resourceId, 'partyId', null);
@@ -242,7 +243,7 @@ class PartyService extends BaseService
         // all seems good, we now check if the target profile has already requested an invite
         if (array_key_exists($targetProfile->getId(), $party['requests'])) {
             // target profile already requested an invite, add them
-            $party['members'][$targetProfile->getId()] = [];
+            $party['members'][$targetProfile->getId()] = ['following'=>false];
             unset($party['requests'][$targetProfile->getId()]);
             if (array_key_exists($targetProfile->getId(), $party['invitations'])) {
                 unset($party['invitations'][$targetProfile->getId()]);
@@ -316,7 +317,7 @@ class PartyService extends BaseService
         // all seems good, we now check if the profile has already been invited
         if (array_key_exists($profile->getId(), $party['invitations'])) {
             // profile already invited, add them
-            $party['members'][$profile->getId()] = [];
+            $party['members'][$profile->getId()] = ['following'=>false];
             unset($party['invitations'][$profile->getId()]);
             if (array_key_exists($profile->getId(), $party['requests'])) {
                 unset($party['requests'][$profile->getId()]);
@@ -391,6 +392,47 @@ class PartyService extends BaseService
         $xmessage = $this->translate(sprintf('[%s] has kicked you from their party', $profile->getUser()->getUsername()));
         $message = $this->translate(sprintf('You have kicked [%s] from your party', $targetProfile->getUser()->getUsername()));
         $this->messageProfileNew($targetProfile, $xmessage, GameClientResponse::CLASS_INFO);
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function partyFollowCommand($resourceId)
+    {
+        // init service
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        /** @var Profile $profile */
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // check if they are in a party
+        if ($this->clientData->partyId === null) {
+            $message = $this->translate('You are not in a party...');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $partyId = $this->clientData->partyId;
+        $partyData = $this->getWebsocketServer()->getParty($partyId);
+        if ($partyData['leader'] == $profile->getId()) {
+            $message = $this->translate('Unable to follow yourself...');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($partyData['members'][$profile->getId()]['following']) {
+            $partyData['members'][$profile->getId()]['following'] = false;
+            $message = $this->translate('You stop following the party leader...');
+        }
+        else {
+            $partyData['members'][$profile->getId()]['following'] = true;
+            $message = $this->translate('You start following the party leader...');
+        }
+        $this->getWebsocketServer()->setParty($partyId, $partyData);
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 

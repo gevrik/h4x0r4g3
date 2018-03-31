@@ -511,6 +511,8 @@ class ParserService
             case 'partychat':
             case 'pc':
                 return $this->chatService->partyChat($resourceId, $contentArray);
+            case 'partyfollow':
+                return $this->partyService->partyFollowCommand($resourceId);
             case 'recipes':
                 return $this->codingService->showRecipes($resourceId);
             case 'removeconnection':
