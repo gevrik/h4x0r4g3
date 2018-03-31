@@ -154,17 +154,17 @@ class UtilityService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
-        $message = 'addconnection  addnode  attack  auction auctionfile  auctionbid bid  auctionbids bids  
+        $message = 'addconnection  addnode  a attack  auction auctionfile  auctionbid bid  auctionbids bids  
         auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  close  bgopacity  bug  cancel  
-        cd  changepassword  clear  code  commands  connect  consider  createpasskey passkey  decompile  defaultmra  
-        deposit  dl  download  editfile  editnode  entityname  equipment  eset  execute  explore  factionchat fc  
+        cd  changepassword  clear  close  code  commands  connect  con consider  creategroup  createpasskey passkey  date  decompile  defaultmra  
+        deposit  dl download  editfile  editnode  entityname  equipment  eset  exe execute  explore  factionchat fc  
         factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  
-        inventory inv  invitations  jobs  kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  manageparts  
+        inventory inv  invitations  jobs  joinfaction  k kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  manageparts  
         map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  
-        options  passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  
-        repairmra  reply  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  
-        showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  
-        system  time  touch  typo  ul  unload  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  
+        options  parts  passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  
+        removeresource rmres  repairmra  reply  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  
+        slay showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  
+        system  tell  time  touch  typo  ul  unload upload  updatesystemcoords  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  
         withdraw';
         $returnMessage = sprintf(
             '%s',
@@ -180,8 +180,8 @@ class UtilityService extends BaseService
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-            $message = 'banip  cybermap  unbanip  banuser  unbanuser  clients  giveinvitation  goto  kick  nlist  
-            setcredits  setsnippets  syslist';
+            $message = 'banip  cybermap  unbanip  banuser  unbanuser  clients  giveinvitation  goto  kickclient  nlist  
+            setcredits  setmotd  setsnippets  showusers  syslist';
             $returnMessage = sprintf(
                 '%s',
                 wordwrap($message, 120)
@@ -189,8 +189,8 @@ class UtilityService extends BaseService
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_INFO);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
-            $message = 'grantrole  invokefile  invokefilemod invokenpc  removerole toggleadminmode setfileproperty 
-            silefilemodproperty setnpcproperty';
+            $message = 'grantrole  invokefile  invokefilemod invokenpc  removerole  toggleadminmode  setfileproperty 
+            silefilemodproperty  setfiletypeproperty  setnpcproperty';
             $returnMessage = sprintf(
                 '%s',
                 wordwrap($message, 120)

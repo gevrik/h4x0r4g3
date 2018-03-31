@@ -1694,6 +1694,33 @@ class BaseService
     }
 
     /**
+     * @param int $partyId
+     * @param $message
+     * @param string $textClass
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function messageEveryoneInParty(int $partyId, $message, $textClass = GameClientResponse::CLASS_MUTED)
+    {
+        $party = $this->getWebsocketServer()->getParty($partyId);
+        if ($party) {
+            $response = new GameClientResponse(NULL, GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+            $response->addMessage($message, $textClass);
+            foreach ($party['members'] as $memberProfileId => $memberData) {
+                /** @var Profile $memberProfile */
+                $memberProfile = $this->entityManager->find('Netrunners\Entity\Profile', $memberProfileId);
+                if ($memberProfile) {
+                    $memberResourceId = $memberProfile->getCurrentResourceId();
+                    if (!$memberResourceId) continue;
+                    $response->setResourceId($memberResourceId)->send();
+                }
+            }
+        }
+    }
+
+    /**
      * @param Profile|NpcInstance|File $detector
      * @param Profile|NpcInstance|File $stealther
      * @return bool
@@ -1960,7 +1987,7 @@ class BaseService
      */
     protected function messageProfileNew(Profile $profile, $message, $textClass = GameClientResponse::CLASS_MUTED)
     {
-        $clientResponse = new GameClientResponse($profile->getId());
+        $clientResponse = new GameClientResponse($profile->getCurrentResourceId());
         $clientResponse->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
         $clientResponse->addMessage($message, $textClass);
         return $clientResponse->send();

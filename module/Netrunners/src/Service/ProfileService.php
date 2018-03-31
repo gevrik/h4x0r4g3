@@ -214,8 +214,8 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        $profile = $this->user->getProfile();
         /** @var Profile $profile */
+        $profile = $this->user->getProfile();
         $returnMessage = array();
         $returnMessage[] = sprintf(
             '%-12s: %s',

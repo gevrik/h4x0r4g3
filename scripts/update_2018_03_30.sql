@@ -24,3 +24,5 @@ INSERT INTO `Morph` (`id`, `name`, `description`, `morphCategory_id`) VALUES (NU
 INSERT INTO `Morph` (`id`, `name`, `description`, `morphCategory_id`) VALUES (NULL, 'novacrab', 'Novacrabs are a pod design bioengineered from coconut crab and spider crab stock and grown to a human size.', '3');
 
 INSERT INTO `NodeType` (`id`, `name`, `shortName`, `description`, `cost`) VALUES (NULL, 'egocasting', 'ego', 'This node allows to transfer your ego into a morph', '1000');
+
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'leadership', 'The ability to lead others - important for parties and groups', '0', '2018-03-30 00:00:00', '0');

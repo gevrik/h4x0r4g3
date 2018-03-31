@@ -159,8 +159,8 @@ class GroupService extends BaseService
         $system->setGeocoords(NULL); // TODO add geocoords
         $this->entityManager->persist($system);
         // default cpu node
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
         /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
         $cpuNode = new Node();
         $cpuNode->setCreated(new \DateTime());
         $cpuNode->setLevel(1);
@@ -169,8 +169,8 @@ class GroupService extends BaseService
         $cpuNode->setNodeType($nodeType);
         $this->entityManager->persist($cpuNode);
         // default private io node
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
         /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
         $ioNode = new Node();
         $ioNode->setCreated(new \DateTime());
         $ioNode->setLevel(5);

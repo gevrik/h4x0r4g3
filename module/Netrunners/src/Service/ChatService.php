@@ -15,7 +15,6 @@ use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\ProfileRepository;
-use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
@@ -55,6 +54,11 @@ class ChatService extends BaseService
     const CHANNEL_FACTION = 'FACTION';
 
     /**
+     * @const CHANNEL_PARTY
+     */
+    const CHANNEL_PARTY = 'PARTY';
+
+    /**
      * @var FileRepository
      */
     protected $fileRepo;
@@ -86,6 +90,8 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function globalChat($resourceId, $contentArray)
     {
@@ -107,21 +113,15 @@ class ChatService extends BaseService
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GLOBAL);
-        $wsClients = $ws->getClients();
-        $wsClientsData = $ws->getClientsData();
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
-        foreach ($wsClients as $wsClient) {
-            /** @noinspection PhpUndefinedFieldInspection */
-            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-            if (!$clientUser) continue;
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
             /** @var User $clientUser */
-            if ($clientUser === $this->user) continue;
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
             if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $this->gameClientResponse->setResourceId($wsClient->resourceId);
-            $this->gameClientResponse->send();
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
     }
@@ -133,6 +133,8 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function moderatorChat($resourceId, $contentArray)
     {
@@ -154,21 +156,15 @@ class ChatService extends BaseService
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_MODERATOR);
-        $wsClients = $ws->getClients();
-        $wsClientsData = $ws->getClientsData();
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
-        foreach ($wsClients as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
-            /** @noinspection PhpUndefinedFieldInspection */
-            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-            if (!$clientUser) continue;
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
             /** @var User $clientUser */
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
             if (!$this->hasRole($clientUser, Role::ROLE_ID_MODERATOR)) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $this->gameClientResponse->setResourceId($wsClient->resourceId);
-            $this->gameClientResponse->send();
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
     }
@@ -181,6 +177,8 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function factionChat($resourceId, $contentArray)
     {
@@ -205,22 +203,16 @@ class ChatService extends BaseService
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_FACTION);
-        $wsClients = $ws->getClients();
-        $wsClientsData = $ws->getClientsData();
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
-        foreach ($wsClients as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
-            /** @noinspection PhpUndefinedFieldInspection */
-            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-            if (!$clientUser) continue;
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
             /** @var User $clientUser */
-            if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getFaction() != $profile->getFaction()) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $this->gameClientResponse->setResourceId($wsClient->resourceId);
-            $this->gameClientResponse->send();
+            if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
     }
@@ -232,6 +224,46 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function partyChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        // get profile
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if (!$this->clientData->partyId) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to be a member of a party to use party chat'))->send();
+        }
+        $messageContent = implode(' ', $contentArray);
+        if (!$messageContent || $messageContent == '') {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_PARTY);
+        $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
+            if ($wsClient['partyId'] != $this->clientData->partyId) continue;
+            if ($wsClientId == $resourceId) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
+        }
+        return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function sayChat($resourceId, $contentArray)
     {
@@ -248,22 +280,15 @@ class ChatService extends BaseService
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_SAY);
-        $wsClients = $ws->getClients();
-        $wsClientsData = $ws->getClientsData();
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
-        foreach ($wsClients as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
-            /** @noinspection PhpUndefinedFieldInspection */
-            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-            if (!$clientUser) continue;
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
             /** @var User $clientUser */
-            // skip if they are not in the same node
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
-            if ($clientUser === $this->user) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $this->gameClientResponse->setResourceId($wsClient->resourceId)->send();
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
     }
@@ -276,6 +301,9 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
+     * @throws \Exception
      */
     public function tellChat($resourceId, $contentArray)
     {
@@ -331,6 +359,9 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
+     * @throws \Exception
      */
     public function replyChat($resourceId, $contentArray)
     {
@@ -388,6 +419,8 @@ class ChatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function newbieChat($resourceId, $contentArray)
     {
@@ -402,20 +435,11 @@ class ChatService extends BaseService
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_NEWBIE);
-        $wsClients = $ws->getClients();
-        $wsClientsData = $ws->getClientsData();
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
-        foreach ($wsClients as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
-            /** @noinspection PhpUndefinedFieldInspection */
-            if (!$wsClientsData[$wsClient->resourceId]['hash']) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClientsData[$wsClient->resourceId]['userId']);
-            if (!$clientUser) continue;
-            /** @var User $clientUser */
-            if ($clientUser === $this->user) continue;
-            /** @noinspection PhpUndefinedFieldInspection */
-            $this->gameClientResponse->setResourceId($wsClient->resourceId)->send();
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
+            if ($wsClientId == $resourceId) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse
             ->setResourceId($profile->getCurrentResourceId())

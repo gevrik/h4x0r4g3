@@ -151,6 +151,11 @@ class ParserService
      */
     protected $groupService;
 
+    /**
+     * @var PartyService
+     */
+    protected $partyService;
+
 
     /**
      * @param EntityManager $entityManager
@@ -178,6 +183,7 @@ class ParserService
      * @param FactionService $factionService
      * @param ResearchService $researchService
      * @param GroupService $groupService
+     * @param PartyService $partyService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -204,7 +210,8 @@ class ParserService
         NpcInstanceService $npcInstanceService,
         FactionService $factionService,
         ResearchService $researchService,
-        GroupService $groupService
+        GroupService $groupService,
+        PartyService $partyService
     )
     {
         $this->entityManager = $entityManager;
@@ -232,6 +239,7 @@ class ParserService
         $this->factionService = $factionService;
         $this->researchService = $researchService;
         $this->groupService = $groupService;
+        $this->partyService = $partyService;
     }
 
     /**
@@ -301,6 +309,7 @@ class ParserService
             case 'attack':
             case 'a':
             case 'kill':
+            case 'k':
                 return $this->combatService->attackCommand($resourceId, $contentArray);
             case 'auctionclaim':
             case 'claim':
@@ -353,6 +362,8 @@ class ParserService
                 return $this->npcInstanceService->considerNpc($resourceId, $contentArray);
             case 'creategroup':
                 return $this->groupService->createGroup($resourceId, $contentArray);
+            case 'createparty':
+                return $this->partyService->createParty($resourceId);
             case 'createpasskey':
             case 'passkey':
                 return $this->fileService->createPasskeyCommand($resourceId);
@@ -437,6 +448,8 @@ class ParserService
                 return $this->fileService->killProcess($resourceId, $contentArray);
             case 'jobs':
                 return $this->profileService->showJobs($resourceId, $jobs);
+            case 'leaveparty':
+                return $this->partyService->leaveParty($resourceId);
             case 'listmanpages':
                 return $this->manpageService->listManpages($resourceId);
             case 'listpasskeys':
@@ -493,6 +506,11 @@ class ParserService
                 return $this->connectionService->openConnection($resourceId, $contentArray);
             case 'options':
                 return $this->gameOptionService->optionsCommand($resourceId, $contentArray);
+            case 'party':
+                return $this->partyService->partyCommand($resourceId);
+            case 'partychat':
+            case 'pc':
+                return $this->chatService->partyChat($resourceId, $contentArray);
             case 'recipes':
                 return $this->codingService->showRecipes($resourceId);
             case 'removeconnection':
@@ -513,7 +531,6 @@ class ParserService
                 return $this->researchService->researchCommand($resourceId, $contentArray);
             case 'showresearch':
                 return $this->researchService->showResearchers($resourceId);
-            case 'parts':
             case 'rm':
                 return $this->fileService->enterMode($resourceId, $userCommand, $contentArray);
             case 'requestmission':
@@ -521,10 +538,17 @@ class ParserService
                 return $this->missionService->enterMode($resourceId);
             case 'resources':
             case 'res':
+            case 'parts':
                 return $this->profileService->showFilePartInstances($resourceId, $contentArray);
             case 'passwd':
             case 'changepassword':
                 return $this->profileService->changePassword($resourceId, $contentArray);
+            case 'partyinvite':
+                return $this->partyService->partyInviteCommand($resourceId, $contentArray);
+            case 'partykick':
+                return $this->partyService->partyKickCommand($resourceId, $contentArray);
+            case 'partyrequest':
+                return $this->partyService->partyRequestCommand($resourceId, $contentArray);
             case 'ps':
                 return $this->fileService->listProcesses($resourceId, $contentArray);
             case self::CMD_REQUESTMILKRUN:

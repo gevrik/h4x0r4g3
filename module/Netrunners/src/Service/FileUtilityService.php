@@ -1169,6 +1169,7 @@ class FileUtilityService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function removePasskeyCommand($resourceId, $contentArray)
     {

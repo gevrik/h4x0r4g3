@@ -37,6 +37,7 @@ class Skill
     const ID_SHIELDCODING = 19;
     const ID_STEALTH = 20;
     const ID_DETECTION = 21;
+    const ID_LEADERSHIP = 22;
 
     /**
      * @ORM\Id
