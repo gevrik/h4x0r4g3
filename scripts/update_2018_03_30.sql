@@ -26,3 +26,16 @@ INSERT INTO `Morph` (`id`, `name`, `description`, `morphCategory_id`) VALUES (NU
 INSERT INTO `NodeType` (`id`, `name`, `shortName`, `description`, `cost`) VALUES (NULL, 'egocasting', 'ego', 'This node allows to transfer your ego into a morph', '1000');
 
 INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'leadership', 'The ability to lead others - important for parties and groups', '0', '2018-03-30 00:00:00', '0');
+
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'beam-weapons', 'Knowledge of beam-weapons', '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'blade-weapons', 'Knowledge of blade-weapons.', '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'climbing', 'Knowledge of climbing.', '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'control', NULL, '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'deception', NULL, '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'demolitions', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'disguise', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'flight', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'fray', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'free-fall', NULL, '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'free-running', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'gunnery', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'hardware', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'impersonation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'infiltration', NULL, '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'infosec', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'interfacing', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'intimidation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'investigation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'kinesics', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'kinetic-weapons', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'medicine', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'navigation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'palming', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'perception', NULL, '0', '2018-03-31 00:00:00', '0');
+INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'persuasion', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'pilot', NULL, '0', '2018-03-31 00:00:00', '0');
+
+# RUN PHP PUBLIC/INDEX.PHP RESET-SKILLS AFTER THIS
+

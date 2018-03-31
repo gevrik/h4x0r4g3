@@ -125,6 +125,7 @@ class IndexController extends AbstractActionController
     // CLI
 
     /**
+     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function cliStartWebsocketAction()
@@ -171,6 +172,7 @@ class IndexController extends AbstractActionController
         if (!$request instanceof Request){
             throw new \RuntimeException('access denied');
         }
+        set_time_limit(0);
         // add skills
         $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
         $profiles = $this->entityManager->getRepository('Netrunners\Entity\Profile')->findAll();
