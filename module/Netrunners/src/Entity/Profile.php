@@ -146,6 +146,78 @@ class Profile
      */
     protected $newbieStatusDate;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptCognition;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptCoordination;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptIntuition;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptReflexes;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptSavvy;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptSomatics;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":15}, nullable=true)
+     * @var int
+     */
+    protected $aptWill;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":30}, nullable=true)
+     * @var int
+     */
+    protected $statInitiative;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":30}, nullable=true)
+     * @var int
+     */
+    protected $statLucidity;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":6}, nullable=true)
+     * @var int
+     */
+    protected $statTraumaThreshold;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":60}, nullable=true)
+     * @var int
+     */
+    protected $statInsanityRating;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":1}, nullable=true)
+     * @var int
+     */
+    protected $statMoxie;
+
     // ORM
 
     /**
@@ -242,6 +314,11 @@ class Profile
      * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Story")
      */
     protected $currentEditorStory;
+
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\MorphInstance")
+     */
+    protected $morph;
 
 
     /**
@@ -951,6 +1028,24 @@ class Profile
     public function setCurrentEditorStory($currentEditorStory)
     {
         $this->currentEditorStory = $currentEditorStory;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMorph()
+    {
+        return $this->morph;
+    }
+
+    /**
+     * @param mixed $morph
+     * @return Profile
+     */
+    public function setMorph($morph)
+    {
+        $this->morph = $morph;
         return $this;
     }
 

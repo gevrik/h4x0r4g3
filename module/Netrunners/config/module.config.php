@@ -92,6 +92,7 @@ return array(
             'Netrunners\Service\MainCampaignService' => 'Netrunners\Factory\MainCampaignServiceFactory',
             'Netrunners\Service\MilkrunService' => 'Netrunners\Factory\MilkrunServiceFactory',
             'Netrunners\Service\MilkrunAivatarService' => 'Netrunners\Factory\MilkrunAivatarServiceFactory',
+            'Netrunners\Service\PartyService' => 'Netrunners\Factory\PartyServiceFactory',
             'Netrunners\Service\ParserService' => 'Netrunners\Factory\ParserServiceFactory',
             'Netrunners\Service\ProfileService' => 'Netrunners\Factory\ProfileServiceFactory',
             'Netrunners\Service\ResearchService' => 'Netrunners\Factory\ResearchServiceFactory',

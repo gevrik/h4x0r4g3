@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
@@ -99,6 +100,24 @@ class ConnectionService extends BaseService
         }
         $this->movePlayerToTargetNodeNew($resourceId, $profile, $connection);
         $this->updateMap($resourceId);
+        if ($this->clientData->partyId) {
+            $partyData = $this->getWebsocketServer()->getParty($this->clientData->partyId);
+            if ($partyData['leader'] == $profile->getId()) {
+                foreach ($partyData['members'] as $memberProfileId => $memberData) {
+                    if ($memberData['following']) {
+                        /** @var Profile $memberProfile */
+                        $memberProfile = $this->entityManager->find('Netrunners\Entity\Profile', $memberProfileId);
+                        if (!$memberProfile->getCurrentResourceId()) continue;
+                        if ($memberProfile->getCurrentNode() != $currentNode) continue;
+                        if ($this->isActionBlockedNew($memberProfile->getCurrentResourceId())) continue;
+                        $this->movePlayerToTargetNodeNew(NULL, $memberProfile, $connection);
+                        $this->updateMap($memberProfile->getCurrentResourceId(), $memberProfile);
+                        $memberResponse = $this->showNodeInfoNew($memberProfile->getCurrentResourceId(), NULL, false);
+                        $memberResponse->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND)->setSilent(true)->send();
+                    }
+                }
+            }
+        }
         return $this->showNodeInfoNew($resourceId, NULL, true);
     }
 

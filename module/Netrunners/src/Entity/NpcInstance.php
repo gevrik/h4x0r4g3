@@ -178,6 +178,11 @@ class NpcInstance
      */
     protected $effects;
 
+    /**
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\File")
+     */
+    protected $spawner;
+
 
     /**
      * NpcInstance constructor.
@@ -716,6 +721,24 @@ class NpcInstance
         if ($this->effects->contains($profileEffect)) {
             $this->effects->removeElement($profileEffect);
         }
+    }
+
+    /**
+     * @return File
+     */
+    public function getSpawner()
+    {
+        return $this->spawner;
+    }
+
+    /**
+     * @param mixed $spawner
+     * @return NpcInstance
+     */
+    public function setSpawner($spawner)
+    {
+        $this->spawner = $spawner;
+        return $this;
     }
 
 }

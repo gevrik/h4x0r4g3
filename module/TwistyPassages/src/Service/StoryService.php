@@ -64,7 +64,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
     /**
      * @return Story
      */
-    public function getEntity(): Story
+    public function getEntity()
     {
         return $this->entity;
     }
@@ -72,7 +72,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
     /**
      * @return StoryForm|Form
      */
-    public function getForm(): Form
+    public function getForm()
     {
         return $this->form;
     }
@@ -80,7 +80,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
     /**
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function initQueryBuilder(): TwistyPassagesEntityServiceInterface
+    public function initQueryBuilder()
     {
         $this->queryBuilder->leftJoin('e.author', 'a');
         return $this;
@@ -91,7 +91,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
      * @param $dir
      * @return $this|TwistyPassagesEntityServiceInterface
      */
-    public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface
+    public function addOrderBy($columnName, $dir)
     {
         switch ($columnName) {
             default:
@@ -105,7 +105,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
      * @param string $searchValue
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface
+    public function getSearchWhere($searchValue)
     {
         $this->queryBuilder->andWhere($this->queryBuilder->expr()->like('u.username', $this->queryBuilder->expr()->literal($searchValue . '%')));
         return $this;
@@ -131,7 +131,7 @@ class StoryService extends TwistyPassagesAbstractEntityService
     /**
      * @return string
      */
-    public function getClassName(): string
+    public function getClassName()
     {
         return Story::class;
     }

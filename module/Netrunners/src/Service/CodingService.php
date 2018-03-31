@@ -34,6 +34,7 @@ use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
+use Zend\View\Model\ViewModel;
 
 class CodingService extends BaseService
 {
@@ -443,6 +444,7 @@ class CodingService extends BaseService
      * @param Profile $profile
      * @param FileType $fileType
      * @return bool|string
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     private function checkForRecipe(Profile $profile, FileType $fileType)
     {
@@ -493,6 +495,7 @@ class CodingService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function codeResource($codeOptions, $amount = 1)
     {
@@ -583,6 +586,7 @@ class CodingService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function codeFileMod($codeOptions)
     {
@@ -609,8 +613,8 @@ class CodingService extends BaseService
         /** @var FileMod $fileMod */
         $neededResources = $fileMod->getFileParts();
         $missingResources = [];
+        /** @var FilePart $neededResource */
         foreach ($neededResources as $neededResource) {
-            /** @var FilePart $neededResource */
             $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
             if (empty($filePartInstances)) {
                 $missingResources[] = sprintf(
@@ -642,8 +646,8 @@ class CodingService extends BaseService
         $completionDate = new \DateTime();
         $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_MOD) . 'S'));
         $fileTypeId = $fileMod->getId();
+        /** @var FilePart $neededResource */
         foreach ($fileMod->getFileParts() as $neededResource) {
-            /** @var FilePart $neededResource */
             $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
             $filePartInstance = array_shift($filePartInstances);
             $modifier += $filePartInstance->getLevel() - $level;
@@ -721,8 +725,8 @@ class CodingService extends BaseService
         // if they have a recipe
         $neededResources = $fileType->getFileParts();
         $missingResources = [];
+        /** @var FilePart $neededResource */
         foreach ($neededResources as $neededResource) {
-            /** @var FilePart $neededResource */
             $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level);
             if (empty($filePartInstances)) {
                 $missingResources[] = sprintf(
@@ -788,8 +792,8 @@ class CodingService extends BaseService
         $codingTime = ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) ? 1 : $difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM;
         $completionDate->add(new \DateInterval('PT' . $codingTime . 'S'));
         $fileTypeId = $fileType->getId();
+        /** @var FilePart $neededResource */
         foreach ($fileType->getFileParts() as $neededResource) {
-            /** @var FilePart $neededResource */
             $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $level, true);
             $filePartInstance = array_shift($filePartInstances);
             $modifier += $filePartInstance->getLevel();
@@ -879,8 +883,8 @@ class CodingService extends BaseService
      */
     private function checkAdvancedCoding(Profile $profile, $skillId)
     {
-        $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
         /** @var Skill $skill */
+        $skill = $this->entityManager->find('Netrunners\Entity\Skill', $skillId);
         $skillRating = $this->getSkillRating($profile, $skill->getId());
         $message = false;
         if ($skillRating < self::MIN_ADV_SKILL_RATING) {
@@ -903,9 +907,9 @@ class CodingService extends BaseService
      */
     public function resolveCoding($jobData)
     {
+        /** @var Profile $profile */
         $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
         if (!$profile) return false;
-        /** @var Profile $profile */
         $response = false;
         $modifier = $jobData['modifier'];
         $difficulty = $jobData['difficulty'];
@@ -925,8 +929,8 @@ class CodingService extends BaseService
             $basePart = $this->entityManager->find('Netrunners\Entity\FileMod', $typeId);
         }
         else {
-            $basePart = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
             /** @var FileType $basePart */
+            $basePart = $this->entityManager->find('Netrunners\Entity\FileType', $typeId);
             if ($basePart->getNeedRecipe()) {
                 $recipe = $this->getRecipe($profile, $basePart);
                 if (!$recipe && !$this->hasRole($profile->getUser(), Role::ROLE_ID_ADMIN)) {
@@ -996,11 +1000,13 @@ class CodingService extends BaseService
                 }
                 $add = '';
                 if (!$newCode->getProfile()) {
-                    $add = $this->translate('<br />The file could not be stored in storage - it has been added to the node that it was coded in');
+                    $add = $this->translate(
+                        '<br />The file could not be stored in storage - it has been added to the node that it was coded in'
+                    );
                 }
                 $this->learnFromSuccess($profile, $jobData);
-                $completionDate = $jobData['completionDate'];
                 /** @var \DateTime $completionDate */
+                $completionDate = $jobData['completionDate'];
                 $response = [
                     'severity' => Notification::SEVERITY_SUCCESS,
                     'message' => sprintf(
@@ -1029,8 +1035,8 @@ class CodingService extends BaseService
                 $this->learnFromFailure($profile, $jobData);
                 if ($basePart instanceof FileType || $basePart instanceof FileMod) {
                     $neededParts = $basePart->getFileParts();
+                    /** @var FilePart $neededPart */
                     foreach ($neededParts as $neededPart) {
-                        /** @var FilePart $neededPart */
                         $chance = mt_rand(1, 100);
                         if ($chance > 50) {
                             if (empty($message)) $message .= '(';
@@ -1045,8 +1051,8 @@ class CodingService extends BaseService
                     }
                     if (!empty($message)) $message .= 'were recovered)]';
                 }
-                $completionDate = $jobData['completionDate'];
                 /** @var \DateTime $completionDate */
+                $completionDate = $jobData['completionDate'];
                 $response = [
                     'severity' => Notification::SEVERITY_WARNING,
                     'message' => sprintf(
@@ -1076,8 +1082,8 @@ class CodingService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
         /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
         $recipes = $profileFileTypeRecipeRepo->findBy([
             'profile' => $profile
         ]);
@@ -1105,12 +1111,94 @@ class CodingService extends BaseService
      * @param Profile $profile
      * @param FileType $fileType
      * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     private function getRecipe(Profile $profile, FileType $fileType)
     {
-        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
         /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
+        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
         return $profileFileTypeRecipeRepo->findOneByProfileAndFileType($profile, $fileType);
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function managePartsCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/file/manage-parts.phtml');
+        $parts = $this->filePartInstanceRepo->findForPartsCommandFull($profile);
+        $view->setVariable('parts', $parts);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is managing their file parts'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function removeResourceCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // get fpi id
+        $fpiid = $this->getNextParameter($contentArray, false, true);
+        if (!$fpiid) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify the ID of the file part'))->send();
+        }
+        /** @var FilePartInstance $fpi */
+        $fpi = $this->filePartInstanceRepo->find($fpiid);
+        if (!$fpi) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid file part id'))->send();
+        }
+        $fpiProfileId = ($fpi->getProfile()) ? $fpi->getProfile()->getId() : null;
+        if ($profile->getId() != $fpiProfileId) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid file part id'))->send();
+        }
+        $this->entityManager->remove($fpi);
+        $this->entityManager->flush($fpi);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has trashed a file part'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $message = sprintf(
+            $this->translate('You have trashed [%s] with id [%s]'),
+            $fpi->getFilePart()->getName(),
+            $fpiid
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
     }
 
 }

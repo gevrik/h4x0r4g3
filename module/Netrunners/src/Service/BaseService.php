@@ -1131,6 +1131,12 @@ class BaseService
                 $result['codegates'] = 0;
                 $result['npcid'] = 0;
                 break;
+            case FileType::ID_SPIDER_SPAWNER:
+                $result['roaming'] = 0;
+                $result['aggressive'] = 0;
+                $result['codegates'] = 0;
+                $result['npcid'] = 0;
+                break;
             case FileType::ID_DATAMINER:
             case FileType::ID_COINMINER:
                 $result['value'] = 0;
@@ -1248,9 +1254,7 @@ class BaseService
      * @param array $adds
      * @param bool $sendNow
      * @return bool|GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function updateDivHtml(Profile $profile, $element, $content, $adds = [], $sendNow = false)
     {
@@ -1661,6 +1665,8 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function messageEveryoneInNodeNew(
         Node $node,
@@ -1684,6 +1690,33 @@ class BaseService
             if ($xprofile !== $actor && !$this->canSee($xprofile, $actor)) continue;
             if ($updateMap) $this->updateMap($xprofile->getCurrentResourceId(), $xprofile);
             $response->setResourceId($xprofile->getCurrentResourceId())->send();
+        }
+    }
+
+    /**
+     * @param int $partyId
+     * @param $message
+     * @param string $textClass
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function messageEveryoneInParty(int $partyId, $message, $textClass = GameClientResponse::CLASS_MUTED)
+    {
+        $party = $this->getWebsocketServer()->getParty($partyId);
+        if ($party) {
+            $response = new GameClientResponse(NULL, GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+            $response->addMessage($message, $textClass);
+            foreach ($party['members'] as $memberProfileId => $memberData) {
+                /** @var Profile $memberProfile */
+                $memberProfile = $this->entityManager->find('Netrunners\Entity\Profile', $memberProfileId);
+                if ($memberProfile) {
+                    $memberResourceId = $memberProfile->getCurrentResourceId();
+                    if (!$memberResourceId) continue;
+                    $response->setResourceId($memberResourceId)->send();
+                }
+            }
         }
     }
 
@@ -1868,6 +1901,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function learnFromSuccess(Profile $profile, $jobData, $modifier = 0)
     {
@@ -1949,13 +1983,11 @@ class BaseService
      * @param $message
      * @param string $textClass
      * @return GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function messageProfileNew(Profile $profile, $message, $textClass = GameClientResponse::CLASS_MUTED)
     {
-        $clientResponse = new GameClientResponse($profile->getId());
+        $clientResponse = new GameClientResponse($profile->getCurrentResourceId());
         $clientResponse->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
         $clientResponse->addMessage($message, $textClass);
         return $clientResponse->send();
@@ -2000,9 +2032,8 @@ class BaseService
      * @param Profile $profile
      * @param $amount
      * @param bool $flush
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function gainSkillpoints(Profile $profile, $amount, $flush = false)
     {
@@ -2018,9 +2049,8 @@ class BaseService
     /**
      * @param Profile $profile
      * @param null|int $special
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function gainInvitation(Profile $profile, $special = NULL)
     {
@@ -2053,6 +2083,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function learnFromFailure(Profile $profile, $jobData, $modifier = 0)
     {
@@ -2598,6 +2629,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function cancelAction($resourceId, $messageSocket = false, $asActiveCommand = false)
     {
@@ -2633,6 +2665,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function checkMoveFileTriggers(Profile $profile, Node $previousNode = NULL)
     {
@@ -2732,6 +2765,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function flatlineProfile(Profile $profile)
     {
@@ -2958,6 +2992,7 @@ class BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     protected function initService($resourceId)
     {
@@ -3003,9 +3038,7 @@ class BaseService
 
     /**
      * @param $resourceId
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     private function initResponse($resourceId)
     {
@@ -4014,9 +4047,16 @@ class BaseService
             $file->setNode($npcInstance->getNode());
             $file->setSystem($npcInstance->getNode()->getSystem());
         }
+        $spawner = $npcInstance->getSpawner();
+        if ($spawner) {
+            $fileData = $this->getFileData($spawner);
+            $fileData->npcid = 0;
+            $spawner->setData(json_encode($fileData));
+        }
         $npcInstance->setBlasterModule(NULL);
         $npcInstance->setBladeModule(NULL);
         $npcInstance->setShieldModule(NULL);
+        $npcInstance->setSpawner(NULL);
         $this->entityManager->flush();
         // give snippets and credits to attacker
         $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
@@ -4398,6 +4438,82 @@ class BaseService
             }
         }
         return $string;
+    }
+
+    /**
+     * @param string $name
+     * @param string $addy
+     * @param Profile|null $profile
+     * @param Faction|null $faction
+     * @param Group|null $group
+     * @param bool $noclaim
+     * @param int $level
+     * @param int $maxSize
+     * @return System
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    protected function createBaseSystem(
+        $name,
+        $addy,
+        Profile $profile = null,
+        Faction $faction = null,
+        Group $group = null,
+        $noclaim = false,
+        $level = 1,
+        $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE
+    )
+    {
+        $system = new System();
+        $system->setProfile($profile);
+        $system->setName($name);
+        $system->setAddy($addy);
+        $system->setGroup($group);
+        $system->setFaction($faction);
+        $system->setMaxSize($maxSize);
+        $system->setAlertLevel(0);
+        $system->setNoclaim($noclaim);
+        $system->setGeocoords(NULL); // TODO add geocoords
+        $this->entityManager->persist($system);
+        // default cpu node
+        /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
+        $cpuNode = new Node();
+        $cpuNode->setCreated(new \DateTime());
+        $cpuNode->setLevel($level);
+        $cpuNode->setName($nodeType->getName());
+        $cpuNode->setSystem($system);
+        $cpuNode->setNodeType($nodeType);
+        $this->entityManager->persist($cpuNode);
+        // default private io node
+        /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
+        $ioNode = new Node();
+        $ioNode->setCreated(new \DateTime());
+        $ioNode->setLevel($level);
+        $ioNode->setName($nodeType->getName());
+        $ioNode->setSystem($system);
+        $ioNode->setNodeType($nodeType);
+        $this->entityManager->persist($ioNode);
+        // connection between nodes
+        $connection = new Connection();
+        $connection->setCreated(new \DateTime());
+        $connection->setLevel($level);
+        $connection->setIsOpen(NULL);
+        $connection->setSourceNode($cpuNode);
+        $connection->setTargetNode($ioNode);
+        $connection->setType(Connection::TYPE_CODEGATE);
+        $this->entityManager->persist($connection);
+        $connection = new Connection();
+        $connection->setCreated(new \DateTime());
+        $connection->setLevel($level);
+        $connection->setIsOpen(NULL);
+        $connection->setTargetNode($cpuNode);
+        $connection->setSourceNode($ioNode);
+        $connection->setType(Connection::TYPE_CODEGATE);
+        $this->entityManager->persist($connection);
+        return $system;
     }
 
     /**

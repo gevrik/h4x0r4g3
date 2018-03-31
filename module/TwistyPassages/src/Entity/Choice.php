@@ -104,7 +104,7 @@ class Choice
      * @param null|string $description
      * @return Choice
      */
-    public function setDescription($description): Choice
+    public function setDescription($description)
     {
         $this->description = $description;
         return $this;

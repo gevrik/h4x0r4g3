@@ -10,6 +10,7 @@
 
 namespace Netrunners\Service;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileCategory;
@@ -18,11 +19,13 @@ use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileModRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\MissionRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -47,6 +50,11 @@ class FileUtilityService extends BaseService
      */
     protected $fileModRepo;
 
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
 
     /**
      * FileService constructor.
@@ -64,6 +72,7 @@ class FileUtilityService extends BaseService
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
+        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
     }
 
     /**
@@ -873,14 +882,25 @@ class FileUtilityService extends BaseService
         foreach ($fmInstances as $fmInstance) {
             $this->entityManager->remove($fmInstance);
         }
-        $this->entityManager->remove($checkResult);
+        // now we need to check if it's a spawner and remove the ice, if possible
+        $spawnerCategory = $this->entityManager->find('Netrunners\Entity\FileCategory', FileCategory::ID_SPAWNER);
+        /** @var ArrayCollection $fileCategories */
+        $fileCategories = $checkResult->getFileType()->getFileCategories();
+        if ($fileCategories->contains($spawnerCategory)) {
+            /** @var NpcInstance $npcInstance */
+            foreach ($this->npcInstanceRepo->findBySpawner($checkResult->getId()) as $npcInstance) {
+                $npcInstance->setSpawner(null);
+            }
+        }
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You removed [%s]'),
             $checkResult->getName()
         );
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
-        return $this->gameClientResponse->send();
+        $this->entityManager->remove($checkResult);
+        $this->entityManager->flush($checkResult);
+        return $this->gameClientResponse;
     }
 
     /**
@@ -1149,6 +1169,7 @@ class FileUtilityService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function removePasskeyCommand($resourceId, $contentArray)
     {
@@ -1288,11 +1309,12 @@ class FileUtilityService extends BaseService
             $this->translate('DESCRIPTION')
         );
         $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
-        foreach ($fileTypes as $fileType) {
             /** @var FileType $fileType */
+        foreach ($fileTypes as $fileType) {
+            if (!$fileType->getCodable()) continue;
             $categories = '';
-            foreach ($fileType->getFileCategories() as $fileCategory) {
                 /** @var FileCategory $fileCategory */
+            foreach ($fileType->getFileCategories() as $fileCategory) {
                 $categories .= $fileCategory->getName() . ' ';
             }
             $returnMessage = sprintf(
@@ -1621,6 +1643,7 @@ class FileUtilityService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function useCommand($resourceId, $contentArray)
     {

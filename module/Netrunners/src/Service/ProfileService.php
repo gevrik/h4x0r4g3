@@ -214,8 +214,8 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        $profile = $this->user->getProfile();
         /** @var Profile $profile */
+        $profile = $this->user->getProfile();
         $returnMessage = array();
         $returnMessage[] = sprintf(
             '%-12s: %s',
@@ -236,6 +236,16 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             '%-12s: %s',
             $this->translate(self::SCORE_SECRATING_STRING),
             ($profile->getSecurityRating()) ? $profile->getSecurityRating() : 0
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate('faction'),
+            ($profile->getFaction()) ? $profile->getFaction()->getName() : $this->translate('<span class="text-muted">---</span>')
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate('group'),
+            ($profile->getGroup()) ? $profile->getGroup()->getName() : $this->translate('<span class="text-muted">---</span>')
         );
         $returnMessage[] = sprintf(
             '%-12s: %s',
@@ -269,7 +279,7 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         );
         $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         $returnMessage = [];
-        $skills = $this->skillRepo->findAll();
+        $skills = $this->skillRepo->findBy([], ['name'=>'asc']);
         foreach ($skills as $skill) {
             /** @var Skill $skill */
             $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $skill);

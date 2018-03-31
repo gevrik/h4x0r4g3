@@ -49,12 +49,12 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
     /**
      * @return string
      */
-    abstract public function getClassName(): string;
+    abstract public function getClassName();
 
     /**
      * @return Form
      */
-    abstract public function getForm(): Form;
+    abstract public function getForm();
 
     /**
      * @param $entity
@@ -152,7 +152,7 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
     /**
      * @return TwistyPassagesEntityServiceInterface
      */
-    abstract public function initQueryBuilder(): TwistyPassagesEntityServiceInterface;
+    abstract public function initQueryBuilder();
 
     /**
      * @param string $class
@@ -171,14 +171,14 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
      * @param string $searchValue
      * @return TwistyPassagesEntityServiceInterface
      */
-    abstract public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface;
+    abstract public function getSearchWhere($searchValue);
 
     /**
      * @param $columnName
      * @param $dir
      * @return TwistyPassagesEntityServiceInterface
      */
-    abstract public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface;
+    abstract public function addOrderBy($columnName, $dir);
 
     /**
      * @param int $entityId
@@ -196,7 +196,7 @@ abstract class TwistyPassagesAbstractEntityService extends TwistyPassagesAbstrac
     /**
      * @return string
      */
-    public function getRouteName(): string
+    public function getRouteName()
     {
         return $this::ROUTE;
     }

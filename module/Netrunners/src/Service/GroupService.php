@@ -11,12 +11,9 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\Connection;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\GroupRole;
 use Netrunners\Entity\GroupRoleInstance;
-use Netrunners\Entity\Node;
-use Netrunners\Entity\NodeType;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\GroupRepository;
@@ -146,65 +143,17 @@ class GroupService extends BaseService
         $gri->setGroupRole($groupRole);
         $gri->setMember($profile);
         $this->entityManager->persist($gri);
-        // create group system
-        $system = new System();
-        $system->setProfile(NULL);
-        $system->setName($newName . '_headquarters');
-        $system->setAddy($addy);
-        $system->setGroup($group);
-        $system->setFaction(NULL);
-        $system->setMaxSize(System::GROUP_MAX_SYSTEM_SIZE);
-        $system->setAlertLevel(0);
-        $system->setNoclaim(false);
-        $system->setGeocoords(NULL); // TODO add geocoords
-        $this->entityManager->persist($system);
-        // default cpu node
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
-        /** @var NodeType $nodeType */
-        $cpuNode = new Node();
-        $cpuNode->setCreated(new \DateTime());
-        $cpuNode->setLevel(1);
-        $cpuNode->setName($nodeType->getName());
-        $cpuNode->setSystem($system);
-        $cpuNode->setNodeType($nodeType);
-        $this->entityManager->persist($cpuNode);
-        // default private io node
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
-        /** @var NodeType $nodeType */
-        $ioNode = new Node();
-        $ioNode->setCreated(new \DateTime());
-        $ioNode->setLevel(5);
-        $ioNode->setName($nodeType->getName());
-        $ioNode->setSystem($system);
-        $ioNode->setNodeType($nodeType);
-        $this->entityManager->persist($ioNode);
-        // connection between nodes
-        $connection = new Connection();
-        $connection->setCreated(new \DateTime());
-        $connection->setLevel(5);
-        $connection->setIsOpen(NULL);
-        $connection->setSourceNode($cpuNode);
-        $connection->setTargetNode($ioNode);
-        $connection->setType(Connection::TYPE_CODEGATE);
-        $this->entityManager->persist($connection);
-        $connection = new Connection();
-        $connection->setCreated(new \DateTime());
-        $connection->setLevel(5);
-        $connection->setIsOpen(NULL);
-        $connection->setTargetNode($cpuNode);
-        $connection->setSourceNode($ioNode);
-        $connection->setType(Connection::TYPE_CODEGATE);
-        $this->entityManager->persist($connection);
+        $systemName = $newName . '_headquarters';
+        $system = $this->createBaseSystem($systemName, $addy, null, null, $group, false, 5, System::GROUP_MAX_SYSTEM_SIZE);
         $profile->setGroup($group);
         $this->entityManager->flush();
-        $this->movePlayerToTargetNodeNew(NULL, $profile, NULL, $currentNode, $ioNode);
         $message = sprintf(
-            'group %s has been created - you have been taken to the new group system [%s]',
+            'group [%s] has been created - group system [%s] [%s]',
             $newName,
+            $system->getName(),
             $addy
         );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
-        return $this->gameClientResponse->send();
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
 }

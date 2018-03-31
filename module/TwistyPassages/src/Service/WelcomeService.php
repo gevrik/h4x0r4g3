@@ -33,7 +33,7 @@ class WelcomeService extends TwistyPassagesAbstractService
     /**
      * @return array
      */
-    public function getForTopList(): array
+    public function getForTopList()
     {
         $qb = $this->entityManager->getRepository('TwistyPassages\Entity\Story')->createQueryBuilder('s');
         $qb->select('s.id, s.title, s.description, s.added, a.id as user_id, a.username as author');

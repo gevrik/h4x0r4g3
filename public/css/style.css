@@ -141,6 +141,10 @@ pre.text-sysmsg {
     color: #99ff99;
 }
 
+.text-party {
+    color: #4286f4;
+}
+
 .panel-heading {
     font-size: 9px !important;
     cursor: pointer;

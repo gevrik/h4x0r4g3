@@ -26,7 +26,8 @@ class Npc
     const ID_NETWATCH_INVESTIGATOR = 8;
     const ID_NETWATCH_AGENT = 9;
     const ID_GUARDIAN_ICE = 10;
-    const ID_STORY_NPC = 11;
+    const ID_SPIDER_ICE = 11;
+    const ID_STORY_NPC = 12;
 
     const TYPE_VIRUS = 1;
     const TYPE_HELPER = 2;

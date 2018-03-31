@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\NodeType;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
@@ -31,6 +32,8 @@ class SystemService extends BaseService
     const PROFILE_OWNER_STRING = 'profile';
     const GROUP_OWNER_STRING = 'group';
     const FACTION_OWNER_STRING = 'faction';
+
+    const SYSTEM_CREATION_COST = 10000;
 
     /**
      * @var SystemGeneratorService
@@ -97,6 +100,7 @@ class SystemService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function homeRecall($resourceId)
     {
@@ -137,6 +141,7 @@ class SystemService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function homeRecallAction($resourceId, $sendNow = true)
     {
@@ -175,6 +180,8 @@ class SystemService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
      */
     public function changeGeocoords($resourceId, $contentArray)
     {
@@ -237,9 +244,51 @@ class SystemService extends BaseService
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_DANGER)->send();
     }
 
-    public function createSystem($resourceId, $contentArray)
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function createSystem($resourceId)
     {
-        // TODO finish this
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_IO) {
+            $message = $this->translate('You must be in an I/O node to create a new system');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($profile->getBankBalance() < self::SYSTEM_CREATION_COST) {
+            $message = $this->translate(sprintf('You need %s credits in your bank balance to create a new system'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $utilityService = $this->getWebsocketServer()->getUtilityService();
+        // create a new addy
+        $addy = $utilityService->getRandomAddress(32);
+        $maxTries = 100;
+        $tries = 0;
+        while ($this->entityManager->getRepository('Netrunners\Entity\System')->findOneBy(['addy' => $addy])) {
+            $addy = $utilityService->getRandomAddress(32);
+            $tries++;
+            if ($tries >= $maxTries) {
+                $message = $this->translate('Unable to initialize the system! Please contact an administrator!');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+        }
+        $profile->setBankBalance($profile->getBankBalance() - self::SYSTEM_CREATION_COST);
+        $systemName = $this->user->getUsername();
+        $system = $this->createBaseSystem($systemName, $addy, $profile);
+        $this->entityManager->flush();
+        $message = sprintf(
+            'system [%s] [%s] has been created',
+            $system->getName(),
+            $addy
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+        return $this->gameClientResponse->send();
     }
 
     public function renameSystem($resourceId, $contentArray)

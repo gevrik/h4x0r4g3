@@ -86,7 +86,8 @@ class FilePartInstanceRepository extends EntityRepository
         $qb = $this->createQueryBuilder('fpi');
         $qb->where('fpi.profile = :profile');
         $qb->setParameter('profile', $profile);
-        $qb->orderBy('fpi.level', 'DESC');
+        $qb->orderBy('fpi.filePart', 'ASC');
+        $qb->addOrderBy('fpi.level', 'DESC');
         return $qb->getQuery()->getResult();
     }
 

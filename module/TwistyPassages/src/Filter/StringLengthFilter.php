@@ -33,7 +33,7 @@ class StringLengthFilter extends AbstractFilter
      * @param int $length
      * @return StringLengthFilter
      */
-    public function setLength(int $length): StringLengthFilter
+    public function setLength(int $length)
     {
         $this->length = $length;
         return $this;
@@ -43,7 +43,7 @@ class StringLengthFilter extends AbstractFilter
      * @param bool $ellipses
      * @return StringLengthFilter
      */
-    public function setEllipses(bool $ellipses): StringLengthFilter
+    public function setEllipses(bool $ellipses)
     {
         $this->ellipses = $ellipses;
         return $this;

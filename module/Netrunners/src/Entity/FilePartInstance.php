@@ -87,7 +87,7 @@ class FilePartInstance
     // ORM
 
     /**
-     * @return mixed
+     * @return FilePart
      */
     public function getFilePart()
     {

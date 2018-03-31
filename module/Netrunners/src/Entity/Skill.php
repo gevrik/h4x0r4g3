@@ -37,6 +37,35 @@ class Skill
     const ID_SHIELDCODING = 19;
     const ID_STEALTH = 20;
     const ID_DETECTION = 21;
+    const ID_LEADERSHIP = 22;
+
+    const ID_BEAM_WEAPONS = 23;
+    const ID_BLADE_WEAPONS = 24;
+    const ID_CLIMBING = 25;
+    const ID_CONTROL = 26;
+    const ID_DECEPTION = 27;
+    const ID_DEMOLITIONS = 28;
+    const ID_DISGUISE = 29;
+    const ID_FLIGHT = 30;
+    const ID_FRAY = 31;
+    const ID_FREE_FALL = 32;
+    const ID_FREE_RUNNING = 33;
+    const ID_GUNNERY = 34;
+    const ID_HARDWARE = 35;
+    const ID_IMPERSONATION = 36;
+    const ID_INFILTRATION = 37;
+    const ID_INFOSEC = 38;
+    const ID_INTERFACING = 39;
+    const ID_INTIMIDATION = 40;
+    const ID_INVESTIGATION = 41;
+    const ID_KINESICS = 42;
+    const ID_KINETIC_WEAPONS = 43;
+    const ID_MEDICINE = 44;
+    const ID_NAVIGATION = 45;
+    const ID_PALMING = 46;
+    const ID_PERCEPTION = 47;
+    const ID_PERSUASION = 48;
+    const ID_PILOT = 49;
 
     /**
      * @ORM\Id
