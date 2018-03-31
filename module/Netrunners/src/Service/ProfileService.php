@@ -239,6 +239,16 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         );
         $returnMessage[] = sprintf(
             '%-12s: %s',
+            $this->translate('faction'),
+            ($profile->getFaction()) ? $profile->getFaction()->getName() : $this->translate('<span class="text-muted">---</span>')
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate('group'),
+            ($profile->getGroup()) ? $profile->getGroup()->getName() : $this->translate('<span class="text-muted">---</span>')
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
             $this->translate(self::SCORE_STEALTHING_STRING),
             ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') : $this->translate('<span class="text-muted">off</span>')
         );
@@ -269,7 +279,7 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         );
         $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         $returnMessage = [];
-        $skills = $this->skillRepo->findAll();
+        $skills = $this->skillRepo->findBy([], ['name'=>'asc']);
         foreach ($skills as $skill) {
             /** @var Skill $skill */
             $skillRatingObject = $this->skillRatingRepo->findByProfileAndSkill($profile, $skill);

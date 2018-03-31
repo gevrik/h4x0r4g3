@@ -56,7 +56,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
     /**
      * @return Passage
      */
-    public function getEntity(): Passage
+    public function getEntity()
     {
         return $this->entity;
     }
@@ -64,7 +64,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
     /**
      * @return string
      */
-    public function getClassName(): string
+    public function getClassName()
     {
         return Passage::class;
     }
@@ -72,7 +72,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
     /**
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function initQueryBuilder(): TwistyPassagesEntityServiceInterface
+    public function initQueryBuilder()
     {
         $this->queryBuilder->leftJoin('e.story', 's');
         return $this;
@@ -83,7 +83,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
      * @param $dir
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function addOrderBy($columnName, $dir): TwistyPassagesEntityServiceInterface
+    public function addOrderBy($columnName, $dir)
     {
         switch ($columnName) {
             default:
@@ -96,7 +96,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
     /**
      * @return PassageForm|\Zend\Form\Form
      */
-    public function getForm(): Form
+    public function getForm()
     {
         return $this->form;
     }
@@ -105,7 +105,7 @@ class PassageService extends TwistyPassagesAbstractEntityService
      * @param string $searchValue
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function getSearchWhere($searchValue): TwistyPassagesEntityServiceInterface
+    public function getSearchWhere($searchValue)
     {
         $this->queryBuilder->andWhere($this->queryBuilder->expr()->like('e.title', $this->queryBuilder->expr()->literal($searchValue . '%')));
         return $this;

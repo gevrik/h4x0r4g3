@@ -18,17 +18,17 @@ interface TwistyPassagesEntityServiceInterface
     /**
      * @return string
      */
-    public function getClassName(): string;
+    public function getClassName();
 
     /**
      * @return string
      */
-    public function getRouteName(): string;
+    public function getRouteName();
 
     /**
      * @return Form
      */
-    public function getForm(): Form;
+    public function getForm();
 
     /**
      * @return mixed
@@ -56,20 +56,20 @@ interface TwistyPassagesEntityServiceInterface
     /**
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function initQueryBuilder(): self;
+    public function initQueryBuilder();
 
     /**
      * @param string $searchValue
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function getSearchWhere($searchValue): self;
+    public function getSearchWhere($searchValue);
 
     /**
      * @param $columnName
      * @param $dir
      * @return TwistyPassagesEntityServiceInterface
      */
-    public function addOrderBy($columnName, $dir): self;
+    public function addOrderBy($columnName, $dir);
 
     /**
      * @param int $id
@@ -99,7 +99,7 @@ interface TwistyPassagesEntityServiceInterface
      * @param int|null $storyId
      * @return array
      */
-    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = "", int $storyId = null): array;
+    public function getEntities(int $start, int $length, array $columns, array $order, string $searchValue = "", int $storyId = null);
 
     /**
      * @return int

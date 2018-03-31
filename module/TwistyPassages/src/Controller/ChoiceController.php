@@ -65,7 +65,7 @@ class ChoiceController extends TwistyPassagesAbstractEntityController
     /**
      * @return string
      */
-    public function getSectionname(): string
+    public function getSectionname()
     {
         return self::SECTION_CHOICES;
     }

@@ -70,7 +70,7 @@ class PassageController extends TwistyPassagesAbstractEntityController
     /**
      * @return string
      */
-    public function getSectionname(): string
+    public function getSectionname()
     {
         return self::SECTION_PASSAGES;
     }

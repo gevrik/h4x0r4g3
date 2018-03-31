@@ -30,7 +30,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
     /**
      * @return string
      */
-    abstract public function getSectionname(): string;
+    abstract public function getSectionname();
 
     /**
      * @param array $entities
@@ -41,7 +41,7 @@ abstract class TwistyPassagesAbstractEntityController extends TwistyPassagesAbst
     /**
      * @return ViewModel
      */
-    public function indexAction(): ViewModel
+    public function indexAction()
     {
         $viewModel = new ViewModel();
         return $viewModel;

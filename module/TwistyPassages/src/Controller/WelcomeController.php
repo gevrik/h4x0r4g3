@@ -49,7 +49,7 @@ class WelcomeController extends AbstractActionController
     /**
      * @return ViewModel
      */
-    public function detailStoryAction(): ViewModel
+    public function detailStoryAction()
     {
         $id = $this->params()->fromRoute('id');
         $entity = $this->service->findStory($id);
@@ -61,7 +61,7 @@ class WelcomeController extends AbstractActionController
     /**
      * @return ViewModel
      */
-    public function indexAction(): ViewModel
+    public function indexAction()
     {
         $topStories = $this->service->getForTopList();
         $viewModel = new ViewModel();

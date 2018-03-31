@@ -80,7 +80,7 @@ class StoryFieldset extends Fieldset implements InputFilterProviderInterface
     /**
      * @return array
      */
-    public function getInputFilterSpecification(): array
+    public function getInputFilterSpecification()
     {
         return [
             'id' => [
