@@ -12,10 +12,41 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
 class NodeRepository extends EntityRepository
 {
+
+    /**
+     * @param Profile $profile
+     * @return array
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function findForConnectCommand(Profile $profile)
+    {
+        $qb = $this->createQueryBuilder('n');
+        $qb->leftJoin('n.system', 's');
+        $qb->where('n.nodeType = :type');
+        $nodeType = $this->getEntityManager()->find('Netrunners\Entity\NodeType', NodeType::ID_PUBLICIO);
+        $pType = $this->getEntityManager()->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
+        $qb->setParameter('type', $nodeType);
+        $qb->orWhere('s.profile = :profile AND n.nodeType = :ptype');
+        $qb->setParameter('profile', $profile);
+        if ($profile->getFaction()) { // TODO make this only show ios that the faction role is allowed to access
+            $qb->orWhere('s.faction = :faction AND n.nodeType = :ptype');
+            $qb->setParameter('faction', $profile->getFaction());
+        }
+        if ($profile->getGroup()) { // TODO make this only show ios that the group role is allowed to access
+            $qb->orWhere('s.group = :group AND n.nodeType = :ptype');
+            $qb->setParameter('group', $profile->getGroup());
+        }
+        $qb->setParameter('ptype', $pType);
+        return $qb->getQuery()->getResult();
+    }
 
     /**
      * @param System $system

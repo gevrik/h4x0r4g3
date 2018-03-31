@@ -1188,7 +1188,7 @@ class NodeService extends BaseService
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
         if (!$parameter) {
-            $publicIoNodes = $this->nodeRepo->findByType(NodeType::ID_PUBLICIO);
+            $publicIoNodes = $this->nodeRepo->findForConnectCommand($profile);
             $returnMessage = sprintf(
                 '%-32s|%-40s|%-12s|%-20s',
                 $this->translate('SYSTEM'),

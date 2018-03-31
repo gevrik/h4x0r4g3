@@ -4441,6 +4441,82 @@ class BaseService
     }
 
     /**
+     * @param string $name
+     * @param string $addy
+     * @param Profile|null $profile
+     * @param Faction|null $faction
+     * @param Group|null $group
+     * @param bool $noclaim
+     * @param int $level
+     * @param int $maxSize
+     * @return System
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    protected function createBaseSystem(
+        $name,
+        $addy,
+        Profile $profile = null,
+        Faction $faction = null,
+        Group $group = null,
+        $noclaim = false,
+        $level = 1,
+        $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE
+    )
+    {
+        $system = new System();
+        $system->setProfile($profile);
+        $system->setName($name);
+        $system->setAddy($addy);
+        $system->setGroup($group);
+        $system->setFaction($faction);
+        $system->setMaxSize($maxSize);
+        $system->setAlertLevel(0);
+        $system->setNoclaim($noclaim);
+        $system->setGeocoords(NULL); // TODO add geocoords
+        $this->entityManager->persist($system);
+        // default cpu node
+        /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
+        $cpuNode = new Node();
+        $cpuNode->setCreated(new \DateTime());
+        $cpuNode->setLevel($level);
+        $cpuNode->setName($nodeType->getName());
+        $cpuNode->setSystem($system);
+        $cpuNode->setNodeType($nodeType);
+        $this->entityManager->persist($cpuNode);
+        // default private io node
+        /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
+        $ioNode = new Node();
+        $ioNode->setCreated(new \DateTime());
+        $ioNode->setLevel($level);
+        $ioNode->setName($nodeType->getName());
+        $ioNode->setSystem($system);
+        $ioNode->setNodeType($nodeType);
+        $this->entityManager->persist($ioNode);
+        // connection between nodes
+        $connection = new Connection();
+        $connection->setCreated(new \DateTime());
+        $connection->setLevel($level);
+        $connection->setIsOpen(NULL);
+        $connection->setSourceNode($cpuNode);
+        $connection->setTargetNode($ioNode);
+        $connection->setType(Connection::TYPE_CODEGATE);
+        $this->entityManager->persist($connection);
+        $connection = new Connection();
+        $connection->setCreated(new \DateTime());
+        $connection->setLevel($level);
+        $connection->setIsOpen(NULL);
+        $connection->setTargetNode($cpuNode);
+        $connection->setSourceNode($ioNode);
+        $connection->setType(Connection::TYPE_CODEGATE);
+        $this->entityManager->persist($connection);
+        return $system;
+    }
+
+    /**
      * @param $value
      * @param null $min
      * @param null $max
