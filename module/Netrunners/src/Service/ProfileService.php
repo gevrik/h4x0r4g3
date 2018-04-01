@@ -311,7 +311,7 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         }
         $profile = $this->user->getProfile();
         $headerMessage = sprintf(
-            '%-20s:',
+            '%-28s',
             $this->translate('APTITUDES')
         );
         $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
