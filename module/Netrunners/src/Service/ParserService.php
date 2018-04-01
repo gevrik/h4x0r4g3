@@ -311,6 +311,9 @@ class ParserService
             case 'kill':
             case 'k':
                 return $this->combatService->attackCommand($resourceId, $contentArray);
+            case 'aptitudes':
+            case 'apt':
+                return $this->profileService->showAptitudes($resourceId);
             case 'auctionclaim':
             case 'claim':
                 return $this->auctionService->claimAuction($resourceId, $contentArray);

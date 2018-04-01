@@ -301,6 +301,92 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
+    public function showAptitudes($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        $headerMessage = sprintf(
+            '%-20s:',
+            $this->translate('APTITUDES')
+        );
+        $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
+        $returnMessage = [];
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('cognition'),
+            $profile->getAptCognition()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('coordination'),
+            $profile->getAptCoordination()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('intuition'),
+            $profile->getAptIntuition()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('reflexes'),
+            $profile->getAptReflexes()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('savvy'),
+            $profile->getAptSavvy()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('somatics'),
+            $profile->getAptSomatics()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('will'),
+            $profile->getAptWill()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('initiative'),
+            $profile->getStatInitiative()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('lucidity'),
+            $profile->getStatLucidity()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('trauma-threshold'),
+            $profile->getStatTraumaThreshold()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('insanity-rating'),
+            $profile->getStatInsanityRating()
+        );
+        $returnMessage[] = sprintf(
+            '%-20s: %-7s',
+            $this->translate('moxie'),
+            $profile->getStatMoxie()
+        );
+        $this->gameClientResponse->addMessages($returnMessage);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     public function showEquipment($resourceId)
     {
         $this->initService($resourceId);
