@@ -59,6 +59,7 @@ class LoginService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function login($resourceId, $content)
     {
@@ -98,7 +99,8 @@ class LoginService extends BaseService
                 $ws->setClientData($resourceId, 'userId', $user->getId());
                 $ws->setClientData($resourceId, 'profileId', $profile->getId());
                 $ws->setClientData($resourceId, 'newbieStatusDate', $profile->getNewbieStatusDate());
-                $ws->setClientData($resourceId, 'mainCampaignStep', $profile->getMainCampaignStep());
+                $ws->setClientData($resourceId, MainCampaignService::MAIN_CAMPAIGN_STEP, $profile->getMainCampaignStep());
+                $ws->setClientData($resourceId, MainCampaignService::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, $profile->getMainCampaignStepActivationDate());
                 $response->setCommand(GameClientResponse::COMMAND_PROMPTFORPASSWORD);
             }
         }
@@ -109,9 +111,7 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function confirmUserCreate($resourceId, $content)
     {
@@ -172,9 +172,7 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function solveCaptcha($resourceId, $content)
     {
@@ -198,9 +196,7 @@ class LoginService extends BaseService
      * @param $content
      * @return array
      * @throws \Doctrine\ORM\NonUniqueResultException
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function enterInvitationCode($resourceId, $content)
     {
@@ -225,9 +221,7 @@ class LoginService extends BaseService
      * @param $resourceId
      * @param $content
      * @return array
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function createPassword($resourceId, $content)
     {
@@ -407,6 +401,8 @@ class LoginService extends BaseService
             $hash = hash('sha256', $ws->getHash() . $user->getId());
             $ws->setClientData($resourceId, 'hash', $hash);
             $ws->setClientData($resourceId, 'userId', $user->getId());
+            $ws->setClientData($resourceId, 'profileId', $profile->getId());
+            $ws->setClientData($resourceId, 'newbieStatusDate', $profile->getNewbieStatusDate());
             $ws->setClientData($resourceId, 'username', $user->getUsername());
             $ws->setClientData($resourceId, 'jobs', []);
             $response->setCommand(GameClientResponse::COMMAND_CREATEUSERDONE);
@@ -448,6 +444,7 @@ class LoginService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function promptForPassword($resourceId, $content)
     {

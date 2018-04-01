@@ -26,6 +26,7 @@ use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\Invitation;
 use Netrunners\Entity\KnownNode;
+use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Mission;
 use Netrunners\Entity\MissionArchetype;
@@ -346,57 +347,51 @@ class BaseService
             case Npc::ID_WILDERSPACE_INTRUDER:
                 $dropChance = $npcInstance->getLevel();
                 if ($this->makePercentRollAgainstTarget($dropChance)) {
-                    $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
                     /** @var FileType $fileType */
-                    $file = new File();
-                    $file->setProfile(NULL);
-                    $file->setLevel($dropChance);
-                    $file->setCreated(new \DateTime());
-                    $file->setSystem(NULL);
-                    $file->setName($fileType->getName());
-                    $file->setNpc($npcInstance);
-                    $file->setData(NULL);
-                    $file->setRunning(false);
-                    $file->setSlots(NULL);
-                    $file->setNode(NULL);
-                    $file->setCoder(NULL);
-                    $file->setExecutable($fileType->getExecutable());
-                    $file->setFileType($fileType);
-                    $file->setIntegrity($dropChance*10);
-                    $file->setMaxIntegrity($dropChance*10);
-                    $file->setMailMessage(NULL);
-                    $file->setModified(NULL);
-                    $file->setSize($fileType->getSize());
-                    $file->setVersion(1);
-                    $this->entityManager->persist($file);
+                    $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_WILDERSPACE_HUB_PORTAL);
+                    $file = $this->createFile(
+                        $fileType,
+                        false,
+                        $fileType->getName(),
+                        $dropChance,
+                        $dropChance*10,
+                        false,
+                        $dropChance*10,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        $npcInstance,
+                        null,
+                        null,
+                        null
+                    );
                     $npcInstance->addFile($file);
                 }
                 break;
             case Npc::ID_NETWATCH_INVESTIGATOR:
             case Npc::ID_NETWATCH_AGENT:
-                $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
                 /** @var FileType $fileType */
-                $file = new File();
-                $file->setProfile(NULL);
-                $file->setLevel($baseLevel * 10);
-                $file->setCreated(new \DateTime());
-                $file->setSystem(NULL);
-                $file->setName($fileType->getName());
-                $file->setNpc($npcInstance);
-                $file->setData(NULL);
-                $file->setRunning(true);
-                $file->setSlots($baseLevel);
-                $file->setNode(NULL);
-                $file->setCoder(NULL);
-                $file->setExecutable($fileType->getExecutable());
-                $file->setFileType($fileType);
-                $file->setIntegrity($baseLevel*10);
-                $file->setMaxIntegrity($baseLevel*10);
-                $file->setMailMessage(NULL);
-                $file->setModified(NULL);
-                $file->setSize($fileType->getSize());
-                $file->setVersion(1);
-                $this->entityManager->persist($file);
+                $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
+                $file = $this->createFile(
+                    $fileType,
+                    false,
+                    $fileType->getName(),
+                    $baseLevel*10,
+                    $baseLevel*10,
+                    true,
+                    $baseLevel*10,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    $npcInstance,
+                    null,
+                    null,
+                    null
+                );
                 $npcInstance->setBladeModule($file);
                 $npcInstance->addFile($file);
                 break;
@@ -4527,6 +4522,75 @@ class BaseService
         if ($min && $value < $min) $value = $min;
         if ($max && $value > $max) $value = $max;
         return $value;
+    }
+
+    /**
+     * @param FileType $fileType
+     * @param bool $flush
+     * @param string|null $name
+     * @param int $level
+     * @param int $integrity
+     * @param bool $running
+     * @param int $maxIntegrity
+     * @param Profile|null $coder
+     * @param string|null $content
+     * @param string|null $data
+     * @param MailMessage|null $mailMessage
+     * @param Node|null $node
+     * @param NpcInstance|null $npc
+     * @param Profile|null $profile
+     * @param System|null $system
+     * @param int|null $slots
+     * @param int $version
+     * @return File
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    protected function createFile(
+        FileType $fileType,
+        $flush = false,
+        $name = null,
+        $level = 1,
+        $integrity = 100,
+        $running = false,
+        $maxIntegrity = 100,
+        Profile $coder = null,
+        $content = null,
+        $data = null,
+        MailMessage $mailMessage = null,
+        Node $node = null,
+        NpcInstance $npc = null,
+        Profile $profile = null,
+        System $system = null,
+        $slots = null,
+        $version = 1
+    )
+    {
+        if (!$name) $name = $fileType->getName();
+        if (!$slots) $slots = $fileType->getSize();
+        $file = new File();
+        $file->setIntegrity($integrity);
+        $file->setCoder($coder);
+        $file->setContent($content);
+        $file->setCreated(new \DateTime());
+        $file->setData($data);
+        $file->setExecutable($fileType->getExecutable());
+        $file->setFileType($fileType);
+        $file->setLevel($level);
+        $file->setMailMessage($mailMessage);
+        $file->setMaxIntegrity($maxIntegrity);
+        $file->setModified(NULL);
+        $file->setName($name);
+        $file->setNode($node);
+        $file->setNpc($npc);
+        $file->setProfile($profile);
+        $file->setRunning($running);
+        $file->setSize($fileType->getSize());
+        $file->setSlots($slots);
+        $file->setSystem($system);
+        $file->setVersion($version);
+        $this->entityManager->persist($file);
+        if ($flush) $this->entityManager->flush($file);
+        return $file;
     }
 
 }

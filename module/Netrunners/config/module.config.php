@@ -3,6 +3,7 @@
 namespace Netrunners;
 
 use Netrunners\View\Helper\ImageUrlHelper;
+use Netrunners\View\Helper\MailMasterHelper;
 
 return array(
     'router' => array(
@@ -116,9 +117,11 @@ return array(
         ),
         'factories' => array(
             ImageUrlHelper::class => 'Netrunners\Factory\ImageUrlHelperFactory',
+            MailMasterHelper::class => 'Netrunners\Factory\MailMasterHelperFactory',
         ),
         'aliases' => array(
             'imageUrlHelper' => ImageUrlHelper::class,
+            'mailMasterHelper' => MailMasterHelper::class,
         ),
     ),
     'view_manager' => array(

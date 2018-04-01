@@ -31,6 +31,7 @@ use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeRepository;
+use Netrunners\Repository\MailMessageRepository;
 use Netrunners\Repository\MilkrunInstanceRepository;
 use Netrunners\Repository\MissionRepository;
 use Netrunners\Repository\NodeRepository;
@@ -102,6 +103,10 @@ class LoopService extends BaseService
      */
     protected $connectionRepo;
 
+    /**
+     * @var MailMessageRepository
+     */
+    protected $mailMessageRepo;
 
     /**
      * LoopService constructor.
@@ -136,6 +141,7 @@ class LoopService extends BaseService
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        $this->mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
     }
 
     /**
@@ -211,10 +217,12 @@ class LoopService extends BaseService
                 /** @var \DateTime $completionDate */
                 $actionTimeRemaining = $completionDate->getTimestamp() - $now->getTimestamp();
             }
+            $unreadMails = $this->mailMessageRepo->countByUnreadMails($profile);
             $response = array(
                 'command' => 'ticker',
                 'amount' => $countUnreadNotifications,
-                'actionTimeRemaining' => $actionTimeRemaining
+                'actionTimeRemaining' => $actionTimeRemaining,
+                'unreadMails' => $unreadMails
             );
             $wsClient->send(json_encode($response));
             // now handle pending actions
@@ -263,11 +271,6 @@ class LoopService extends BaseService
                             break;
                         case FileType::ID_PROXIFIER:
                             $gameClientResponse = $this->fileService->executeProxifier($file);
-                            break;
-                        case FileType::ID_CROWBAR:
-                            /** @var Connection $connection */
-                            $connection = $this->entityManager->find('Netrunners\Entity\Connection', $parameter->connectionId);
-                            $gameClientResponse = $this->fileService->executeCrowbar($resourceId, $file, $connection);
                             break;
                     }
                     break;
@@ -787,22 +790,24 @@ class LoopService extends BaseService
      */
     public function loopMainCampaign()
     {
-        $ws = $this->getWebsocketServer();
-        foreach ($ws->getClients() as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
-            /** @noinspection PhpUndefinedFieldInspection */
-            $resourceId = $wsClient->resourceId;
-            $clientData = $ws->getClientData($resourceId);
-            // skip sockets that are not properly connected yet
-            if (!$clientData) continue;
-            if (!$clientData->hash) continue;
-            // skip sockets that are done with the main campaign
-            if ($clientData->mainCampaignStep >= MainCampaignService::STEP_COMPLETED) continue;
-            // check campaign step
-            $this->mainCampaignService->checkMainCampaignStep($resourceId, $clientData);
+        if (MainCampaignService::RUN_CAMPAIGN) {
+            $ws = $this->getWebsocketServer();
+            foreach ($ws->getClients() as $wsClient) {
+                /** @var ConnectionInterface $wsClient */
+                /** @noinspection PhpUndefinedFieldInspection */
+                $resourceId = $wsClient->resourceId;
+                $clientData = $ws->getClientData($resourceId);
+                // skip sockets that are not properly connected yet
+                if (!$clientData) continue;
+                if (!$clientData->hash) continue;
+                // skip sockets that are done with the main campaign
+                if ($clientData->mainCampaignStep >= MainCampaignService::STEP_COMPLETED) continue;
+                // check campaign step
+                $this->mainCampaignService->checkMainCampaignStep($resourceId, $clientData);
+            }
+            // flush changes to db
+            $this->entityManager->flush();
         }
-        // flush changes to db
-        $this->entityManager->flush();
     }
 
     /**

@@ -7,6 +7,7 @@ use Netrunners\Entity\Feedback;
 use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
+use Netrunners\Service\MainCampaignService;
 use TmoAuth\Entity\Role;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\BannedIpRepository;
@@ -52,7 +53,7 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @const LOOP_MAIN_CAMPAIGN the amount of seconds between main campaign checks
      */
-    const LOOP_MAIN_CAMPAIGN = 20;
+    const LOOP_MAIN_CAMPAIGN = 3600;
 
     /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
@@ -717,7 +718,8 @@ class WebsocketService implements MessageComponentInterface {
             'replyId' => NULL,
             'partyId' => NULL,
             'newbieStatusDate' => NULL,
-            'mainCampaignStep' => NULL
+            MainCampaignService::MAIN_CAMPAIGN_STEP => NULL,
+            MainCampaignService::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE => NULL,
         ];
         $response = new GameClientResponse($resourceId);
         $response->setCommand(GameClientResponse::COMMAND_GETIPADDY);

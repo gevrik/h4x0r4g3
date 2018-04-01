@@ -251,6 +251,14 @@ pre.text-sysmsg {
     height: 2em;
 }
 
+.mail-notifier {
+    position: fixed;
+    top: 2.1em;
+    right: 0;
+    width: 2em;
+    height: 2em;
+}
+
 textarea {
     background-color: #1b1b1b;
 }

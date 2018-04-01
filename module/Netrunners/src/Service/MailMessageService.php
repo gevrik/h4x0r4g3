@@ -16,8 +16,10 @@ use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
+use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\MailMessageRepository;
 use Zend\Mvc\I18n\Translator;
+use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
 class MailMessageService extends BaseService
@@ -33,6 +35,11 @@ class MailMessageService extends BaseService
      */
     protected $mailMessageRepo;
 
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
+
 
     /**
      * MailMessageService constructor.
@@ -44,6 +51,7 @@ class MailMessageService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
+        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
     }
 
     /**
@@ -150,7 +158,7 @@ class MailMessageService extends BaseService
      * @param MailMessage $mail
      * @return string
      */
-    private function getFromString(MailMessage $mail)
+    public function getFromString(MailMessage $mail)
     {
         $result = "[SYSTEM-MAIL]";
         if ($mail->getAuthor()) {
@@ -212,7 +220,7 @@ class MailMessageService extends BaseService
         }
         /** @var MailMessage $mail */
         // mark mail as read
-        if (!$mail->getReadDateTime() && $mail->getRecipient() == $profile) {
+        if (!$mail->getReadDateTime() && $mail->getRecipient() === $profile) {
             $mail->setReadDateTime(new \DateTime());
             $this->entityManager->flush($mail);
         }
@@ -283,10 +291,11 @@ class MailMessageService extends BaseService
 
     /**
      * @param Profile $recipient
-     * @param Profile|NpcInstance|File NULL $author
+     * @param null $author
      * @param string $subject
      * @param string $content
      * @param bool $flush
+     * @param array $files
      * @return MailMessage
      * @throws \Doctrine\ORM\OptimisticLockException
      */
@@ -295,7 +304,8 @@ class MailMessageService extends BaseService
         $author = NULL,
         $subject = 'INVALID SUBJECT',
         $content = 'EMPTY CONTENT',
-        $flush = false
+        $flush = false,
+        array $files = []
     )
     {
         $mailMessage = new MailMessage();
@@ -324,10 +334,308 @@ class MailMessageService extends BaseService
         $mailMessage->setSentDateTime(new \DateTime());
         $mailMessage->setSubject($subject);
         $this->entityManager->persist($mailMessage);
+        /** @var File $file */
+        foreach ($files as $file) {
+            $mailMessage->addAttachment($file);
+        }
         if ($flush) {
-            $this->entityManager->flush($mailMessage);
+            $this->entityManager->flush();
         }
         return $mailMessage;
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function manageMails($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/index.phtml');
+        $mails = $this->mailMessageRepo->findBy(['recipient' => $profile]);
+        $view->setVariable('mails', $mails);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is managing their mails'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function mailReadCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // get parameter
+        $parameter = $this->getNextParameter($contentArray, false, true);
+        if (!$parameter) {
+            $message = $this->translate(sprintf('Please specify the mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var MailMessage $mailMessage */
+        $mailMessage = $this->mailMessageRepo->find($parameter);
+        if (!$mailMessage) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getRecipient()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($mailMessage->getRecipient() !== $profile) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $mailMessage->setReadDateTime(new \DateTime());
+        $this->entityManager->flush($mailMessage);
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/read.phtml');
+        $view->setVariable('mail', $mailMessage);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is reading a mail message'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function mailDetachCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // get mail-id
+        list($contentArray, $mailId) = $this->getNextParameter($contentArray, true, true);
+        if (!$mailId) {
+            $message = $this->translate(sprintf('Please specify the mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var MailMessage $mailMessage */
+        $mailMessage = $this->mailMessageRepo->find($mailId);
+        if (!$mailMessage) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getRecipient()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($mailMessage->getRecipient() !== $profile) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now get the attachment id
+        $attachmentId = $this->getNextParameter($contentArray, false, true);
+        if (!$attachmentId) {
+            $message = $this->translate(sprintf('Please specify the attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var File $attachment */
+        $attachment = $this->fileRepo->find($attachmentId);
+        if (!$attachment) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$attachment->getMailMessage()) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($attachment->getMailMessage() !== $mailMessage) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // check if they have enough storage space
+        if (!$this->canStoreFile($profile, $attachment)) {
+            $message = $this->translate(sprintf('You do not have enough storage space to download that file'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // all good, we can retrieve the file
+        $mailMessage->removeAttachment($attachment);
+        $attachment->setProfile($profile);
+        $this->entityManager->flush();
+        // render output
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/read.phtml');
+        $view->setVariable('mail', $mailMessage);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has detached a file from a mail message'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function mailAttachmentDeleteCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // get mail-id
+        list($contentArray, $mailId) = $this->getNextParameter($contentArray, true, true);
+        if (!$mailId) {
+            $message = $this->translate(sprintf('Please specify the mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var MailMessage $mailMessage */
+        $mailMessage = $this->mailMessageRepo->find($mailId);
+        if (!$mailMessage) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getRecipient()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($mailMessage->getRecipient() !== $profile) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now get the attachment id
+        $attachmentId = $this->getNextParameter($contentArray, false, true);
+        if (!$attachmentId) {
+            $message = $this->translate(sprintf('Please specify the attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var File $attachment */
+        $attachment = $this->fileRepo->find($attachmentId);
+        if (!$attachment) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$attachment->getMailMessage()) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($attachment->getMailMessage() !== $mailMessage) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // all good, we can delete the file
+        $mailMessage->removeAttachment($attachment);
+        $this->entityManager->remove($attachment);
+        $this->entityManager->flush();
+        // render output
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/read.phtml');
+        $view->setVariable('mail', $mailMessage);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has deleted a file from a mail message'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function mailDeleteCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // get mail-id
+        $mailId = $this->getNextParameter($contentArray, false, true);
+        if (!$mailId) {
+            $message = $this->translate(sprintf('Please specify the mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var MailMessage $mailMessage */
+        $mailMessage = $this->mailMessageRepo->find($mailId);
+        if (!$mailMessage) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getRecipient()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($mailMessage->getRecipient() !== $profile) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // all good, we can delete the message
+        /** @var File $attachment */
+        foreach ($mailMessage->getAttachments() as $attachment) {
+            $mailMessage->removeAttachment($attachment);
+            $this->entityManager->remove($attachment);
+        }
+        $this->entityManager->flush();
+        $this->entityManager->remove($mailMessage);
+        $this->entityManager->flush($mailMessage);
+        // render output
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/index.phtml');
+        $mails = $this->mailMessageRepo->findBy(['recipient' => $profile]);
+        $view->setVariable('mails', $mails);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has deleted a mail message'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew(
+            $profile->getCurrentNode(),
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
+        return $this->gameClientResponse->send();
     }
 
 }

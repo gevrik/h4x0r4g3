@@ -770,29 +770,24 @@ class AdminService extends BaseService
         if (!$level) $level = 1;
         if (!$slots) $slots = 1;
         $fileType = $this->fileTypeRepo->findLikeName($fileTypeName);
-        $file = new File();
-        $file->setIntegrity(100);
-        $file->setCoder($profile);
-        $file->setContent(NULL);
-        $file->setCreated(new \DateTime());
-        $file->setData(NULL);
-        $file->setExecutable($fileType->getExecutable());
-        $file->setFileType($fileType);
-        $file->setLevel($level);
-        $file->setMailMessage(NULL);
-        $file->setMaxIntegrity(100);
-        $file->setModified(NULL);
-        $file->setName('prototype_' . $fileType->getName());
-        $file->setNode(NULL);
-        $file->setNpc(NULL);
-        $file->setProfile($profile);
-        $file->setRunning(false);
-        $file->setSize($fileType->getSize());
-        $file->setSlots($slots);
-        $file->setSystem(NULL);
-        $file->setVersion(1);
-        $this->entityManager->persist($file);
-        $this->entityManager->flush($file);
+        $this->createFile(
+            $fileType,
+            true,
+            'prototype_' . $fileType->getName(),
+            $level,
+            100,
+            false,
+            100,
+            $profile,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $profile,
+            null,
+            $slots
+        );
         return $this->gameClientResponse->addMessage($this->translate('File prototype invoked'), GameClientResponse::CLASS_SUCCESS)->send();
     }
 

@@ -198,7 +198,7 @@ class MailMessage
     // ORM
 
     /**
-     * @return mixed
+     * @return Profile|null
      */
     public function getAuthor()
     {
@@ -216,7 +216,7 @@ class MailMessage
     }
 
     /**
-     * @return mixed
+     * @return Profile|null
      */
     public function getRecipient()
     {
@@ -234,7 +234,7 @@ class MailMessage
     }
 
     /**
-     * @return mixed
+     * @return NpcInstance
      */
     public function getNpcAuthor()
     {
@@ -252,7 +252,7 @@ class MailMessage
     }
 
     /**
-     * @return mixed
+     * @return NpcInstance
      */
     public function getNpcRecipient()
     {
@@ -270,7 +270,7 @@ class MailMessage
     }
 
     /**
-     * @return mixed
+     * @return File
      */
     public function getFileAuthor()
     {
@@ -288,7 +288,7 @@ class MailMessage
     }
 
     /**
-     * @return mixed
+     * @return File
      */
     public function getFileRecipient()
     {
@@ -306,7 +306,7 @@ class MailMessage
     }
 
     /**
-     * @return mixed
+     * @return MailMessage|null
      */
     public function getParent()
     {
@@ -360,6 +360,7 @@ class MailMessage
      */
     public function addAttachment(File $file)
     {
+        $file->setMailMessage($this);
         $this->attachments[] = $file;
     }
 
@@ -368,6 +369,7 @@ class MailMessage
      */
     public function removeAttachment(File $file)
     {
+        $file->setMailMessage(null);
         $this->attachments->removeElement($file);
     }
 

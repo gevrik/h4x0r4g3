@@ -58,7 +58,7 @@
             "pageLength": 10
         });
 
-        $('.btn-trash-fpi').on('click', function (e) {
+        $('.btn-trash-fpi').on('click', function () {
             var fpiid = $(this).data('fpiid');
             table
                 .row( $(this).parents('tr') )
@@ -70,7 +70,7 @@
                 content: 'rmres ' + fpiid
             };
             conn.send(JSON.stringify(command));
-        })
+        });
 
     } );
 

@@ -238,27 +238,24 @@ class MissionService extends BaseService
             $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT);
             /** @var FileType $fileType */
             $fileName = $this->getRandomString(12) . '.txt';
-            $targetFile = new File();
-            $targetFile->setVersion(1);
-            $targetFile->setSlots(0);
-            $targetFile->setSize(0);
-            $targetFile->setExecutable(false);
-            $targetFile->setCoder(NULL);
-            $targetFile->setRunning(false);
-            $targetFile->setFileType($fileType);
-            $targetFile->setNode(($addToNode) ? $targetNode : NULL);
-            $targetFile->setMailMessage(NULL);
-            $targetFile->setModified(NULL);
-            $targetFile->setNpc(NULL);
-            $targetFile->setData(NULL);
-            $targetFile->setSystem(($addToNode) ? $targetSystem : NULL);
-            $targetFile->setCreated(new \DateTime());
-            $targetFile->setLevel(1);
-            $targetFile->setProfile(($setTargetProfile) ? $profile : NULL);
-            $targetFile->setName($fileName);
-            $targetFile->setMaxIntegrity(100);
-            $targetFile->setIntegrity(100);
-            $this->entityManager->persist($targetFile);
+            $targetFile = $this->createFile(
+                $fileType,
+                false,
+                $fileName,
+                1,
+                100,
+                false,
+                100,
+                null,
+                null,
+                null,
+                null,
+                ($addToNode) ? $targetNode : NULL,
+                null,
+                ($setTargetProfile) ? $profile : NULL,
+                ($addToNode) ? $targetSystem : NULL,
+                0
+            );
             $mInstance->setTargetFile($targetFile);
             $mInstance->setTargetNode($targetNode);
             $this->entityManager->flush();

@@ -1,0 +1,91 @@
+<div class="panel panel-default draggable manage-mails-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manage-mails" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate("manage mails"); ?></h3>
+    </div>
+    <div class="panel-body table-responsive" style="padding: 0;">
+        <table id="mails-table" class="display cell-border compact" cellspacing="0" width="100%">
+            <thead>
+            <tr>
+                <th>ACTIONS</th>
+                <th>SUBJECT</th>
+                <th>AUTHOR</th>
+                <th>RECEIVED</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($this->mails as $mail) : /** @var \Netrunners\Entity\MailMessage $mail */ ?>
+                <tr>
+                    <td>
+                        <button type="button"
+                                class="btn btn-primary btn-xs btn-read-mail"
+                                data-mailid="<?php echo $mail->getId(); ?>">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                        <button type="button"
+                                class="btn btn-danger btn-xs btn-trash-mail"
+                                data-mailid="<?php echo $mail->getId(); ?>">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <?php echo $mail->getSubject(); ?>
+                    </td>
+                    <td>
+                        <?php echo $this->mailMasterHelper()->getFromString($mail); ?>
+                    </td>
+                    <td>
+                        <?php echo $mail->getSentDateTime()->format('Y-m-d H:i:s'); ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<?php echo $this->headLink()->appendStylesheet('/css/nh_tables.css'); ?>
+
+<script>
+
+    $('.panel-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    $(document).ready(function() {
+
+        var table = $('#mails-table').DataTable({
+            "pageLength": 10
+        });
+
+        $('.btn-trash-mail').on('click', function () {
+            var mailid = $(this).data('mailid');
+            table
+                .row( $(this).parents('tr') )
+                .remove()
+                .draw();
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'maildelete ' + mailid
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+        $('.btn-read-mail').on('click', function () {
+            var mailid = $(this).data('mailid');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'mailread ' + mailid
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+    } );
+
+</script>

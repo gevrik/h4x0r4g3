@@ -1,0 +1,123 @@
+<div class="panel panel-default draggable read-mail-panel">
+    <div class="panel-heading">
+        <button id="btn-close-read-mail" type="button" class="close" aria-label="Close"><span
+                    aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title">
+            <?php echo $this->translate(
+                    sprintf('mail message from: %s', $this->mailMasterHelper()->getFromString($this->mail))
+            ); ?>
+        </h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <h3><?php echo $this->mail->getSubject(); ?></h3>
+        <div class="container-fluid">
+            <pre><?php echo $this->mail->getContent(); ?></pre>
+        </div>
+        <hr/>
+        <?php foreach ($this->mail->getAttachments() as $attachment) :
+            /** @var \Netrunners\Entity\MailMessage $attachment */ ?>
+            <i class="fa fa-5x fa-file mail-attachment" data-attachment-id="<?php echo $attachment->getId(); ?>"
+               data-mail-id="<?php echo $this->mail->getId(); ?>"></i>
+        <?php endforeach; ?>
+    </div>
+    <div class="panel-footer">
+        <button type="button"
+                class="btn btn-sm btn-primary btn-reply-mail"
+                data-mailid="<?php echo $this->mail->getId(); ?>">
+            <?php echo $this->translate('reply'); ?>
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-primary btn-forward-mail"
+                data-mailid="<?php echo $this->mail->getId(); ?>">
+            <?php echo $this->translate('forward'); ?>
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-danger btn-trash-mail"
+                data-mailid="<?php echo $this->mail->getId(); ?>">
+            <?php echo $this->translate('delete'); ?>
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-default pull-right btn-mail-inbox">
+            <?php echo $this->translate('back to inbox'); ?>
+        </button>
+    </div>
+</div>
+
+<script>
+
+    $('.panel-container')
+        .css('max-height', viewportHeight * 0.425)
+        .css('height', viewportHeight * 0.425)
+        .css('max-width', viewportWidth * 0.33)
+        .css('width', viewportWidth * 0.33)
+        .css('top', viewportHeight * 0.5)
+        .css('left', viewportWidth * 0.65);
+
+    $(document).ready(function () {
+        $('.btn-mail-inbox').on('click', function () {
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'mail'
+            };
+            conn.send(JSON.stringify(command));
+        });
+        $('.btn-trash-mail').on('click', function () {
+            var mailid = $(this).data('mailid');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'maildelete ' + mailid
+            };
+            conn.send(JSON.stringify(command));
+        });
+        $.contextMenu({
+            selector: '.mail-attachment',
+            animation: {duration: 250, show: 'fadeIn', hide: 'fadeOut'},
+            trigger: 'left',
+            callback: function (key, options) {
+
+            },
+            items: {
+                "download": {
+                    name: "download",
+                    icon: "download",
+                    callback: function (key, options) {
+                        var clickedIcon = options.$trigger;
+                        var attachmentId = clickedIcon.data('attachment-id');
+                        var mailId = clickedIcon.data('mail-id');
+                        var command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'maildetach ' + mailId + ' ' + attachmentId
+                        };
+                        conn.send(JSON.stringify(command));
+                    }
+                },
+                "sep1": "---------",
+                "trash": {
+                    name: "trash",
+                    icon: "trash",
+                    callback: function (key, options) {
+                        var clickedIcon = options.$trigger;
+                        var attachmentId = clickedIcon.data('attachment-id');
+                        var mailId = clickedIcon.data('mail-id');
+                        var command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'mailattachmentdelete ' + mailId + ' ' + attachmentId
+                        };
+                        conn.send(JSON.stringify(command));
+                    }
+                },
+                "sep2": "---------",
+                "quit": {
+                    name: "Quit", icon: function () {
+                        return 'context-menu-icon context-menu-icon-quit';
+                    }
+                }
+            }
+        });
+    });
+
+</script>

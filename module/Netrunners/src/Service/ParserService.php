@@ -462,7 +462,18 @@ class ParserService
             case 'look':
                 return $this->nodeService->showNodeInfoNew($resourceId, NULL, true);
             case 'mail':
-                return $this->mailMessageService->enterMailMode($resourceId);
+                return $this->mailMessageService->manageMails($resourceId);
+            case 'mailread':
+                return $this->mailMessageService->mailReadCommand($resourceId, $contentArray);
+            case 'maildetach':
+                return $this->mailMessageService->mailDetachCommand($resourceId, $contentArray);
+                break;
+            case 'mailattachmentdelete':
+                return $this->mailMessageService->mailAttachmentDeleteCommand($resourceId, $contentArray);
+                break;
+            case 'maildelete':
+                return $this->mailMessageService->mailDeleteCommand($resourceId, $contentArray);
+                break;
             case 'manageparts':
                 return $this->codingService->managePartsCommand($resourceId);
                 break;

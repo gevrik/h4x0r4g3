@@ -466,7 +466,7 @@
             }
             switch (command) {
                 default:
-                    console.log('=== unknown command received ===');
+                    console.log('=== unknown command received ==='); // TODO remove for production
                     console.log(e.data);
                     break;
                 case 'getipaddy':
@@ -555,6 +555,10 @@
                     hash = data.hash;
                     md.append('<span class="text-muted">A new user account and system has been generated.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1</span><br />');
+                    $('.notification-box').show();
+                    $('.actiontime-box').show();
+                    $('.img-tesseract').show();
+                    if (data.playsound) playSoundById(4);
                     showprompt();
                     break;
                 case 'promptforpassword':
@@ -566,12 +570,12 @@
                 case 'logincomplete':
                     var jsonData;
                     loginStage = 'complete';
-                    resetConsoleOptionsMail();
                     hash = data.hash;
                     md.append('<span class="text-muted">Authentication complete.</span><br />');
                     md.append('<span class="text-info">Welcome to NeoCortex OS v0.1 (ANONYMOUS ADWARE)</span><br />');
                     $('.notification-box').show();
                     $('.actiontime-box').show();
+                    $('.img-tesseract').show();
                     if (data.playsound) playSoundById(4);
                     if (data.bgopacity) $('.content').css('background-color', 'rgba(0,0,0,' + data.bgopacity + ')');
                     mymap.flyTo([data.homecoords[0], data.homecoords[1]], 15);
@@ -579,6 +583,13 @@
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;
+                    var unreadMails = data.unreadMails;
+                    if (unreadMails > 0) {
+                        $('.mail-notifier').show();
+                    }
+                    else {
+                        $('.mail-notifier').hide();
+                    }
                     var actionTimeRemining = data.actionTimeRemaining;
                     $('.actiontime-box').removeClass('btn-default').removeClass('btn-info').addClass((actionTimeRemining)?'btn-info':'btn-default').html('<span>' + actionTimeRemining + '</span>');
                     if (notiAmount !== currentNotiAmount) {

@@ -970,26 +970,24 @@ class CodingService extends BaseService
                     if ($integrity > 100) $integrity = 100;
                     // programs
                     $newFileName = $basePart->getName();
-                    $newCode = new File();
-                    $newCode->setProfile($profile);
-                    $newCode->setCoder($profile);
-                    $newCode->setLevel($difficulty);
-                    $newCode->setFileType($basePart);
-                    $newCode->setCreated(new \DateTime());
-                    $newCode->setExecutable($basePart->getExecutable());
-                    $newCode->setIntegrity($integrity);
-                    $newCode->setMaxIntegrity($integrity);
-                    $newCode->setMailMessage(NULL);
-                    $newCode->setModified(NULL);
-                    $newCode->setName($newFileName);
-                    $newCode->setRunning(NULL);
-                    $newCode->setSize($basePart->getSize());
-                    $newCode->setSlots(1);
-                    $newCode->setSystem(NULL);
-                    $newCode->setNode(NULL);
-                    $newCode->setVersion(1);
-                    $newCode->setData(NULL);
-                    $this->entityManager->persist($newCode);
+                    $newCode = $this->createFile(
+                        $basePart,
+                        false,
+                        $newFileName,
+                        $difficulty,
+                        $integrity,
+                        false,
+                        $integrity,
+                        $profile,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        $profile,
+                        null,
+                        1
+                    );
                     $canStore = $this->canStoreFile($profile, $newCode);
                     if (!$canStore) {
                         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);

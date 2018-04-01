@@ -37,5 +37,7 @@ INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) 
 INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'infosec', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'interfacing', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'intimidation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'investigation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'kinesics', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'kinetic-weapons', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'medicine', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'navigation', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'palming', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'perception', NULL, '0', '2018-03-31 00:00:00', '0');
 INSERT INTO `Skill` (`id`, `name`, `description`, `advanced`, `added`, `level`) VALUES (NULL, 'persuasion', NULL, '0', '2018-03-31 00:00:00', '0'), (NULL, 'pilot', NULL, '0', '2018-03-31 00:00:00', '0');
 
+INSERT INTO `Npc` (`id`, `name`, `description`, `baseEeg`, `baseSnippets`, `baseCredits`, `level`, `baseBlade`, `baseBlaster`, `baseShield`, `baseDetection`, `baseStealth`, `baseSlots`, `aggressive`, `roaming`, `type`, `stealthing`, `social`) VALUES (NULL, 'story_npc', 'a story npc', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '4', '0', '0');
+
 # RUN PHP PUBLIC/INDEX.PHP RESET-SKILLS AFTER THIS
 

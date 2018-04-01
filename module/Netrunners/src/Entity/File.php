@@ -479,7 +479,7 @@ class File
     }
 
     /**
-     * @param mixed $mailMessage
+     * @param MailMessage|null $mailMessage
      * @return File
      */
     public function setMailMessage($mailMessage)

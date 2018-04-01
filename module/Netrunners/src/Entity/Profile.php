@@ -144,6 +144,12 @@ class Profile
      * @ORM\Column(type="datetime", nullable=true)
      * @var \DateTime
      */
+    protected $mainCampaignStepActivationDate;
+
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
     protected $newbieStatusDate;
 
     /**
@@ -670,6 +676,24 @@ class Profile
     }
 
     /**
+     * @return \DateTime|null
+     */
+    public function getMainCampaignStepActivationDate()
+    {
+        return $this->mainCampaignStepActivationDate;
+    }
+
+    /**
+     * @param \DateTime|null $mainCampaignStepActivationDate
+     * @return Profile
+     */
+    public function setMainCampaignStepActivationDate($mainCampaignStepActivationDate)
+    {
+        $this->mainCampaignStepActivationDate = $mainCampaignStepActivationDate;
+        return $this;
+    }
+
+    /**
      * @return \DateTime
      */
     public function getNewbieStatusDate()
@@ -1046,6 +1070,222 @@ class Profile
     public function setMorph($morph)
     {
         $this->morph = $morph;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptCognition()
+    {
+        return $this->aptCognition;
+    }
+
+    /**
+     * @param int $aptCognition
+     * @return Profile
+     */
+    public function setAptCognition(int $aptCognition)
+    {
+        $this->aptCognition = $aptCognition;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptCoordination()
+    {
+        return $this->aptCoordination;
+    }
+
+    /**
+     * @param int $aptCoordination
+     * @return Profile
+     */
+    public function setAptCoordination(int $aptCoordination)
+    {
+        $this->aptCoordination = $aptCoordination;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptIntuition()
+    {
+        return $this->aptIntuition;
+    }
+
+    /**
+     * @param int $aptIntuition
+     * @return Profile
+     */
+    public function setAptIntuition(int $aptIntuition)
+    {
+        $this->aptIntuition = $aptIntuition;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptReflexes()
+    {
+        return $this->aptReflexes;
+    }
+
+    /**
+     * @param int $aptReflexes
+     * @return Profile
+     */
+    public function setAptReflexes(int $aptReflexes)
+    {
+        $this->aptReflexes = $aptReflexes;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptSavvy()
+    {
+        return $this->aptSavvy;
+    }
+
+    /**
+     * @param int $aptSavvy
+     * @return Profile
+     */
+    public function setAptSavvy(int $aptSavvy)
+    {
+        $this->aptSavvy = $aptSavvy;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptSomatics()
+    {
+        return $this->aptSomatics;
+    }
+
+    /**
+     * @param int $aptSomatics
+     * @return Profile
+     */
+    public function setAptSomatics(int $aptSomatics)
+    {
+        $this->aptSomatics = $aptSomatics;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAptWill()
+    {
+        return $this->aptWill;
+    }
+
+    /**
+     * @param int $aptWill
+     * @return Profile
+     */
+    public function setAptWill(int $aptWill)
+    {
+        $this->aptWill = $aptWill;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatInitiative()
+    {
+        return $this->statInitiative;
+    }
+
+    /**
+     * @param int $statInitiative
+     * @return Profile
+     */
+    public function setStatInitiative(int $statInitiative)
+    {
+        $this->statInitiative = $statInitiative;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatLucidity()
+    {
+        return $this->statLucidity;
+    }
+
+    /**
+     * @param int $statLucidity
+     * @return Profile
+     */
+    public function setStatLucidity(int $statLucidity)
+    {
+        $this->statLucidity = $statLucidity;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatTraumaThreshold()
+    {
+        return $this->statTraumaThreshold;
+    }
+
+    /**
+     * @param int $statTraumaThreshold
+     * @return Profile
+     */
+    public function setStatTraumaThreshold(int $statTraumaThreshold)
+    {
+        $this->statTraumaThreshold = $statTraumaThreshold;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatInsanityRating()
+    {
+        return $this->statInsanityRating;
+    }
+
+    /**
+     * @param int $statInsanityRating
+     * @return Profile
+     */
+    public function setStatInsanityRating(int $statInsanityRating)
+    {
+        $this->statInsanityRating = $statInsanityRating;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getStatMoxie()
+    {
+        return $this->statMoxie;
+    }
+
+    /**
+     * @param int $statMoxie
+     * @return Profile
+     */
+    public function setStatMoxie(int $statMoxie)
+    {
+        $this->statMoxie = $statMoxie;
         return $this;
     }
 

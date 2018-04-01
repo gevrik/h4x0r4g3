@@ -13,7 +13,6 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
-use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Geocoord;
 use Netrunners\Entity\Node;
@@ -307,28 +306,26 @@ class SystemGeneratorService extends BaseService
                 break;
         }
         if ($fileTypeId) {
-            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $fileTypeId);
             /** @var FileType $fileType */
-            $file = new File();
-            $file->setIntegrity($node->getLevel()*10);
-            $file->setMaxIntegrity($node->getLevel()*10);
-            $file->setName($fileType->getName());
-            $file->setProfile(NULL);
-            $file->setLevel($node->getLevel()*10);
-            $file->setCreated(new \DateTime());
-            $file->setSystem($system);
-            $file->setData(NULL);
-            $file->setNpc(NULL);
-            $file->setModified(NULL);
-            $file->setMailMessage(NULL);
-            $file->setNode($node);
-            $file->setRunning(true);
-            $file->setFileType($fileType);
-            $file->setCoder(NULL);
-            $file->setExecutable($fileType->getExecutable());
-            $file->setSize($fileType->getSize());
-            $file->setVersion(1);
-            $this->entityManager->persist($file);
+            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $fileTypeId);
+            $this->createFile(
+                $fileType,
+                false,
+                null,
+                $node->getLevel() * 10,
+                100,
+                true,
+                100,
+                null,
+                null,
+                null,
+                null,
+                $node,
+                null,
+                null,
+                $system,
+                0
+            );
         }
     }
 

@@ -1082,34 +1082,30 @@ class FileUtilityService extends BaseService
         );
         $profile->setSnippets($profile->getSnippets()-self::PASSKEY_COST);
         $this->entityManager->flush($profile);
-        $passkey = new File();
-        $passkey->setProfile($profile);
-        $passkey->setNode(NULL);
-        $passkey->setCreated(new \DateTime());
-        $passkey->setLevel(1);
-        $passkey->setIntegrity(100);
-        $passkey->setMaxIntegrity(100);
-        $passkey->setSystem(NULL);
-        $passkey->setModified(NULL);
-        $passkey->setNpc(NULL);
-        $passkey->setMailMessage(NULL);
-        $passkey->setFileType($fileType);
-        $passkey->setRunning(false);
-        $passkey->setCoder($profile);
-        $passkey->setExecutable(true);
-        $passkey->setSize(0);
-        $passkey->setSlots(0);
-        $passkey->setVersion(1);
-        $passkey->setData(json_encode($data));
-        $passkey->setName(sprintf(
+        $newName = sprintf(
             '%s_%s_%s',
             $shortSystemName,
             $shortNodeName,
             'passkey'
-        ));
-        $passkey->setContent($passkeyDesc);
-        $this->entityManager->persist($passkey);
-        $this->entityManager->flush($passkey);
+        );
+        $this->createFile(
+            $fileType,
+            true,
+            $newName,
+            1,
+            100,
+            false,
+            100,
+            $profile,
+            $passkeyDesc,
+            json_encode($data),
+            null,
+            null,
+            null,
+            $profile,
+            null,
+            0
+        );
         $this->gameClientResponse->addMessage($this->translate('Passkey created'), GameClientResponse::CLASS_SUCCESS);
         return $this->gameClientResponse->send();
     }
@@ -1535,26 +1531,25 @@ class FileUtilityService extends BaseService
         /* start logic */
         $currentSnippets = $profile->getSnippets();
         $profile->setSnippets($currentSnippets - 1);
-        $newCode = new File();
-        $newCode->setProfile($profile);
-        $newCode->setCoder($profile);
-        $newCode->setLevel(1);
-        $newCode->setFileType($this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT));
-        $newCode->setCreated(new \DateTime());
-        $newCode->setExecutable(0);
-        $newCode->setIntegrity(100);
-        $newCode->setMaxIntegrity(100);
-        $newCode->setMailMessage(NULL);
-        $newCode->setModified(NULL);
-        $newCode->setName($parameter . '.txt');
-        $newCode->setRunning(NULL);
-        $newCode->setSize(0);
-        $newCode->setSlots(0);
-        $newCode->setSystem(NULL);
-        $newCode->setNode(NULL);
-        $newCode->setVersion(1);
-        $newCode->setData(NULL);
-        $this->entityManager->persist($newCode);
+        $newFileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT);
+        $this->createFile(
+            $newFileType,
+            false,
+            $parameter . '.txt',
+            1,
+            100,
+            false,
+            100,
+            $profile,
+            '',
+            null,
+            null,
+            null,
+            null,
+            $profile,
+            null,
+            0
+        );
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('%s has been created'),
