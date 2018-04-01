@@ -11,7 +11,6 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
-use Netrunners\Entity\File;
 use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FilePart;
@@ -86,6 +85,10 @@ class CodingService extends BaseService
      */
     protected $fileRepo;
 
+    /**
+     * @var ProfileFileTypeRecipeRepository
+     */
+    protected $profileFileTypeRecipeRepo;
 
     /**
      * CodingService constructor.
@@ -106,6 +109,7 @@ class CodingService extends BaseService
         $this->fileModRepo = $this->entityManager->getRepository('Netrunners\Entity\FileMod');
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
     }
 
     /**
@@ -146,6 +150,498 @@ class CodingService extends BaseService
             $profile,
             $profile->getId()
         );
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function openCodingInterface($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_CODING) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You must be in a coding node to enter coding mode'))->send();
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/file/coding-ui.phtml');
+        $fileparts = $this->filePartRepo->findForCoding();
+        $filemods = $this->fileModRepo->findForCoding();
+        $programs = $this->fileTypeRepo->findForCoding($profile);
+        $view->setVariables([
+            'fileparts' => $fileparts,
+            'filemods' => $filemods,
+            'programs' => $programs
+        ]);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has opened their coding interface'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function showCodingDetailPanel($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_CODING) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You must be in a coding node to enter coding mode'))->send();
+        }
+        list($contentArray, $codeType) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$codeType) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid code type'))->send();
+        }
+        $codeId = $this->getNextParameter($contentArray, false, true);
+        if (!$codeId) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid code id'))->send();
+        }
+        $view = new ViewModel();
+        switch ($codeType) {
+            default:
+                $partsString = null;
+                $archetype = null;
+                $template = null;
+                break;
+            case 'mod':
+                /** @var FileMod $archetype */
+                $archetype = $this->fileModRepo->find($codeId);
+                $partsString = $this->getPartsString($profile, $archetype, $this->clientData->lastCodingLevel);
+                $template = 'netrunners/file/coding-mod-ui.phtml';
+                break;
+            case 'resource':
+                /** @var FilePart $archetype */
+                $archetype = $this->filePartRepo->find($codeId);
+                $partsString = null;
+                $template = 'netrunners/file/coding-resource-ui.phtml';
+                break;
+            case 'program':
+                /** @var FileType $archetype */
+                $archetype = $this->fileTypeRepo->find($codeId);
+                $partsString = $this->getPartsString($profile, $archetype, $this->clientData->lastCodingLevel);
+                $template = 'netrunners/file/coding-program-ui.phtml';
+                break;
+        }
+        if (!$archetype || !$template) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to process request'))->send();
+        }
+        $skillList = $this->getSkillListForTypeNew($codeType, $archetype->getId());
+        $chance = $this->calculateCodingSuccessChanceNew($this->user->getProfile(), $codeType, $this->clientData->lastCodingLevel, $archetype->getId());
+        $view->setTemplate($template);
+        $view->setVariables([
+            'archetype' => $archetype,
+            'skillList' => $skillList,
+            'chance' => $chance,
+            'codeType' => $codeType,
+            'partsString' => $partsString,
+            'lastCodingLevel' => $this->clientData->lastCodingLevel
+        ]);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOW_CODING_DETAIL_PANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param Profile $profile
+     * @param FileType|FileMod|FilePart $archetype
+     * @param int $level
+     * @return string
+     */
+    public function getPartsString(Profile $profile, $archetype, $level = 1)
+    {
+        $partsString = '';
+        /** @var FilePart $filePart */
+        foreach ($archetype->getFileParts() as $filePart) {
+            $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $filePart, $level);
+            if (empty($filePartInstances)) {
+                $partsString .= '<span class="text-danger">' . $filePart->getName() . '</span> ';
+            }
+            else {
+                $partsString .= '<span class="text-success">' . $filePart->getName() . '</span> ';
+            }
+        }
+        return $partsString;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function updatePartsString($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        list($contentArray, $mode) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$mode) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid coding mode'))->send();
+        }
+        list($contentArray, $archetypeId) = $this->getNextParameter($contentArray, true, true);
+        if (!$archetypeId) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid archetype id'))->send();
+        }
+        $targetLevel = $this->getNextParameter($contentArray, false, true);
+        if (!$targetLevel) $targetLevel = 1;
+        switch ($mode) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Please specify a valid code mode'))->send();
+            case 'mod':
+                /** @var FileMod $archetype */
+                $archetype = $this->fileModRepo->find($archetypeId);
+                break;
+            case 'resource':
+                return $this->gameClientResponse->addMessage($this->translate('Please specify a valid code mode'))->send();
+            case 'program':
+                /** @var FileType $archetype */
+                $archetype = $this->fileTypeRepo->find($archetypeId);
+                break;
+        }
+        $partsString = $this->getPartsString($profile, $archetype, $targetLevel);
+        $response = $this->updateDivHtml($profile, '#needed-parts', $partsString, []);
+        return $response->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function updateLastCodingLevel($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $level = $this->getNextParameter($contentArray, false, true);
+        if (!$level) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid level'))->send();
+        }
+        $this->getWebsocketServer()->setClientData($resourceId, 'lastCodingLevel', $level);
+        return true;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function startCodingCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_CODING) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You must be in a coding node to code something'))->send();
+        }
+        list($contentArray, $mode) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$mode) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid coding mode'))->send();
+        }
+        list($contentArray, $archetypeId) = $this->getNextParameter($contentArray, true, true);
+        if (!$archetypeId) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a valid archetype id'))->send();
+        }
+        $targetLevel = $this->getNextParameter($contentArray, false, true);
+        if (!$targetLevel) $targetLevel = 1;
+        switch ($mode) {
+            default:
+                return $this->gameClientResponse->addMessage($this->translate('Please specify a valid coding mode'))->send();
+            case 'resource':
+                /** @var FilePart $archetype */
+                $archetype = $this->filePartRepo->find($archetypeId);
+                if (!$archetype) {
+                    return $this->gameClientResponse->addMessage($this->translate('Please specify a valid archetype id'))->send();
+                }
+                if ($targetLevel > $profile->getSnippets()) {
+                    $message = sprintf(
+                        $this->translate('You need %s snippets to code %s'),
+                        $targetLevel,
+                        $archetype->getName()
+                    );
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                /* now check if advanced coding is involved and check skill rating requirements */
+                $skillList = $this->getSkillListForTypeNew($mode, $archetype->getId());
+                if (in_array('advanced-coding', $skillList)) {
+                    $message = $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+                    if ($message) {
+                        return $this->gameClientResponse->addMessage($message)->send();
+                    }
+                }
+                if (in_array('advanced-networking', $skillList)) {
+                    $message = $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+                    if ($message) {
+                        return $this->gameClientResponse->addMessage($message)->send();
+                    }
+                }
+                /* checks passed, we can now create the file part */
+                $difficulty = $targetLevel;
+                $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+                $skillModifier = $this->getSkillModifierForFilePart($archetype, $profile);
+                $modifier = floor(($skillRating + $skillModifier)/2);
+                $modifier = (int)$modifier;
+                $completionTime = ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) ? 1 : $difficulty*self::CODING_TIME_MULTIPLIER_RESOURCE;
+                $completionDate = new \DateTime();
+                $completionDate->add(new \DateInterval('PT' . $completionTime . 'S'));
+                $filePartId = $archetype->getId();
+                $this->getWebsocketServer()->addJob([
+                    'difficulty' => $difficulty,
+                    'modifier' => $modifier,
+                    'completionDate' => $completionDate,
+                    'typeId' => $filePartId,
+                    'type' => 'resource',
+                    'mode' => 'resource',
+                    'skills' => $skillList,
+                    'profileId' => $profile->getId(),
+                    'socketId' => $this->clientData->socketId,
+                    'nodeId' => $profile->getCurrentNode()->getId()
+                ]);
+                $message = sprintf(
+                    $this->translate('You start coding %s for %s snippets'),
+                    $archetype->getName(),
+                    $targetLevel
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                $currentSnippets = $profile->getSnippets();
+                $profile->setSnippets($currentSnippets - $targetLevel);
+                $this->entityManager->flush($profile);
+                break;
+            case 'mod':
+                /** @var FileMod $archetype */
+                $archetype = $this->fileModRepo->find($archetypeId);
+                if (!$archetype) {
+                    return $this->gameClientResponse->addMessage($this->translate('Please specify a valid archetype id'))->send();
+                }
+                $neededResources = $archetype->getFileParts();
+                $missingResources = [];
+                /** @var FilePart $neededResource */
+                foreach ($neededResources as $neededResource) {
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $targetLevel);
+                    if (empty($filePartInstances)) {
+                        $missingResources[] = sprintf(
+                            $this->translate('You need [%s] with at least level %s to code the [%s]'),
+                            $neededResource->getName(),
+                            $targetLevel,
+                            $archetype->getName()
+                        );
+                    }
+                }
+                if (!empty($missingResources)) {
+                    foreach ($missingResources as $missingResource) {
+                        $this->gameClientResponse->addMessage($missingResource);
+                    }
+                    return $this->gameClientResponse->send();
+                }
+                // check if advanced coding is involved and check for skill rating requirements
+                $skillList = $this->getSkillListForTypeNew($mode, $archetype->getId());
+                $message = $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+                if ($message) {
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                /* checks passed, we can now create the mod */
+                $difficulty = $targetLevel;
+                $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+                $skillModifier = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+                $modifier = floor(($skillRating + $skillModifier)/2);
+                $modifier = (int)$modifier;
+                $completionDate = new \DateTime();
+                $completionDate->add(new \DateInterval('PT' . ($difficulty*self::CODING_TIME_MULTIPLIER_MOD) . 'S'));
+                $fileTypeId = $archetype->getId();
+                /** @var FilePart $neededResource */
+                foreach ($archetype->getFileParts() as $neededResource) {
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $targetLevel, true);
+                    $filePartInstance = array_shift($filePartInstances);
+                    $modifier += $filePartInstance->getLevel() - $targetLevel;
+                    $this->entityManager->remove($filePartInstance);
+                }
+                // add the coding job to the loop service
+                $this->getWebsocketServer()->addJob([
+                    'difficulty' => $difficulty,
+                    'modifier' => $modifier,
+                    'completionDate' => $completionDate,
+                    'typeId' => $fileTypeId,
+                    'type' => 'mod',
+                    'mode' => 'mod',
+                    'skills' => $skillList,
+                    'profileId' => $profile->getId(),
+                    'socketId' => $this->clientData->socketId,
+                    'nodeId' => $profile->getCurrentNode()->getId()
+                ]);
+                // prepare response message and add clientdata
+                $message = sprintf(
+                    $this->translate('You start coding the %s'),
+                    $archetype->getName()
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                $this->entityManager->flush();
+                break;
+            case 'program':
+                /** @var FileType $archetype */
+                $archetype = $this->fileTypeRepo->find($archetypeId);
+                if (!$archetype) {
+                    return $this->gameClientResponse->addMessage($this->translate('Please specify a valid archetype id'))->send();
+                }
+                if ($targetLevel > $profile->getSnippets()) {
+                    $message = sprintf(
+                        $this->translate('You need %s snippets to code: %s'),
+                        $targetLevel,
+                        $archetype->getName()
+                    );
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                if ($archetype->getNeedRecipe()) {
+                    $message = $this->checkForRecipe($profile, $archetype);
+                    if ($message) {
+                        return $this->gameClientResponse->addMessage($message)->send();
+                    }
+                }
+                // if they have a recipe
+                $neededResources = $archetype->getFileParts();
+                $missingResources = [];
+                /** @var FilePart $neededResource */
+                foreach ($neededResources as $neededResource) {
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $targetLevel);
+                    if (empty($filePartInstances)) {
+                        $missingResources[] = sprintf(
+                            $this->translate('You need [%s] with at least level %s to code the [%s]'),
+                            $neededResource->getName(),
+                            $targetLevel,
+                            $archetype->getName()
+                        );
+                    }
+                }
+                if (!empty($missingResources)) {
+                    foreach ($missingResources as $missingResource) {
+                        $this->gameClientResponse->addMessage($missingResource);
+                    }
+                    return $this->gameClientResponse->send();
+                }
+                // check if the player can store the file in his total storage
+                if (!$this->canStoreFileOfSize($profile, $archetype->getSize())) {
+                    $message = sprintf(
+                        $this->translate('You do not have enough storage space to code the %s - you need %s more storage units - build more storage nodes'),
+                        $archetype->getName(),
+                        $archetype->getSize()
+                    );
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                // check if advanced coding is involved and check for skill rating requirements
+                $skillList = $this->getSkillListForTypeNew($mode, $archetype->getId());
+                if (in_array('advanced-coding', $skillList)) {
+                    $message = $this->checkAdvancedCoding($profile, Skill::ID_CODING);
+                    if ($message) {
+                        return $this->gameClientResponse->addMessage($message)->send();
+                    }
+                }
+                if (in_array('advanced-networking', $skillList)) {
+                    $message = $this->checkAdvancedCoding($profile, Skill::ID_NETWORKING);
+                    if ($message) {
+                        return $this->gameClientResponse->addMessage($message)->send();
+                    }
+                }
+                // check if the system has enough coding levels to support this job
+                $alljobs = $this->getWebsocketServer()->getJobs();
+                $systemJobAmount = 0;
+                $currentSystem = $profile->getCurrentNode()->getSystem();
+                foreach ($alljobs as $alljobId => $jobData) {
+                    if ($jobData['mode'] != 'program') continue;
+                    $codeNode = $this->entityManager->find('Netrunners\Entity\Node', $jobData['nodeId']);
+                    if ($codeNode->getSystem() == $currentSystem) {
+                        $systemJobAmount++;
+                    }
+                }
+                if ($systemJobAmount >= $this->getTotalSystemValueByNodeType($currentSystem, self::VALUE_TYPE_CODINGNODELEVELS)) {
+                    $message = $this->translate('The system does not have enough coding rating to accept another coding job - please wait until another job has finished');
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+                /* checks passed, we can now create the file */
+                $difficulty = $targetLevel;
+                $skillRating = $this->getSkillRating($profile, Skill::ID_CODING);
+                $skillModifier = $this->getSkillModifierForFileType($archetype, $profile);
+                $modifier = floor(($skillRating + $skillModifier)/2);
+                $modifier = (int)$modifier;
+                $completionDate = new \DateTime();
+                // calculate coding time - for admins this is always 1s
+                $codingTime = ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) ? 1 : $difficulty*self::CODING_TIME_MULTIPLIER_PROGRAM;
+                $completionDate->add(new \DateInterval('PT' . $codingTime . 'S'));
+                $fileTypeId = $archetype->getId();
+                /** @var FilePart $neededResource */
+                foreach ($archetype->getFileParts() as $neededResource) {
+                    $filePartInstances = $this->filePartInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $neededResource, $targetLevel, true);
+                    $filePartInstance = array_shift($filePartInstances);
+                    $modifier += $filePartInstance->getLevel();
+                    $this->entityManager->remove($filePartInstance);
+                }
+                // add the coding job to the loop service
+                $this->getWebsocketServer()->addJob([
+                    'difficulty' => $difficulty,
+                    'modifier' => $modifier,
+                    'completionDate' => $completionDate,
+                    'typeId' => $fileTypeId,
+                    'type' => 'program',
+                    'mode' => 'program',
+                    'skills' => $skillList,
+                    'profileId' => $profile->getId(),
+                    'socketId' => $this->clientData->socketId,
+                    'nodeId' => $profile->getCurrentNode()->getId()
+                ]);
+                // prepare response message and add clientdata
+                $message = sprintf(
+                    $this->translate('You start coding the %s for %s snippets'),
+                    $archetype->getName(),
+                    $targetLevel
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                $currentSnippets = $profile->getSnippets();
+                $profile->setSnippets($currentSnippets - $targetLevel);
+                $this->entityManager->flush();
+                break;
+        }
         return $this->gameClientResponse->send();
     }
 
@@ -874,6 +1370,41 @@ class CodingService extends BaseService
     }
 
     /**
+     * @param string $mode
+     * @param int|null $typeId
+     * @return array
+     */
+    private function getSkillListForTypeNew($mode, $typeId = null)
+    {
+        $skillList = [];
+        switch ($mode) {
+            default:
+                $object = $this->filePartRepo->find($typeId);
+                $repo = $this->entityManager->getRepository('Netrunners\Entity\FilePartSkill');
+                $results = $repo->findBy([
+                    'filePart' => $object
+                ]);
+                break;
+            case 'mod':
+                $advancedCodingSkill = $this->entityManager->getRepository('Netrunners\Entity\Skill')->find(Skill::ID_ADVANCED_CODING);
+                $results = [$advancedCodingSkill];
+                break;
+            case 'program':
+                $object = $this->fileTypeRepo->find($typeId);
+                $repo = $this->entityManager->getRepository('Netrunners\Entity\FileTypeSkill');
+                $results = $repo->findBy([
+                    'fileType' => $object
+                ]);
+                break;
+        }
+        foreach ($results as $result) {
+            /** @var FilePartSkill|FileTypeSkill|Skill $result */
+            $skillList[] = ($result instanceof Skill) ? $this->getNameWithoutSpaces($result->getName()) : $this->getNameWithoutSpaces($result->getSkill()->getName(), '-');
+        }
+        return $skillList;
+    }
+
+    /**
      * @param Profile $profile
      * @param $skillId
      * @return bool|string
@@ -1080,9 +1611,7 @@ class CodingService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
-        /** @var ProfileFileTypeRecipeRepository $profileFileTypeRecipeRepo */
-        $profileFileTypeRecipeRepo = $this->entityManager->getRepository('Netrunners\Entity\ProfileFileTypeRecipe');
-        $recipes = $profileFileTypeRecipeRepo->findBy([
+        $recipes = $this->profileFileTypeRecipeRepo->findBy([
             'profile' => $profile
         ]);
         $returnMessage = sprintf(

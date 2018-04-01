@@ -191,6 +191,22 @@ pre.text-sysmsg {
 }
 
 .panel-container {
+    z-index: 20;
+    position: absolute;
+}
+
+.coding-ui-panel {
+    background: url("../img/panel_code.jpg");
+    background-size:cover;
+}
+
+.notifications-container {
+    z-index: 10;
+    position: absolute;
+}
+
+.coding-detail-container {
+    background-size:cover;
     position: absolute;
 }
 

@@ -893,6 +893,9 @@ class AdminService extends BaseService
         }
         if (!$level) $level = 1;
         $fileMod = $this->fileModRepo->findLikeName($fileModName);
+        if (!$fileMod) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid file mod'), GameClientResponse::CLASS_DANGER)->send();
+        }
         $fileModInstance = new FileModInstance();
         $fileModInstance->setLevel($level);
         $fileModInstance->setProfile($profile);

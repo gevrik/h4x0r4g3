@@ -20,6 +20,7 @@ class FileTypeRepository extends EntityRepository
     /**
      * @param Profile $profile
      * @return array
+     * @throws \Doctrine\ORM\NonUniqueResultException
      */
     public function findForCoding(Profile $profile)
     {

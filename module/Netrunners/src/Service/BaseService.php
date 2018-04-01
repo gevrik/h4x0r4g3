@@ -1501,6 +1501,38 @@ class BaseService
     }
 
     /**
+     * @param Profile $profile
+     * @param string $mode
+     * @param int $difficulty
+     * @param int $fileType
+     * @return int
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    protected function calculateCodingSuccessChanceNew(Profile $profile, $mode, $difficulty, $fileType)
+    {
+        $skillModifier = 0;
+        if ($mode == 'program') {
+            $targetType = $this->entityManager->find('Netrunners\Entity\FileType', $fileType);
+            /** @var FileType $targetType */
+            $skillModifier = $this->getSkillModifierForFileType($targetType, $profile);
+        }
+        if ($mode == 'resource') {
+            $targetType = $this->entityManager->find('Netrunners\Entity\FilePart', $fileType);
+            /** @var FilePart $targetType */
+            $skillModifier = $this->getSkillModifierForFilePart($targetType, $profile);
+        }
+        if ($mode == 'mod') {
+            $skillModifier = $this->getSkillRating($profile, Skill::ID_ADVANCED_CODING);
+        }
+        $skillCoding = $this->getSkillRating($profile, Skill::ID_CODING);
+        $skillRating = floor(($skillCoding + $skillModifier)/2);
+        $chance = $skillRating - $difficulty;
+        return (int)$chance;
+    }
+
+    /**
      * @param FileType $fileType
      * @param Profile $profile
      * @return int

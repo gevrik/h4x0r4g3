@@ -1,0 +1,192 @@
+<div class="panel panel-default draggable coding-ui-panel">
+    <div class="panel-heading">
+        <button id="btn-collapse-coding-ui" class="collapse" type="button" data-toggle="collapse" data-target="#coding-ui-body"><i class="fa fa-caret-down"></i></button>
+        <button id="btn-close-coding-ui" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate("coding interface"); ?></h3>
+    </div>
+    <div id="coding-ui-body" class="panel-body table-responsive" style="padding: 0;">
+
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#fileparts" aria-controls="fileparts" role="tab" data-toggle="tab">fileparts</a></li>
+            <li role="presentation"><a href="#filemods" aria-controls="filemods" role="tab" data-toggle="tab">filemods</a></li>
+            <li role="presentation"><a href="#coding" aria-controls="coding" role="tab" data-toggle="tab">programs</a></li>
+        </ul>
+
+        <!-- Tab panes -->
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active" id="fileparts">
+
+                <table id="parts-table" class="cell-border compact" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>ACTIONS</th>
+                        <th>NAME</th>
+                        <th>DESC</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($this->fileparts as $part) : /** @var \Netrunners\Entity\FilePart $part */ ?>
+                        <tr>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-primary btn-xs btn-code-fpi"
+                                        data-fpiid="<?php echo $part->getId(); ?>">
+                                    <i class="fa fa-pencil-square"></i>
+                                </button>
+                            </td>
+                            <td>
+                                <?php echo $part->getName(); ?>
+                            </td>
+                            <td>
+                                <?php echo $part->getDescription(); ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+            </div>
+            <div role="tabpanel" class="tab-pane" id="filemods">
+
+                <table id="mods-table" class="cell-border compact" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>ACTIONS</th>
+                        <th>NAME</th>
+                        <th>DESC</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($this->filemods as $mod) : /** @var \Netrunners\Entity\FileMod $mod */ ?>
+                        <tr>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-primary btn-xs btn-code-mod"
+                                        data-mod-id="<?php echo $mod->getId(); ?>">
+                                    <i class="fa fa-pencil-square"></i>
+                                </button>
+                            </td>
+                            <td>
+                                <?php echo $mod->getName(); ?>
+                            </td>
+                            <td>
+                                <?php echo $mod->getDescription(); ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+            </div>
+            <div role="tabpanel" class="tab-pane" id="coding">
+
+                <table id="recipes-table" class="cell-border compact" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>ACTIONS</th>
+                        <th>NAME</th>
+                        <th>DESC</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($this->programs as $program) : /** @var \Netrunners\Entity\FileType $program */ ?>
+                        <tr>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-primary btn-xs btn-code-program"
+                                        data-program-id="<?php echo $program->getId(); ?>">
+                                    <i class="fa fa-pencil-square"></i>
+                                </button>
+                            </td>
+                            <td>
+                                <?php echo $program->getName(); ?>
+                            </td>
+                            <td>
+                                <?php echo $program->getDescription(); ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<?php echo $this->headLink()->appendStylesheet('/css/nh_tables.css'); ?>
+
+<style>
+    .nav-tabs>li.active>a, .nav-tabs>li.active>a:hover, .nav-tabs>li.active>a:focus {
+        color: #ffffff;
+        background-color: rgba(40, 40, 40, 0.75);
+        border: 1px solid #3c3c3c;
+        border-bottom-color: transparent;
+        cursor: default;
+    }
+</style>
+
+<script>
+
+    $('.panel-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    $(document).ready(function() {
+        var tableParts = $('#parts-table').DataTable({
+            pageLength: 100,
+            scrollY: viewportHeight*0.3,
+            scrollCollapse: true
+        });
+
+        var tableMods = $('#mods-table').DataTable({
+            pageLength: 100,
+            scrollY: viewportHeight*0.3,
+            scrollCollapse: true
+        });
+
+        var tableRecipes = $('#recipes-table').DataTable({
+            pageLength: 100,
+            scrollY: viewportHeight*0.3,
+            scrollCollapse: true
+        });
+
+        $('.btn-code-fpi').on('click', function () {
+            var fpiid = $(this).data('fpiid');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'showcodingdetailpanel resource ' + fpiid
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+        $('.btn-code-mod').on('click', function () {
+            var modid = $(this).data('mod-id');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'showcodingdetailpanel mod ' + modid
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+        $('.btn-code-program').on('click', function () {
+            var programid = $(this).data('program-id');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'showcodingdetailpanel program ' + programid
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+    });
+
+</script>

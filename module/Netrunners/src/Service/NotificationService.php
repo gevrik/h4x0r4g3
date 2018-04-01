@@ -55,7 +55,7 @@ class NotificationService extends BaseService
         $view = new ViewModel();
         $view->setTemplate('netrunners/notification/list.phtml');
         $view->setVariable('notifications', $unreadNotifications);
-        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL)->setSilent(true);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOW_NOTIFICATIONS)->setSilent(true);
         $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
         return $this->gameClientResponse->send();
     }

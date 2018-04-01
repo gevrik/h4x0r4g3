@@ -1,0 +1,122 @@
+<style>
+    #custom-handle {
+        width: 3em;
+        height: 1.6em;
+        top: 50%;
+        margin-top: -.8em;
+        text-align: center;
+        line-height: 1.6em;
+        border: 1px solid #3c3c3c;
+        background: #222222;
+        color: #888888;
+    }
+    .ui-widget.ui-widget-content {
+        border: 1px solid #3c3c3c;
+    }
+    .ui-widget-content {
+        background: #222222;
+        color: #888888;
+    }
+</style>
+
+<input id="mode" type="hidden" value="<?php echo $this->codeType; ?>">
+
+<div class="panel panel-default draggable code-resource-panel">
+    <div class="panel-heading">
+        <button id="btn-close-code-resource-panel" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo $this->translate(sprintf("code mod: %s", $this->archetype->getName())); ?></h3>
+    </div>
+    <div class="panel-body">
+        <p>choose level:</p>
+        <div id="slider">
+            <div id="custom-handle" class="ui-slider-handle"></div>
+        </div>
+        <div style="margin-top: 1em;">
+            <p>needed skills : <span id="needed-skills"><?php echo implode(' ', $this->skillList); ?></span></p>
+        </div>
+        <div>
+            <p>needed parts : <span id="needed-parts"><?php echo $this->partsString; ?></span></p>
+        </div>
+        <div>
+            <p>coding chance : <span id="coding-chance"><?php echo $this->chance; ?></span></p>
+        </div>
+    </div>
+    <div class="panel-footer">
+        <button type="button" class="btn btn-sm btn-primary btn-code">
+            <?php echo $this->translate('code'); ?>
+        </button>
+    </div>
+</div>
+
+<script>
+
+    $('.coding-detail-container')
+        .css('max-height', viewportHeight*0.4)
+        .css('height', viewportHeight*0.4)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.32);
+
+    $(document).ready(function() {
+        var currentLevel = <?php echo $this->lastCodingLevel; ?>;
+        var handle = $('#custom-handle');
+        var chanceOutput = $('#coding-chance');
+        var currentChance = <?php echo $this->chance; ?>;
+        $( "#slider" ).slider({
+            min: 1,
+            max: 100,
+            value: <?php echo $this->lastCodingLevel; ?>,
+            create: function() {
+                handle.text( $( this ).slider( "value" ) );
+            },
+            slide: function( event, ui ) {
+                handle.text( ui.value );
+                var levelDifference = ui.value - currentLevel;
+                currentLevel = currentLevel + levelDifference;
+                currentChance = currentChance - levelDifference;
+                if (currentChance < 1) {
+                    $('#coding-chance').removeClass('text-success').addClass('text-danger');
+                }
+                else {
+                    $('#coding-chance').removeClass('text-danger').addClass('text-success');
+                }
+                chanceOutput.text( currentChance );
+            },
+            stop: function( event, ui ) {
+                var mode = $('#mode').val();
+                var command = {
+                    command: 'parseInput',
+                    hash: hash,
+                    content: 'updatepartsstring ' + mode + ' ' + <?php echo $this->archetype->getId(); ?> + ' ' + ui.value,
+                    silent: true
+                };
+                conn.send(JSON.stringify(command));
+                command = {
+                    command: 'parseInput',
+                    hash: hash,
+                    content: 'updatelastcodinglevel ' + ui.value,
+                    silent: true
+                };
+                conn.send(JSON.stringify(command));
+            }
+        });
+        $('.btn-code').on('click', function () {
+            var mode = $('#mode').val();
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'startcoding ' + mode + ' ' + <?php echo $this->archetype->getId(); ?> + ' ' + currentLevel
+            };
+            conn.send(JSON.stringify(command));
+            command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'updatepartsstring ' + mode + ' ' + <?php echo $this->archetype->getId(); ?> + ' ' + currentLevel,
+                silent: true
+            };
+            conn.send(JSON.stringify(command));
+        });
+    });
+
+</script>

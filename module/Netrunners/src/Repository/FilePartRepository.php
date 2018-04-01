@@ -17,10 +17,9 @@ class FilePartRepository extends EntityRepository
 {
 
     /**
-     * @param Profile|NULL $profile
      * @return array
      */
-    public function findForCoding(Profile $profile = NULL)
+    public function findForCoding()
     {
         $qb = $this->createQueryBuilder('ft');
         return $qb->getQuery()->getResult();

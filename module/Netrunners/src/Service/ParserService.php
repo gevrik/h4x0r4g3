@@ -352,7 +352,10 @@ class ParserService
             case 'close':
                 return $this->connectionService->closeConnection($resourceId, $contentArray);
             case 'code':
-                return $this->codingService->enterCodeMode($resourceId);
+                return $this->codingService->openCodingInterface($resourceId);
+            case 'showcodingdetailpanel':
+                return $this->codingService->showCodingDetailPanel($resourceId, $contentArray);
+                break;
             case 'commands':
                 return $this->getWebsocketServer()->getUtilityService()->showCommands($resourceId);
             case 'connect':
@@ -371,6 +374,10 @@ class ParserService
                 return $this->notificationService->showNotifications($resourceId);
             case 'decompile':
                 return $this->fileService->decompileFile($resourceId, $contentArray);
+            case 'updatepartsstring':
+                return $this->codingService->updatePartsString($resourceId, $contentArray);
+            case 'updatelastcodinglevel':
+                return $this->codingService->updateLastCodingLevel($resourceId, $contentArray);
             case 'deposit':
                 return $this->profileService->depositCredits($resourceId, $contentArray);
             case 'dismissnotification':
@@ -598,6 +605,8 @@ class ParserService
             case 'sneak':
             case 'stealth':
                 return $this->profileService->startStealthing($resourceId);
+            case 'startcoding':
+                return $this->codingService->startCodingCommand($resourceId, $contentArray);
             case 'stat':
                 return $this->fileService->statFile($resourceId, $contentArray);
             case 'survey':

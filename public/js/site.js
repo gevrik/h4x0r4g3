@@ -18,6 +18,14 @@
             .css('top', viewportHeight*0.5)
             .css('left', viewportWidth*0.65);
 
+        $('.notifications-container')
+            .css('max-height', viewportHeight*0.425)
+            .css('height', viewportHeight*0.425)
+            .css('max-width', viewportWidth*0.33)
+            .css('width', viewportWidth*0.33)
+            .css('top', viewportHeight*0.5)
+            .css('left', viewportWidth*0.65);
+
         $('.map-container')
             .css('max-height', viewportHeight*0.425)
             .css('height', viewportHeight*0.425)
@@ -374,6 +382,16 @@
             commandInput.focus();
         });
 
+        $('#notifications-container').on('click', '.panel-heading .close', function(e){
+            $('#notifications-container').html('').hide();
+            commandInput.focus();
+        });
+
+        $('#coding-detail-container').on('click', '.panel-heading .close', function(e){
+            $('#coding-detail-container').html('').hide();
+            commandInput.focus();
+        });
+
         $('#map-container').on('click', '.panel-heading .close', function(e){
             $('#map-container').html('').hide();
             commandInput.focus();
@@ -391,7 +409,7 @@
             commandInput.focus();
         });
 
-        $('#gamepanels').on('click', '#panel-container #btn-dismiss-all-notifications', function(e){
+        $('#gamepanels').on('click', '#notifications-container #btn-dismiss-all-notifications', function(e){
             var command = {
                 command: 'parseInput',
                 hash: hash,
@@ -399,7 +417,7 @@
                 silent: true
             };
             conn.send(JSON.stringify(command));
-            $('#panel-container').html('');
+            $('#notifications-container').html('').hide();
             commandInput.focus();
         });
 
@@ -578,8 +596,12 @@
                     $('.img-tesseract').show();
                     if (data.playsound) playSoundById(4);
                     if (data.bgopacity) $('.content').css('background-color', 'rgba(0,0,0,' + data.bgopacity + ')');
-                    mymap.flyTo([data.homecoords[0], data.homecoords[1]], 15);
-                    mymap.flyTo([data.geocoords[0], data.geocoords[1]], 15);
+                    if (data.homecoords[0] !== undefined) {
+                        mymap.flyTo([data.homecoords[0], data.homecoords[1]], 15);
+                    }
+                    if (data.geocoords[0] !== undefined) {
+                        mymap.flyTo([data.geocoords[0], data.geocoords[1]], 15);
+                    }
                     break;
                 case 'ticker':
                     var notiAmount = data.amount;
@@ -685,8 +707,17 @@
                     //$('.panel-body-map').resizable();
                     if (!data.silent) showprompt();
                     break;
-                case 'showpanel':
-                    $('#panel-container').html('').append(data.content).show().draggable({
+                case 'showcodingdetailpanel':
+                    $('#coding-detail-container').html('').append(data.content).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
+                    });
+                    if (!data.silent) showprompt();
+                    break;
+                case 'shownotifications':
+                    $('#notifications-container').html('').append(data.content).show().draggable({
                         cursor: 'pointer',
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
@@ -696,6 +727,15 @@
                     {
                         document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
                     }
+                    if (!data.silent) showprompt();
+                    break;
+                case 'showpanel':
+                    $('#panel-container').html('').append(data.content).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
+                    });
                     $('.btn-hangman-letter').on('click', function(){
                         var hangmanLetter = $(this).data('letter');
                         command = {

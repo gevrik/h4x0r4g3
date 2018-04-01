@@ -32,6 +32,8 @@ class GameClientResponse {
     const COMMAND_ENTERCONFIRMMODE = 'enterconfirmmode';
     const COMMAND_CLOSEPANEL = 'closepanel';
     const COMMAND_SHOWPANEL = 'showpanel';
+    const COMMAND_SHOW_NOTIFICATIONS = 'shownotifications';
+    const COMMAND_SHOW_CODING_DETAIL_PANEL = 'showcodingdetailpanel';
     const COMMAND_ENTERMAILMODE = 'entermailmode';
     const COMMAND_EXITMAILMODE = 'exitmailmode';
     const COMMAND_OPENMANPAGEMENU = 'openmanpagemenu';

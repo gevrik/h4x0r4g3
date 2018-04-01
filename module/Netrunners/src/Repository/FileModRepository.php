@@ -20,10 +20,9 @@ class FileModRepository extends EntityRepository
 {
 
     /**
-     * @param Profile|NULL $profile
      * @return array
      */
-    public function findForCoding(Profile $profile = NULL)
+    public function findForCoding()
     {
         $qb = $this->createQueryBuilder('fm');
         return $qb->getQuery()->getResult();
