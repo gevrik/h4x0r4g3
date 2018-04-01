@@ -510,6 +510,64 @@ class MailMessageService extends BaseService
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
+    public function mailAttachInfoCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        // get mail-id
+        list($contentArray, $mailId) = $this->getNextParameter($contentArray, true, true);
+        if (!$mailId) {
+            $message = $this->translate(sprintf('Please specify the mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var MailMessage $mailMessage */
+        $mailMessage = $this->mailMessageRepo->find($mailId);
+        if (!$mailMessage) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getRecipient()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($mailMessage->getRecipient() !== $profile) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now get the attachment id
+        $attachmentId = $this->getNextParameter($contentArray, false, true);
+        if (!$attachmentId) {
+            $message = $this->translate(sprintf('Please specify the attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var File $attachment */
+        $attachment = $this->fileRepo->find($attachmentId);
+        if (!$attachment) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$attachment->getMailMessage()) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($attachment->getMailMessage() !== $mailMessage) {
+            $message = $this->translate(sprintf('Invalid attachment-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // all good, we can show info about the file
+        $this->generateFileInfo($attachment);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
     public function mailAttachmentDeleteCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);

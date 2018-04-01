@@ -475,6 +475,9 @@ class ParserService
             case 'maildetach':
                 return $this->mailMessageService->mailDetachCommand($resourceId, $contentArray);
                 break;
+            case 'mailattachinfo':
+                return $this->mailMessageService->mailAttachInfoCommand($resourceId, $contentArray);
+                break;
             case 'mailattachmentdelete':
                 return $this->mailMessageService->mailAttachmentDeleteCommand($resourceId, $contentArray);
                 break;

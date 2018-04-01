@@ -16,7 +16,9 @@ use Netrunners\Entity\Connection;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
@@ -45,6 +47,7 @@ use Netrunners\Entity\System;
 use Netrunners\Entity\SystemLog;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
@@ -1268,6 +1271,146 @@ class BaseService
         }
         else {
             return $response;
+        }
+    }
+
+    /**
+     * @param File $targetFile
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    protected function generateFileInfo(File $targetFile)
+    {
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Name"),
+            $targetFile->getName()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Coder"),
+            ($targetFile->getCoder()) ?
+                $targetFile->getCoder()->getUser()->getUsername() :
+                $this->translate('<span class="text-muted">system-generated</span>')
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %smu',
+            $this->translate("Size"),
+            $targetFile->getSize()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Level"), $targetFile->getLevel()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Version"),
+            $targetFile->getVersion()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Type"),
+            $targetFile->getFileType()->getName()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s/%s',
+            $this->translate("Integrity"),
+            $targetFile->getIntegrity(),
+            $targetFile->getMaxIntegrity()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Slots"),
+            $targetFile->getSlots()
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Birth"),
+            $targetFile->getCreated()->format('Y/m/d H:i:s')
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $returnMessage = sprintf(
+            '%-12s: %s',
+            $this->translate("Modified"),
+            ($targetFile->getModified()) ? $targetFile->getModified()->format('Y/m/d H:i:s') : $this->translate("---")
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+        $categories = '';
+        foreach ($targetFile->getFileType()->getFileCategories() as $fileCategory) {
+            /** @var FileCategory $fileCategory */
+            $categories .= $fileCategory->getName() . ' ';
+        }
+        $returnMessage = sprintf(
+            '%s: %s',
+            $this->translate("Categories"),
+            $categories
+        );
+        $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+        switch ($targetFile->getFileType()->getId()) {
+            default:
+                break;
+            case FileType::ID_COINMINER:
+                $fileData = json_decode($targetFile->getData());
+                $returnMessage = sprintf(
+                    '%-12s: %s',
+                    $this->translate("Collected credits"),
+                    (isset($fileData->value)) ? $fileData->value : 0
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+            case FileType::ID_DATAMINER:
+                $fileData = json_decode($targetFile->getData());
+                $returnMessage = sprintf(
+                    '%-12s: %s',
+                    $this->translate("Collected snippets"),
+                    (isset($fileData->value)) ? $fileData->value : 0
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+            case FileType::ID_TEXT:
+            case FileType::ID_PASSKEY:
+                $fileData = $targetFile->getContent();
+                $returnMessage = sprintf(
+                    '%s<br/><span class="text-muted">%s</span>',
+                    $this->translate("File content:"),
+                    ($fileData) ? wordwrap($fileData, 120) : $this->translate('[CONTENT IS EMPTY]')
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+            case FileType::ID_CUSTOM_IDE:
+                $returnMessage = sprintf(
+                    '%s <span class="text-muted">%s</span>',
+                    $this->translate("Effective skill boost:"),
+                    $this->getBonusForFileLevel($targetFile)
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
+                break;
+        }
+        // now show its file-mods
+        /** @var FileModInstanceRepository $fileModInstanceRepo */
+        $fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
+        $fileModsCount = $fileModInstanceRepo->countByFile($targetFile);
+        if ($fileModsCount >= 1) {
+            $fileMods = $fileModInstanceRepo->findByFile($targetFile);
+            $installedModsString = '';
+            foreach ($fileMods as $fileMod) {
+                /** @var FileModInstance $fileMod */
+                $installedModsString .= $fileMod->getFileMod()->getName() . '|' . $fileMod->getLevel() . ' ';
+            }
+            $returnMessage = sprintf(
+                '%s %s',
+                $this->translate("Installed mods:"),
+                wordwrap($installedModsString, 120)
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
         }
     }
 

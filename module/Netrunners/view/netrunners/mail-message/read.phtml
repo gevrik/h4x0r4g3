@@ -14,11 +14,13 @@
             <pre><?php echo $this->mail->getContent(); ?></pre>
         </div>
         <hr/>
-        <?php foreach ($this->mail->getAttachments() as $attachment) :
-            /** @var \Netrunners\Entity\MailMessage $attachment */ ?>
-            <i class="fa fa-5x fa-file mail-attachment" data-attachment-id="<?php echo $attachment->getId(); ?>"
-               data-mail-id="<?php echo $this->mail->getId(); ?>"></i>
-        <?php endforeach; ?>
+        <div class="container-fluid">
+            <?php foreach ($this->mail->getAttachments() as $attachment) :
+                /** @var \Netrunners\Entity\MailMessage $attachment */ ?>
+                <i class="fa fa-5x fa-file mail-attachment" data-attachment-id="<?php echo $attachment->getId(); ?>"
+                   data-mail-id="<?php echo $this->mail->getId(); ?>"></i>
+            <?php endforeach; ?>
+        </div>
     </div>
     <div class="panel-footer">
         <button type="button"
@@ -79,6 +81,22 @@
 
             },
             items: {
+                "info": {
+                    name: "info",
+                    icon: "info",
+                    callback: function (key, options) {
+                        var clickedIcon = options.$trigger;
+                        var attachmentId = clickedIcon.data('attachment-id');
+                        var mailId = clickedIcon.data('mail-id');
+                        var command = {
+                            command: 'parseInput',
+                            hash: hash,
+                            content: 'mailattachinfo ' + mailId + ' ' + attachmentId
+                        };
+                        conn.send(JSON.stringify(command));
+                    }
+                },
+                "sep0": "---------",
                 "download": {
                     name: "download",
                     icon: "download",

@@ -20,21 +20,13 @@
                 <table id="parts-table" class="cell-border compact" cellspacing="0" width="100%">
                     <thead>
                     <tr>
-                        <th>ACTIONS</th>
                         <th>NAME</th>
                         <th>DESC</th>
                     </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($this->fileparts as $part) : /** @var \Netrunners\Entity\FilePart $part */ ?>
-                        <tr>
-                            <td>
-                                <button type="button"
-                                        class="btn btn-primary btn-xs btn-code-fpi"
-                                        data-fpiid="<?php echo $part->getId(); ?>">
-                                    <i class="fa fa-pencil-square"></i>
-                                </button>
-                            </td>
+                        <tr data-row-id="<?php echo $part->getId(); ?>">
                             <td>
                                 <?php echo $part->getName(); ?>
                             </td>
@@ -52,21 +44,13 @@
                 <table id="mods-table" class="cell-border compact" cellspacing="0" width="100%">
                     <thead>
                     <tr>
-                        <th>ACTIONS</th>
                         <th>NAME</th>
                         <th>DESC</th>
                     </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($this->filemods as $mod) : /** @var \Netrunners\Entity\FileMod $mod */ ?>
-                        <tr>
-                            <td>
-                                <button type="button"
-                                        class="btn btn-primary btn-xs btn-code-mod"
-                                        data-mod-id="<?php echo $mod->getId(); ?>">
-                                    <i class="fa fa-pencil-square"></i>
-                                </button>
-                            </td>
+                        <tr data-row-id="<?php echo $mod->getId(); ?>">
                             <td>
                                 <?php echo $mod->getName(); ?>
                             </td>
@@ -84,21 +68,13 @@
                 <table id="recipes-table" class="cell-border compact" cellspacing="0" width="100%">
                     <thead>
                     <tr>
-                        <th>ACTIONS</th>
                         <th>NAME</th>
                         <th>DESC</th>
                     </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($this->programs as $program) : /** @var \Netrunners\Entity\FileType $program */ ?>
-                        <tr>
-                            <td>
-                                <button type="button"
-                                        class="btn btn-primary btn-xs btn-code-program"
-                                        data-program-id="<?php echo $program->getId(); ?>">
-                                    <i class="fa fa-pencil-square"></i>
-                                </button>
-                            </td>
+                        <tr data-row-id="<?php echo $program->getId(); ?>">
                             <td>
                                 <?php echo $program->getName(); ?>
                             </td>
@@ -157,35 +133,56 @@
             scrollCollapse: true
         });
 
-        $('.btn-code-fpi').on('click', function () {
-            var fpiid = $(this).data('fpiid');
-            var command = {
-                command: 'parseInput',
-                hash: hash,
-                content: 'showcodingdetailpanel resource ' + fpiid
-            };
-            conn.send(JSON.stringify(command));
-        });
+        $('#parts-table tbody').on( 'click', 'tr', function () {
+            if ( $(this).hasClass('selected') ) {
+                $(this).removeClass('selected');
+            }
+            else {
+                tableParts.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+                var rowId = $(this).data('row-id');
+                var command = {
+                    command: 'parseInput',
+                    hash: hash,
+                    content: 'showcodingdetailpanel resource ' + rowId
+                };
+                conn.send(JSON.stringify(command));
+            }
+        } );
 
-        $('.btn-code-mod').on('click', function () {
-            var modid = $(this).data('mod-id');
-            var command = {
-                command: 'parseInput',
-                hash: hash,
-                content: 'showcodingdetailpanel mod ' + modid
-            };
-            conn.send(JSON.stringify(command));
-        });
+        $('#mods-table tbody').on( 'click', 'tr', function () {
+            if ( $(this).hasClass('selected') ) {
+                $(this).removeClass('selected');
+            }
+            else {
+                tableMods.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+                var rowId = $(this).data('row-id');
+                var command = {
+                    command: 'parseInput',
+                    hash: hash,
+                    content: 'showcodingdetailpanel mod ' + rowId
+                };
+                conn.send(JSON.stringify(command));
+            }
+        } );
 
-        $('.btn-code-program').on('click', function () {
-            var programid = $(this).data('program-id');
-            var command = {
-                command: 'parseInput',
-                hash: hash,
-                content: 'showcodingdetailpanel program ' + programid
-            };
-            conn.send(JSON.stringify(command));
-        });
+        $('#recipes-table tbody').on( 'click', 'tr', function () {
+            if ( $(this).hasClass('selected') ) {
+                $(this).removeClass('selected');
+            }
+            else {
+                tableRecipes.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+                var rowId = $(this).data('row-id');
+                var command = {
+                    command: 'parseInput',
+                    hash: hash,
+                    content: 'showcodingdetailpanel program ' + rowId
+                };
+                conn.send(JSON.stringify(command));
+            }
+        } );
 
     });
 
