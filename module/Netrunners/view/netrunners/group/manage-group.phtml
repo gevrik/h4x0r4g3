@@ -1,0 +1,183 @@
+<div class="panel panel-default draggable manage-group-panel">
+    <div class="panel-heading">
+        <button id="btn-collapse-manage-group" class="collapse" type="button" data-toggle="collapse" data-target="#manage-group-body"><i class="fa fa-caret-down"></i></button>
+        <button id="btn-close-manage-group" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo sprintf($this->translate("manage group: %s"), $this->group->getName()); ?></h3>
+    </div>
+    <div id="manage-group-body" class="panel-body">
+
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#groupinfo" aria-controls="groupinfo" role="tab" data-toggle="tab">info</a></li>
+            <li role="presentation"><a href="#groupmembers" aria-controls="groupmembers" role="tab" data-toggle="tab">members</a></li>
+            <li role="presentation"><a href="#groupinvitations" aria-controls="groupinvitations" role="tab" data-toggle="tab">invitations</a></li>
+        </ul>
+
+        <!-- Tab panes -->
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active" id="groupinfo">
+                <h4><?php echo $this->group->getName(); ?></h4>
+                <div class="row-fluid">
+                    <table class="table table-condensed table-responsive table-striped">
+                        <tbody>
+                            <tr><td><?php echo $this->group->getDescription(); ?></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row-fluid">
+                    <table class="table table-condensed table-responsive table-striped">
+                        <tbody>
+                        <tr>
+                            <td><?php echo $this->translate("faction"); ?></td>
+                            <td><?php echo $this->group->getFaction()->getName(); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo $this->translate("founded"); ?></td>
+                            <td><?php echo $this->group->getAdded()->format('Y-m-d H:i:s'); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo $this->translate("credits"); ?></td>
+                            <td><?php echo $this->group->getCredits(); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo $this->translate("snippets"); ?></td>
+                            <td><?php echo $this->group->getSnippets(); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo $this->translate("members"); ?></td>
+                            <td><?php echo count($this->members); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo $this->translate("systems"); ?></td>
+                            <td><?php echo count($this->systems); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo $this->translate("open recruitment"); ?></td>
+                            <td>
+                                <button type="button" class="btn btn-primary btn-xs" id="toggle-open-recruitment">
+                                    <?php echo ($this->group->getOpenRecruitment()) ?
+                                        $this->translate("yes") :
+                                        $this->translate("no");
+                                    ?>
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="groupmembers">
+                <table id="members-table" class="cell-border compact" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>NAME</th>
+                        <th>JOINED</th>
+                        <th>RATING</th>
+                        <th>ROLES</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($this->members as $member) : /** @var \Netrunners\Entity\Profile $member */ ?>
+                        <tr data-row-id="<?php echo $member->getId(); ?>">
+                            <td>
+                                <?php echo $member->getUser()->getUsername(); ?>
+                            </td>
+                            <td>
+                                <?php echo $this->profileGroupHelper()->getJoinDate($member); ?>
+                            </td>
+                            <td>
+                                <?php echo $this->profileGroupHelper()->getRating($member); ?>
+                            </td>
+                            <td>
+                                <?php echo $this->profileGroupHelper()->getRolesString($member); ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="groupinvitations">
+                <table id="members-table" class="cell-border compact" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th>NAME</th>
+                        <th>RECRUITED BY</th>
+                        <th>RECRUITED AT</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->invitations as $recruitId => $invitationData) : ?>
+                            <tr data-recruit-id="<?php echo $recruitId; ?>">
+                                <td>
+                                    <?php echo $invitationData['recruitname']; ?>
+                                </td>
+                                <td>
+                                    <?php echo $invitationData['recruitername']; ?>
+                                </td>
+                                <td>
+                                    <?php echo $invitationData['added']->format('Y-m-d H:i:s'); ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<?php echo $this->headLink()->appendStylesheet('/css/nh_tables.css'); ?>
+
+<script>
+
+    $('.group-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    $(document).ready(function() {
+        var tableMembers = $('#members-table').DataTable({
+            pageLength: 100,
+            scrollY: viewportHeight*0.3,
+            scrollCollapse: true
+        });
+
+        var tableInvitations = $('#invitations-table').DataTable({
+            pageLength: 100,
+            scrollY: viewportHeight*0.3,
+            scrollCollapse: true
+        });
+
+        $('#members-table tbody').on( 'click', 'tr', function () {
+            if ( $(this).hasClass('selected') ) {
+                $(this).removeClass('selected');
+            }
+            else {
+                tableMembers.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+                var rowId = $(this).data('row-id');
+                var command = {
+                    command: 'parseInput',
+                    hash: hash,
+                    content: 'groupmemberdetails ' + rowId
+                };
+                conn.send(JSON.stringify(command));
+            }
+        });
+
+        $('#toggle-open-recruitment').on( 'click', function () {
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'grouptogglerecruitment'
+            };
+            conn.send(JSON.stringify(command));
+        });
+
+    });
+
+</script>

@@ -15,10 +15,15 @@ use Netrunners\Entity\Group;
 use Netrunners\Entity\GroupRole;
 use Netrunners\Entity\GroupRoleInstance;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\GroupRepository;
+use Netrunners\Repository\GroupRoleInstanceRepository;
+use Netrunners\Repository\ProfileRepository;
+use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
+use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
 class GroupService extends BaseService
@@ -31,6 +36,21 @@ class GroupService extends BaseService
      */
     protected $groupRepo;
 
+    /**
+     * @var ProfileRepository
+     */
+    protected $profileRepo;
+
+    /**
+     * @var SystemRepository
+     */
+    protected $systemRepo;
+
+    /**
+     * @var GroupRoleInstanceRepository
+     */
+    protected $groupRoleInstanceRepo;
+
 
     /**
      * GroupService constructor.
@@ -42,6 +62,9 @@ class GroupService extends BaseService
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->groupRepo = $this->entityManager->getRepository('Netrunners\Entity\Group');
+        $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        $this->groupRoleInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRoleInstance');
     }
 
     /**
@@ -210,8 +233,16 @@ class GroupService extends BaseService
         }
         // check if it is open recruitment or if they need to write an application
         if (!$group->getOpenRecruitment()) {
-            $message = $this->translate('You can not join this group without an invitation');
-            return $this->gameClientResponse->addMessage($message)->send();
+            // check if they have an invitation
+            $invitation = $this->getWebsocketServer()->getGroupInvitation($group->getId(), $profile->getId());
+            if ($invitation) {
+                $this->getWebsocketServer()->removeGroupInvitation($group->getId(), $profile->getId());
+            }
+            else {
+                // no invitation - reject
+                $message = $this->translate('You can not join this group without an invitation');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
         }
         /* checks passed, we can join the group */
         $profile->setGroup($group);
@@ -229,6 +260,195 @@ class GroupService extends BaseService
         );
         $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function manageGroupCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $group = $profile->getGroup();
+        if (!$group) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/group/manage-group.phtml');
+        // gather important data
+        $members = $this->profileRepo->findBy(['group'=>$group]);
+        $systems = $this->systemRepo->findBy(['group'=>$group]);
+        $allInvited = $this->getWebsocketServer()->getGroupInvitations();
+        $invitations = (array_key_exists($group->getId(), $allInvited)) ? $allInvited[$group->getId()] : [];
+        $view->setVariables([
+            'group' => $group,
+            'members' => $members,
+            'systems' => $systems,
+            'invitations' => $invitations
+        ]);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOW_GROUP_PANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] is managing their group'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function toggleRecruitment($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $group = $profile->getGroup();
+        if (!$group) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$this->memberRoleIsAllowed($profile, GroupRole::$allowedToggleRecruitment)) {
+            $message = $this->translate('You are not allowed to toggle recruitment options');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($group->getOpenRecruitment()) {
+            $newValue = false;
+            $stringValue = $this->translate('no');
+        }
+        else {
+            $newValue = true;
+            $stringValue = $this->translate('yes');
+        }
+        $group->setOpenRecruitment($newValue);
+        $this->entityManager->flush($group);
+        $this->updateInterfaceElement($resourceId, '#toggle-open-recruitment', $stringValue);
+        return $this->gameClientResponse
+            ->addMessage($this->translate('recruitment option toggled'), GameClientResponse::CLASS_SUCCESS)
+            ->send();
+    }
+
+    /**
+     * @param Profile $member
+     * @param array $allowedRoles
+     * @return bool
+     */
+    private function memberRoleIsAllowed(Profile $member, $allowedRoles = [])
+    {
+        if (!$member->getGroup()) return false;
+        $roles = $this->groupRoleInstanceRepo->findBy([
+            'member' => $member,
+            'group' => $member->getGroup()
+        ]);
+        /** @var GroupRoleInstance $role */
+        foreach ($roles as $role) {
+            if (in_array($role->getId(), $allowedRoles)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function groupInvitation($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $group = $profile->getGroup();
+        // check if they are already in a group
+        if (!$group) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // check if they are allowed to recruit
+        if (!$this->memberRoleIsAllowed($profile, GroupRole::$allowedToggleRecruitment)) {
+            $message = $this->translate('You not allowed to recruit for your group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now get the new member
+        $recruitName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$recruitName) {
+            $message = $this->translate('Please specify the name of the new recruit');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $recruit = $this->profileRepo->findLikeName($recruitName);
+        if (!$recruit) {
+            $message = $this->translate('Invalid recruit');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($recruit->getGroup()) {
+            $message = $this->translate('That user is already in another group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$recruit->getCurrentResourceId()) {
+            $message = $this->translate('That user is not online');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$recruit->getFaction()) {
+            $message = $this->translate('That user is not in a faction');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($recruit->getFaction() !== $group->getFaction()) {
+            $message = $this->translate('That user is not in your faction');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($this->getWebsocketServer()->getGroupInvitation($group->getId(), $profile->getId())) {
+            $message = $this->translate('That user has already been invited');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // all seems good, add invite
+        $this->getWebsocketServer()->setGroupInvitation($group->getId(), $profile->getId(), [
+            'recruiter' => $profile->getId(),
+            'recruitername' => $profile->getUser()->getUsername(),
+            'added' => new \DateTime(),
+            'recruitname' => $recruit->getUser()->getUsername()
+        ]);
+        $xMessage = sprintf(
+            $this->translate('[%s] has invited you to join their group [%s]'),
+            $profile->getUser()->getUsername(),
+            $group->getName()
+        );
+        $this->messageProfileNew($recruit, $xMessage, GameClientResponse::CLASS_INFO);
+        $message = sprintf(
+            $this->translate('You have invited [%s] to join your group'),
+            $recruit->getUser()->getUsername()
+        );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
 }

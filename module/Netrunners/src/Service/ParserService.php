@@ -496,8 +496,14 @@ class ParserService
                 return $this->mailMessageService->mailCreateCommand($resourceId);
             case 'mailreply':
                 return $this->mailMessageService->mailReplyCommand($resourceId, $contentArray);
+            case 'managegroup':
+                return $this->groupService->manageGroupCommand($resourceId);
             case 'manageparts':
                 return $this->codingService->managePartsCommand($resourceId);
+            case 'grouptogglerecruitment':
+                return $this->groupService->toggleRecruitment($resourceId);
+            case 'groupinvitation':
+                return $this->groupService->groupInvitation($resourceId, $contentArray);
             case 'map':
                 return $this->systemService->updateMap($resourceId, $user->getProfile(), false);
             case 'showmra':

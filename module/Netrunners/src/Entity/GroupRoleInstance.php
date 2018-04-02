@@ -107,7 +107,7 @@ class GroupRoleInstance
     }
 
     /**
-     * @return mixed
+     * @return GroupRole
      */
     public function getGroupRole()
     {

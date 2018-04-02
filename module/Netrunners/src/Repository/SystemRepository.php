@@ -12,6 +12,7 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\Faction;
+use Netrunners\Entity\Group;
 use Netrunners\Entity\Profile;
 
 class SystemRepository extends EntityRepository
@@ -51,6 +52,21 @@ class SystemRepository extends EntityRepository
         $qb = $this->createQueryBuilder('s');
         $qb->select($qb->expr()->count('s.id'));
         $qb->where($qb->expr()->like('s.name', $qb->expr()->literal($name . '%')));
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param Group $group
+     * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function countByGroup(Group $group)
+    {
+        $qb = $this->createQueryBuilder('s');
+        $qb->select($qb->expr()->count('s.id'));
+        $qb->where('s.group = :group');
+        $qb->setParameter('group', $group);
         return $qb->getQuery()->getSingleScalarResult();
     }
 

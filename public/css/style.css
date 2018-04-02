@@ -191,7 +191,6 @@ pre.text-sysmsg {
 }
 
 .panel-container {
-    z-index: 20;
     position: absolute;
 }
 
@@ -201,7 +200,10 @@ pre.text-sysmsg {
 }
 
 .notifications-container {
-    z-index: 10;
+    position: absolute;
+}
+
+.group-container {
     position: absolute;
 }
 
@@ -474,4 +476,12 @@ span.twitter-typeahead {
 .input-group.input-group-lg span.twitter-typeahead .tt-menu,
 .input-group.input-group-lg span.twitter-typeahead .tt-dropdown-menu {
     top: 46px !important;
+}
+
+.nav-tabs>li.active>a, .nav-tabs>li.active>a:hover, .nav-tabs>li.active>a:focus {
+    color: #ffffff;
+    background-color: rgba(40, 40, 40, 0.75);
+    border: 1px solid #3c3c3c;
+    border-bottom-color: transparent;
+    cursor: default;
 }

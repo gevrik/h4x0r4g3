@@ -4,6 +4,7 @@ namespace Netrunners;
 
 use Netrunners\View\Helper\ImageUrlHelper;
 use Netrunners\View\Helper\MailMasterHelper;
+use Netrunners\View\Helper\ProfileGroupHelper;
 
 return array(
     'router' => array(
@@ -120,10 +121,12 @@ return array(
         'factories' => array(
             ImageUrlHelper::class => 'Netrunners\Factory\ImageUrlHelperFactory',
             MailMasterHelper::class => 'Netrunners\Factory\MailMasterHelperFactory',
+            ProfileGroupHelper::class => 'Netrunners\Factory\ProfileGroupHelperFactory',
         ),
         'aliases' => array(
             'imageUrlHelper' => ImageUrlHelper::class,
             'mailMasterHelper' => MailMasterHelper::class,
+            'profileGroupHelper' => ProfileGroupHelper::class,
         ),
     ),
     'view_manager' => array(

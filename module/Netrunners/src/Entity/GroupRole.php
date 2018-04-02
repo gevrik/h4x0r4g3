@@ -28,6 +28,13 @@ class GroupRole
     const ROLE_NEWBIE_ID = 9;
 
     /**
+     * @var array
+     */
+    static $allowedToggleRecruitment = [
+        self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_RECRUITMENT_ID
+    ];
+
+    /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
      * @ORM\Column(type="integer")

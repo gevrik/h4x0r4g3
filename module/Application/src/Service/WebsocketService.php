@@ -138,6 +138,11 @@ class WebsocketService implements MessageComponentInterface {
      */
     protected $parties = [];
 
+    /**
+     * @var array
+     */
+    protected $groupInvitations = [];
+
 
     /**
      * WebsocketService constructor.
@@ -231,6 +236,56 @@ class WebsocketService implements MessageComponentInterface {
 
         self::$instance = $this;
 
+    }
+
+    /**
+     * @return array
+     */
+    public function getGroupInvitations()
+    {
+        return $this->groupInvitations;
+    }
+
+    /**
+     * @param int $groupId
+     * @param int $profileId
+     * @return null|array
+     */
+    public function getGroupInvitation($groupId, $profileId)
+    {
+        if (
+            array_key_exists($groupId, $this->groupInvitations) &&
+            array_key_exists($profileId, $this->groupInvitations[$groupId])
+        ) {
+            return $this->groupInvitations[$groupId][$profileId];
+        }
+        return null;
+    }
+
+    /**
+     * @param int $groupId
+     * @param int $profileId
+     */
+    public function removeGroupInvitation($groupId, $profileId)
+    {
+        if (
+            array_key_exists($groupId, $this->groupInvitations) &&
+            array_key_exists($profileId, $this->groupInvitations[$groupId])
+        ) {
+            unset($this->groupInvitations[$groupId][$profileId]);
+        }
+    }
+
+    /**
+     * @param int $groupId
+     * @param int $profileId
+     * @param array $data
+     * @return $this
+     */
+    public function setGroupInvitation($groupId, $profileId, $data = [])
+    {
+        $this->groupInvitations[$groupId][$profileId] = $data;
+        return $this;
     }
 
     /**
@@ -333,10 +388,12 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @param int $partyId
      * @param array $party
+     * @return WebsocketService
      */
     public function setParty(int $partyId, array $party)
     {
         $this->parties[$partyId] = $party;
+        return $this;
     }
 
     /**

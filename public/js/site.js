@@ -387,6 +387,11 @@
             commandInput.focus();
         });
 
+        $('#group-container').on('click', '.panel-heading .close', function(e){
+            $('#group-container').html('').hide();
+            commandInput.focus();
+        });
+
         $('#coding-detail-container').on('click', '.panel-heading .close', function(e){
             $('#coding-detail-container').html('').hide();
             commandInput.focus();
@@ -716,6 +721,16 @@
                         containment: '#messages'
                     });
                     $('#coding-detail-container').css('z-index', panelZIndex++);
+                    if (!data.silent) showprompt();
+                    break;
+                case 'showgrouppanel':
+                    $('#group-container').html('').append(data.content).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
+                    });
+                    $('#group-container').css('z-index', panelZIndex++);
                     if (!data.silent) showprompt();
                     break;
                 case 'shownotifications':
