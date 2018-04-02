@@ -704,6 +704,7 @@
                         stack: '#gamepanels div',
                         containment: '#messages'
                     });
+                    $('#map-container').css('z-index', panelZIndex++);
                     //$('.panel-body-map').resizable();
                     if (!data.silent) showprompt();
                     break;
@@ -714,6 +715,7 @@
                         stack: '#gamepanels div',
                         containment: '#messages'
                     });
+                    $('#coding-detail-container').css('z-index', panelZIndex++);
                     if (!data.silent) showprompt();
                     break;
                 case 'shownotifications':
@@ -723,6 +725,7 @@
                         stack: '#gamepanels div',
                         containment: '#messages'
                     });
+                    $('#notifications-container').css('z-index', panelZIndex++);
                     if(document.getElementById('notification-container') !== null)
                     {
                         document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
@@ -736,6 +739,7 @@
                         stack: '#gamepanels div',
                         containment: '#messages'
                     });
+                    $('#panel-container').css('z-index', panelZIndex++);
                     $('.btn-hangman-letter').on('click', function(){
                         var hangmanLetter = $(this).data('letter');
                         command = {
@@ -766,8 +770,12 @@
                         stack: '#gamepanels div',
                         containment: '#messages'
                     });
+                    $('#milkrun-container').css('z-index', panelZIndex++);
                     var milkrunMapWidth = $('#milkrun-panel').innerWidth();
-                    $('#milkrun-game-container').css('max-height', milkrunMapWidth).css('height', milkrunMapWidth);
+                    $('#milkrun-game-container')
+                        .css('max-height', milkrunMapWidth)
+                        .css('height', milkrunMapWidth)
+                        .css('z-index', panelZIndex++);
                     $('.milkrun-tile').attr('width', milkrunMapWidth/(data.level+4));
                     $('#milkrun-eeg').html(data.eeg);
                     $('#milkrun-attack').html(data.attack);
@@ -792,6 +800,7 @@
                         stack: '#gamepanels div',
                         containment: '#messages'
                     });
+                    $('#manpage-container').css('z-index', panelZIndex++);
                     $('#btn-close-manpage-editor').on('click', function(){
                         if (editor1) {
                             editor1.destroy();

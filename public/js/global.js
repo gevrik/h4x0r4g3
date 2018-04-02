@@ -13,3 +13,4 @@ var mymap;
 var myGeoCoords = [];
 var musicInstance;
 var viewportWidth, viewportHeight;
+var panelZIndex = 300;

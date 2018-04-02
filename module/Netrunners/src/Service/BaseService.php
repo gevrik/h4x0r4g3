@@ -144,6 +144,19 @@ class BaseService
     }
 
     /**
+     * @param object|null $entity
+     * @return null|\ReflectionClass
+     * @throws \ReflectionException
+     */
+    protected function getReflectionClass($entity = null)
+    {
+        if ($entity) {
+            return new \ReflectionClass(get_class($entity));
+        }
+        return null;
+    }
+
+    /**
      * Generate a random string.
      *
      * @param int $length      How many characters do we want?

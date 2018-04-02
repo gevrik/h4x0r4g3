@@ -55,7 +55,8 @@ class ParserServiceFactory implements FactoryInterface
             $container->get('Netrunners\Service\FactionService'),
             $container->get('Netrunners\Service\ResearchService'),
             $container->get('Netrunners\Service\GroupService'),
-            $container->get('Netrunners\Service\PartyService')
+            $container->get('Netrunners\Service\PartyService'),
+            $container->get('Netrunners\Service\StoryService')
         );
     }
 

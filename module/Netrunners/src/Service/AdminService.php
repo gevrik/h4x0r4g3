@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use BjyAuthorize\Service\Authorize;
+use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\BannedIp;
 use Netrunners\Entity\File;
@@ -905,7 +906,182 @@ class AdminService extends BaseService
         $fileModInstance->setFileMod($fileMod);
         $this->entityManager->persist($fileModInstance);
         $this->entityManager->flush($fileModInstance);
-        return $this->gameClientResponse->addMessage($this->translate('Filemod prototype invoked'), GameClientResponse::CLASS_SUCCESS)->send();
+        return $this->gameClientResponse
+            ->addMessage($this->translate('Filemod prototype invoked'), GameClientResponse::CLASS_SUCCESS)
+            ->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function invokeEntity($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $entityName = $this->getNextParameter(
+            $contentArray,
+            false,
+            false,
+            false,
+            true
+        );
+        if (!$entityName) {
+            return $this->gameClientResponse->addMessage($this->translate('Supply entity name'))->send();
+        }
+        if (strpos($entityName, '_') === false) {
+            $entityName = 'Netrunners\Entity\\' . $entityName;
+        }
+        else {
+            $entityNameArray = explode('_', $entityName);
+            $entityName = $entityNameArray[0] . '\Entity\\' . $entityNameArray[1];
+        }
+        if (!class_exists($entityName)) {
+            return $this->gameClientResponse->addMessage('Invalid entity name')->send();
+        }
+        // TODO keep working on this - unfinished
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\Common\Annotations\AnnotationException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \ReflectionException
+     * @throws \Doctrine\Common\Annotations\AnnotationException
+     */
+    public function setPropertyCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        list($contentArray, $entityName) = $this->getNextParameter(
+            $contentArray,
+            true,
+            false,
+            false,
+            true
+        );
+        if (!$entityName) {
+            return $this->gameClientResponse->addMessage($this->translate('Supply entity name'))->send();
+        }
+        if (strpos($entityName, '_') === false) {
+            $entityName = 'Netrunners\Entity\\' . $entityName;
+        }
+        else {
+            $entityNameArray = explode('_', $entityName);
+            $entityName = $entityNameArray[0] . '\Entity\\' . $entityNameArray[1];
+        }
+        if (!class_exists($entityName)) {
+            return $this->gameClientResponse->addMessage('Invalid entity name')->send();
+        }
+        list($contentArray, $entityId) = $this->getNextParameter($contentArray, true, true);
+        if (!$entityId) {
+            return $this->gameClientResponse->addMessage($this->translate('Supply entity id'))->send();
+        }
+        $entity = $this->entityManager->getRepository($entityName)->find($entityId);
+        if (!$entity) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('Invalid entity name/id combination'))
+                ->send();
+        }
+        list($contentArray, $targetPropertyName) = $this->getNextParameter(
+            $contentArray,
+            true,
+            false,
+            false,
+            true
+        );
+        if (!$targetPropertyName) {
+            return $this->gameClientResponse->addMessage($this->translate('Supply property name'))->send();
+        }
+        $propertyName = false;
+        $docInfo = null;
+        $annotationReader = new AnnotationReader();
+        foreach ($this->getReflectionClass($entity)->getProperties() as $property) {
+            $property->setAccessible(true);
+            $currentPropertyName = $property->getName();
+            $docInfos = $annotationReader->getPropertyAnnotations($property);
+            $docInfo = $docInfos[0];
+            $property->setAccessible(false);
+            if ($currentPropertyName == $targetPropertyName) {
+                $propertyName = $currentPropertyName;
+                break;
+            }
+        }
+        if ($propertyName === false) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid property name'))->send();
+        }
+        if (!isset($docInfo->type)) {
+            if (!isset($docInfo->targetEntity)) {
+                return $this->gameClientResponse->addMessage($this->translate(json_encode($docInfo)))->send();
+            }
+        }
+        $setter = 'set' . ucfirst($propertyName);
+        $value = null;
+        if (isset($docInfo->targetEntity)) {
+            $targetEntityName = $docInfo->targetEntity;
+            $value = $this->getNextParameter($contentArray, false, true);
+            if ($value) {
+                $targetEntity = $this->entityManager->find($targetEntityName, $value);
+                if (!$targetEntity) {
+                    return $this->gameClientResponse->addMessage('invalid relation entity id')->send();
+                }
+                $value = $targetEntity;
+            }
+        }
+        else {
+            switch ($docInfo->type) {
+                default: // TODO add support for relations
+                    return $this->gameClientResponse->addMessage(json_encode($docInfo))->send();
+                case 'integer':
+                    $value = $this->getNextParameter($contentArray, false, true);
+                    break;
+                case 'string':
+                case 'text':
+                    $value = $this->getNextParameter(
+                        $contentArray,
+                        false,
+                        false,
+                        true,
+                        true
+                    );
+                    break;
+            }
+        }
+        if (!$value) {
+            return $this->gameClientResponse->addMessage(json_encode($docInfo))->send();
+        }
+        try {
+            $entity->$setter($value);
+        }
+        catch (\Exception $e) {
+            return $this->gameClientResponse->addMessage($e->getMessage())->send();
+        }
+        $this->entityManager->flush($entity);
+        $this->gameClientResponse->addMessage(
+            sprintf(
+                '%s: %s set to %s',
+                $entityName,
+                $propertyName,
+                (!is_object($value)) ? $value : $value->getId()
+            ),
+            GameClientResponse::CLASS_INFO
+        );
+        return $this->gameClientResponse->send();
     }
 
     /**

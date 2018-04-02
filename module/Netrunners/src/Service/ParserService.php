@@ -156,6 +156,10 @@ class ParserService
      */
     protected $partyService;
 
+    /**
+     * @var StoryService
+     */
+    protected $storyService;
 
     /**
      * @param EntityManager $entityManager
@@ -184,6 +188,7 @@ class ParserService
      * @param ResearchService $researchService
      * @param GroupService $groupService
      * @param PartyService $partyService
+     * @param StoryService $storyService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -211,7 +216,8 @@ class ParserService
         FactionService $factionService,
         ResearchService $researchService,
         GroupService $groupService,
-        PartyService $partyService
+        PartyService $partyService,
+        StoryService $storyService
     )
     {
         $this->entityManager = $entityManager;
@@ -240,6 +246,7 @@ class ParserService
         $this->researchService = $researchService;
         $this->groupService = $groupService;
         $this->partyService = $partyService;
+        $this->storyService = $storyService;
     }
 
     /**
@@ -615,6 +622,14 @@ class ParserService
                 return $this->codingService->startCodingCommand($resourceId, $contentArray);
             case 'stat':
                 return $this->fileService->statFile($resourceId, $contentArray);
+            case 'storyadd':
+                return $this->storyService->storyAddCommand($resourceId);
+            case 'storyedit':
+                return $this->storyService->storyEditCommand($resourceId, $contentArray);
+            case 'storyeditor':
+                return $this->storyService->storyEditorCommand($resourceId, $contentArray);
+            case 'storylist':
+                return $this->storyService->storyListCommand($resourceId);
             case 'survey':
                 return $this->nodeService->surveyNode($resourceId);
             case 'system':
@@ -707,6 +722,8 @@ class ParserService
                 return $this->adminService->setnpcproperty($resourceId, $contentArray);
             case 'setfiletypeproperty':
                 return $this->adminService->setfiletypeproperty($resourceId, $contentArray);
+            case 'setproperty':
+                return $this->adminService->setPropertyCommand($resourceId, $contentArray);
         }
         if (!is_array($response)) {
             if (!$silent) {

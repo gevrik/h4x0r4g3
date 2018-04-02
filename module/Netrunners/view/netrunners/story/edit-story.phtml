@@ -1,0 +1,68 @@
+<div class="panel panel-default draggable edit-story-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manpage-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button id="save-story" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="fa fa-save"></i></span></button>
+        <h3 class="panel-title"><?php echo sprintf('%s: %s', $this->translate("EDITING"), $this->story->getTitle()); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: .25em;">
+        <div class="form-group">
+            <label for="story-title">
+                <input type="text" id="story-title" name="story-title" class="story-title form-control" style="border: 0;" value="<?php echo $this->story->getTitle(); ?>" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="story-status">
+                <select id="story-status" name="story-status" class="story-status form-control">
+                    <?php foreach (\TwistyPassages\Service\StoryService::$status as $statusId => $statusString) : ?>
+                        <option value="<?php echo $statusId; ?>" <?php echo ($this->story->getStatus() == $statusId) ? 'selected="selected"' : '';?>>
+                            status: <?php echo $statusString; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
+        <label for="story-content">
+            <textarea id="story-content" name="story-content" class="story-content" rows="12" style="border: 0; padding: .25em;"><?php echo $this->story->getDescription(); ?></textarea>
+        </label>
+    </div>
+</div>
+<script type="application/javascript">
+
+    $('.manpage-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    var editorWidth = viewportWidth*0.329 - 10;
+    $('#story-content').css('width', editorWidth);
+    $('#story-title').css('width', editorWidth);
+
+    $('#save-story').on('click', function(){
+        var jsonData = {
+            command: 'parseFrontendInput',
+            subcommand: 'savestory',
+            hash: hash,
+            content: editor1.getData(),
+            title: $('#story-title').val(),
+            status: $('#story-status').val(),
+            entityId: <?php echo $this->story->getId(); ?>,
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+    });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace( 'story-content', {width: editorWidth, uiColor: '#3c3c3c', contentsCss: '../../../css/ckeditor.css'} );
+        editor1.editorConfig = function( config ) {
+            config.toolbar = [
+                { name: 'basicstyles', items: [ 'Bold', 'Italic' ] },
+                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent' ] },
+                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] }
+            ];
+        };
+    }
+
+</script>
