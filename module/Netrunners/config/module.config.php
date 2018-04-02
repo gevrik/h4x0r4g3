@@ -67,6 +67,7 @@ return array(
     'service_manager' => array(
         'factories' => array(
             'translator' => 'Zend\Mvc\Service\TranslatorServiceFactory',
+            'Netrunners\Service\BaseUtilityService' => 'Netrunners\Factory\BaseUtilityServiceFactory',
             'Netrunners\Service\BaseService' => 'Netrunners\Factory\BaseServiceFactory',
             'Netrunners\Service\AuctionService' => 'Netrunners\Factory\AuctionServiceFactory',
             'Netrunners\Service\AdminService' => 'Netrunners\Factory\AdminServiceFactory',
