@@ -26,6 +26,7 @@ class SystemService extends BaseService
 
     const SYSTEM_STRING = 'system';
     const ADDY_STRING = 'address';
+    const INTEGRITY_STRING = 'integrity';
     const MEMORY_STRING = 'memory';
     const STORAGE_STRING = 'storage';
     const AVG_NODE_LVL_STRING = 'avg-level';
@@ -82,6 +83,7 @@ class SystemService extends BaseService
         $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         $returnMessage = [];
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::ADDY_STRING), $currentSystem->getAddy());
+        $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::INTEGRITY_STRING), $currentSystem->getIntegrity());
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::MEMORY_STRING), $this->getSystemMemory($currentSystem));
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::STORAGE_STRING), $this->getSystemStorage($currentSystem));
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::AVG_NODE_LVL_STRING), $nodeRepo->getAverageNodeLevelOfSystem($currentSystem));

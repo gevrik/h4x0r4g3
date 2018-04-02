@@ -100,6 +100,7 @@ class CombatService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function slayCommand($resourceId, $contentArray)
     {

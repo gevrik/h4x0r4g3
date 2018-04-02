@@ -4245,8 +4245,61 @@ class BaseService
         $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
         $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
         // remove the npc instance
+        if ($npcInstance->getNpc()->getType() == Npc::TYPE_HELPER) {
+            $this->systemIntegrityLoss($npcInstance->getSystem());
+        }
         $this->entityManager->remove($npcInstance);
         $this->entityManager->flush($npcInstance);
+    }
+
+    /**
+     * @param System $system
+     * @param int $amount
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    private function systemIntegrityLoss(System $system, $amount = 1)
+    {
+        // TODO npcinstances need to check if they belong to profile, group or faction when spawned
+        $newIntegrity = $system->getIntegrity() - $amount;
+        if ($newIntegrity < 0) {
+            $newIntegrity = 0;
+            $message = sprintf($this->translate("system integrity crititcal"));
+            $this->messageEveryoneInSystem($system, $message, GameClientResponse::CLASS_DANGER);
+        }
+        $system->setIntegrity($newIntegrity);
+        $this->entityManager->flush($system);
+    }
+
+    /**
+     * @param System $system
+     * @param $message
+     * @param string $textClass
+     * @param array $ignoredProfileIds
+     * @param bool $updateMap
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    public function messageEveryoneInSystem(
+        System $system,
+        $message,
+        $textClass = GameClientResponse::CLASS_MUTED,
+        $ignoredProfileIds = [],
+        $updateMap = false
+    )
+    {
+        /** @var ProfileRepository $profileRepo */
+        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        $profiles = $profileRepo->findByCurrentSystem($system);
+        $response = new GameClientResponse(NULL, GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        $response->addMessage($message, $textClass);
+        foreach ($profiles as $xprofile) {
+            /** @var Profile $xprofile */
+            if (!is_array($ignoredProfileIds)) $ignoredProfileIds = [$ignoredProfileIds];
+            if (in_array($xprofile->getId(), $ignoredProfileIds)) continue;
+            if (!$xprofile->getCurrentResourceId()) continue;
+            if ($updateMap) $this->updateMap($xprofile->getCurrentResourceId(), $xprofile);
+            $response->setResourceId($xprofile->getCurrentResourceId())->send();
+        }
     }
 
     /**

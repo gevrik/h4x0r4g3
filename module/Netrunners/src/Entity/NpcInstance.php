@@ -449,7 +449,7 @@ class NpcInstance
     // ORM
 
     /**
-     * @return mixed
+     * @return Npc|null
      */
     public function getNpc()
     {
@@ -557,7 +557,7 @@ class NpcInstance
     }
 
     /**
-     * @return mixed
+     * @return System|null
      */
     public function getSystem()
     {
