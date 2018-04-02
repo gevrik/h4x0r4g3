@@ -484,19 +484,18 @@ class ParserService
                 return $this->mailMessageService->mailReadCommand($resourceId, $contentArray);
             case 'maildetach':
                 return $this->mailMessageService->mailDetachCommand($resourceId, $contentArray);
-                break;
             case 'mailattachinfo':
                 return $this->mailMessageService->mailAttachInfoCommand($resourceId, $contentArray);
-                break;
             case 'mailattachmentdelete':
                 return $this->mailMessageService->mailAttachmentDeleteCommand($resourceId, $contentArray);
-                break;
             case 'maildelete':
                 return $this->mailMessageService->mailDeleteCommand($resourceId, $contentArray);
-                break;
+            case 'mailcreate':
+                return $this->mailMessageService->mailCreateCommand($resourceId);
+            case 'mailreply':
+                return $this->mailMessageService->mailReplyCommand($resourceId, $contentArray);
             case 'manageparts':
                 return $this->codingService->managePartsCommand($resourceId);
-                break;
             case 'map':
                 return $this->systemService->updateMap($resourceId, $user->getProfile(), false);
             case 'showmra':
@@ -948,6 +947,10 @@ class ParserService
                 $mpTitle = (isset($msgData->title)) ? $msgData->title : false;
                 $mpStatus = (isset($msgData->status)) ? $msgData->status : false;
                 return $this->manpageService->saveManpage($resourceId, $content, $mpTitle, $entityId, $mpStatus);
+            case 'sendmail':
+                $recipient = (isset($msgData->recipient)) ? $msgData->recipient : null;
+                $subject = (isset($msgData->subject)) ? $msgData->subject : false;
+                return $this->mailMessageService->sendMail($resourceId, $content, $recipient, $subject);
         }
         return true;
     }

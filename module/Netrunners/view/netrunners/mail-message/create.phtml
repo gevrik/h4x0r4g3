@@ -1,0 +1,107 @@
+<div class="panel panel-default draggable create-mail-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manpage-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span>
+        </button>
+        <button id="send-mail" type="button" class="btn btn-primary btn-xs send" aria-label="Send"><span
+                    aria-hidden="true"><i class="fa fa-send"></i></span></button>
+        <h3 class="panel-title"><?php echo $this->translate("CREATE MAIL"); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: .25em;">
+        <div class="form-group">
+            <label for="mail-recipient">
+                <input type="text" id="mail-recipient" name="mail-recipient"
+                       class="manpage-subject form-control typeahead" style="border: 0;" value=""
+                       placeholder="<?php echo $this->translate("mail recipient"); ?>"/>
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="mail-subject">
+                <input type="text" id="mail-subject" name="mail-subject" class="manpage-subject form-control"
+                       style="border: 0;" value="" placeholder="<?php echo $this->translate("mail subject"); ?>"/>
+            </label>
+        </div>
+        <label for="mail-content">
+            <textarea id="mail-content" name="mail-content" class="mail-content" rows="12"
+                      style="border: 0; padding: .25em;"></textarea>
+        </label>
+    </div>
+</div>
+<script type="application/javascript">
+
+    $('.manpage-container')
+        .css('max-height', viewportHeight * 0.425)
+        .css('height', viewportHeight * 0.425)
+        .css('max-width', viewportWidth * 0.33)
+        .css('width', viewportWidth * 0.33)
+        .css('top', viewportHeight * 0.5)
+        .css('left', viewportWidth * 0.65);
+
+    var editorWidth = viewportWidth * 0.329 - 10;
+    $('#mail-content').css('width', editorWidth);
+    $('#mail-subject').css('width', editorWidth);
+
+    $('#send-mail').on('click', function () {
+        var jsonData = {
+            command: 'parseFrontendInput',
+            subcommand: 'sendmail',
+            hash: hash,
+            content: editor1.getData(),
+            recipient: $('#mail-recipient').val(),
+            subject: $('#mail-subject').val(),
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+        $('#manpage-container').html('').hide();
+        commandInput.focus();
+    });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace('mail-content', {
+            width: editorWidth,
+            uiColor: '#3c3c3c',
+            contentsCss: '../../../css/ckeditor.css'
+        });
+        editor1.editorConfig = function (config) {
+            config.toolbar = [
+                {name: 'basicstyles', items: ['Bold', 'Italic']},
+                {name: 'paragraph', items: ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent']},
+                {name: 'links', items: ['Link', 'Unlink', 'Anchor']}
+            ];
+        };
+    }
+
+    var substringMatcher = function (strs) {
+        return function findMatches(q, cb) {
+            var matches, substrRegex;
+
+            // an array that will be populated with substring matches
+            matches = [];
+
+            // regex used to determine if a string contains the substring `q`
+            substrRegex = new RegExp(q, 'i');
+
+            // iterate through the pool of strings and for any string that
+            // contains the substring `q`, add it to the `matches` array
+            $.each(strs, function (i, str) {
+                if (substrRegex.test(str)) {
+                    matches.push(str);
+                }
+            });
+
+            cb(matches);
+        };
+    };
+
+    var usernames = <?php echo $this->usernames; ?>
+
+        $('#mail-recipient').typeahead({
+                hint: true,
+                highlight: true,
+                minLength: 3
+            },
+            {
+                name: 'usernames',
+                source: substringMatcher(usernames)
+            });
+
+</script>

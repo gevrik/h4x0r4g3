@@ -23,16 +23,13 @@
         </div>
     </div>
     <div class="panel-footer">
-        <button type="button"
-                class="btn btn-sm btn-primary btn-reply-mail"
-                data-mailid="<?php echo $this->mail->getId(); ?>">
-            <?php echo $this->translate('reply'); ?>
-        </button>
-        <button type="button"
-                class="btn btn-sm btn-primary btn-forward-mail"
-                data-mailid="<?php echo $this->mail->getId(); ?>">
-            <?php echo $this->translate('forward'); ?>
-        </button>
+        <?php if ($this->mail->getAuthor()) : // can't reply to mails that were not sent by other players ?>
+            <button type="button"
+                    class="btn btn-sm btn-primary btn-reply-mail"
+                    data-mailid="<?php echo $this->mail->getId(); ?>">
+                <?php echo $this->translate('reply'); ?>
+            </button>
+        <?php endif; ?>
         <button type="button"
                 class="btn btn-sm btn-danger btn-trash-mail"
                 data-mailid="<?php echo $this->mail->getId(); ?>">
@@ -61,6 +58,15 @@
                 command: 'parseInput',
                 hash: hash,
                 content: 'mail'
+            };
+            conn.send(JSON.stringify(command));
+        });
+        $('.btn-reply-mail').on('click', function () {
+            var mailid = $(this).data('mailid');
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'mailreply ' + mailid
             };
             conn.send(JSON.stringify(command));
         });

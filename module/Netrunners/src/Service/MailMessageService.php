@@ -18,6 +18,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\MailMessageRepository;
+use Netrunners\Repository\ProfileRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -40,6 +41,10 @@ class MailMessageService extends BaseService
      */
     protected $fileRepo;
 
+    /**
+     * @var ProfileRepository
+     */
+    protected $profileRepo;
 
     /**
      * MailMessageService constructor.
@@ -52,6 +57,7 @@ class MailMessageService extends BaseService
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->mailMessageRepo = $this->entityManager->getRepository('Netrunners\Entity\MailMessage');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
     }
 
     /**
@@ -693,6 +699,146 @@ class MailMessageService extends BaseService
             $profile,
             $profile->getId()
         );
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function mailCreateCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/create.phtml');
+        $usernames = $this->profileRepo->getAllUsernames();
+        $view->setVariable('usernames', json_encode($usernames));
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_OPENMANPAGEMENU);
+        // add the rendered view as the gmr message with css-class raw so that it will not wrap it in pre
+        $this->gameClientResponse->addMessage($this->viewRenderer->render($view), GameClientResponse::CLASS_RAW);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function mailReplyCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $mailId = $this->getNextParameter($contentArray, false, true);
+        if (!$mailId) {
+            $message = $this->translate(sprintf('Please specify the mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var MailMessage $mailMessage */
+        $mailMessage = $this->mailMessageRepo->find($mailId);
+        if (!$mailMessage) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getRecipient()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($mailMessage->getRecipient() !== $profile) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$mailMessage->getAuthor()) {
+            $message = $this->translate(sprintf('Invalid mail-id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/reply.phtml');
+        $recipient = $mailMessage->getAuthor();
+        $subject = sprintf($this->translate('Re: %s'), $mailMessage->getSubject());
+        $quotedTextLabel = sprintf(
+            $this->translate('[%s] wrote at [%s]:'),
+            $mailMessage->getAuthor()->getUser()->getUsername(),
+            $mailMessage->getSentDateTime()->format('Y-m-d H:i:s')
+        );
+        $quotedMailText = $mailMessage->getContent();
+        $quotedText = <<<EOD
+<br />
+<br />
+<strong>$quotedTextLabel</strong>
+
+<i>$quotedMailText</i>
+EOD;
+        $view->setVariables([
+            'recipient' => $recipient,
+            'subject' => $subject,
+            'quotedText' => $quotedText
+        ]);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_OPENMANPAGEMENU);
+        // add the rendered view as the gmr message with css-class raw so that it will not wrap it in pre
+        $this->gameClientResponse->addMessage($this->viewRenderer->render($view), GameClientResponse::CLASS_RAW);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param string $content
+     * @param string $recipient
+     * @param string $subject
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function sendMail(
+        $resourceId,
+        $content = '===invalid content===',
+        $recipient = '===invalid title===',
+        $subject = '===invalid subject==='
+    )
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $recipientName = filter_var($recipient, FILTER_SANITIZE_STRING);
+        $content = htmLawed($content, ['safe'=>1,'elements'=>'strong,i,ul,ol,li,p,br']);
+        $subject = htmLawed($subject, ['safe'=>1,'elements'=>'strong']);
+        $recipient = $this->profileRepo->findLikeName($recipientName);
+        if (!$recipient) {
+            $message = $this->translate(sprintf('Invalid recipient'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($recipient->getUser()->getUsername() == $this->user->getUsername()) {
+            $message = $this->translate(sprintf('We are starting to worry about you...'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $mailMessage = new MailMessage();
+        $mailMessage->setAuthor($profile);
+        $mailMessage->setRecipient($recipient);
+        $mailMessage->setReadDateTime(null);
+        $mailMessage->setContent($content);
+        $mailMessage->setFileAuthor(null);
+        $mailMessage->setFileRecipient(null);
+        $mailMessage->setNpcAuthor(null);
+        $mailMessage->setNpcRecipient(null);
+        $mailMessage->setParent(null);
+        $mailMessage->setSentDateTime(new \DateTime());
+        $mailMessage->setSubject($subject);
+        $this->entityManager->persist($mailMessage);
+        $this->entityManager->flush($mailMessage);
+        $view = new ViewModel();
+        $view->setTemplate('netrunners/mail-message/index.phtml');
+        $mails = $this->mailMessageRepo->findBy(['recipient' => $profile]);
+        $view->setVariable('mails', $mails);
+        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_SHOWPANEL);
+        $this->gameClientResponse->addOption(GameClientResponse::OPT_CONTENT, $this->viewRenderer->render($view));
         return $this->gameClientResponse->send();
     }
 

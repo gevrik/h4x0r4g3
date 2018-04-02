@@ -151,4 +151,20 @@ class ProfileRepository extends NetrunnersAbstractRepo implements NetrunnersRepo
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    /**
+     * @return array
+     */
+    public function getAllUsernames()
+    {
+        $qb = $this->createQueryBuilder('p');
+        $qb->select('u.username');
+        $qb->join('p.user', 'u');
+        $result = $qb->getQuery()->getResult();
+        $nameArray = [];
+        foreach ($result as $item => $values) {
+            $nameArray[] = $values['username'];
+        }
+        return $nameArray;
+    }
+
 }

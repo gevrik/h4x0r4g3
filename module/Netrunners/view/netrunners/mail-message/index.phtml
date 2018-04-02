@@ -33,6 +33,12 @@
             </tbody>
         </table>
     </div>
+    <div class="panel-footer">
+        <button type="button"
+                class="btn btn-sm btn-primary btn-create-mail">
+            <?php echo $this->translate('create'); ?>
+        </button>
+    </div>
 </div>
 
 <?php echo $this->headLink()->appendStylesheet('/css/nh_tables.css'); ?>
@@ -54,6 +60,15 @@
         .css('left', viewportWidth*0.65);
 
     $(document).ready(function() {
+
+        $('.btn-create-mail').on('click', function () {
+            var command = {
+                command: 'parseInput',
+                hash: hash,
+                content: 'mailcreate'
+            };
+            conn.send(JSON.stringify(command));
+        });
 
         var table = $('#mails-table').DataTable({
             "pageLength": 10
