@@ -21,6 +21,7 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\FileTypeSkill;
 use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Group;
+use Netrunners\Entity\GroupRoleInstance;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\MilkrunInstance;
@@ -43,6 +44,7 @@ use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
+use Netrunners\Repository\GroupRoleInstanceRepository;
 use Netrunners\Repository\KnownNodeRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\ProfileEffectRepository;
@@ -83,6 +85,31 @@ class BaseUtilityService {
     protected function getWebsocketServer()
     {
         return WebsocketService::getInstance();
+    }
+
+    /**
+     * @param Profile $member
+     * @param Group $group
+     * @param array $allowedRoles
+     * @return bool
+     */
+    protected function memberRoleIsAllowed(Profile $member, Group $group = null, $allowedRoles = [])
+    {
+        if (!$member->getGroup()) return false;
+        if (!$group) $group = $member->getGroup();
+        /** @var GroupRoleInstanceRepository $griRepo */
+        $griRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRoleInstance');
+        $roles = $griRepo->findBy([
+            'member' => $member,
+            'group' => $member->getGroup()
+        ]);
+        /** @var GroupRoleInstance $role */
+        foreach ($roles as $role) {
+            if (in_array($role->getId(), $allowedRoles)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

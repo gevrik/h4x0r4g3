@@ -20,6 +20,7 @@ use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\GroupRepository;
 use Netrunners\Repository\GroupRoleInstanceRepository;
+use Netrunners\Repository\GroupRoleRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
@@ -51,6 +52,11 @@ class GroupService extends BaseService
      */
     protected $groupRoleInstanceRepo;
 
+    /**
+     * @var GroupRoleRepository
+     */
+    protected $groupRoleRepo;
+
 
     /**
      * GroupService constructor.
@@ -65,6 +71,7 @@ class GroupService extends BaseService
         $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         $this->groupRoleInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRoleInstance');
+        $this->groupRoleRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRole');
     }
 
     /**
@@ -148,26 +155,9 @@ class GroupService extends BaseService
         $group->setName($newName);
         $group->setOpenRecruitment(false);
         $this->entityManager->persist($group);
-        // founder role
-        $groupRole = $this->entityManager->find('Netrunners\Entity\GroupRole', GroupRole::ROLE_FOUNDER_ID);
-        /** @var GroupRole $groupRole */
-        $gri = new GroupRoleInstance();
-        $gri->setAdded(new \DateTime());
-        $gri->setChanger(NULL);
-        $gri->setGroup($group);
-        $gri->setGroupRole($groupRole);
-        $gri->setMember($profile);
-        $this->entityManager->persist($gri);
-        // leader role
-        $groupRole = $this->entityManager->find('Netrunners\Entity\GroupRole', GroupRole::ROLE_LEADER_ID);
-        /** @var GroupRole $groupRole */
-        $gri = new GroupRoleInstance();
-        $gri->setAdded(new \DateTime());
-        $gri->setChanger(NULL);
-        $gri->setGroup($group);
-        $gri->setGroupRole($groupRole);
-        $gri->setMember($profile);
-        $this->entityManager->persist($gri);
+        // founder and leader role
+        $this->addGroupRole($profile, $group, GroupRole::ROLE_FOUNDER_ID);
+        $this->addGroupRole($profile, $group, GroupRole::ROLE_LEADER_ID);
         $systemName = $newName . '_headquarters';
         $system = $this->createBaseSystem($systemName, $addy, null, null, $group, false, 5, System::GROUP_MAX_SYSTEM_SIZE);
         $profile->setGroup($group);
@@ -246,7 +236,8 @@ class GroupService extends BaseService
         }
         /* checks passed, we can join the group */
         $profile->setGroup($group);
-        $this->entityManager->flush($profile);
+        $this->addGroupRole($profile, $group, GroupRole::ROLE_NEWBIE_ID);
+        $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have joined [%s]'),
             $group->getName()
@@ -260,6 +251,23 @@ class GroupService extends BaseService
         );
         $this->messageEveryoneInNodeNew($profile->getCurrentNode(), $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
         return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param Profile $profile
+     * @param Group $group
+     * @param $groupRoleId
+     */
+    private function addGroupRole(Profile $profile, Group $group, $groupRoleId)
+    {
+        $groupRole = $this->groupRoleRepo->find($groupRoleId);
+        $gri = new GroupRoleInstance();
+        $gri->setGroup($group);
+        $gri->setAdded(new \DateTime());
+        $gri->setChanger(null);
+        $gri->setGroupRole($groupRole);
+        $gri->setMember($profile);
+        $this->entityManager->persist($gri);
     }
 
     /**
@@ -329,7 +337,7 @@ class GroupService extends BaseService
             $message = $this->translate('You are not a member of any group');
             return $this->gameClientResponse->addMessage($message)->send();
         }
-        if (!$this->memberRoleIsAllowed($profile, GroupRole::$allowedToggleRecruitment)) {
+        if (!$this->memberRoleIsAllowed($profile, $group, GroupRole::$allowedToggleRecruitment)) {
             $message = $this->translate('You are not allowed to toggle recruitment options');
             return $this->gameClientResponse->addMessage($message)->send();
         }
@@ -350,27 +358,6 @@ class GroupService extends BaseService
     }
 
     /**
-     * @param Profile $member
-     * @param array $allowedRoles
-     * @return bool
-     */
-    private function memberRoleIsAllowed(Profile $member, $allowedRoles = [])
-    {
-        if (!$member->getGroup()) return false;
-        $roles = $this->groupRoleInstanceRepo->findBy([
-            'member' => $member,
-            'group' => $member->getGroup()
-        ]);
-        /** @var GroupRoleInstance $role */
-        foreach ($roles as $role) {
-            if (in_array($role->getId(), $allowedRoles)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * @param $resourceId
      * @param $contentArray
      * @return bool|GameClientResponse
@@ -384,6 +371,7 @@ class GroupService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
+        $ws = $this->getWebsocketServer();
         $profile = $this->user->getProfile();
         $isBlocked = $this->isActionBlockedNew($resourceId);
         if ($isBlocked) {
@@ -396,7 +384,7 @@ class GroupService extends BaseService
             return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if they are allowed to recruit
-        if (!$this->memberRoleIsAllowed($profile, GroupRole::$allowedToggleRecruitment)) {
+        if (!$this->memberRoleIsAllowed($profile, $group, GroupRole::$allowedToggleRecruitment)) {
             $message = $this->translate('You not allowed to recruit for your group');
             return $this->gameClientResponse->addMessage($message)->send();
         }
@@ -427,12 +415,12 @@ class GroupService extends BaseService
             $message = $this->translate('That user is not in your faction');
             return $this->gameClientResponse->addMessage($message)->send();
         }
-        if ($this->getWebsocketServer()->getGroupInvitation($group->getId(), $profile->getId())) {
+        if ($ws->getGroupInvitation($group->getId(), $profile->getId())) {
             $message = $this->translate('That user has already been invited');
             return $this->gameClientResponse->addMessage($message)->send();
         }
         // all seems good, add invite
-        $this->getWebsocketServer()->setGroupInvitation($group->getId(), $profile->getId(), [
+        $ws->setGroupInvitation($group->getId(), $recruit->getId(), [
             'recruiter' => $profile->getId(),
             'recruitername' => $profile->getUser()->getUsername(),
             'added' => new \DateTime(),

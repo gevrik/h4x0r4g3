@@ -140,8 +140,9 @@ class ConnectionService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        // check if they can add connections
-        if ($profile !== $currentSystem->getProfile()) {
+        // check if they can remove connections
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* connections can be given by name or number, so we need to handle both */
@@ -331,11 +332,12 @@ class ConnectionService extends BaseService
         if ($connection->getType() != Connection::TYPE_CODEGATE) {
             return $this->gameClientResponse->addMessage($this->translate('That is not a codegate'))->send();
         }
-        if ($profile !== $currentNode->getSystem()->getProfile()) {
-            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
-        }
         if ($connection->getType() == Connection::TYPE_CODEGATE && $connection->getisOpen()) {
             return $this->gameClientResponse->addMessage($this->translate('That codegate is already open'))->send();
+        }
+        $checker = $this->checkSystemPermission($profile, $currentNode->getSystem());
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // all good - can open
         $connection->setIsOpen(true);
@@ -385,7 +387,8 @@ class ConnectionService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // check if they can add connections
-        if ($profile !== $currentSystem->getProfile()) {
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         $parameter = $this->getNextParameter($contentArray, false, true);
@@ -495,7 +498,8 @@ class ConnectionService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // check if they can add connections
-        if ($profile !== $currentSystem->getProfile()) {
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if they have enough credits
@@ -581,7 +585,8 @@ class ConnectionService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // check if they can add connections
-        if ($profile !== $currentSystem->getProfile()) {
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* connections can be given by name or number, so we need to handle both */

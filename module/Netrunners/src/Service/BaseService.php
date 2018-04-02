@@ -21,6 +21,7 @@ use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\GameOption;
 use Netrunners\Entity\Group;
+use Netrunners\Entity\GroupRole;
 use Netrunners\Entity\Invitation;
 use Netrunners\Entity\KnownNode;
 use Netrunners\Entity\Mission;
@@ -200,6 +201,28 @@ class BaseService extends BaseUtilityService
             $defenderName
         );
         $this->messageEveryoneInNode($currentNode, $message);
+    }
+
+    /**
+     * @param Profile $profile
+     * @param System $system
+     * @return bool|string
+     */
+    protected function checkSystemPermission(Profile $profile, System $system)
+    {
+        if ($system->getProfile() && $system->getProfile() !== $profile) {
+            return $this->translate('Permission denied');
+        }
+        if ($system->getFaction()) {
+            return $this->translate('Permission denied'); // TODO change this once players can create factions
+        }
+        if ($system->getGroup() && $system->getGroup() !== $profile->getGroup()) {
+            return $this->translate('Permission denied');
+        }
+        if ($system->getGroup() && !$this->memberRoleIsAllowed($profile, $system->getGroup(), GroupRole::$allowedBuilding)) {
+            return $this->translate('Permission denied');
+        }
+        return false;
     }
 
     /**

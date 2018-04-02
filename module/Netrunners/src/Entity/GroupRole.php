@@ -31,7 +31,14 @@ class GroupRole
      * @var array
      */
     static $allowedToggleRecruitment = [
-        self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_RECRUITMENT_ID
+        self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_COUNCIL_ID, self::ROLE_RECRUITMENT_ID
+    ];
+
+    /**
+     * @var array
+     */
+    static $allowedBuilding = [
+        self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_COUNCIL_ID, self::ROLE_ADMIN_OFFICE_ID
     ];
 
     /**

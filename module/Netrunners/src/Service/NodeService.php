@@ -12,8 +12,10 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
+use Netrunners\Entity\GroupRole;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
@@ -238,8 +240,9 @@ class NodeService extends BaseService
     {
         $profile = $this->user->getProfile();
         $node = $profile->getCurrentNode();
-        if ($node->getSystem()->getProfile() !== $profile) {
-            return $this->translate('Permission denied');
+        $checker = $this->checkSystemPermission($profile, $node->getSystem());
+        if ($checker !== false) {
+            return $checker;
         }
         if ($node->getLevel() >= self::MAX_NODE_LEVEL) {
             return $this->translate('This node is already at max level');
@@ -267,8 +270,10 @@ class NodeService extends BaseService
     {
         $profile = $this->user->getProfile();
         $node = $profile->getCurrentNode();
-        if ($node->getSystem()->getProfile() !== $profile) {
-            return $this->translate('Permission denied');
+        $system = $node->getSystem();
+        $checker = $this->checkSystemPermission($profile, $system);
+        if ($checker !== false) {
+            return $checker;
         }
         // check if they have enough credits
         if ($profile->getCredits() < self::RAW_NODE_COST) {
@@ -529,9 +534,10 @@ class NodeService extends BaseService
                 ->addMessage($this->translate('Please specify a new name for the node (alpha-numeric-only, 32-chars-max)'))
                 ->send();
         }
-        // check if they can change the type
-        if ($profile !== $currentSystem->getProfile()) {
-            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
+        // check if they can change the name
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) {
+            return $checker;
         }
         // check if only alphanumeric
         $checkResult = $this->stringChecker($parameter);
@@ -645,8 +651,9 @@ class NodeService extends BaseService
             return $gameResponse;
         }
         // check if they can change the type
-        if ($profile !== $currentSystem->getProfile()) {
-            return $this->translate('Permission denied');
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) {
+            return $checker;
         }
         $searchByNumber = false;
         if (is_numeric($parameter)) {
@@ -691,7 +698,7 @@ class NodeService extends BaseService
         // check if it is a recruitment node but not a faction or group system
         if (
             $nodeType->getId() == NodeType::ID_RECRUITMENT &&
-            (!$currentSystem->getGroup() || !$currentSystem->getFaction())
+            (!$currentSystem->getGroup() && !$currentSystem->getFaction())
         )
         {
             return $this->translate('Recruitment nodes can only be created in group or faction systems');
@@ -726,7 +733,8 @@ class NodeService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // only allow owner of system to add nodes
-        if ($profile !== $currentNode->getSystem()->getProfile()) {
+        $checker = $this->checkSystemPermission($profile, $currentNode->getSystem());
+        if ($checker !== false) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* checks passed, we can now edit the node */
@@ -766,7 +774,8 @@ class NodeService extends BaseService
         $profile = $this->user->getProfile();
         $currentNode = $this->nodeRepo->find($entityId);
         // only allow owner of system to add nodes
-        if ($profile !== $currentNode->getSystem()->getProfile()) {
+        $checker = $this->checkSystemPermission($profile, $currentNode->getSystem());
+        if ($checker !== false) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* checks passed, we can now edit the node */
@@ -814,7 +823,8 @@ class NodeService extends BaseService
         }
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
-        if ($currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         $nodeData = $this->getNodeData($currentNode, true);
@@ -856,9 +866,9 @@ class NodeService extends BaseService
         $currentSystem = $currentNode->getSystem();
         list($contentArray, $nodeProperty) = $this->getNextParameter($contentArray, true, false, false, true);
         $propertyValue = $this->getNextParameter($contentArray, false, false, false, true);
-        if ($currentSystem->getProfile() !== $profile && $currentNode->getProfile() !== $profile) {
-            $message = $this->translate('Permission denied');
-            return $this->gameClientResponse->addMessage($message)->send();
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         if (!$nodeProperty) {
             $message = $this->listNodePropertiesByNodeType($nodeType->getId());
@@ -968,7 +978,8 @@ class NodeService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // check if they are allowed to remove nodes
-        if ($profile !== $currentSystem->getProfile()) {
+        $checker = $this->checkSystemPermission($profile, $currentSystem);
+        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if there are still connections to this node
