@@ -52,6 +52,12 @@ class Group
     protected $snippets;
 
     /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $openRecruitment;
+
+    /**
      * @ORM\Column(type="datetime")
      * @var \DateTime
      */
@@ -152,6 +158,24 @@ class Group
     public function setSnippets($snippets)
     {
         $this->snippets = $snippets;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getOpenRecruitment()
+    {
+        return $this->openRecruitment;
+    }
+
+    /**
+     * @param int $openRecruitment
+     * @return Group
+     */
+    public function setOpenRecruitment(int $openRecruitment)
+    {
+        $this->openRecruitment = $openRecruitment;
         return $this;
     }
 

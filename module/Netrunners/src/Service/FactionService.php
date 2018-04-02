@@ -131,7 +131,8 @@ class FactionService extends BaseService
         }
         // check if it is open recruitment or if they need to write an application
         if (!$faction->getOpenRecruitment()) {
-            // TODO need to write application to join faction
+            $message = $this->translate('You can not join this faction without an invitation');
+            return $this->gameClientResponse->addMessage($message)->send();
         }
         /* checks passed, we can join the faction */
         $profile->setFaction($faction);

@@ -105,6 +105,12 @@ class Profile
     protected $factionJoinBlockDate;
 
     /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $groupJoinBlockDate;
+
+    /**
      * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
@@ -564,6 +570,24 @@ class Profile
     public function setFactionJoinBlockDate($factionJoinBlockDate)
     {
         $this->factionJoinBlockDate = $factionJoinBlockDate;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getGroupJoinBlockDate()
+    {
+        return $this->groupJoinBlockDate;
+    }
+
+    /**
+     * @param \DateTime $groupJoinBlockDate
+     * @return Profile
+     */
+    public function setGroupJoinBlockDate(\DateTime $groupJoinBlockDate)
+    {
+        $this->groupJoinBlockDate = $groupJoinBlockDate;
         return $this;
     }
 

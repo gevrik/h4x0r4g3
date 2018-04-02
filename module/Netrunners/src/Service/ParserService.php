@@ -460,6 +460,8 @@ class ParserService
                 return $this->profileService->showInvitations($resourceId);
             case 'joinfaction':
                 return $this->factionService->joinFaction($resourceId);
+            case 'joingroup':
+                return $this->groupService->joinGroup($resourceId);
             case 'killprocess':
             case 'killp':
                 return $this->fileService->killProcess($resourceId, $contentArray);
