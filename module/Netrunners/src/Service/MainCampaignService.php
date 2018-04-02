@@ -26,11 +26,14 @@ class MainCampaignService extends BaseService
     const STEP_ABSOLUTE_BASICS = 2;
     const STEP_NIX_FOLLOW_UP = 3;
     const STEP_MORE_BASICS = 4;
+    const STEP_NIX_PROGRAMS = 5;
+    const STEP_FIRST_MILKRUN = 6;
+    const STEP_FIRST_MILKRUN_NIX = 7;
     const STEP_COMPLETED = 10000;
     const MAIN_CAMPAIGN_STEP = 'mainCampaignStep';
     const MAIN_CAMPAIGN_STEP_ACTIVATION_DATE = 'mainCampaignStepActivationDate';
 
-    const RUN_CAMPAIGN = false;
+    const RUN_CAMPAIGN = true;
 
     /**
      * @var MailMessageService
@@ -90,11 +93,52 @@ class MainCampaignService extends BaseService
                 /** @var Profile $profile */
                 $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
                 if ($profile) {
-                    $system = $profile->getCurrentNode()->getSystem();
+                    $system = $profile->getHomeNode()->getSystem();
                     $storageNodeCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_STORAGE);
                     $memoryNodeCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_MEMORY);
                     if ($storageNodeCount > 0 && $memoryNodeCount > 0) {
                         $this->sendBasicPrograms($profile);
+                    }
+                }
+                break;
+            case self::STEP_MORE_BASICS:
+                $now = new \DateTime();
+                if ($clientData->mainCampaignStepActivationDate > $now) continue;
+                /** @var Profile $profile */
+                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+                if ($profile) {
+                    $this->sendNixProgramMail($profile);
+                }
+                break;
+            case self::STEP_NIX_PROGRAMS:
+                /** @var Profile $profile */
+                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+                if ($profile) {
+                    $system = $profile->getHomeNode()->getSystem();
+                    $databaseNodeCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_DATABASE);
+                    $terminalNodeCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_TERMINAL);
+                    $privateIoCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_IO);
+                    if ($databaseNodeCount > 0 && $terminalNodeCount > 0 && $privateIoCount > 0) {
+                        $this->sendAgentInstructions($profile);
+                    }
+                }
+                break;
+            case self::STEP_FIRST_MILKRUN:
+                $now = new \DateTime();
+                if ($clientData->mainCampaignStepActivationDate > $now) continue;
+                /** @var Profile $profile */
+                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+                if ($profile) {
+                    $this->sendNixMilkrunMail($profile);
+                }
+                break;
+            case self::STEP_FIRST_MILKRUN_NIX:
+                /** @var Profile $profile */
+                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
+                if ($profile) {
+                    $milkrunCount = $profile->getCompletedMilkruns();
+                    if ($milkrunCount > 0) {
+                        // TODO continue here
                     }
                 }
                 break;
@@ -309,6 +353,157 @@ EOD;
         $profile->setCredits($profile->getCredits() + 2000);
         $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP, self::STEP_MORE_BASICS);
         $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, $activationDate);
+    }
+
+    /**
+     * @param Profile $profile
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    private function sendNixProgramMail(Profile $profile)
+    {
+        $ws = $this->getWebsocketServer();
+        $subject = $this->translate("Well done indeed...");
+        $content = <<<EOD
+Can you believe these guys? Oh well, those programs show exactly what they're
+up to... A bunch of crude and very noisy intrusion programs, talking about
+sending the lambs to the slaughter...
+
+No doubt they'll want you to use those soon, but let me tell you, there are
+other ways to make credits and snippets... but it's your choice. Whatever
+you'll decide to do, you will need some real programs to keep you a bit safer.
+
+I've attached a couple of equipment programs - nothing fancy, I can't afford
+to raise the networks suspicions by sending anything more complex... You might
+need some more storage and memory to use those, though.
+
+How is that ego-casting node coming along?
+*NIX
+EOD;
+        $cloakType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CLOAK);
+        $bladeType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
+        $cloak = $this->createFile(
+            $cloakType,
+            false,
+            'see_nix',
+            5,
+            100,
+            false,
+            100,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            1
+        );
+        $blade = $this->createFile(
+            $bladeType,
+            false,
+            'nixxer',
+            5,
+            100,
+            false,
+            100,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            1
+        );
+        $this->mailMessageService->createMail(
+            $profile,
+            null,
+            $subject,
+            $content,
+            false,
+            [$cloak, $blade]
+        );
+        $profile->setMainCampaignStep(self::STEP_NIX_PROGRAMS);
+        $profile->setMainCampaignStepActivationDate(null);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP, self::STEP_NIX_PROGRAMS);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, null);
+    }
+
+    /**
+     * @param Profile $profile
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    private function sendAgentInstructions(Profile $profile)
+    {
+        $ws = $this->getWebsocketServer();
+        $user = $profile->getUser();
+        $username = $user->getUsername();
+        $subject = $this->translate("System Updates");
+        $content = <<<EOD
+Welcome again, $username
+
+it is nice to see your system flourish. You have done well and are on your
+way to greatness. We have rewarded you with another 1.000 credits for your 
+hard work. Before we will send you out into the field, we would like you to 
+add an agent node to your system.
+
+Once you have completed this task, use the command "milkrun" in the agent
+node and complete at least one of those milkruns.
+
+We will be in touch once you have completed the run to start your first
+fully-fledged mission. 
+EOD;
+        $this->mailMessageService->createMail(
+            $profile,
+            NULL,
+            $subject,
+            $content,
+            false
+        );
+        $activationDate = new \DateTime();
+        $activationDate->add(new \DateInterval('PT2M'));
+        $profile->setMainCampaignStep(self::STEP_FIRST_MILKRUN);
+        $profile->setMainCampaignStepActivationDate($activationDate);
+        $profile->setCredits($profile->getCredits() + 1000);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP, self::STEP_FIRST_MILKRUN);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, $activationDate);
+    }
+
+    /**
+     * @param Profile $profile
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function sendNixMilkrunMail(Profile $profile)
+    {
+        $ws = $this->getWebsocketServer();
+        $subject = $this->translate("Milkruns, ey?");
+        $content = <<<EOD
+Guess they've moved away from the cannon-fodder approach and are now
+trying something different. Honestly, doing milkruns is not a bad idea for
+a newbie like you, easy money and faction rating.
+
+Make sure you don't take on runs against factions that you want to stay
+friendly with, though. Listen, I have to go dark for a while, I'll be in
+touch, don't forget about that ego-casting node...
+*NIX 
+EOD;
+        $this->mailMessageService->createMail(
+            $profile,
+            NULL,
+            $subject,
+            $content,
+            false
+        );
+        $profile->setMainCampaignStep(self::STEP_FIRST_MILKRUN_NIX);
+        $profile->setMainCampaignStepActivationDate(null);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP, self::STEP_FIRST_MILKRUN_NIX);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, null);
     }
 
 }

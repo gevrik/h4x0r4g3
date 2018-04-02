@@ -53,7 +53,7 @@ class WebsocketService implements MessageComponentInterface {
     /**
      * @const LOOP_MAIN_CAMPAIGN the amount of seconds between main campaign checks
      */
-    const LOOP_MAIN_CAMPAIGN = 3600;
+    const LOOP_MAIN_CAMPAIGN = 60;
 
     /**
      * @const LOOP_NPC_ROAM the amount of seconds between npc roaming checks
