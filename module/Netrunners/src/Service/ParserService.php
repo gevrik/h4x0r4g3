@@ -331,7 +331,6 @@ class ParserService
             case 'apt':
                 return $this->profileService->showAptitudes($resourceId);
             case 'auctionclaim':
-            case 'claim':
                 return $this->auctionService->claimAuction($resourceId, $contentArray);
             case 'auction':
             case 'auctionfile':
@@ -350,6 +349,10 @@ class ParserService
             case 'auctioncancel':
             case 'cancelauction':
                 return $this->auctionService->cancelAuction($resourceId, $contentArray);
+            case 'claimnode':
+            case 'claimsystem':
+            case 'claim':
+                return $this->nodeService->claimCommand($resourceId);
             case 'clear':
                 $response = array(
                     'command' => 'clear',

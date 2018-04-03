@@ -511,6 +511,7 @@ class LoopService extends BaseService
             /** @var Profile|NpcInstance $target */
             if ($wsClient && $defenderMessage) {
                 $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
+                $this->updateInterfaceElement($wsClient->resourceId, '#current-eeg', $target->getEeg());
                 if ($flyToDefender) {
                     $flyToMessage = [
                         'command' => 'flytocoords',

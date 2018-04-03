@@ -1575,8 +1575,12 @@ class BaseUtilityService {
         $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
         $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
         // remove the npc instance
-        if ($npcInstance->getNpc()->getType() == Npc::TYPE_HELPER) {
-            $this->systemIntegrityLoss($npcInstance->getSystem());
+        $npcType = $npcInstance->getNpc();
+        if ($npcType->getType() == Npc::TYPE_HELPER) {
+            $this->systemIntegrityChange($npcInstance->getSystem(), -1);
+        }
+        if ($npcType->getType() == Npc::TYPE_VIRUS) {
+            $this->systemIntegrityChange($npcInstance->getSystem(), 1);
         }
         $this->entityManager->remove($npcInstance);
         $this->entityManager->flush($npcInstance);
@@ -1587,13 +1591,10 @@ class BaseUtilityService {
      * @param int $amount
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    protected function systemIntegrityLoss(System $system, $amount = 1)
+    protected function systemIntegrityChange(System $system, $amount = 0)
     {
         // TODO npcinstances need to check if they belong to profile, group or faction when spawned
-        $newIntegrity = $system->getIntegrity() - $amount;
-        if ($newIntegrity < 0) {
-            $newIntegrity = 0;
-        }
+        $newIntegrity = $this->checkValueMinMax($system->getIntegrity() + $amount, 0, 100);
         $system->setIntegrity($newIntegrity);
         $this->entityManager->flush($system);
     }
@@ -1762,6 +1763,20 @@ class BaseUtilityService {
         if ($min && $value < $min) $value = $min;
         if ($max && $value > $max) $value = $max;
         return $value;
+    }
+
+    /**
+     * @param $message
+     * @param $textClass
+     * @throws \Exception
+     */
+    protected function broadcastMessage($message, $textClass)
+    {
+        $response = new GameClientResponse(NULL, GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        $response->addMessage($message, $textClass);
+        foreach ($this->getWebsocketServer()->getClients() as $wsClientId => $wsClient) {
+            $response->setResourceId($wsClient->resourceId)->send();
+        }
     }
 
 }

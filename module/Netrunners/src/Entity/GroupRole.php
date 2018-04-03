@@ -26,6 +26,7 @@ class GroupRole
     const ROLE_FOUNDER_ID = 7;
     const ROLE_MEMBER_ID = 8;
     const ROLE_NEWBIE_ID = 9;
+    const ROLE_COMBAT_OFFICE_ID = 10;
 
     /**
      * @var array
@@ -39,6 +40,13 @@ class GroupRole
      */
     static $allowedBuilding = [
         self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_COUNCIL_ID, self::ROLE_ADMIN_OFFICE_ID
+    ];
+
+    /**
+     * @var array
+     */
+    static $allowedSystemClaim = [
+        self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_COUNCIL_ID, self::ROLE_COMBAT_OFFICE_ID
     ];
 
     /**

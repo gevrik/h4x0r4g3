@@ -12,9 +12,12 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
-use Netrunners\Entity\GroupRole;
+use Netrunners\Entity\Faction;
+use Netrunners\Entity\File;
+use Netrunners\Entity\Group;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
@@ -375,16 +378,23 @@ class NodeService extends BaseService
             $this->translate('[%s] added a new node to the system'),
             $this->user->getUsername()
         );
-        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $this->messageEveryoneInNodeNew(
+            $currentNode,
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
         return $this->gameClientResponse;
     }
 
     /**
      * @param $resourceId
-     * @return array|bool|false
+     * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function claimCommand($resourceId)
     {
@@ -394,9 +404,186 @@ class NodeService extends BaseService
         $currentNode = $profile->getCurrentNode();
         $currentSystem = $currentNode->getSystem();
         $serverSetting = $this->entityManager->find('Netrunners\Entity\ServerSetting', 1);
-        $this->response = $this->isActionBlocked($resourceId);
-        // TODO finish this
-        return $this->response;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($serverSetting->getWildernessSystemId() == $currentSystem->getId()) {
+            $message = $this->translate('Claiming wilderspace nodes is not implemented yet');
+            $class = GameClientResponse::CLASS_DANGER;
+        }
+        else {
+            if (!$currentSystem->getProfile() && !$currentSystem->getGroup() && !$currentSystem->getFaction()) {
+                $message = $this->translate('This system can not be claimed');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            if ($currentSystem->getNoclaim()) {
+                $message = $this->translate('This system can not be claimed');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            if ($currentSystem->getProfile() && $currentSystem->getProfile() === $profile) {
+                $message = $this->translate('You can not claim your own systems');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            if ($currentSystem->getGroup() && $currentSystem->getGroup() === $profile->getGroup()) {
+                $message = $this->translate('This system already belongs to your group');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            if ($currentSystem->getFaction() && $currentSystem->getFaction() === $profile->getFaction()) {
+                $message = $this->translate('This system already belongs to your faction');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            if ($currentNode->getNodeType()->getId() != NodeType::ID_CPU) {
+                $message = $this->translate('You must be in a CPU node to claim a system');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            if ($currentSystem->getIntegrity() >= 1) {
+                $message = $this->translate('System integrity is not critical - unable to claim');
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            $claimed = false;
+            $claimerName = false;
+            // base checks are done, now we need to check who will get the system
+            if ($currentSystem->getProfile()) {
+                // the system is owned by a profile and will be given to the claiming profile
+                $this->claimProfileSystem($currentSystem, $profile);
+                $claimerName = $profile->getUser()->getUsername();
+                $claimed = true;
+            }
+            if (!$claimed && $currentSystem->getGroup()) {
+                // the system is owned by a group, check if the claiming profile belongs to a group too
+                if ($profile->getGroup()) {
+                    $this->claimGroupSystem($currentSystem, $profile->getGroup());
+                    $claimerName = $profile->getGroup()->getName();
+                    $claimed = true;
+                }
+                elseif ($profile->getFaction()) {
+                    $this->claimFactionSystem($currentSystem, $profile->getFaction(), $currentSystem->getGroup());
+                    $claimerName = $profile->getFaction()->getName();
+                    $claimed = true;
+                }
+                else {
+                    $message = $this->translate('Group systems can only be claimed by other groups and factions');
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+            }
+            if (!$claimed && $currentSystem->getFaction()) {
+                // the system is owned by a faction, check if the claiming profile belongs to a faction too
+                if ($profile->getGroup()) {
+                    $this->claimGroupSystem($currentSystem, $profile->getGroup());
+                    $claimerName = $profile->getGroup()->getName();
+                    $claimed = true;
+                }
+                elseif ($profile->getFaction()) {
+                    $this->claimFactionSystem($currentSystem, $profile->getFaction());
+                    $claimerName = $profile->getFaction()->getName();
+                    $claimed = true;
+                }
+                else {
+                    $message = $this->translate(
+                        'Faction systems can only be claimed by other factions and groups'
+                    );
+                    return $this->gameClientResponse->addMessage($message)->send();
+                }
+            }
+            if ($claimed) {
+                $message = $this->translate('You have claimed the system!');
+                $class = GameClientResponse::CLASS_SUCCESS;
+                $broadcastMessage = sprintf(
+                    'system [%s] was claimed by [%s]',
+                    $currentSystem->getName(),
+                    $claimerName
+                );
+                $broadcastClass = GameClientResponse::CLASS_INFO;
+                $this->broadcastMessage($broadcastMessage, $broadcastClass);
+                $currentSystem->setIntegrity(20);
+                $this->entityManager->flush();
+            }
+            else {
+                $message = $this->translate('Something went wrong while trying to claim the system');
+                $class = GameClientResponse::CLASS_DANGER;
+            }
+        }
+        return $this->gameClientResponse->addMessage($message, $class)->send();
+    }
+
+    /**
+     * @param System $system
+     * @param Profile $profile
+     */
+    private function claimProfileSystem(System $system, Profile $profile)
+    {
+        $oldOwner = $system->getProfile();
+        $system->setProfile($profile);
+        $files = $this->fileRepo->findBy([
+            'system' => $system
+        ]);
+        /** @var File $file */
+        foreach ($files as $file) {
+            if ($file->getProfile() === $oldOwner) {
+                $file->setProfile($profile);
+            }
+        }
+        $npcs = $this->npcInstanceRepo->findBy([
+            'system' => $system
+        ]);
+        /** @var NpcInstance $npc */
+        foreach ($npcs as $npc) {
+            if ($npc->getProfile() === $oldOwner) {
+                $npc->setProfile($profile);
+            }
+        }
+    }
+
+    /**
+     * @param System $system
+     * @param Group $group
+     */
+    private function claimGroupSystem(System $system, Group $group)
+    {
+        $oldOwner = $system->getGroup();
+        $oldFaction = $group->getFaction();
+        $system->setGroup($group);
+        if ($oldFaction) $system->setFaction(null);
+        $npcs = $this->npcInstanceRepo->findBy([
+            'system' => $system
+        ]);
+        /** @var NpcInstance $npc */
+        foreach ($npcs as $npc) {
+            if ($npc->getGroup() === $oldOwner) {
+                $npc->setGroup($group);
+            }
+            if ($npc->getFaction() === $oldFaction) {
+                $npc->setFaction($group->getFaction());
+            }
+        }
+    }
+
+    /**
+     * @param System $system
+     * @param Faction $faction
+     * @param Group|null $oldGroup
+     */
+    private function claimFactionSystem(System $system, Faction $faction, Group $oldGroup = null)
+    {
+        $oldOwner = $system->getFaction();
+        $system->setFaction($faction);
+        if ($oldGroup) $system->setGroup(null);
+        $npcs = $this->npcInstanceRepo->findBy([
+            'system' => $system
+        ]);
+        /** @var NpcInstance $npc */
+        foreach ($npcs as $npc) {
+            if ($npc->getGroup()) {
+                if ($oldGroup && $npc->getGroup() == $oldGroup) {
+                    $npc->setGroup(null);
+                    $npc->setFaction($faction);
+                }
+            }
+            if ($npc->getFaction() === $oldOwner) {
+                $npc->setFaction($faction);
+            }
+        }
     }
 
     /**
@@ -440,11 +627,14 @@ class NodeService extends BaseService
         // node level makes it harder
         $chance -= ($currentNode->getLevel() * 10);
         if (mt_rand(1, 100) > $chance) {
-            return $this->gameClientResponse->addMessage($this->translate('You fail to find any hidden connections'))->send(); // TODO make this take time
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You fail to find any hidden connections'))
+                ->send(); // TODO make this take time
         }
         else {
             // player has found a hidden connection
-            $excludedNodeTypes = [NodeType::ID_CPU, NodeType::ID_HOME, NodeType::ID_IO, NodeType::ID_PUBLICIO, NodeType::ID_RECRUITMENT];
+            $excludedNodeTypes = [NodeType::ID_CPU, NodeType::ID_HOME, NodeType::ID_IO, NodeType::ID_PUBLICIO,
+                NodeType::ID_RECRUITMENT];
             $exploredNodeType = $this->getRandomNodeType($excludedNodeTypes);
             $exploredNode =  new Node();
             $exploredNode->setSystem($currentSystem);
@@ -475,7 +665,9 @@ class NodeService extends BaseService
             $targetConnection->setIsOpen(false);
             $this->entityManager->persist($targetConnection);
             $this->entityManager->flush();
-            $this->gameClientResponse->addMessage($this->translate('You have found a hidden service'), GameClientResponse::CLASS_SUCCESS);
+            $this->gameClientResponse->addMessage(
+                $this->translate('You have found a hidden service'), GameClientResponse::CLASS_SUCCESS
+            );
             $this->updateMap($resourceId);
         }
         // inform other players in node

@@ -44,3 +44,5 @@ INSERT INTO `Npc` (`id`, `name`, `description`, `baseEeg`, `baseSnippets`, `base
 UPDATE `Faction` SET `openRecruitment` = '1' WHERE `Faction`.`id` = 1; UPDATE `Faction` SET `openRecruitment` = '1' WHERE `Faction`.`id` = 2; UPDATE `Faction` SET `openRecruitment` = '1' WHERE `Faction`.`id` = 3; UPDATE `Faction` SET `openRecruitment` = '1' WHERE `Faction`.`id` = 4; UPDATE `Faction` SET `openRecruitment` = '1' WHERE `Faction`.`id` = 5; UPDATE `Faction` SET `openRecruitment` = '1' WHERE `Faction`.`id` = 6;
 
 UPDATE System SET integrity = 100 WHERE id > 0;
+
+INSERT INTO `GroupRole` (`id`, `name`, `description`) VALUES (NULL, 'combat officer', 'This role allows combat-related actions, like claiming enemy systems.');

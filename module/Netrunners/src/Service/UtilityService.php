@@ -45,7 +45,7 @@ class UtilityService extends BaseService
         $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
         $sneaking = ($profile->getStealthing()) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
-        $fullPromptString = '[<span class="eeg">' . $profile->getEeg() . '/100</span>][<span class="willpower">' .
+        $fullPromptString = '[<span class="eeg"><span id="current-eeg">' . $profile->getEeg() . '</span>/100</span>][<span class="willpower">' .
             $profile->getWillpower() . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
             '][' . $currentNode->getNodeType()->getShortName() . '][' . $currentNode->getLevel() . ']</span>' . $sneaking .  ' ';
         return $fullPromptString;
@@ -84,6 +84,7 @@ class UtilityService extends BaseService
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function autocomplete(ConnectionInterface $from, $clientData, $content = '')
     {
