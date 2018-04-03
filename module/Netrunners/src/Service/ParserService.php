@@ -162,6 +162,12 @@ class ParserService
     protected $storyService;
 
     /**
+     * @var PassageService
+     */
+    protected $passageService;
+
+
+    /**
      * @param EntityManager $entityManager
      * @param Translator $translator
      * @param AuctionService $auctionService
@@ -189,6 +195,7 @@ class ParserService
      * @param GroupService $groupService
      * @param PartyService $partyService
      * @param StoryService $storyService
+     * @param PassageService $passageService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -217,7 +224,8 @@ class ParserService
         ResearchService $researchService,
         GroupService $groupService,
         PartyService $partyService,
-        StoryService $storyService
+        StoryService $storyService,
+        PassageService $passageService
     )
     {
         $this->entityManager = $entityManager;
@@ -247,6 +255,7 @@ class ParserService
         $this->groupService = $groupService;
         $this->partyService = $partyService;
         $this->storyService = $storyService;
+        $this->passageService = $passageService;
     }
 
     /**
@@ -580,6 +589,14 @@ class ParserService
             case 'res':
             case 'parts':
                 return $this->profileService->showFilePartInstances($resourceId, $contentArray);
+            case 'passageadd':
+                return $this->passageService->passageAddCommand($resourceId);
+            case 'passageedit':
+                return $this->passageService->passageEditCommand($resourceId, $contentArray);
+            case 'passageeditor':
+                return $this->passageService->passageEditorCommand($resourceId, $contentArray);
+            case 'passagelist':
+                return $this->passageService->passageListCommand($resourceId);
             case 'passwd':
             case 'changepassword':
                 return $this->profileService->changePassword($resourceId, $contentArray);
@@ -959,6 +976,17 @@ class ParserService
                 $recipient = (isset($msgData->recipient)) ? $msgData->recipient : null;
                 $subject = (isset($msgData->subject)) ? $msgData->subject : false;
                 return $this->mailMessageService->sendMail($resourceId, $content, $recipient, $subject);
+            case 'savestory':
+                $title = (isset($msgData->title)) ? $msgData->title: null;
+                $status = (isset($msgData->status)) ? $msgData->status: false;
+                $entityId = (isset($msgData->entityId)) ? $msgData->entityId: false;
+                return $this->storyService->saveStoryCommand($resourceId, $entityId, $content, $title, $status);
+            case 'savepassage':
+                $title = (isset($msgData->title)) ? $msgData->title: null;
+                $status = (isset($msgData->status)) ? $msgData->status: false;
+                $entityId = (isset($msgData->entityId)) ? $msgData->entityId: false;
+                $allowChoiceSubmissions = (isset($msgData->allowChoiceSubmissions)) ? $msgData->allowChoiceSubmissions: false;
+                return $this->passageService->savePassageCommand($resourceId, $entityId, $content, $title, $status, $allowChoiceSubmissions);
         }
         return true;
     }

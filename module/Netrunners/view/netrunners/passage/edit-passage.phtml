@@ -1,0 +1,81 @@
+<div class="panel panel-default draggable edit-passage-panel">
+    <div class="panel-heading">
+        <button id="btn-close-manpage-editor" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button id="save-passage" type="button" class="save" aria-label="Save"><span aria-hidden="true"><i class="fa fa-save"></i></span></button>
+        <h3 class="panel-title"><?php echo sprintf('%s: %s', $this->translate("EDITING"), $this->passage->getTitle()); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: .25em;">
+        <div class="form-group">
+            <label for="passage-title">
+                <input type="text" id="passage-title" name="passage-title" class="passage-title form-control" style="border: 0;" value="<?php echo $this->passage->getTitle(); ?>" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="passage-status">
+                <select id="passage-status" name="passage-status" class="passage-status form-control">
+                    <?php foreach (\TwistyPassages\Service\PassageService::$status as $statusId => $statusString) : ?>
+                        <option value="<?php echo $statusId; ?>" <?php echo ($this->passage->getStatus() == $statusId) ? 'selected="selected"' : '';?>>
+                            status: <?php echo $statusString; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="passage-allow-choice-submissions">
+                <select id="passage-allow-choice-submissions" name="passage-allow-choice-submissions" class="passage-allow-choice-submissions form-control">
+                    <option value="0" <?php echo ($this->passage->getAllowChoiceSubmissions() == 0) ? 'selected="selected"' : '';?>>
+                        <?php echo $this->translate("no"); ?>
+                    </option>
+                    <option value="1" <?php echo ($this->passage->getAllowChoiceSubmissions() == 1) ? 'selected="selected"' : '';?>>
+                        <?php echo $this->translate("yes"); ?>
+                    </option>
+                </select>
+            </label>
+        </div>
+        <label for="passage-content">
+            <textarea id="passage-content" name="passage-content" class="passage-content" rows="12" style="border: 0; padding: .25em;"><?php echo $this->passage->getDescription(); ?></textarea>
+        </label>
+    </div>
+</div>
+<script type="application/javascript">
+
+    $('.manpage-container')
+        .css('max-height', viewportHeight*0.425)
+        .css('height', viewportHeight*0.425)
+        .css('max-width', viewportWidth*0.33)
+        .css('width', viewportWidth*0.33)
+        .css('top', viewportHeight*0.5)
+        .css('left', viewportWidth*0.65);
+
+    var editorWidth = viewportWidth*0.329 - 10;
+    $('#passage-content').css('width', editorWidth);
+    $('#passage-title').css('width', editorWidth);
+
+    $('#save-passage').on('click', function(){
+        var jsonData = {
+            command: 'parseFrontendInput',
+            subcommand: 'savepassage',
+            hash: hash,
+            content: editor1.getData(),
+            title: $('#passage-title').val(),
+            status: $('#passage-status').val(),
+            allowChoiceSubmissions: $('#passage-allow-choice-submissions').val(),
+            entityId: <?php echo $this->passage->getId(); ?>,
+            silent: true
+        };
+        conn.send(JSON.stringify(jsonData));
+    });
+
+    if (!editor1) {
+        editor1 = CKEDITOR.replace( 'passage-content', {width: editorWidth, uiColor: '#3c3c3c', contentsCss: '../../../css/ckeditor.css'} );
+        editor1.editorConfig = function( config ) {
+            config.toolbar = [
+                { name: 'basicstyles', items: [ 'Bold', 'Italic' ] },
+                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent' ] },
+                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] }
+            ];
+        };
+    }
+
+</script>
