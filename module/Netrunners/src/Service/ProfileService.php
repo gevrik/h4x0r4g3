@@ -1192,14 +1192,11 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             $message = $this->translate('Please specify how much you want to deposit');
             return $this->gameClientResponse->addMessage($message)->send();
         }
+        // check if valid amount
+        $this->checkValueMinMax($amount, 1);
         // check if they have that much
         if ($profile->getCredits() < $amount) {
             $message = $this->translate('You do not have that many credits');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if valid amount
-        if ($amount <= 0) {
-            $message = $this->translate('Nice try');
             return $this->gameClientResponse->addMessage($message)->send();
         }
         /* all seems good, deposit */
@@ -1315,14 +1312,10 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             $message = $this->translate('Please specify how much you want to withdraw');
             return $this->gameClientResponse->addMessage($message)->send();
         }
+        $amount = $this->checkValueMinMax($amount, 1);
         // check if they have that much
         if ($profile->getBankBalance() < $amount) {
             $message = $this->translate('You do not have that many credits in your bank account');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if valid amount
-        if ($amount <= 0) {
-            $message = $this->translate('Nice try...');
             return $this->gameClientResponse->addMessage($message)->send();
         }
         /* all seems good, withdraw */

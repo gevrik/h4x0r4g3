@@ -72,6 +72,7 @@ return array(
             'Netrunners\Service\BaseService' => 'Netrunners\Factory\BaseServiceFactory',
             'Netrunners\Service\AuctionService' => 'Netrunners\Factory\AuctionServiceFactory',
             'Netrunners\Service\AdminService' => 'Netrunners\Factory\AdminServiceFactory',
+            'Netrunners\Service\BountyService' => 'Netrunners\Factory\BountyServiceFactory',
             'Netrunners\Service\ChatService' => 'Netrunners\Factory\ChatServiceFactory',
             'Netrunners\Service\CodingService' => 'Netrunners\Factory\CodingServiceFactory',
             'Netrunners\Service\CodebreakerService' => 'Netrunners\Factory\CodebreakerServiceFactory',

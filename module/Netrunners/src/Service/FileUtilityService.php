@@ -431,7 +431,7 @@ class FileUtilityService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // get parameter
-        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray, true, false, false, true);
         // try to get target file via repo method
         $targetFiles = $this->fileRepo->findByNodeOrProfileAndName(
             $profile->getCurrentNode(),
@@ -1612,6 +1612,18 @@ class FileUtilityService extends BaseService
             ->send();
         // redirect to show-node-info method
         return $this->showNodeInfoNew($resourceId, NULL, true);
+    }
+
+    /**
+     * @param File $file
+     * @return int
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function getAmountOfFittedSlots(File $file)
+    {
+        return $this->fileModInstanceRepo->countByFile($file);
+
     }
 
 }

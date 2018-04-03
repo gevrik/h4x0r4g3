@@ -272,7 +272,7 @@ class AuctionService extends BaseService
             $bid = $auction->getCurrentPrice() + 1;
         }
         else {
-            $bid = $this->checkValueMinMax($bid, 1, NULL);
+            $bid = $this->checkValueMinMax($bid, 1);
         }
         if ($bid <= $auction->getCurrentPrice()) {
             return $this->gameClientResponse->addMessage($this->translate('Unable to bid less than the current bid'))->send();

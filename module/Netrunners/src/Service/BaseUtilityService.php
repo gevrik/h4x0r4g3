@@ -1779,4 +1779,15 @@ class BaseUtilityService {
         }
     }
 
+    /**
+     * @param $amount
+     * @param string $locale
+     * @return string
+     */
+    protected function numberFormat($amount, $locale = Profile::DEFAULT_PROFILE_LOCALE)
+    {
+        $formatter = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+        return $formatter->format($amount);
+    }
+
 }

@@ -54,6 +54,11 @@ class ChatService extends BaseService
     const CHANNEL_FACTION = 'FACTION';
 
     /**
+     * @const CHANNEL_GROUP
+     */
+    const CHANNEL_GROUP = 'GROUP';
+
+    /**
      * @const CHANNEL_PARTY
      */
     const CHANNEL_PARTY = 'PARTY';
@@ -445,6 +450,54 @@ class ChatService extends BaseService
             ->setResourceId($profile->getCurrentResourceId())
             ->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)
             ->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
+     */
+    public function groupChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        // get profile
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // check if the have a running chat client
+        if (!$this->fileRepo->findChatClientForProfile($profile)) {
+            return $this->gameClientResponse->addMessage($this->translate('You need a running chatclient to use group chat'))->send();
+        }
+        if (!$profile->getGroup()) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to be a member of a group to use group chat'))->send();
+        }
+        $messageContent = implode(' ', $contentArray);
+        if (!$messageContent || $messageContent == '') {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_GROUP);
+        $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
+            /** @var User $clientUser */
+            $clientUser = $this->entityManager->find(User::class, $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
+            if ($clientUser->getProfile()->getGroup() != $profile->getGroup()) continue;
+            if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
+        }
+        return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
     }
 
     /**

@@ -95,7 +95,7 @@ class FileModInstanceRepository extends EntityRepository
 
     /**
      * @param File $file
-     * @return array
+     * @return int
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      */

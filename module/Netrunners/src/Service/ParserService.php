@@ -166,6 +166,10 @@ class ParserService
      */
     protected $passageService;
 
+    /**
+     * @var BountyService
+     */
+    protected $bountyService;
 
     /**
      * @param EntityManager $entityManager
@@ -196,6 +200,7 @@ class ParserService
      * @param PartyService $partyService
      * @param StoryService $storyService
      * @param PassageService $passageService
+     * @param BountyService $bountyService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -225,7 +230,8 @@ class ParserService
         GroupService $groupService,
         PartyService $partyService,
         StoryService $storyService,
-        PassageService $passageService
+        PassageService $passageService,
+        BountyService $bountyService
     )
     {
         $this->entityManager = $entityManager;
@@ -256,6 +262,7 @@ class ParserService
         $this->partyService = $partyService;
         $this->storyService = $storyService;
         $this->passageService = $passageService;
+        $this->bountyService = $bountyService;
     }
 
     /**
@@ -380,6 +387,8 @@ class ParserService
                 break;
             case 'commands':
                 return $this->getWebsocketServer()->getUtilityService()->showCommands($resourceId);
+            case 'compare':
+                return $this->fileService->compareCommand($resourceId, $contentArray);
             case 'connect':
                 return $this->nodeService->systemConnect($resourceId, $contentArray);
             case 'consider':
@@ -446,8 +455,10 @@ class ParserService
             return $this->fileService->changeFileName($resourceId, $contentArray);
             case 'filetypes':
                 return $this->fileService->showFileTypes($resourceId);
-            case 'gc':
+            case 'glob':
                 return $this->chatService->globalChat($resourceId, $contentArray);
+            case 'gc':
+                return $this->chatService->groupChat($resourceId, $contentArray);
             case 'hangmanletterclick':
                 return $this->hangmanService->letterClicked($resourceId, $contentArray);
             case 'hangmansolution':
@@ -508,6 +519,12 @@ class ParserService
                 return $this->mailMessageService->mailCreateCommand($resourceId);
             case 'mailreply':
                 return $this->mailMessageService->mailReplyCommand($resourceId, $contentArray);
+            case 'groupdeposit':
+                // TODO finish this
+                break;
+            case 'groupwithdraw':
+                // TODO finish this
+                break;
             case 'managegroup':
                 return $this->groupService->manageGroupCommand($resourceId);
             case 'manageparts':
@@ -609,6 +626,8 @@ class ParserService
                 return $this->partyService->partyKickCommand($resourceId, $contentArray);
             case 'partyrequest':
                 return $this->partyService->partyRequestCommand($resourceId, $contentArray);
+            case 'placebounty':
+                return $this->bountyService->postBounty($resourceId, $contentArray);
             case 'ps':
                 return $this->fileService->listProcesses($resourceId, $contentArray);
             case self::CMD_REQUESTMILKRUN:
@@ -640,6 +659,8 @@ class ParserService
                 return $this->profileService->showSkills($resourceId);
             case 'showbalance':
                 return $this->profileService->showBankBalance($resourceId);
+            case 'showbounties':
+                return $this->bountyService->showBounties($resourceId, $contentArray);
             case 'showunreadmails':
                 return $this->mailMessageService->displayAmountUnreadMails($resourceId);
             case 'sneak':

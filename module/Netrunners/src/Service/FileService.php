@@ -15,6 +15,7 @@ use Netrunners\Entity\Connection;
 use Netrunners\Entity\File;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\System;
+use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
@@ -334,9 +335,7 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @return \Netrunners\Model\GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeMedkit(File $file)
     {
@@ -346,9 +345,7 @@ class FileService extends BaseService
     /**
      * @param File $file
      * @return \Netrunners\Model\GameClientResponse
-     * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
      */
     public function executeProxifier(File $file)
     {
@@ -455,6 +452,94 @@ class FileService extends BaseService
     public function createPasskeyCommand($resourceId)
     {
         return $this->fileUtilityService->createPasskeyCommand($resourceId);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function compareCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // get parameter
+        list($contentArray, $firstFileName) = $this->getNextParameter($contentArray, true, false, false, true);
+        if (!$firstFileName) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify the first file to compare'))->send();
+        }
+        $firstFile = $this->fileRepo->findByNodeOrProfileAndName($currentNode, $profile, $firstFileName);
+        if (empty($firstFile)) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid first file to compare'))->send();
+        }
+        $firstFile = array_shift($firstFile);
+        /** @var File $firstFile */
+        $secondFileName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$secondFileName) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify the second file to compare'))->send();
+        }
+        $secondFile = $this->fileRepo->findByNodeOrProfileAndName($currentNode, $profile, $secondFileName);
+        if (empty($secondFile)) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid second file to compare'))->send();
+        }
+        $secondFile = array_shift($secondFile);
+        /** @var File $secondFile */
+        // now we can compare the two files
+        $headerRow = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('PROPERTY'),
+            $firstFile->getName(),
+            $secondFile->getName()
+        );
+        $this->gameClientResponse->addMessage($headerRow, GameClientResponse::CLASS_SYSMSG);
+        $returnMessages = [];
+        $returnMessages[] = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('type'),
+            $firstFile->getFileType()->getName(),
+            $secondFile->getFileType()->getName()
+        );
+        $returnMessages[] = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('coder'),
+            ($firstFile->getCoder()) ? $firstFile->getCoder()->getUser()->getUsername() : $this->translate('---'),
+            ($secondFile->getCoder()) ? $secondFile->getCoder()->getUser()->getUsername() : $this->translate('---')
+        );
+        $returnMessages[] = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('size'),
+            $firstFile->getSize(),
+            $secondFile->getSize()
+        );
+        $returnMessages[] = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('level'),
+            $firstFile->getLevel(),
+            $secondFile->getLevel()
+        );
+        $returnMessages[] = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('integrity'),
+            sprintf('%s/%s', $firstFile->getIntegrity(), $firstFile->getMaxIntegrity()),
+            sprintf('%s/%s', $secondFile->getIntegrity(), $secondFile->getMaxIntegrity())
+        );
+        $returnMessages[] = sprintf(
+            '%-12s|%-32s|%-32s',
+            $this->translate('slots'),
+            sprintf('%s/%s', $this->fileUtilityService->getAmountOfFittedSlots($firstFile), $firstFile->getSlots()),
+            sprintf('%s/%s', $this->fileUtilityService->getAmountOfFittedSlots($secondFile), $secondFile->getSlots())
+        );
+        // TODO add mods to output
+        return $this->gameClientResponse->addMessages($returnMessages)->send();
     }
 
 }
