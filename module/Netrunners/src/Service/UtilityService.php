@@ -70,7 +70,7 @@ class UtilityService extends BaseService
         $promptString = $currentNode['name'];
         $userAtHostString = $user['username'] . '@' . $currentSystem['name'];
         $sneaking = ($profile['stealthing']) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
-        $fullPromptString = '[<span class="eeg">' . $profile['eeg'] . '/100</span>][<span class="willpower">' .
+        $fullPromptString = '[<span class="eeg"><span id="current-eeg">' . $profile['eeg'] . '</span>/100</span>][<span class="willpower">' .
             $profile['willpower'] . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
             '][' . $currentNodeType['shortName'] . '][' . $currentNode['level'] . ']</span>' . $sneaking .  ' ';
         return $fullPromptString;
@@ -155,18 +155,20 @@ class UtilityService extends BaseService
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
-        $message = 'addconnection  addnode  a attack  auction auctionfile  auctionbid bid  auctionbids bids  
-        auctionbuyout buyout  auctioncancel cancelauction  auctions  auctionclaim claim  close  bgopacity  bug  cancel  
-        cd  changepassword  clear  close  code  commands  connect  con consider  creategroup  createpasskey passkey  date  decompile  defaultmra  
-        deposit  dl download  editfile  editnode  entityname  equipment  eset  exe execute  explore  factionchat fc  
-        factionratings  factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  
-        inventory inv  invitations  jobs  joinfaction  k kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  manageparts  
-        map  milkrun  mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  
-        options  parts  passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  
-        removeresource rmres  repairmra  reply  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  
-        slay showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  
-        system  tell  time  touch  typo  ul  unload upload  updatesystemcoords  unsecure  update updatefile  upgrademra  upgradenode  use  visible  vis  
-        withdraw';
+        $message = <<<EOD
+addconnection  addnode  a attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  
+auctioncancel cancelauction  auctions  auctionclaim  bgopacity  bug  cancel  cd  changepassword  claim  clear  close
+code  commands  connect  con consider  creategroup  createpasskey passkey  date  decompile  defaultmra  deposit  dl 
+download  editfile  editnode  entityname  equipment  eset  exe execute  explore  factionchat fc  factionratings  
+factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations
+jobs  joinfaction  k kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  manageparts  map  milkrun  
+mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  options  parts  
+passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  removeresource rmres  
+repairmra  reply  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  slay 
+showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  
+tell  time  touch  typo  ul  unload upload  updatesystemcoords  unsecure  update updatefile  upgrademra  upgradenode  
+use  visible  vis  withdraw
+EOD;
         $returnMessage = sprintf(
             '%s',
             wordwrap($message, 120)
@@ -181,8 +183,10 @@ class UtilityService extends BaseService
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_ADDON);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
-            $message = 'banip  cybermap  unbanip  banuser  unbanuser  clients  giveinvitation  goto  kickclient  nlist  
-            setcredits  setmotd  setsnippets  showusers  syslist';
+            $message = <<<EOD
+banip  cybermap  unbanip  banuser  unbanuser  clients  giveinvitation  goto  kickclient  nlist  setcredits  setmotd  
+setsnippets  showusers  syslist
+EOD;
             $returnMessage = sprintf(
                 '%s',
                 wordwrap($message, 120)
@@ -190,8 +194,10 @@ class UtilityService extends BaseService
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_INFO);
         }
         if ($this->hasRole(NULL, Role::ROLE_ID_SUPERADMIN)) {
-            $message = 'grantrole  invokefile  invokefilemod invokenpc  removerole  toggleadminmode  setfileproperty 
-            silefilemodproperty  setfiletypeproperty  setnpcproperty';
+            $message = <<<EOD
+grantrole  invokefile  invokefilemod invokenpc  removerole  toggleadminmode  setfileproperty silefilemodproperty  
+setfiletypeproperty  setnpcproperty
+EOD;
             $returnMessage = sprintf(
                 '%s',
                 wordwrap($message, 120)

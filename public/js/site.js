@@ -330,7 +330,6 @@
             animation: {duration: 250, show: 'fadeIn', hide: 'fadeOut'},
             callback: function(key, options) {
                 var m = "clicked: " + key;
-                console.log(m);
             },
             items: {
                 "secureconnection": {name: "secure", icon: "edit"},
@@ -460,7 +459,6 @@
         };
         // event listener for server message
         conn.onmessage = function(e) {
-            //console.log(e.data);
             var messageArray;
             var textClass = 'muted';
             var data = JSON.parse(e.data);
@@ -490,7 +488,6 @@
             switch (command) {
                 default:
                     console.log('=== unknown command received ==='); // TODO remove for production
-                    console.log(e.data);
                     break;
                 case 'getipaddy':
                     var ipaddy = $('#ipaddy').val();
@@ -854,7 +851,15 @@
                     break;
                 case 'updateinterfaceelement':
                     console.log(data);
-                    $(data.message.element).html(data.message.value);
+                    var updatedElement = data.message.element;
+                    var updatedValue = data.message.value;
+                    if (updatedElement === 'current-eeg') {
+                        console.log('here');
+                        $('#'+updatedElement).empty().text(updatedValue);
+                    }
+                    else {
+                        $('#'+updatedElement).html(updatedValue);
+                    }
                     break;
                 case 'showmessage':
                     //getRandomInRange(0, 6);
@@ -1059,7 +1064,6 @@
                 conn.send(JSON.stringify(jsonData));
             }
             // tab
-            //console.log(keycode);
             if(keycode === 9){
                 event.preventDefault();
                 message = $(this).val();

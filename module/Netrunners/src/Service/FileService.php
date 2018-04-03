@@ -292,22 +292,6 @@ class FileService extends BaseService
     /**
      * @param $resourceId
      * @param File $file
-     * @param Connection $connection
-     * @return \Netrunners\Model\GameClientResponse
-     * @throws \Doctrine\ORM\NoResultException
-     * @throws \Doctrine\ORM\NonUniqueResultException
-     * @throws \Doctrine\ORM\ORMException
-     * @throws \Doctrine\ORM\OptimisticLockException
-     * @throws \Doctrine\ORM\TransactionRequiredException
-     */
-    public function executeCrowbar($resourceId, File $file, Connection $connection)
-    {
-        return $this->fileExecutionService->executeCrowbar($resourceId, $file, $connection);
-    }
-
-    /**
-     * @param $resourceId
-     * @param File $file
      * @param System $system
      * @param Node $node
      * @return \Netrunners\Model\GameClientResponse
