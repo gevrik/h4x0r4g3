@@ -2776,12 +2776,20 @@ class BaseService extends BaseUtilityService
         /** @var MissionRepository $missionRepo */
         $mission = $missionRepo->findByTargetFile($file);
         if (!$mission) {
-            return false;
+            $message = sprintf(
+                $this->translate('[%s] can not be executed'),
+                $file->getName()
+            );
+            return $this->gameClientResponse->addMessage($message);
         }
         /** @var Mission $mission */
         switch ($mission->getMission()->getId()) {
             default:
-                break;
+                $message = sprintf(
+                    $this->translate('[%s] can not be executed'),
+                    $file->getName()
+                );
+                return $this->gameClientResponse->addMessage($message);
             case MissionArchetype::ID_PLANT_BACKDOOR:
                 if ($mission->getProfile() != $profile) {
                     $message = sprintf(
@@ -2861,7 +2869,7 @@ class BaseService extends BaseUtilityService
                 $this->translate('Mission accomplished - you received %s credits'),
                 $reward
             );
-            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
         }
         return false;
     }

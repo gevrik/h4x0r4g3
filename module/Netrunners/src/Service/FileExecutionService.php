@@ -16,7 +16,6 @@ use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
-use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
@@ -222,7 +221,14 @@ class FileExecutionService extends BaseService
             case FileType::ID_CODEARMOR:
                 return $this->equipFile($file);
             case FileType::ID_TEXT:
-                return $this->executeMissionFile($file);
+                $missionFileCheck = $this->executeMissionFile($file);
+                if ($missionFileCheck instanceof GameClientResponse) {
+                    return $missionFileCheck->send();
+                }
+                else {
+                    return $missionFileCheck;
+                }
+                break;
             case FileType::ID_WORMER:
                 return $this->hangmanService->startHangmanGame($resourceId, $file, $contentArray);
         }

@@ -540,6 +540,7 @@ class FileUtilityService extends BaseService
         if (!$parameter) {
             return $this->gameClientResponse->addMessage($this->translate('Please specify the process id to kill (ps for list)'))->send();
         }
+        /** @var File $runningFile */
         $runningFile = $this->entityManager->find('Netrunners\Entity\File', $parameter);
         if (!$runningFile) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid process id'))->send();
@@ -555,6 +556,51 @@ class FileUtilityService extends BaseService
         }
         if ($runningFile->getNode() && $runningFile->getNode() != $profile->getCurrentNode()) {
             return $this->gameClientResponse->addMessage($this->translate('That process needs to be killed in the node that it is running in'))->send();
+        }
+        // check if this is equipment
+        if ($runningFile->getFileType()->getId() == FileType::ID_CODEBLADE) {
+            $profile->setBlade(null);
+            $this->entityManager->flush($profile);
+        }
+        if ($runningFile->getFileType()->getId() == FileType::ID_CODEBLASTER) {
+            $profile->setBlaster(null);
+            $this->entityManager->flush($profile);
+        }
+        if ($runningFile->getFileType()->getId() == FileType::ID_CODESHIELD) {
+            $profile->setShield(null);
+            $this->entityManager->flush($profile);
+        }
+        if ($runningFile->getFileType()->getId() == FileType::ID_CODEARMOR) {
+            $fileData = json_decode($runningFile->getData());
+            switch ($fileData->subtype) {
+                default:
+                    break;
+                case FileType::SUBTYPE_ARMOR_HEAD:
+                    $profile->setHeadArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_SHOULDERS:
+                    $profile->setShoulderArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_UPPER_ARM:
+                    $profile->setUpperArmArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_LOWER_ARM:
+                    $profile->setLowerArmArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_HANDS:
+                    $profile->setHandArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_TORSO:
+                    $profile->setTorsoArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_LEGS:
+                    $profile->setLegArmor(null);
+                    break;
+                case FileType::SUBTYPE_ARMOR_SHOES:
+                    $profile->setShoesArmor(null);
+                    break;
+            }
+            $this->entityManager->flush($profile);
         }
         $runningFile->setRunning(false);
         $runningFile->setSystem(NULL);
