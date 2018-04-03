@@ -45,7 +45,7 @@ class UtilityService extends BaseService
         $promptString = $currentNode->getName();
         $userAtHostString = $user->getUsername() . '@' . $currentSystem->getName();
         $sneaking = ($profile->getStealthing()) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
-        $fullPromptString = '[<span class="eeg"><span id="current-eeg">' . $profile->getEeg() . '</span>/100</span>][<span class="willpower">' .
+        $fullPromptString = '[<span class="eeg"><span class="current-eeg">' . $profile->getEeg() . '</span>/100</span>][<span class="willpower">' .
             $profile->getWillpower() . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
             '][' . $currentNode->getNodeType()->getShortName() . '][' . $currentNode->getLevel() . ']</span>' . $sneaking .  ' ';
         return $fullPromptString;
@@ -70,7 +70,7 @@ class UtilityService extends BaseService
         $promptString = $currentNode['name'];
         $userAtHostString = $user['username'] . '@' . $currentSystem['name'];
         $sneaking = ($profile['stealthing']) ? '[<span class="text-warning">*</span>]' : '[<span class="text-muted">*</span>]';
-        $fullPromptString = '[<span class="eeg"><span id="current-eeg">' . $profile['eeg'] . '</span>/100</span>][<span class="willpower">' .
+        $fullPromptString = '[<span class="eeg"><span class="current-eeg">' . $profile['eeg'] . '</span>/100</span>][<span class="willpower">' .
             $profile['willpower'] . '/100</span>]<span class="prompt">[' . $userAtHostString . ':' . $promptString .
             '][' . $currentNodeType['shortName'] . '][' . $currentNode['level'] . ']</span>' . $sneaking .  ' ';
         return $fullPromptString;

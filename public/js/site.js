@@ -850,15 +850,13 @@
                     }
                     break;
                 case 'updateinterfaceelement':
-                    console.log(data);
                     var updatedElement = data.message.element;
                     var updatedValue = data.message.value;
-                    if (updatedElement === 'current-eeg') {
-                        console.log('here');
-                        $('#'+updatedElement).empty().text(updatedValue);
+                    if (updatedElement === '.current-eeg') {
+                        $(updatedElement).empty().text(updatedValue);
                     }
                     else {
-                        $('#'+updatedElement).html(updatedValue);
+                        $(updatedElement).html(updatedValue);
                     }
                     break;
                 case 'showmessage':

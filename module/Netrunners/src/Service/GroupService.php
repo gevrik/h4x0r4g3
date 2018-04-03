@@ -351,7 +351,7 @@ class GroupService extends BaseService
         }
         $group->setOpenRecruitment($newValue);
         $this->entityManager->flush($group);
-        $this->updateInterfaceElement($resourceId, 'toggle-open-recruitment', $stringValue);
+        $this->updateInterfaceElement($resourceId, '#toggle-open-recruitment', $stringValue);
         return $this->gameClientResponse
             ->addMessage($this->translate('recruitment option toggled'), GameClientResponse::CLASS_SUCCESS)
             ->send();

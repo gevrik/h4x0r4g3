@@ -470,7 +470,7 @@ class LoopService extends BaseService
             }
             if ($targetWsClient && $defenderMessage) {
                 $targetWsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
-                $this->updateInterfaceElement($targetWsClient->resourceId, 'current-eeg', $target->getEeg());
+                $this->updateInterfaceElement($targetWsClient->resourceId, '.current-eeg', $target->getEeg());
             }
             if ($nodeMessage) {
                 $ignoredProfiles = [$profile->getId()];
@@ -511,7 +511,7 @@ class LoopService extends BaseService
             /** @var Profile|NpcInstance $target */
             if ($wsClient && $defenderMessage) {
                 $wsClient->send(json_encode(['command'=>'showmessageprepend', 'message'=>$defenderMessage]));
-                $this->updateInterfaceElement($wsClient->resourceId, 'current-eeg', $target->getEeg());
+                $this->updateInterfaceElement($wsClient->resourceId, '.current-eeg', $target->getEeg());
                 if ($flyToDefender) {
                     $flyToMessage = [
                         'command' => 'flytocoords',
