@@ -475,10 +475,11 @@ class LoopService extends BaseService
             if ($nodeMessage) {
                 $ignoredProfiles = [$profile->getId()];
                 if (!$combatData->npcTarget) $ignoredProfiles[] = $target->getId();
-                $this->messageEveryoneInNode(
+                $this->messageEveryoneInNodeNew(
                     ($combatData->npcTarget) ? $target->getNode() : $target->getCurrentNode(),
-                    ['command' => 'showmessageprepend', 'message' => $nodeMessage],
-                    NULL,
+                    $nodeMessage,
+                    GameClientResponse::CLASS_MUTED,
+                    null,
                     $ignoredProfiles
                 );
             }
@@ -522,10 +523,11 @@ class LoopService extends BaseService
             if ($nodeMessage) {
                 $ignoredProfiles = [];
                 if (!$combatData->npcTarget) $ignoredProfiles[] = $target->getId();
-                $this->messageEveryoneInNode(
+                $this->messageEveryoneInNodeNew(
                     ($combatData->npcTarget) ? $target->getNode() : $target->getCurrentNode(),
-                    ['command' => 'showmessageprepend', 'message' => $nodeMessage],
-                    NULL,
+                    $nodeMessage,
+                    GameClientResponse::CLASS_MUTED,
+                    null,
                     $ignoredProfiles
                 );
             }

@@ -102,6 +102,7 @@ function playSoundById(soundId) {
 }
 
 function createMusicInstance(soundId) {
+    if (musicInstance) return;
     musicInstance = createjs.Sound.play(soundId);
     if (musicInstance === null || musicInstance.playState === createjs.Sound.PLAY_FAILED) {
         console.log('play-sound-by-id-error');
@@ -114,6 +115,7 @@ function createMusicInstance(soundId) {
 
 function stopMusicInstance() {
     if (musicInstance) musicInstance.stop();
+    musicInstance = null;
 }
 
 var getGeoCoordsForIp = function (ip) {

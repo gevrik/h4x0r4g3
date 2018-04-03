@@ -689,16 +689,6 @@
                     resetConsoleOptionsMail();
                     showprompt();
                     break;
-                case 'completemilkrun':
-                    stopMusicInstance();
-                    if (data.playsound) playSoundById(data.playsound);
-                    $('#milkrun-container').html('');
-                    var lastPrompt = $('.output-line').last();
-                    var messageData = data.content;
-                    $(messageData).insertBefore(lastPrompt);
-                    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-                    commandInput.focus();
-                    return true;
                 case 'getrandomgeocoords':
                     getRandomInRange(data.content, 6);
                     break;
@@ -808,6 +798,16 @@
                     });
                     if (!data.silent) showprompt();
                     break;
+                case 'completemilkrun':
+                    stopMusicInstance();
+                    if (data.playsound) playSoundById(data.playsound);
+                    $('#milkrun-container').html('');
+                    var lastPrompt = $('.output-line').last();
+                    var messageData = data.content;
+                    $(messageData).insertBefore(lastPrompt);
+                    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    commandInput.focus();
+                    return true;
                 case 'openmanpagemenu':
                     $('#manpage-container').html('').append(data.message).show().draggable({
                         cursor: 'pointer',

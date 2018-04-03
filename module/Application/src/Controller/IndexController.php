@@ -339,6 +339,18 @@ class IndexController extends AbstractActionController
         $profile->setTorsoArmor(NULL);
         $profile->setUpperArmArmor(NULL);
         $profile->setStealthing(false);
+        $profile->setAptCognition(15);
+        $profile->setAptCoordination(15);
+        $profile->setAptIntuition(15);
+        $profile->setAptReflexes(15);
+        $profile->setAptSavvy(15);
+        $profile->setAptSomatics(15);
+        $profile->setAptWill(15);
+        $profile->setStatInitiative(30);
+        $profile->setStatInsanityRating(60);
+        $profile->setStatLucidity(30);
+        $profile->setStatTraumaThreshold(6);
+        $profile->setStatMoxie(1);
         // add skills
         $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
         foreach ($skills as $skill) {
@@ -365,6 +377,7 @@ class IndexController extends AbstractActionController
         $system->setFaction(NULL);
         $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
         $system->setAlertLevel(0);
+        $system->setIntegrity(100);
         $system->setNoclaim(true);
         $this->entityManager->persist($system);
         // default io node
@@ -476,6 +489,7 @@ class IndexController extends AbstractActionController
             $system->setName(strtolower($systemName));
             $system->setAlertLevel(0);
             $system->setNoclaim(true);
+            $system->setIntegrity(100);
             // create a new addy for the system
             $addy = $this->utilityService->getRandomAddress(32);
             $maxTries = 100;
@@ -797,6 +811,7 @@ class IndexController extends AbstractActionController
         $system->setFaction(NULL);
         $system->setMaxSize(100000);
         $system->setAlertLevel(0);
+        $system->setIntegrity(100);
         $this->entityManager->persist($system);
         // default node
         $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
@@ -855,6 +870,7 @@ class IndexController extends AbstractActionController
         $system->setFaction(NULL);
         $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
         $system->setNoclaim(true);
+        $system->setIntegrity(100);
         $system->setAlertLevel(0);
         $this->entityManager->persist($system);
         // default io node

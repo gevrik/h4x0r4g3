@@ -321,6 +321,18 @@ class LoginService extends BaseService
             $profile->setTorsoArmor(NULL);
             $profile->setUpperArmArmor(NULL);
             $profile->setStealthing(false);
+            $profile->setAptCognition(15);
+            $profile->setAptCoordination(15);
+            $profile->setAptIntuition(15);
+            $profile->setAptReflexes(15);
+            $profile->setAptSavvy(15);
+            $profile->setAptSomatics(15);
+            $profile->setAptWill(15);
+            $profile->setStatInitiative(30);
+            $profile->setStatInsanityRating(60);
+            $profile->setStatLucidity(30);
+            $profile->setStatTraumaThreshold(6);
+            $profile->setStatMoxie(1);
             $newbieStatusDate = new \DateTime();
             $newbieStatusDate->add(new \DateInterval('P7D'));
             $profile->setNewbieStatusDate($newbieStatusDate);
@@ -372,6 +384,7 @@ class LoginService extends BaseService
             $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
             $system->setAlertLevel(0);
             $system->setNoclaim(true);
+            $system->setIntegrity(100);
             $system->setGeocoords($clientData->geocoords);
             $this->entityManager->persist($system);
             // default io node

@@ -1708,6 +1708,7 @@ class BaseUtilityService {
         $system->setMaxSize($maxSize);
         $system->setAlertLevel(0);
         $system->setNoclaim($noclaim);
+        $system->setIntegrity(100);
         $system->setGeocoords(NULL); // TODO add geocoords
         $this->entityManager->persist($system);
         // default cpu node
