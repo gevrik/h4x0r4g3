@@ -345,6 +345,9 @@ class BaseUtilityService {
                 case Skill::ID_SHIELDS:
                     $rating = $npc->getBaseShield() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
                     break;
+                case Skill::ID_FRAY:
+                    $rating = $npc->getBaseFray() + mt_rand(($baseLevel - 1) * 10, $baseLevel * 10);
+                    break;
             }
             $skillRating = new SkillRating();
             $skillRating->setNpc($npcInstance);

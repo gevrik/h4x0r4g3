@@ -112,6 +112,12 @@ class Npc
      * @ORM\Column(type="integer", options={"default":0}, nullable=true)
      * @var int
      */
+    protected $baseFray;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
     protected $baseSlots;
 
     /**
@@ -358,6 +364,24 @@ class Npc
     public function setBaseStealth($baseStealth)
     {
         $this->baseStealth = $baseStealth;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getBaseFray()
+    {
+        return $this->baseFray;
+    }
+
+    /**
+     * @param int $baseFray
+     * @return Npc
+     */
+    public function setBaseFray($baseFray)
+    {
+        $this->baseFray = $baseFray;
         return $this;
     }
 
