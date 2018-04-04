@@ -333,6 +333,9 @@ class LoginService extends BaseService
             $profile->setStatLucidity(30);
             $profile->setStatTraumaThreshold(6);
             $profile->setStatMoxie(1);
+            $profile->setNoTells(false);
+            $profile->setSilenced(false);
+            $profile->setSilencedUntil(null);
             $newbieStatusDate = new \DateTime();
             $newbieStatusDate->add(new \DateInterval('P7D'));
             $profile->setNewbieStatusDate($newbieStatusDate);

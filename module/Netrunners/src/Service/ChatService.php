@@ -109,6 +109,9 @@ class ChatService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
         // check if the have a running chat client
         if (!$this->fileRepo->findChatClientForProfile($profile)) {
             return $this->gameClientResponse->addMessage($this->translate('You need a running chatclient to use global chat'))->send();
@@ -151,6 +154,9 @@ class ChatService extends BaseService
         $isBlocked = $this->isActionBlockedNew($resourceId, true);
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
         // check if the have mod role
         if (!$this->hasRole(NULL, Role::ROLE_ID_MODERATOR)) {
@@ -195,6 +201,9 @@ class ChatService extends BaseService
         $isBlocked = $this->isActionBlockedNew($resourceId, true);
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
         // check if the have a running chat client
         if (!$this->fileRepo->findChatClientForProfile($profile)) {
@@ -242,6 +251,9 @@ class ChatService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
         if (!$this->clientData->partyId) {
             return $this->gameClientResponse->addMessage($this->translate('You need to be a member of a party to use party chat'))->send();
         }
@@ -280,12 +292,62 @@ class ChatService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         $profile = $this->user->getProfile();
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
         $messageContent = implode(' ', $contentArray);
         if (!$messageContent || $messageContent == '') {
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_SAY);
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
+            /** @var User $clientUser */
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
+            if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
+        }
+        return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
+     */
+    public function emoteChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
+        $messageContent = implode(' ', $contentArray);
+        if (!$messageContent || $messageContent == '') {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify an emote message'))->send();
+        }
+        $messageContent = htmLawed($messageContent, array('safe'=>1, 'elements'=>'strong, em, strike, u'));
+        $message = sprintf(
+            '<span class="text-say">[%s] %s %s</span>',
+            $this->translate('EMOTE'),
+            $this->user->getUsername(),
+            $messageContent
+        );
+        $this->gameClientResponse->addMessage($message)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
         foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
             if (!$wsClient['hash']) continue;
             /** @var User $clientUser */
@@ -321,6 +383,9 @@ class ChatService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
         // sanity checks
         list($contentArray, $recipientName) = $this->getNextParameter($contentArray, true, false, false, true);
         $recipient = $this->profileRepo->findLikeName($recipientName, $profile, true);
@@ -336,6 +401,9 @@ class ChatService extends BaseService
         }
         if (!$messageContent) {
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        if ($recipient->getNoTells()) {
+            return $this->gameClientResponse->addMessage($this->translate('That user is currently not receiving any tell messages'))->send();
         }
         // logic start
         $ws = $this->getWebsocketServer();
@@ -377,6 +445,9 @@ class ChatService extends BaseService
         $isBlocked = $this->isActionBlockedNew($resourceId, true);
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
         $ws = $this->getWebsocketServer();
         // sanity checks
@@ -435,6 +506,9 @@ class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
         $messageContent = implode(' ', $contentArray);
         if (!$messageContent || $messageContent == '') {
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
@@ -473,6 +547,9 @@ class ChatService extends BaseService
         $isBlocked = $this->isActionBlockedNew($resourceId, true);
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
         // check if the have a running chat client
         if (!$this->fileRepo->findChatClientForProfile($profile)) {

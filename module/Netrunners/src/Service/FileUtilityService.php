@@ -1623,7 +1623,6 @@ class FileUtilityService extends BaseService
     public function getAmountOfFittedSlots(File $file)
     {
         return $this->fileModInstanceRepo->countByFile($file);
-
     }
 
 }

@@ -87,6 +87,10 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
 
     const SCORE_STEALTHING_STRING = 'stealthing';
 
+    const SCORE_NOTELLS_STRING = 'notells';
+
+    const SCORE_SILENCED_STRING = 'silenced';
+
     const DEFAULT_STARTING_CREDITS = 750;
 
     const DEFAULT_STARTING_SNIPPETS = 250;
@@ -252,6 +256,14 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             $this->translate(self::SCORE_STEALTHING_STRING),
             ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') : $this->translate('<span class="text-muted">off</span>')
         );
+        $returnMessage[] = sprintf(
+            '%-12s: %s',
+            $this->translate(self::SCORE_NOTELLS_STRING),
+            ($profile->getNoTells()) ? $this->translate('<span class="text-success">on</span>') : $this->translate('<span class="text-muted">off</span>')
+        );
+        if ($profile->getSilenced()) {
+            $returnMessage[] = $this->translate('<span class="text-warning">You are currently silenced</span>');
+        }
         $this->gameClientResponse->addMessages($returnMessage);
         return $this->gameClientResponse->send();
     }
@@ -1250,6 +1262,7 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
      */
     public function changeBackgroundOpacity($resourceId, $contentArray)
     {
@@ -1421,6 +1434,34 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         $message = $this->translate('Disconnecting from NeoCortex Network - have a nice day and see you soon');
         $this->gameClientResponse->addOption(GameClientResponse::OPT_DISCONNECTX, true)->setSilent(true);
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_INFO);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function noTellsCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        if ($profile->getNoTells()) {
+            $message = sprintf("You are now receiving tell messages again");
+            $profile->setNoTells(false);
+        }
+        else {
+            $message = sprintf("You are no longer receiving tell messages");
+            $profile->setNoTells(true);
+        }
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         return $this->gameClientResponse->send();
     }
 

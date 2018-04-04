@@ -426,6 +426,9 @@ class ParserService
                 return $this->manpageService->editManpage($resourceId, $contentArray);
             case 'editnode':
                 return $this->nodeService->editNodeDescription($resourceId);
+            case 'emote':
+            case 'em':
+                return $this->chatService->emoteChat($resourceId, $contentArray);
             case 'entityname':
                 return $this->npcInstanceService->changeNpcName($resourceId, $contentArray);
             case 'equipment':
@@ -647,7 +650,9 @@ class ParserService
             case 'unsecureconnection':
                 return $this->connectionService->unsecureConnection($resourceId, $contentArray);
             case 'update':
+            case 'fix':
             case 'updatefile':
+            case 'fixfile':
                 return $this->fileService->updateFile($resourceId, $contentArray);
             case 'setemail':
                 return $this->profileService->setEmail($resourceId, $contentArray);
@@ -756,6 +761,8 @@ class ParserService
                 return $this->adminService->showCyberspaceMap($resourceId);
             case 'setmotd':
                 return $this->adminService->adminSetMotd($resourceId, $contentArray);
+            case 'silenceplayer':
+                return $this->adminService->silencePlayer($resourceId, $contentArray);
             case 'invokefile':
                 return $this->adminService->invokeFile($resourceId, $contentArray);
             case 'setfileproperty':

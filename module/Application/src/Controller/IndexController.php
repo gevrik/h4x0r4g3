@@ -351,6 +351,9 @@ class IndexController extends AbstractActionController
         $profile->setStatLucidity(30);
         $profile->setStatTraumaThreshold(6);
         $profile->setStatMoxie(1);
+        $profile->setNoTells(false);
+        $profile->setSilenced(false);
+        $profile->setSilencedUntil(null);
         // add skills
         $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
         foreach ($skills as $skill) {

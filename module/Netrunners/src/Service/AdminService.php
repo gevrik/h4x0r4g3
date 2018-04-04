@@ -31,6 +31,7 @@ use Netrunners\Repository\FileTypeRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
+use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
@@ -75,6 +76,11 @@ class AdminService extends BaseService
      */
     protected $npcInstanceRepo;
 
+    /**
+     * @var ProfileRepository
+     */
+    protected $profileRepo;
+
 
     /**
      * AdminService constructor.
@@ -93,6 +99,7 @@ class AdminService extends BaseService
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
         $this->npcRepo = $this->entityManager->getRepository('Netrunners\Entity\Npc');
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        $this->profileRepo = $this->entityManager->getRepository(Profile::class);
     }
 
     /**
@@ -1339,6 +1346,40 @@ class AdminService extends BaseService
         }
         $this->entityManager->flush($ft);
         $this->gameClientResponse->addMessage(sprintf('%s: %s set to %s', $ft->getName(), $property, $newValue));
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function silencePlayer($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
+            return $this->gameClientResponse->send();
+        }
+        $targetName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$targetName) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a username'))->send();
+        }
+        $target = $this->profileRepo->findLikeName($targetName);
+        if (!$target) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid username'))->send();
+        }
+        $target->setSilenced(($target->getSilenced())?false:true);
+        $this->entityManager->flush($target);
+        $this->gameClientResponse->addMessage(
+            sprintf($this->translate('You have %s %s'),
+                ($target->getSilenced())?$this->translate('silenced'):$this->translate('unsilenced'),
+                $target->getUser()->getUsername()
+            )
+        );
         return $this->gameClientResponse->send();
     }
 

@@ -230,6 +230,24 @@ class Profile
      */
     protected $statMoxie;
 
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $noTells;
+
+    /**
+     * @ORM\Column(type="integer", options={"default":0}, nullable=true)
+     * @var int
+     */
+    protected $silenced;
+
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $silencedUntil;
+
     // ORM
 
     /**
@@ -732,6 +750,60 @@ class Profile
     public function setNewbieStatusDate($newbieStatusDate)
     {
         $this->newbieStatusDate = $newbieStatusDate;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getNoTells()
+    {
+        return $this->noTells;
+    }
+
+    /**
+     * @param int $noTells
+     * @return Profile
+     */
+    public function setNoTells($noTells)
+    {
+        $this->noTells = $noTells;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSilenced()
+    {
+        return $this->silenced;
+    }
+
+    /**
+     * @param int $silenced
+     * @return Profile
+     */
+    public function setSilenced($silenced)
+    {
+        $this->silenced = $silenced;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getSilencedUntil()
+    {
+        return $this->silencedUntil;
+    }
+
+    /**
+     * @param \DateTime $silencedUntil
+     * @return Profile
+     */
+    public function setSilencedUntil($silencedUntil)
+    {
+        $this->silencedUntil = $silencedUntil;
         return $this;
     }
 
