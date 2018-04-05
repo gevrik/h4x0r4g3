@@ -286,9 +286,8 @@ class NodeService extends BaseService
             );
         }
         // check if the system has reached its max size
-        $currentSystem = $node->getSystem();
-        $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
-        if ($nodeamount >= $currentSystem->getMaxSize()) {
+        $nodeamount = $this->nodeRepo->countBySystem($system);
+        if ($nodeamount >= $system->getMaxSize()) {
             return $this->translate('System has reached its maximum size');
         }
         // check if we are in a home node, you can't add nodes to a home node
@@ -296,16 +295,8 @@ class NodeService extends BaseService
             return $this->translate('You can not add nodes to a home node');
         }
         // check if there are enough cpus to support the new node
-        $cpus = $this->nodeRepo->findBySystemAndType($currentSystem, NodeType::ID_CPU);
-        $amountCpus = count($cpus);
-        $cpuRating = 0;
-        foreach ($cpus as $cpu) {
-            /** @var Node $cpu */
-            $cpuRating += $cpu->getLevel();
-        }
-        $maxNodes = $cpuRating * self::MAX_NODES_MULTIPLIER;
-        $amountNodes = $this->nodeRepo->countBySystem($currentSystem) - $amountCpus;
-        if ($amountNodes >= $maxNodes) {
+        $maxNodes = $this->getCurrentNodeMaximumForSystem($system);
+        if ($nodeamount >= $maxNodes) {
             return $this->translate('You do not have enough CPU rating to add another node to this system - upgrade CPU nodes or add new CPU nodes');
         }
         return false;
@@ -864,9 +855,7 @@ class NodeService extends BaseService
         }
         // check a few combinations that are not valid
         if ($nodeType->getId() == NodeType::ID_HOME) {
-            if ($this->countTargetNodesOfType($currentNode, NodeType::ID_HOME) > 0) {
-                return $this->translate('There is already a home node around this node');
-            }
+            return $this->translate('Unable to change a node into a home node - please create a new node for the home');
         }
         // check if this is a market
         if ($currentNodeType->getId() == NodeType::ID_MARKET) {
@@ -903,6 +892,34 @@ class NodeService extends BaseService
         )
         {
             return $this->translate('Unable to remove the last CPU node of this system');
+        }
+        // check if this is a storage node and if the removal would still support all programs
+        if ($currentNodeType->getId() == NodeType::ID_STORAGE) {
+            $newMaxStorage = $this->getTotalStorage($profile) - ($currentNode->getLevel() * SystemService::BASE_STORAGE_VALUE);
+            if ($this->getUsedStorage($profile) > $newMaxStorage) {
+                return $this->translate('You could not store all of your programs after removing this node');
+            }
+        }
+        // check if this is a memory node and if the removal would still support all programs
+        if ($currentNodeType->getId() == NodeType::ID_MEMORY) {
+            $newMaxMemoty = $this->getTotalMemory($profile) - ($currentNode->getLevel() * SystemService::BASE_MEMORY_VALUE);
+            if ($this->getUsedMemory($profile) > $newMaxMemoty) {
+                return $this->translate('You could not run all of your programs after removing this node');
+            }
+        }
+        // check if this is a cpu node and if the removal would still support all nodes in the system
+        if ($currentNodeType->getId() == NodeType::ID_CPU) {
+            $maxNodes = $this->getCurrentNodeMaximumForSystem($currentSystem) - 10;
+            $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
+            if ($nodeamount > $maxNodes) {
+                return $this->translate('Too many nodes depend on this cpu');
+            }
+        }
+        if ($this->fileRepo->countByNode($currentNode) >= 1) {
+            return $this->translate('Unable to change node that has programs');
+        }
+        if ($this->npcInstanceRepo->findOneByHomeNode($currentNode)) {
+            return $this->translate('Unable to evict entity that originated from this node');
         }
         return $nodeType;
     }
@@ -977,24 +994,6 @@ class NodeService extends BaseService
         return $this->gameClientResponse
             ->addMessage($this->translate('Node description saved'), GameClientResponse::CLASS_SUCCESS)
             ->send();
-    }
-
-    /**
-     * @param Node $node
-     * @param $type
-     * @return int
-     */
-    private function countTargetNodesOfType(Node $node, $type)
-    {
-        $connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
-        /** @var ConnectionRepository $connectionRepo */
-        $amount = 0;
-        $connections = $connectionRepo->findBySourceNode($node);
-        foreach ($connections as $connection) {
-            /** @var Connection $connection */
-            if ($connection->getTargetNode()->getNodeType()->getId() == $type) $amount++;
-        }
-        return $amount;
     }
 
     /**
@@ -1164,6 +1163,7 @@ class NodeService extends BaseService
         if (!$this->user) return false;
         $profile = $this->user->getProfile();
         $currentNode = $profile->getCurrentNode();
+        $currentNodeType = $currentNode->getNodeType();
         $currentSystem = $currentNode->getSystem();
         $isBlocked = $this->isActionBlockedNew($resourceId);
         if ($isBlocked) {
@@ -1204,27 +1204,47 @@ class NodeService extends BaseService
             return $this->gameClientResponse->addMessage($this->translate('Unable to remove a node which is another user\'s home node'))->send();
         }
         // check if this is the home node of some npc
-        $homeNpcs = $this->npcInstanceRepo->findBy([
-            'homeNode' => $currentNode
-        ]);
-        if (count($homeNpcs) > 0) {
+        $homeNpcs = $this->npcInstanceRepo->findOneByHomeNode($currentNode);
+        if ($homeNpcs) {
             return $this->gameClientResponse->addMessage($this->translate('Unable to remove a node which is still an entity\'s home node'))->send();
         }
         // check if this is a cpu node and the last one...
         $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
         if (
-            $currentNode->getNodeType()->getId() == NodeType::ID_CPU &&
+            $currentNodeType->getId() == NodeType::ID_CPU &&
             (int)$cpuCount < 2
         )
         {
             return $this->gameClientResponse->addMessage($this->translate('Unable to remove the last CPU node of this system'))->send();
         }
         // check if this is an io-node
-        if ($currentNode->getNodeType()->getId() == NodeType::ID_IO || $currentNode->getNodeType()->getId() == NodeType::ID_PUBLICIO)
+        if ($currentNodeType->getId() == NodeType::ID_IO || $currentNode->getNodeType()->getId() == NodeType::ID_PUBLICIO)
         {
             return $this->gameClientResponse->addMessage($this->translate('Unable to remove I/O nodes'))->send();
         }
-        // TODO sanity checks for storage/memory/etc - lots of things
+        // check if this is a storage node and if the removal would still support all programs
+        if ($currentNodeType->getId() == NodeType::ID_STORAGE) {
+            $newMaxStorage = $this->getTotalStorage($profile) - ($currentNode->getLevel() * SystemService::BASE_STORAGE_VALUE);
+            if ($this->getUsedStorage($profile) > $newMaxStorage) {
+                return $this->translate('You could not store all of your programs after removing this node');
+            }
+        }
+        // check if this is a memory node and if the removal would still support all programs
+        if ($currentNodeType->getId() == NodeType::ID_MEMORY) {
+            $newMaxMemoty = $this->getTotalMemory($profile) - ($currentNode->getLevel() * SystemService::BASE_MEMORY_VALUE);
+            if ($this->getUsedMemory($profile) > $newMaxMemoty) {
+                return $this->translate('You could not run all of your programs after removing this node');
+            }
+        }
+        // check if this is a cpu node and if the removal would still support all nodes in the system
+        if ($currentNodeType->getId() == NodeType::ID_CPU) {
+            $maxNodes = $this->getCurrentNodeMaximumForSystem($currentSystem) - 10;
+            $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
+            if ($nodeamount > $maxNodes) {
+                return $this->translate('Too many nodes depend on this cpu');
+            }
+        }
+        // TODO adjust sanity checks for faction and group systems - programs in general need to only occupy storage/memory of the system they are used in
         /* all checks passed, we can now remove the node */
         $newCurrentNode = NULL;
         $connection = array_shift($connections);

@@ -90,6 +90,22 @@ class FileRepository extends EntityRepository
     }
 
     /**
+     * Counts all files for the given node.
+     * @param Node $node
+     * @return array
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function countRunningByNode(Node $node)
+    {
+        $qb = $this->createQueryBuilder('f');
+        $qb->select($qb->expr()->count('f.id'));
+        $qb->where('f.node = :node AND f.running = 1');
+        $qb->setParameter('node', $node);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * @param Node $node
      * @param Profile $profile
      * @return array

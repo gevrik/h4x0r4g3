@@ -67,6 +67,16 @@ class ChatService extends BaseService
     const CHANNEL_PARTY = 'PARTY';
 
     /**
+     * @const CHANNEL_SYSTEM
+     */
+    const CHANNEL_SYSTEM = 'SYSTEM';
+
+    /**
+     * @const CHANNEL_TRADE
+     */
+    const CHANNEL_TRADE = 'TRADE';
+
+    /**
      * @var FileRepository
      */
     protected $fileRepo;
@@ -118,6 +128,9 @@ class ChatService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
+        if (!$this->getProfileGameOption($profile, GameOption::ID_SHOW_GLOBAL_CHAT)) {
+            return $this->gameClientResponse->addMessage($this->translate('You have global chat deactivated in options'))->send();
+        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -139,6 +152,59 @@ class ChatService extends BaseService
             if ($wsClientId == $resourceId) continue;
             if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
             if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
+            if (!$this->getProfileGameOption($clientUser->getProfile(), GameOption::ID_SHOW_SYSTEM_CHAT)) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
+        }
+        return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
+     */
+    public function tradeChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        // get profile
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if (!$this->getProfileGameOption($profile, GameOption::ID_SHOW_TRADE_CHAT)) {
+            return $this->gameClientResponse->addMessage($this->translate('You have trade chat deactivated in options'))->send();
+        }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
+        // check if the have a running chat client
+        if (!$this->fileRepo->findChatClientForProfile($profile)) {
+            return $this->gameClientResponse->addMessage($this->translate('You need a running chatclient to use global chat'))->send();
+        }
+        $messageContent = implode(' ', $contentArray);
+        if (!$messageContent || $messageContent == '') {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_TRADE);
+        $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
+            /** @var User $clientUser */
+            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
+            if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
+            if (!$this->getProfileGameOption($clientUser->getProfile(), GameOption::ID_SHOW_TRADE_CHAT)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
@@ -320,6 +386,57 @@ class ChatService extends BaseService
             if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
             if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
+            $this->gameClientResponse->setResourceId($wsClientId)->send();
+        }
+        return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     * @throws \Exception
+     */
+    public function systemChat($resourceId, $contentArray)
+    {
+        $ws = $this->getWebsocketServer();
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        if (!$this->fileRepo->findChatClientForProfile($profile)) {
+            return $this->gameClientResponse->addMessage($this->translate('You need a running chatclient to send system messages'))->send();
+        }
+        if (!$this->getProfileGameOption($profile, GameOption::ID_SHOW_SYSTEM_CHAT)) {
+            return $this->gameClientResponse->addMessage($this->translate('You have system chat deactivated in options'))->send();
+        }
+        if ($profile->getSilenced()) {
+            return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
+        }
+        $messageContent = implode(' ', $contentArray);
+        if (!$messageContent || $messageContent == '') {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
+        }
+        $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_SYSTEM);
+        $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
+            if (!$wsClient['hash']) continue;
+            /** @var User $clientUser */
+            $clientUser = $this->entityManager->find(User::class, $wsClient['userId']);
+            $clientProfile = $clientUser->getProfile();
+            if (!$clientUser) continue;
+            if ($wsClientId == $resourceId) continue;
+            if (!$this->fileRepo->findChatClientForProfile($clientProfile)) continue;
+            if ($clientProfile->getCurrentNode()->getSystem() != $profile->getCurrentNode()->getSystem()) continue;
+            if ($this->isIgnoredBy($clientProfile, $profile)) continue;
+            if (!$this->getProfileGameOption($clientUser->getProfile(), GameOption::ID_SHOW_SYSTEM_CHAT)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();

@@ -113,6 +113,28 @@ class NodeRepository extends EntityRepository
 
     /**
      * @param System $system
+     * @return mixed
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function getTotalCpuLevels(System $system)
+    {
+        $qb = $this->createQueryBuilder('n');
+        $qb->select('SUM(n.level)');
+        $qb->where('n.nodeType = :type and n.system = :system');
+        $nodeType = $this->getEntityManager()->find(NodeType::class, NodeType::ID_CPU);
+        $qb->setParameters([
+            'type' => $nodeType,
+            'system' => $system
+        ]);
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param System $system
      * @param $type
      * @return mixed
      * @throws \Doctrine\ORM\NoResultException

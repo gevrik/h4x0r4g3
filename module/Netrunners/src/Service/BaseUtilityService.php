@@ -668,10 +668,10 @@ class BaseUtilityService {
      */
     protected function getTotalStorage(Profile $profile)
     {
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var SystemRepository $systemRepo */
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var NodeRepository $nodeRepo */
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $systems = $systemRepo->findByProfile($profile);
         $total = 0;
         foreach ($systems as $system) {
@@ -683,6 +683,24 @@ class BaseUtilityService {
             }
         }
         return $total;
+    }
+
+    /**
+     * @param System $system
+     * @return float|int
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    protected function getCurrentNodeMaximumForSystem(System $system)
+    {
+        /** @var NodeRepository $nodeRepo */
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
+        $cpus = $nodeRepo->countBySystemAndType($system, NodeType::ID_CPU);
+        $maxNodes = $cpus * NodeService::MAX_NODES_MULTIPLIER;
+        return $maxNodes;
     }
 
     /**

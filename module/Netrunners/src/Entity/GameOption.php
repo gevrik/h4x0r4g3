@@ -22,6 +22,9 @@ class GameOption
     const ID_SURVEY = 3;
     const ID_BGOPACITY = 4;
     const ID_SHOW_NEWBIE_CHAT = 5;
+    const ID_SHOW_TRADE_CHAT = 6;
+    const ID_SHOW_SYSTEM_CHAT = 7;
+    const ID_SHOW_GLOBAL_CHAT = 8;
 
     /**
      * @ORM\Id

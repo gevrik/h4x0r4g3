@@ -627,12 +627,9 @@ class FileExecutionService extends BaseService
             );
             return $this->gameClientResponse->addMessage($message)->send();
         }
-        if (!$this->canAccess($profile, $profile->getCurrentNode()->getSystem())) {
-            $message = sprintf(
-                $this->translate('Permission denied'),
-                $file->getName()
-            );
-            return $this->gameClientResponse->addMessage($message)->send();
+        $checker = $this->checkSystemPermission($profile, $profile->getCurrentNode()->getSystem());
+        if ($checker !== false) {
+            return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         $file->setRunning(true);
         $file->setSystem($node->getSystem());

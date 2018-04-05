@@ -142,7 +142,7 @@ class ConnectionService extends BaseService
         }
         // check if they can remove connections
         $checker = $this->checkSystemPermission($profile, $currentSystem);
-        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
+        if ($checker !== false) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* connections can be given by name or number, so we need to handle both */
@@ -388,7 +388,7 @@ class ConnectionService extends BaseService
         }
         // check if they can add connections
         $checker = $this->checkSystemPermission($profile, $currentSystem);
-        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
+        if ($checker !== false) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         $parameter = $this->getNextParameter($contentArray, false, true);
@@ -442,6 +442,10 @@ class ConnectionService extends BaseService
         // check if there already is a connection between the current node and the target node
         if ($this->connectionRepo->findBySourceNodeAndTargetNode($currentNode, $targetNode)) {
             return $this->gameClientResponse->addMessage($this->translate('There already exists a connection between those nodes'))->send();
+        }
+        // check if this is a home node
+        if ($targetNode->getNodeType()->getId() == NodeType::ID_HOME) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to add a connection to a home node'))->send();
         }
         /* all checks passed, we can now add the connection */
         $newCredits = $profile->getCredits() - self::CONNECTION_COST;
@@ -499,7 +503,7 @@ class ConnectionService extends BaseService
         }
         // check if they can add connections
         $checker = $this->checkSystemPermission($profile, $currentSystem);
-        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
+        if ($checker !== false) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         // check if they have enough credits
@@ -586,7 +590,7 @@ class ConnectionService extends BaseService
         }
         // check if they can add connections
         $checker = $this->checkSystemPermission($profile, $currentSystem);
-        if ($checker !== false) { // TODO add check for wilderspace claimed nodes
+        if ($checker !== false) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         /* connections can be given by name or number, so we need to handle both */

@@ -149,6 +149,14 @@ pre.text-sysmsg {
     color: #4286f4;
 }
 
+.text-system {
+    color: #f4b487;
+}
+
+.text-trade {
+    color: #53f4a4;
+}
+
 .panel-heading {
     font-size: 9px !important;
     cursor: pointer;

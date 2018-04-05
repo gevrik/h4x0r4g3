@@ -47,4 +47,7 @@ UPDATE System SET integrity = 100 WHERE id > 0;
 
 INSERT INTO `GroupRole` (`id`, `name`, `description`) VALUES (NULL, 'combat officer', 'This role allows combat-related actions, like claiming enemy systems.');
 
-INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('newbiechat', 'show newbie chat', 1, '')
+INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('newbiechat', 'show newbie chat', 1, '');
+INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('tradechat', 'show trade chat', 1, 'NULL');
+INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('systemchat', 'show system chat', 1, 'NULL');
+INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('globalchat', 'show global chat', 1, 'NULL');

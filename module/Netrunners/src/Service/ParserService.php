@@ -689,6 +689,9 @@ class ParserService
                 return $this->nodeService->surveyNode($resourceId);
             case 'system':
                 return $this->systemService->showSystemStats($resourceId);
+            case 'systemchat':
+            case 'sc':
+                return $this->chatService->systemChat($resourceId, $contentArray);
             case 'tell':
                 return $this->chatService->tellChat($resourceId, $contentArray);
             case 'time':
@@ -704,6 +707,9 @@ class ParserService
                 break;
             case 'touch':
                 return $this->fileService->touchFile($resourceId, $contentArray);
+            case 'tradechat':
+            case 'tc':
+                return $this->chatService->tradeChat($resourceId, $contentArray);
             case 'typo':
                 return $this->profileService->openSubmitFeedbackPanel($resourceId);
             case 'idea':
