@@ -62,6 +62,7 @@ class FileType
     const ID_PASSKEY = 40;
     const ID_SPIDER_SPAWNER = 41;
     const ID_LOCKPICK = 42;
+    const ID_OMEN = 43;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
@@ -105,6 +106,7 @@ class FileType
     const STRING_PASSKEY = 'passkey';
     const STRING_SPIDER_SPAWNER = 'spider-spawner';
     const STRING_LOCKPICK = 'lockpick';
+    const STRING_OMEN = 'omen';
 
     static $revLookup = [
         self::STRING_DIRECTORY => self::ID_DIRECTORY,
@@ -149,6 +151,7 @@ class FileType
         self::STRING_PASSKEY => self::ID_PASSKEY,
         self::STRING_SPIDER_SPAWNER => self::ID_SPIDER_SPAWNER,
         self::STRING_LOCKPICK => self::ID_LOCKPICK,
+        self::STRING_OMEN => self::ID_OMEN,
     ];
 
     const SUBTYPE_ARMOR_HEAD = 1;

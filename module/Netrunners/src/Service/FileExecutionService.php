@@ -16,6 +16,7 @@ use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
@@ -176,6 +177,8 @@ class FileExecutionService extends BaseService
                 return $this->executeDataminer($file, $profile->getCurrentNode());
             case FileType::ID_COINMINER:
                 return $this->executeCoinminer($file, $profile->getCurrentNode());
+            case FileType::ID_OMEN:
+                return $this->executeOmen($file, $profile->getCurrentNode());
             case FileType::ID_GUARD_SPAWNER:
             case FileType::ID_SPIDER_SPAWNER:
                 return $this->executeSpawner($file, $profile->getCurrentNode());
@@ -616,6 +619,34 @@ class FileExecutionService extends BaseService
      * @return GameClientResponse
      * @throws \Doctrine\ORM\OptimisticLockException
      */
+    protected function executeOmen(File $file, Node $node)
+    {
+        // check if they can execute it in this node
+        if (!$this->canExecuteInNodeType($file, $node)) {
+            $message = sprintf(
+                $this->translate('%s can only be used in a monitoring node'),
+                $file->getName()
+            );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $file->setRunning(true);
+        $file->setSystem($node->getSystem());
+        $file->setNode($node);
+        $this->entityManager->flush($file);
+        $message = sprintf(
+            $this->translate('%s has been started as process %s'),
+            $file->getName(),
+            $file->getId()
+        );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param File $file
+     * @param Node $node
+     * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
     protected function executeSpawner(File $file, Node $node)
     {
         $profile = $this->user->getProfile();
@@ -733,6 +764,7 @@ class FileExecutionService extends BaseService
                     $this->translate('You start portscanning with [%s] - please wait'),
                     $file->getName()
                 );
+                $this->determinePreExecutionActions($file, $systemId);
                 break;
             case FileType::ID_JACKHAMMER:
                 list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $node, $contentArray);
@@ -746,6 +778,7 @@ class FileExecutionService extends BaseService
                     $this->translate('You start breaking into the system with [%s] - please wait'),
                     $file->getName()
                 );
+                $this->determinePreExecutionActions($file, $systemId);
                 break;
             case FileType::ID_LOCKPICK:
                 list($executeWarning, $connectionId) = $this->executeWarningLockpick($file, $contentArray);
@@ -758,6 +791,7 @@ class FileExecutionService extends BaseService
                     $this->translate('You start breaking the codegate with [%s] - please wait'),
                     $file->getName()
                 );
+                $this->determinePreExecutionActions($file);
                 break;
             case FileType::ID_SIPHON:
                 list($executeWarning, $minerId) = $this->executeWarningSiphon($contentArray);
@@ -770,6 +804,7 @@ class FileExecutionService extends BaseService
                     $this->translate('You start siphoning into the miner program with [%s] - please wait'),
                     $file->getName()
                 );
+                $this->determinePreExecutionActions($file);
                 break;
             case FileType::ID_MEDKIT:
                 $executeWarning = $this->executeWarningMedkit();
@@ -813,6 +848,104 @@ class FileExecutionService extends BaseService
             $this->gameClientResponse->addOption(GameClientResponse::OPT_TIMER, $fileType->getExecutionTime());
         }
         return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param File $file
+     * @param null $systemId
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    private function determinePreExecutionActions(
+        File $file,
+        $systemId = null
+    )
+    {
+        switch ($file->getFileType()->getId()) {
+            default:
+                break;
+            case FileType::ID_PORTSCANNER:
+                /** @var System $system */
+                $system = $this->entityManager->find(System::class, $systemId);
+                $omens = $this->fileRepo->findRunningFilesInSystemByType($system, true, FileType::ID_OMEN);
+                foreach ($omens as $omen) {
+                    $chance = $this->getBonusForFileLevel($omen);
+                    if ($this->makePercentRollAgainstTarget($chance)) {
+                        $sourceSystem = $file->getProfile()->getCurrentNode()->getSystem();
+                        $this->writeSystemLogEntry(
+                            $system,
+                            sprintf($this->translate('Portscanner attempt started from [%s]'), $sourceSystem->getAddy()),
+                            Notification::SEVERITY_WARNING
+                        );
+                    }
+                    $this->lowerIntegrityOfFile($omen, 100, 1, true);
+                }
+                break;
+            case FileType::ID_JACKHAMMER:
+                /** @var System $system */
+                $system = $this->entityManager->find(System::class, $systemId);
+                $omens = $this->fileRepo->findRunningFilesInSystemByType($system, true, FileType::ID_OMEN);
+                foreach ($omens as $omen) {
+                    $chance = $this->getBonusForFileLevel($omen);
+                    if ($this->makePercentRollAgainstTarget($chance)) {
+                        $sourceSystem = $file->getProfile()->getCurrentNode()->getSystem();
+                        $this->writeSystemLogEntry(
+                            $system,
+                            sprintf(
+                                $this->translate('Jackhammer attempt started from [%s] [%s]'),
+                                $sourceSystem->getAddy(),
+                                $file->getProfile()->getCurrentNode()->getId()
+                            ),
+                            Notification::SEVERITY_WARNING
+                        );
+                    }
+                    $this->lowerIntegrityOfFile($omen, 100, 1, true);
+                }
+                break;
+            case FileType::ID_LOCKPICK:
+                /** @var System $system */
+                $system = $this->entityManager->find(System::class, $systemId);
+                $omens = $this->fileRepo->findRunningFilesInSystemByType($system, true, FileType::ID_OMEN);
+                foreach ($omens as $omen) {
+                    $chance = $this->getBonusForFileLevel($omen);
+                    if ($this->makePercentRollAgainstTarget($chance)) {
+                        $attackedNode = $file->getProfile()->getCurrentNode();
+                        $this->writeSystemLogEntry(
+                            $system,
+                            sprintf(
+                                $this->translate('Lockpick attempt started from [%s] [%s]'),
+                                $attackedNode->getName(),
+                                $attackedNode->getId()
+                            ),
+                            Notification::SEVERITY_WARNING
+                        );
+                    }
+                    $this->lowerIntegrityOfFile($omen, 100, 1, true);
+                }
+                break;
+            case FileType::ID_SIPHON:
+                /** @var System $system */
+                $system = $this->entityManager->find(System::class, $systemId);
+                $omens = $this->fileRepo->findRunningFilesInSystemByType($system, true, FileType::ID_OMEN);
+                foreach ($omens as $omen) {
+                    $chance = $this->getBonusForFileLevel($omen);
+                    if ($this->makePercentRollAgainstTarget($chance)) {
+                        $attackedNode = $file->getProfile()->getCurrentNode();
+                        $this->writeSystemLogEntry(
+                            $system,
+                            sprintf(
+                                $this->translate('Siphon attempt started from [%s] [%s]'),
+                                $attackedNode->getName(),
+                                $attackedNode->getId()
+                            ),
+                            Notification::SEVERITY_WARNING
+                        );
+                    }
+                    $this->lowerIntegrityOfFile($omen, 100, 1, true);
+                }
+                break;
+        }
     }
 
     /**
@@ -1741,6 +1874,11 @@ class FileExecutionService extends BaseService
                     );
                 }
                 else {
+                    $this->writeSystemLogEntry(
+                        $system,
+                        $this->translate('Portscanner attempt failed'),
+                        Notification::SEVERITY_WARNING
+                    );
                     // check for reaction from programs in the attacked node
                     $file = $this->triggerProgramExecutionReaction($file, $node);
                     if ($file->getIntegrity() <= 0) {
@@ -1829,6 +1967,14 @@ class FileExecutionService extends BaseService
             $response->addMessage($message, GameClientResponse::CLASS_SYSMSG);
             $message = $this->translate('You fail to break in to the target system');
             $response->addMessage($message);
+            $this->writeSystemLogEntry(
+                $system,
+                $this->translate('Jackhammer attempt failed'),
+                Notification::SEVERITY_WARNING,
+                null,
+                null,
+                $node
+            );
             $file = $this->triggerProgramExecutionReaction($file, $node);
             if ($file->getIntegrity() <= 0) {
                 $message = $this->translate('Critical integrity failure - program shutdown initiated');
@@ -1885,7 +2031,16 @@ class FileExecutionService extends BaseService
             $response->addMessage($message, GameClientResponse::CLASS_SYSMSG);
             $message = $this->translate('You fail to break the codegate');
             $response->addMessage($message);
-            $file = $this->triggerProgramExecutionReaction($file, $connection->getSourceNode());
+            $sourceNode = $connection->getSourceNode();
+            $this->writeSystemLogEntry(
+                $sourceNode->getSystem(),
+                $this->translate('Lockpick attempt failed'),
+                Notification::SEVERITY_WARNING,
+                null,
+                null,
+                $connection->getSourceNode()
+            );
+            $file = $this->triggerProgramExecutionReaction($file, $sourceNode);
             if ($file->getIntegrity() <= 0) {
                 $message = $this->translate('Critical integrity failure - program shutdown initiated');
                 $response->addMessage($message);
@@ -1967,6 +2122,14 @@ class FileExecutionService extends BaseService
             );
             $response->addMessage($message);
             $node = $profile->getCurrentNode();
+            $this->writeSystemLogEntry(
+                $node->getSystem(),
+                $this->translate('Siphon attempt failed'),
+                Notification::SEVERITY_WARNING,
+                null,
+                null,
+                $node
+            );
             $file = $this->triggerProgramExecutionReaction($file, $node);
             if ($file->getIntegrity() <= 0) {
                 $message = $this->translate('Critical integrity failure - program shutdown initiated');

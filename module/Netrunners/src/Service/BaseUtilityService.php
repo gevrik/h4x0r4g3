@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FilePart;
 use Netrunners\Entity\FilePartSkill;
 use Netrunners\Entity\FileType;
@@ -41,6 +42,7 @@ use Netrunners\Entity\System;
 use Netrunners\Entity\SystemLog;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FilePartSkillRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\FileTypeSkillRepository;
@@ -176,11 +178,22 @@ class BaseUtilityService {
 
     /**
      * @param int $target
-     * @return bool
+     * @param bool $returnMarginOfSuccess
+     * @return bool|int
      */
-    protected function makePercentRollAgainstTarget($target)
+    protected function makePercentRollAgainstTarget($target, $returnMarginOfSuccess = false)
     {
-        return (mt_rand(1, 100) <= $target) ? true : false;
+        $roll = mt_rand(1, 100);
+        $result = false;
+        if ($roll <= $target) {
+            if ($returnMarginOfSuccess) {
+                $result = $target - $roll;
+            }
+            else {
+                $result = true;
+            }
+        }
+        return $result;
     }
 
     /**
@@ -486,39 +499,6 @@ class BaseUtilityService {
         $this->entityManager->persist($file);
         if ($flush) $this->entityManager->flush($file);
         return $file;
-    }
-
-    /**
-     * @param System $system
-     * @param string $subject
-     * @param string $severity
-     * @param null $details
-     * @param File|NULL $file
-     * @param Node|NULL $node
-     * @param Profile|NULL $profile
-     * @throws \Doctrine\ORM\OptimisticLockException
-     */
-    public function writeSystemLogEntry(
-        System $system,
-        $subject = '',
-        $severity = Notification::SEVERITY_INFO,
-        $details = NULL,
-        File $file = NULL,
-        Node $node = NULL,
-        Profile $profile = NULL
-    )
-    {
-        $log = new SystemLog();
-        $log->setAdded(new \DateTime());
-        $log->setSystem($system);
-        $log->setSubject($subject);
-        $log->setSeverity($severity);
-        $log->setDetails($details);
-        $log->setFile($file);
-        $log->setNode($node);
-        $log->setProfile($profile);
-        $this->entityManager->persist($log);
-        $this->entityManager->flush($log);
     }
 
     /**
@@ -989,6 +969,22 @@ class BaseUtilityService {
     }
 
     /**
+     * @param File $file
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    protected function destroyFile(File $file)
+    {
+        /** @var FileModInstanceRepository $fileModInstanceRepo */
+        $fileModInstanceRepo = $this->entityManager->getRepository(FileModInstance::class);
+        $fileMods = $fileModInstanceRepo->findByFile($file);
+        foreach ($fileMods as $fileMod) {
+            $this->entityManager->remove($fileMod);
+        }
+        $this->entityManager->remove($file);
+        $this->entityManager->flush();
+    }
+
+    /**
      * @param Profile $profile
      * @param $codeOptions
      * @return int
@@ -1339,6 +1335,9 @@ class BaseUtilityService {
                 break;
             case FileType::ID_DATAMINER:
                 $validNodeTypes[] = NodeType::ID_DATABASE;
+                break;
+            case FileType::ID_OMEN:
+                $validNodeTypes[] = NodeType::ID_MONITORING;
                 break;
             case FileType::ID_ICMP_BLOCKER:
                 $validNodeTypes[] = NodeType::ID_IO;

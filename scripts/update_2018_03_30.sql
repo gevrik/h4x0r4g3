@@ -56,3 +56,8 @@ UPDATE `FileType` SET `executionTime` = '120' WHERE `FileType`.`id` = 13;
 UPDATE `FileType` SET `executionTime` = '60' WHERE `FileType`.`id` = 12;
 UPDATE `FileType` SET `executionTime` = '10' WHERE `FileType`.`id` = 28;
 UPDATE `FileType` SET `executionTime` = '90' WHERE `FileType`.`id` = 42;
+
+INSERT INTO `FileType` (`name`, `description`, `codable`, `executable`, `size`, `executionTime`, `fullblock`, `blocking`, `stealthing`, `needRecipe`) VALUES ('omen', 'Can be used in monitoring nodes to intercept hacking attempts', 1, 1, 2, 1, 0, 0, 0, 1);
+INSERT INTO `FileTypeSkill` (`id`, `skill_id`, `fileType_id`) VALUES (NULL, '3', '43'), (NULL, '4', '43'), (NULL, '8', '43');
+INSERT INTO `filetype_filecategory` (`filetype_id`, `filecategory_id`) VALUES ('43', '10');
+INSERT INTO `filetype_filepart` (`filetype_id`, `filepart_id`) VALUES ('43', '1'), ('43', '3'), ('43', '8'), ('43', '9');

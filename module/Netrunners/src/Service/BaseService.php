@@ -37,6 +37,7 @@ use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemLog;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileModInstanceRepository;
@@ -201,6 +202,55 @@ class BaseService extends BaseUtilityService
             $defenderName
         );
         $this->messageEveryoneInNode($currentNode, $message);
+    }
+
+    /**
+     * @param System $system
+     * @param string $subject
+     * @param string $severity
+     * @param null $details
+     * @param File|NULL $file
+     * @param Node|NULL $node
+     * @param Profile|NULL $profile
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function writeSystemLogEntry(
+        System $system,
+        $subject = '',
+        $severity = Notification::SEVERITY_INFO,
+        $details = NULL,
+        File $file = NULL,
+        Node $node = NULL,
+        Profile $profile = NULL
+    )
+    {
+        $log = new SystemLog();
+        $log->setAdded(new \DateTime());
+        $log->setSystem($system);
+        $log->setSubject($subject);
+        $log->setSeverity($severity);
+        $log->setDetails($details);
+        $log->setFile($file);
+        $log->setNode($node);
+        $log->setProfile($profile);
+        $this->entityManager->persist($log);
+        $this->entityManager->flush($log);
+        /** @var NodeRepository $nodeRepo */
+        $nodeRepo = $this->entityManager->getRepository(Node::class);
+        $monitoringNodes = $nodeRepo->findBySystemAndType($system, NodeType::ID_MONITORING);
+        foreach ($monitoringNodes as $monitoringNode) {
+            $this->messageEveryoneInNodeNew(
+                $monitoringNode,
+                sprintf(
+                    $this->translate("[LOG][%s]: %s"),
+                    $log->getAdded()->format('Y-m-d H:i:s'),
+                    $subject
+                ),
+                $severity
+            );
+        }
     }
 
     /**
@@ -1203,19 +1253,93 @@ class BaseService extends BaseUtilityService
     {
         if ($chance == 100 || $this->makePercentRollAgainstTarget($chance)) {
             $currentIntegrity = $file->getIntegrity();
-            $newIntegrity = $currentIntegrity - $integrityLoss;
-            if ($newIntegrity < 0) $newIntegrity = 0;
+            $newIntegrity = $this->checkValueMinMax($currentIntegrity - $integrityLoss, 0);
             $file->setIntegrity($newIntegrity);
             if ($newIntegrity < 1) {
-                $file->setRunning(false);
-                $message = sprintf(
-                    $this->translate("[%s][%s] has lost all of its integrity and needs to be updated"),
-                    $file->getName(),
-                    $file->getId()
-                );
-                $this->storeNotification($file->getProfile(), $message, Notification::SEVERITY_WARNING);
+                $profile = $file->getProfile();
+                if ($file->getMaxIntegrity() <= 1) {
+                    if ($profile) {
+                        $message = sprintf(
+                            $this->translate("[%s][%s] has lost all of its integrity and needs to be updated"),
+                            $file->getName(),
+                            $file->getId()
+                        );
+                        $this->removeFileFromProfile($file);
+                        $this->storeNotification($file->getProfile(), $message, Notification::SEVERITY_WARNING);
+                    }
+                    // destroy the file
+                    $this->destroyFile($file);
+                }
+                else {
+                    if ($profile) {
+                        $this->removeFileFromProfile($file);
+                        $message = sprintf(
+                            $this->translate("[%s][%s] has lost all of its integrity and needs to be updated"),
+                            $file->getName(),
+                            $file->getId()
+                        );
+                        $this->storeNotification($file->getProfile(), $message, Notification::SEVERITY_WARNING);
+                    }
+                    $file->setRunning(false);
+                }
             }
             if ($flush) $this->entityManager->flush($file);
+        }
+    }
+
+    /**
+     * @param File $file
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    protected function removeFileFromProfile(File $file)
+    {
+        // check if this is equipment
+        $profile = $file->getProfile();
+        if ($profile) {
+            if ($file->getFileType()->getId() == FileType::ID_CODEBLADE) {
+                $profile->setBlade(null);
+                $this->entityManager->flush($profile);
+            }
+            if ($file->getFileType()->getId() == FileType::ID_CODEBLASTER) {
+                $profile->setBlaster(null);
+                $this->entityManager->flush($profile);
+            }
+            if ($file->getFileType()->getId() == FileType::ID_CODESHIELD) {
+                $profile->setShield(null);
+                $this->entityManager->flush($profile);
+            }
+            if ($file->getFileType()->getId() == FileType::ID_CODEARMOR) { // TODO armor needs to mitigate damage too
+                $fileData = json_decode($file->getData());
+                switch ($fileData->subtype) {
+                    default:
+                        break;
+                    case FileType::SUBTYPE_ARMOR_HEAD:
+                        $profile->setHeadArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_SHOULDERS:
+                        $profile->setShoulderArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_UPPER_ARM:
+                        $profile->setUpperArmArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_LOWER_ARM:
+                        $profile->setLowerArmArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_HANDS:
+                        $profile->setHandArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_TORSO:
+                        $profile->setTorsoArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_LEGS:
+                        $profile->setLegArmor(null);
+                        break;
+                    case FileType::SUBTYPE_ARMOR_SHOES:
+                        $profile->setShoesArmor(null);
+                        break;
+                }
+                $this->entityManager->flush($profile);
+            }
         }
     }
 

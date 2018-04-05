@@ -165,13 +165,16 @@ class FileUtilityService extends BaseService
         if (count($targetFiles) < 1) {
             return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
+        /** @var File $file */
         $file = array_shift($targetFiles);
         if (!$file) {
             return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
         }
-        /** @var File $file */
         if ($file->getIntegrity() >= $file->getMaxIntegrity()) {
             return $this->gameClientResponse->addMessage($this->translate('File is already at max integrity'))->send();
+        }
+        if ($file->getMaxIntegrity() <= 1) {
+            return $this->gameClientResponse->addMessage($this->translate('This file can no longer be updated'))->send();
         }
         /* all checks passed, we can update the file now */
         $currentIntegrity = $file->getIntegrity();
@@ -179,6 +182,8 @@ class FileUtilityService extends BaseService
         $neededIntegrity = $maxIntegrity - $currentIntegrity;
         if ($neededIntegrity > $profile->getSnippets()) $neededIntegrity = $profile->getSnippets();
         $file->setIntegrity($file->getIntegrity() + $neededIntegrity);
+        $newMaxIntegrity = $file->getMaxIntegrity() - 1;
+        $file->setMaxIntegrity($newMaxIntegrity);
         $this->entityManager->flush($file);
         $profile->setSnippets($profile->getSnippets() - $neededIntegrity);
         $this->entityManager->flush($profile);
@@ -557,51 +562,7 @@ class FileUtilityService extends BaseService
         if ($runningFile->getNode() && $runningFile->getNode() != $profile->getCurrentNode()) {
             return $this->gameClientResponse->addMessage($this->translate('That process needs to be killed in the node that it is running in'))->send();
         }
-        // check if this is equipment
-        if ($runningFile->getFileType()->getId() == FileType::ID_CODEBLADE) {
-            $profile->setBlade(null);
-            $this->entityManager->flush($profile);
-        }
-        if ($runningFile->getFileType()->getId() == FileType::ID_CODEBLASTER) {
-            $profile->setBlaster(null);
-            $this->entityManager->flush($profile);
-        }
-        if ($runningFile->getFileType()->getId() == FileType::ID_CODESHIELD) {
-            $profile->setShield(null);
-            $this->entityManager->flush($profile);
-        }
-        if ($runningFile->getFileType()->getId() == FileType::ID_CODEARMOR) {
-            $fileData = json_decode($runningFile->getData());
-            switch ($fileData->subtype) {
-                default:
-                    break;
-                case FileType::SUBTYPE_ARMOR_HEAD:
-                    $profile->setHeadArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_SHOULDERS:
-                    $profile->setShoulderArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_UPPER_ARM:
-                    $profile->setUpperArmArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_LOWER_ARM:
-                    $profile->setLowerArmArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_HANDS:
-                    $profile->setHandArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_TORSO:
-                    $profile->setTorsoArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_LEGS:
-                    $profile->setLegArmor(null);
-                    break;
-                case FileType::SUBTYPE_ARMOR_SHOES:
-                    $profile->setShoesArmor(null);
-                    break;
-            }
-            $this->entityManager->flush($profile);
-        }
+        $this->removeFileFromProfile($runningFile);
         $runningFile->setRunning(false);
         $runningFile->setSystem(NULL);
         $runningFile->setNode(NULL);

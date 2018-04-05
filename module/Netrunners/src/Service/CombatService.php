@@ -158,6 +158,7 @@ class CombatService extends BaseService
         $skillRating = 30;
         $blade = NULL;
         $defenseRating = 0;
+        $frayRating = 0;
         $damage = 1;
         $attackerMessage = NULL;
         $defenderMessage = NULL;
@@ -197,10 +198,7 @@ class CombatService extends BaseService
                 ($attacker instanceof Profile) ? $attacker->getCurrentResourceId() : NULL
             );
             $defenseRating += ($defender->getBlade()) ? $defender->getBlade()->getLevel() : 0;
-            $shield = $defender->getShield();
-            if ($shield) {
-                $defenseRating += ceil(round(($shield->getLevel() + $shield->getIntegrity()) / 2));
-            }
+            $frayRating = $this->getSkillRating($defender, Skill::ID_FRAY);
         }
         // defense modifier for npc defender - and check if we need to add another combatant
         if ($defender instanceof NpcInstance) {
@@ -212,16 +210,11 @@ class CombatService extends BaseService
                 ($attacker instanceof Profile) ? $attacker->getCurrentResourceId() : NULL
             );
             $defenseRating = $this->getSkillRating($defender, Skill::ID_BLADES);
-            $shield = $defender->getShieldModule();
-            if ($shield) {
-                $defenseRating += ceil(round(($shield->getLevel() + $shield->getIntegrity()) / 2));
-            }
+            $frayRating = $this->getSkillRating($defender, Skill::ID_FRAY);
         }
         // start rolling the dice
         $roll = mt_rand(1, 100);
         if ($roll <= ($skillRating - $defenseRating)) {
-
-            // TODO add fray check
 
             /* hit */
             // attacker is profile
@@ -230,87 +223,146 @@ class CombatService extends BaseService
             }
             // defender is profile
             if ($defender instanceof Profile) {
-                $health = $defender->getEeg();
-                $newHealth = $health - $damage;
-                if ($newHealth <= 0) {
-                    // profile flatlined - remove combatants
+                if ($this->makePercentRollAgainstTarget($frayRating)) {
                     if ($attacker instanceof Profile) {
                         $attackerMessage = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage</pre>'),
-                            $defenderName,
-                            $damage
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] evades your attack</pre>'),
+                            $defenderName
                         );
                     }
-                    $ws->removeCombatant($defender);
-                    $this->flatlineProfile($defender);
+                    $this->learnFromSuccess($defender, ['skills' => ['fray']], -50);
                     $defenderMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been flatlined by [%s] with [%s] damage</pre>'),
-                        $attackerName,
-                        $damage
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You evade the attack by [%s]</pre>'),
+                        $attackerName
                     );
-                    $flyToDefender = true;
                     $nodeMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlined [%s]</pre>'),
-                        $attackerName,
-                        $defenderName
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] evaded the attack from [%s]</pre>'),
+                        $defenderName,
+                        $attackerName
                     );
                 }
                 else {
-                    if ($attacker instanceof Profile) {
-                        $attackerMessage = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage</pre>'),
+                    // defender unable to evade, damage - first check for shield
+                    $health = $defender->getEeg();
+                    if ($defenderShield = $defender->getShield()) {
+                        $defShieldLevel = $defenderShield->getLevel();
+                        $defShieldInt = $defenderShield->getIntegrity();
+                        $mitigatedDamage = ceil(round(($damage / 100) * $defShieldLevel));
+                        $mitigatedDamage = $this->checkValueMinMax($mitigatedDamage, 1, $defShieldInt);
+                        $damage = $damage - $mitigatedDamage;
+                        $this->lowerIntegrityOfFile($defenderShield, 100, $mitigatedDamage);
+                    }
+                    // now check for armor
+                    $hitLocation = $this->determineHitLocation();
+                    $damage = $this->processArmorOnHit($defender, $hitLocation, $damage);
+                    // all checks complete, apply remaining damage
+                    $newHealth = $health - $damage;
+                    if ($newHealth <= 0) {
+                        // profile flatlined - remove combatants
+                        if ($attacker instanceof Profile) {
+                            $attackerMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage in the [%s]</pre>'),
+                                $defenderName,
+                                $damage,
+                                $hitLocation
+                            );
+                        }
+                        $ws->removeCombatant($defender);
+                        $this->flatlineProfile($defender);
+                        $defenderMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been flatlined by [%s] with [%s] damage in the [%s]</pre>'),
+                            $attackerName,
+                            $damage,
+                            $hitLocation
+                        );
+                        $flyToDefender = true;
+                        $nodeMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlined [%s] with a hit in the [%s]</pre>'),
+                            $attackerName,
                             $defenderName,
-                            $damage
+                            $hitLocation
                         );
                     }
-                    $defenderMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for [%s] damage</pre>'),
-                        $attackerName,
-                        $damage
-                    );
-                    $nodeMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] hits [%s]</pre>'),
-                        $attackerName,
-                        $defenderName
-                    );
-                    $defender->setEeg($newHealth);
+                    else {
+                        if ($attacker instanceof Profile) {
+                            $attackerMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage in the [%s]</pre>'),
+                                $defenderName,
+                                $damage,
+                                $hitLocation
+                            );
+                        }
+                        $defenderMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] hits you for [%s] damage in the [%s]</pre>'),
+                            $attackerName,
+                            $damage,
+                            $hitLocation
+                        );
+                        $nodeMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] hits [%s] in the [%s]</pre>'),
+                            $attackerName,
+                            $defenderName,
+                            $hitLocation
+                        );
+                        $defender->setEeg($newHealth);
+                    }
                 }
             }
             // defender is npc
             if ($defender instanceof NpcInstance) {
-                $health = $defender->getCurrentEeg();
-                $newHealth = $health - $damage;
-                if ($newHealth <= 0) {
-                    // npc instance flatlined - remove combatants
+                if ($this->makePercentRollAgainstTarget($frayRating)) {
                     if ($attacker instanceof Profile) {
                         $attackerMessage = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage</pre>'),
-                            $defenderName,
-                            $damage
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-warning">[%s] evades your attack</pre>'),
+                            $defenderName
                         );
                     }
-                    $ws->removeCombatant($defender);
-                    $this->flatlineNpcInstance($defender, $attacker);
                     $nodeMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlines [%s]</pre>'),
-                        $attackerName,
-                        $defenderName
+                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] evaded the attack from [%s]</pre>'),
+                        $defenderName,
+                        $attackerName
                     );
                 }
                 else {
-                    if ($attacker instanceof Profile) {
-                        $attackerMessage = sprintf(
-                            $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage</pre>'),
+                    $hitLocation = $this->determineHitLocation();
+                    $health = $defender->getCurrentEeg();
+                    $newHealth = $health - $damage;
+                    if ($newHealth <= 0) {
+                        // npc instance flatlined - remove combatants
+                        if ($attacker instanceof Profile) {
+                            $attackerMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You flatlined [%s] with [%s] damage in the [%s]</pre>'),
+                                $defenderName,
+                                $damage,
+                                $hitLocation
+                            );
+                        }
+                        $ws->removeCombatant($defender);
+                        $this->flatlineNpcInstance($defender, $attacker);
+                        $nodeMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlines [%s] with a hit in the [%s]</pre>'),
+                            $attackerName,
                             $defenderName,
-                            $damage
+                            $hitLocation
                         );
                     }
-                    $defender->setCurrentEeg($newHealth);
-                    $nodeMessage = sprintf(
-                        $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] hits [%s]</pre>'),
-                        $attackerName,
-                        $defenderName
-                    );
+                    else {
+                        if ($attacker instanceof Profile) {
+                            $attackerMessage = sprintf(
+                                $this->translate('<pre style="white-space: pre-wrap;" class="text-success">You hit [%s] for [%s] damage in the [%s]</pre>'),
+                                $defenderName,
+                                $damage,
+                                $hitLocation
+                            );
+                        }
+                        $defender->setCurrentEeg($newHealth);
+                        $nodeMessage = sprintf(
+                            $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] hits [%s] in the [%s]</pre>'),
+                            $attackerName,
+                            $defenderName,
+                            $hitLocation
+                        );
+                    }
                 }
             }
         }
@@ -339,6 +391,78 @@ class CombatService extends BaseService
             );
         }
         return [$attackerMessage, $defenderMessage, $flyToDefender, $nodeMessage];
+    }
+
+    /**
+     * @return string
+     */
+    private function determineHitLocation()
+    {
+        $roll = mt_rand(1, 10);
+        switch ($roll) {
+            default:
+                return 'torso';
+            case 1:
+                return 'head';
+            case 2:
+                return 'shoulders';
+            case 3:
+                return 'upper arms';
+            case 4:
+                return 'lower arms';
+            case 5:
+                return 'hands';
+            case 6:
+                return 'legs';
+            case 7:
+                return 'feet';
+        }
+    }
+
+    /**
+     * @param Profile $defender
+     * @param string $hitLocation
+     * @param int $damage
+     * @return int
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    private function processArmorOnHit(Profile $defender, $hitLocation, $damage)
+    {
+        switch ($hitLocation) {
+            default:
+                $armor = $defender->getTorsoArmor();
+                break;
+            case 'head':
+                $armor = $defender->getHeadArmor();
+                break;
+            case 'shoulders':
+                $armor = $defender->getShoulderArmor();
+                break;
+            case 'upper arms':
+                $armor = $defender->getUpperArmArmor();
+                break;
+            case 'lower arms':
+                $armor = $defender->getLowerArmArmor();
+                break;
+            case 'hands':
+                $armor = $defender->getHandArmor();
+                break;
+            case 'legs':
+                $armor = $defender->getLegArmor();
+                break;
+            case 'feet':
+                $armor = $defender->getShoesArmor();
+                break;
+        }
+        if ($armor) {
+            $armorLevel = $armor->getLevel();
+            $armorIntegrity = $armor->getIntegrity();
+            $mitigatedDamage = ceil(round(($damage / 100) * $armorLevel));
+            $mitigatedDamage = $this->checkValueMinMax($mitigatedDamage, 1, $armorIntegrity);
+            $damage = $damage - $mitigatedDamage;
+            $this->lowerIntegrityOfFile($armor, 100, $mitigatedDamage);
+        }
+        return $damage;
     }
 
 }
