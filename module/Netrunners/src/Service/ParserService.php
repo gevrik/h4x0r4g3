@@ -549,6 +549,8 @@ class ParserService
                 return $this->milkrunAivatarService->upgradeMra($resourceId, $contentArray);
             case 'missiondetails':
                 return $this->missionService->showMissionDetails($resourceId);
+            case 'missionlist':
+                return $this->missionService->missionListCommand($resourceId);
             case 'modchat':
             case 'mc':
                 return $this->chatService->moderatorChat($resourceId, $contentArray);

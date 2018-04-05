@@ -54,6 +54,24 @@ class Mission
      */
     protected $expired;
 
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     * @var string
+     */
+    protected $name;
+
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $description;
+
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     * @var string
+     */
+    protected $data;
+
     // ORM
 
     /**
@@ -90,6 +108,31 @@ class Mission
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
      */
     protected $targetNode;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
+     */
+    protected $missionGiver;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Group")
+     */
+    protected $sourceGroup;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Group")
+     */
+    protected $targetGroup;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Profile")
+     */
+    protected $targetProfile;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Netrunners\Entity\Node")
+     */
+    protected $agentNode;
 
 
     /**
@@ -200,6 +243,60 @@ class Mission
         return $this;
     }
 
+    /**
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param string $name
+     * @return Mission
+     */
+    public function setName($name)
+    {
+        $this->name = $name;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDescription()
+    {
+        return $this->description;
+    }
+
+    /**
+     * @param string $description
+     * @return Mission
+     */
+    public function setDescription($description)
+    {
+        $this->description = $description;
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getData()
+    {
+        return $this->data;
+    }
+
+    /**
+     * @param string $data
+     * @return Mission
+     */
+    public function setData($data)
+    {
+        $this->data = $data;
+        return $this;
+    }
+
     // ORM
 
     /**
@@ -239,7 +336,7 @@ class Mission
     }
 
     /**
-     * @return mixed
+     * @return Profile|null
      */
     public function getProfile()
     {
@@ -325,6 +422,96 @@ class Mission
     public function setTargetNode($targetNode)
     {
         $this->targetNode = $targetNode;
+        return $this;
+    }
+
+    /**
+     * @return Profile|null
+     */
+    public function getMissionGiver()
+    {
+        return $this->missionGiver;
+    }
+
+    /**
+     * @param mixed $missionGiver
+     * @return Mission
+     */
+    public function setMissionGiver($missionGiver)
+    {
+        $this->missionGiver = $missionGiver;
+        return $this;
+    }
+
+    /**
+     * @return Group|null
+     */
+    public function getSourceGroup()
+    {
+        return $this->sourceGroup;
+    }
+
+    /**
+     * @param mixed $sourceGroup
+     * @return Mission
+     */
+    public function setSourceGroup($sourceGroup)
+    {
+        $this->sourceGroup = $sourceGroup;
+        return $this;
+    }
+
+    /**
+     * @return Group|null
+     */
+    public function getTargetGroup()
+    {
+        return $this->targetGroup;
+    }
+
+    /**
+     * @param mixed $targetGroup
+     * @return Mission
+     */
+    public function setTargetGroup($targetGroup)
+    {
+        $this->targetGroup = $targetGroup;
+        return $this;
+    }
+
+    /**
+     * @return Profile|null
+     */
+    public function getTargetProfile()
+    {
+        return $this->targetProfile;
+    }
+
+    /**
+     * @param mixed $targetProfile
+     * @return Mission
+     */
+    public function setTargetProfile($targetProfile)
+    {
+        $this->targetProfile = $targetProfile;
+        return $this;
+    }
+
+    /**
+     * @return Node
+     */
+    public function getAgentNode()
+    {
+        return $this->agentNode;
+    }
+
+    /**
+     * @param mixed $agentNode
+     * @return Mission
+     */
+    public function setAgentNode($agentNode)
+    {
+        $this->agentNode = $agentNode;
         return $this;
     }
 

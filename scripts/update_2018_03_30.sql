@@ -51,3 +51,8 @@ INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`
 INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('tradechat', 'show trade chat', 1, 'NULL');
 INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('systemchat', 'show system chat', 1, 'NULL');
 INSERT INTO `GameOption` (`name`, `description`, `defaultStatus`, `defaultValue`) VALUES ('globalchat', 'show global chat', 1, 'NULL');
+
+UPDATE `FileType` SET `executionTime` = '120' WHERE `FileType`.`id` = 13;
+UPDATE `FileType` SET `executionTime` = '60' WHERE `FileType`.`id` = 12;
+UPDATE `FileType` SET `executionTime` = '10' WHERE `FileType`.`id` = 28;
+UPDATE `FileType` SET `executionTime` = '90' WHERE `FileType`.`id` = 42;

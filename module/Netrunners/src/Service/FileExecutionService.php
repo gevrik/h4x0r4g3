@@ -190,7 +190,6 @@ class FileExecutionService extends BaseService
             case FileType::ID_MEDKIT:
             case FileType::ID_PROXIFIER:
                 return $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
-                break;
             case FileType::ID_CODEBREAKER:
                 return $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
             case FileType::ID_CUSTOM_IDE:
@@ -824,7 +823,7 @@ class FileExecutionService extends BaseService
      */
     public function executeWarningPortscanner(File $file, Node $node, $contentArray)
     {
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
+        $systemRepo = $this->entityManager->getRepository(System::class);
         /** @var SystemRepository $systemRepo */
         $response = false;
         if (!$this->canExecuteInNodeType($file, $node)) {
@@ -840,6 +839,7 @@ class FileExecutionService extends BaseService
         $systemId = false;
         $system = false;
         if (!$response) {
+            /** @var System $system */
             $system = $systemRepo->findOneBy([
                 'addy' => $addy
             ]);
@@ -850,11 +850,10 @@ class FileExecutionService extends BaseService
                 $systemId = $system->getId();
             }
         }
-        /** @var System $system */
-        $profile = $file->getProfile();
         /** @var Profile $profile */
-        if (!$response && $system->getProfile() === $profile) {
-            $response = $this->translate('Invalid system - unable to scan own systems');
+        $profile = $file->getProfile();
+        if (!$response && $this->checkSystemPermission($profile, $system) === false) {
+            $response = $this->translate('Invalid system - unable to scan friendly systems');
         }
         return [$response, $systemId];
     }
@@ -894,6 +893,7 @@ class FileExecutionService extends BaseService
         $systemId = false;
         $system = false;
         if (!$response) {
+            /** @var System $system */
             $system = $systemRepo->findOneBy([
                 'addy' => $addy
             ]);
@@ -906,9 +906,8 @@ class FileExecutionService extends BaseService
                 $systemId = $system->getId();
             }
         }
-        /** @var System $system */
-        if (!$response && $system->getProfile() === $profile) {
-            $response = $this->translate('Invalid system - unable to break in to your own systems');
+        if (!$response && $this->checkSystemPermission($profile, $system) === false) {
+            $response = $this->translate('Invalid system - unable to break-in to friendly systems');
         }
         // now check if a node id was given
         $nodeId = $this->getNextParameter($contentArray, false, true);
@@ -916,8 +915,8 @@ class FileExecutionService extends BaseService
             $response = $this->translate('Please specify a node ID to break in to');
         }
         if (!$response) {
-            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
             /** @var Node $node */
+            $node = $this->entityManager->find('Netrunners\Entity\Node', $nodeId);
             if (!$this->getNodeAttackDifficulty($node, $file)) {
                 $response = $this->translate('Invalid node ID');
             }
@@ -968,6 +967,9 @@ class FileExecutionService extends BaseService
         if (!$response && $this->npcInstanceRepo->countByHostileToProfileInNode($profile) >= 1) {
             $this->translate('Unable to use lockpick when there are hostile entities in the node');
         }
+        if (!$response && $this->checkSystemPermission($profile, $profile->getCurrentNode()->getSystem()) === false) {
+            $response = $this->translate('Invalid system - unable to lockpick friendly connections');
+        }
         return [$response, $connection->getId()];
     }
 
@@ -979,6 +981,7 @@ class FileExecutionService extends BaseService
     {
         $response = false;
         $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
         $minerString = $this->getNextParameter($contentArray, false);
         if (!$minerString) {
             $response = $this->translate('Please specify the miner that you want to siphon from');
@@ -987,15 +990,15 @@ class FileExecutionService extends BaseService
         $miner = NULL;
         if (!$response) {
             // try to get target file via repo method
-            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($profile->getCurrentNode(), $profile, $minerString);
+            $targetFiles = $this->fileRepo->findByNodeOrProfileAndName($currentNode, $profile, $minerString);
             if (!$response && count($targetFiles) < 1) {
                 $response = $this->translate('No such file');
             }
             if (!$response) {
-                $miner = array_shift($targetFiles);
                 /** @var File $miner */
-                if ($miner->getProfile() == $profile) {
-                    $response = $this->translate('Unable to siphon from own miners');
+                $miner = array_shift($targetFiles);
+                if (!$response && $this->checkSystemPermission($profile, $currentNode->getSystem()) === false) {
+                    $response = $this->translate('Invalid system - unable to hack friendly programs');
                 }
             }
             if (!$response && $miner) {
@@ -1081,6 +1084,10 @@ class FileExecutionService extends BaseService
                 $this->translate('%s can only be used in a banking node'),
                 $file->getName()
             );
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($this->checkSystemPermission($this->user->getProfile(), $node->getSystem()) === false) {
+            $message = $this->translate('Invalid system - unable to hack friendly programs');
             return $this->gameClientResponse->addMessage($message)->send();
         }
         $file->setRunning(true);

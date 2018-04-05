@@ -12,6 +12,7 @@ namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Netrunners\Entity\File;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\Profile;
 
 class MissionRepository extends EntityRepository
@@ -56,6 +57,21 @@ class MissionRepository extends EntityRepository
         $qb = $this->createQueryBuilder('m');
         $qb->where('m.completed IS NULL AND m.expires <= :now AND m.expired IS NULL');
         $qb->setParameter('now', new \DateTime());
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Node $node
+     * @return array
+     */
+    public function findForMissionListCommand(Node $node)
+    {
+        $qb = $this->createQueryBuilder('m');
+        $qb->where('m.completed IS NULL AND m.expires <= :now AND m.expired IS NULL AND m.agentNode = :agentNode');
+        $qb->setParameters([
+            'now' => new \DateTime(),
+            'agentNode' => $node
+        ]);
         return $qb->getQuery()->getResult();
     }
 
