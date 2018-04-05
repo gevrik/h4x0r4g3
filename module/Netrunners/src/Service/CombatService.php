@@ -220,6 +220,9 @@ class CombatService extends BaseService
         // start rolling the dice
         $roll = mt_rand(1, 100);
         if ($roll <= ($skillRating - $defenseRating)) {
+
+            // TODO add fray check
+
             /* hit */
             // attacker is profile
             if ($attacker instanceof Profile) {

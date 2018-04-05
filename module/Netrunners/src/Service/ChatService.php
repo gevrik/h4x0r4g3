@@ -11,9 +11,12 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\GameOption;
+use Netrunners\Entity\Pignore;
 use Netrunners\Entity\Profile;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
+use Netrunners\Repository\PignoreRepository;
 use Netrunners\Repository\ProfileRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
@@ -73,6 +76,11 @@ class ChatService extends BaseService
      */
     protected $profileRepo;
 
+    /**
+     * @var PignoreRepository
+     */
+    protected $pignoreRepo;
+
 
     /**
      * ChatService constructor.
@@ -85,6 +93,7 @@ class ChatService extends BaseService
         parent::__construct($entityManager, $viewRenderer, $translator);
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        $this->pignoreRepo = $this->entityManager->getRepository(Pignore::class);
     }
 
     /**
@@ -129,6 +138,7 @@ class ChatService extends BaseService
             if (!$clientUser) continue;
             if ($wsClientId == $resourceId) continue;
             if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
@@ -226,6 +236,7 @@ class ChatService extends BaseService
             if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getFaction() != $profile->getFaction()) continue;
             if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
@@ -304,10 +315,11 @@ class ChatService extends BaseService
         foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
             if (!$wsClient['hash']) continue;
             /** @var User $clientUser */
-            $clientUser = $this->entityManager->find('TmoAuth\Entity\User', $wsClient['userId']);
+            $clientUser = $this->entityManager->find(User::class, $wsClient['userId']);
             if (!$clientUser) continue;
             if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
@@ -355,6 +367,7 @@ class ChatService extends BaseService
             if (!$clientUser) continue;
             if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getCurrentNode() != $profile->getCurrentNode()) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
@@ -402,8 +415,14 @@ class ChatService extends BaseService
         if (!$messageContent) {
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
+        if (!$this->fileRepo->findChatClientForProfile($recipient)) {
+            return $this->gameClientResponse->addMessage($this->translate('Your contact needs a running chatclient to receive tell messages'))->send();
+        }
         if ($recipient->getNoTells()) {
             return $this->gameClientResponse->addMessage($this->translate('That user is currently not receiving any tell messages'))->send();
+        }
+        if ($this->isIgnoredBy($recipient, $profile)) {
+            return $this->gameClientResponse->addMessage($this->translate('That user is currently not receiving any tell messages from you'))->send();
         }
         // logic start
         $ws = $this->getWebsocketServer();
@@ -470,6 +489,9 @@ class ChatService extends BaseService
         if (!$this->fileRepo->findChatClientForProfile($recipient)) {
             return $this->gameClientResponse->addMessage($this->translate('Your reply target has no running chatclient'))->send();
         }
+        if (!$this->isIgnoredBy($recipient, $profile)) {
+            return $this->gameClientResponse->addMessage($this->translate('That user is currently not receiving any tell messages from you'))->send();
+        }
         // logic start
         // prepare message for recipient, send and set client-data
         $recipientMessage = $this->prepareMessage($profile, $messageContent, self::CHANNEL_TELL, true, 'FROM ');
@@ -513,11 +535,19 @@ class ChatService extends BaseService
         if (!$messageContent || $messageContent == '') {
             return $this->gameClientResponse->addMessage($this->translate('Please specify a message'))->send();
         }
+        if (!$this->getProfileGameOption($profile, GameOption::ID_SHOW_NEWBIE_CHAT)) {
+            return $this->gameClientResponse->addMessage($this->translate('You have newbie chat deactivated in options'))->send();
+        }
         $messageContent = $this->prepareMessage($profile, $messageContent, self::CHANNEL_NEWBIE);
         $this->gameClientResponse->addMessage($messageContent)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
         foreach ($ws->getClientsData() as $wsClientId => $wsClient) {
             if (!$wsClient['hash']) continue;
+            /** @var User $clientUser */
+            $clientUser = $this->entityManager->find(User::class, $wsClient['userId']);
+            if (!$clientUser) continue;
             if ($wsClientId == $resourceId) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
+            if (!$this->getProfileGameOption($clientUser->getProfile(), GameOption::ID_SHOW_NEWBIE_CHAT)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse
@@ -572,6 +602,7 @@ class ChatService extends BaseService
             if ($wsClientId == $resourceId) continue;
             if ($clientUser->getProfile()->getGroup() != $profile->getGroup()) continue;
             if (!$this->fileRepo->findChatClientForProfile($clientUser->getProfile())) continue;
+            if ($this->isIgnoredBy($clientUser->getProfile(), $profile)) continue;
             $this->gameClientResponse->setResourceId($wsClientId)->send();
         }
         return $this->gameClientResponse->setResourceId($resourceId)->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT)->send();
@@ -598,6 +629,19 @@ class ChatService extends BaseService
             wordwrap($messageContent, 120)
         );
         return $messageContent;
+    }
+
+    /**
+     * @param Profile $sourceProfile
+     * @param Profile $targetProfile
+     * @return bool
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    private function isIgnoredBy(Profile $sourceProfile, Profile $targetProfile)
+    {
+        $pigCount = $this->pignoreRepo->countBySourceAndTarget($sourceProfile, $targetProfile);
+        return ($pigCount >= 1) ? true : false;
     }
 
 }

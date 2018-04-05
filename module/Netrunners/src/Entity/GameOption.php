@@ -21,6 +21,7 @@ class GameOption
     const ID_MUSIC = 2;
     const ID_SURVEY = 3;
     const ID_BGOPACITY = 4;
+    const ID_SHOW_NEWBIE_CHAT = 5;
 
     /**
      * @ORM\Id

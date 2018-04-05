@@ -24,9 +24,15 @@ class GameOptionService extends BaseService
 {
 
     /**
-     * @var GameOptionRepository|null
+     * @var GameOptionRepository
      */
-    protected $gameOptionRepo = NULL;
+    protected $gameOptionRepo;
+
+    /**
+     * @var GameOptionInstanceRepository
+     */
+    protected $goiRepo;
+
 
     /**
      * GameOptionService constructor.
@@ -41,7 +47,8 @@ class GameOptionService extends BaseService
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
-        $this->gameOptionRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOption');
+        $this->gameOptionRepo = $this->entityManager->getRepository(GameOption::class);
+        $this->goiRepo = $this->entityManager->getRepository(GameOptionInstance::class);
     }
 
     /**
@@ -73,8 +80,6 @@ class GameOptionService extends BaseService
             /** @var GameOption $gameOption */
             // if this is an option that requires another parameter as its value
             if ($gameOption->getDefaultValue()) {
-                $goiRepo = $this->entityManager->getRepository('Netrunners\Entity\GameOptionInstance');
-                /** @var GameOptionInstanceRepository $goiRepo */
                 $gameOptionValue = $this->getNextParameter($contentArray, false, false, true, true);
                 if (!$gameOptionValue) {
                     $returnMessage = $this->translate('Please specify a value');
@@ -87,7 +92,7 @@ class GameOptionService extends BaseService
                         return $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_DANGER)->send();
                     case GameOption::ID_BGOPACITY:
                         $gameOptionValue = floatval($gameOptionValue);
-                        $gameOptionInstance = $goiRepo->findOneBy([
+                        $gameOptionInstance = $this->goiRepo->findOneBy([
                             'gameOption' => $gameOption,
                             'profile' => $profile
                         ]);

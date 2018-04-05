@@ -20,6 +20,7 @@ use Netrunners\Entity\FilePartInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Invitation;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Pignore;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
@@ -28,6 +29,8 @@ use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FilePartInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\InvitationRepository;
+use Netrunners\Repository\PignoreRepository;
+use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SkillRepository;
 use Zend\Crypt\Password\Bcrypt;
@@ -126,6 +129,16 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
      */
     protected $fileRepo;
 
+    /**
+     * @var PignoreRepository
+     */
+    protected $pignoreRepo;
+
+    /**
+     * @var ProfileRepository
+     */
+    protected $profileRepo;
+
 
     /**
      * ProfileService constructor.
@@ -141,6 +154,8 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
         $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
         $this->fileModInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FileModInstance');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
+        $this->pignoreRepo = $this->entityManager->getRepository(Pignore::class);
+        $this->profileRepo = $this->entityManager->getRepository(Profile::class);
     }
 
     /**
@@ -1462,6 +1477,72 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             $profile->setNoTells(true);
         }
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function pignoreCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        $username = $this->getNextParameter($contentArray, false, false, true, true);
+        // if no username was given, show a list of currently ignored profiles
+        if (!$username) {
+            $pignores = $this->pignoreRepo->findForPignoreList($profile);
+            $message = sprintf(
+                $this->translate('you are currently ignoring the following users:</span>')
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+            if (count($pignores) < 1) {
+                $this->gameClientResponse->addMessage($this->translate('You are not ignoring anyone'), GameClientResponse::CLASS_MUTED);
+            }
+            else {
+                foreach ($pignores as $pignore) {
+                    $this->gameClientResponse->addMessage($pignore['username'], GameClientResponse::CLASS_WHITE);
+                }
+            }
+        }
+        else {
+            $targetName = $this->getNextParameter($contentArray, false, false, true, true);
+            $targetProfile = $this->profileRepo->findLikeName($targetName);
+            if (!$targetProfile) {
+                $message = sprintf($this->translate('Invalid user [%s] - could not be found'), $targetProfile->getUser()->getUsername());
+                return $this->gameClientResponse->addMessage($message)->send();
+            }
+            $existingRecord = $this->pignoreRepo->findOneBy([
+                'sourceProfile' => $profile,
+                'targetProfile' => $targetProfile
+            ]);
+            if ($existingRecord) {
+                $message = sprintf($this->translate('You have removed [%s] from your ignore list'), $targetProfile->getUser()->getUsername());
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                $this->entityManager->remove($existingRecord);
+                $this->entityManager->flush($existingRecord);
+            }
+            else {
+                $message = sprintf($this->translate('You have added [%s] to your ignore list'), $targetProfile->getUser()->getUsername());
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+                $pignore = new Pignore();
+                $pignore->setAdded(new \DateTime());
+                $pignore->setSourceProfile($profile);
+                $pignore->setTargetProfile($targetProfile);
+                $this->entityManager->persist($pignore);
+                $this->entityManager->flush($pignore);
+            }
+        }
+        // TODO add checks to chat-service
         return $this->gameClientResponse->send();
     }
 

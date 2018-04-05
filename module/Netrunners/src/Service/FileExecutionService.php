@@ -627,7 +627,7 @@ class FileExecutionService extends BaseService
             );
             return $this->gameClientResponse->addMessage($message)->send();
         }
-        if ($profile !== $profile->getCurrentNode()->getSystem()->getProfile()) {
+        if (!$this->canAccess($profile, $profile->getCurrentNode()->getSystem())) {
             $message = sprintf(
                 $this->translate('Permission denied'),
                 $file->getName()

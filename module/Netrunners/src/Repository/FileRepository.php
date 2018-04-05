@@ -200,9 +200,9 @@ class FileRepository extends EntityRepository
      */
     public function findChatClientForProfile(Profile $profile)
     {
-        $chatclient = $this->getEntityManager()->find('Netrunners\Entity\FileType', FileType::ID_CHATCLIENT);
+        $chatclient = $this->getEntityManager()->find(FileType::class, FileType::ID_CHATCLIENT);
         $qb = $this->createQueryBuilder('f');
-        $qb->where('f.fileType = :fileType AND f.running IS NOT NULL AND f.integrity >= 1 AND f.profile = :profile');
+        $qb->where('f.fileType = :fileType AND f.running != 0 AND f.integrity >= 1 AND f.profile = :profile');
         $qb->setParameters([
             'fileType' => $chatclient,
             'profile' => $profile

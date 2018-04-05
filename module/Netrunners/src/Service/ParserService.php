@@ -629,6 +629,8 @@ class ParserService
                 return $this->partyService->partyKickCommand($resourceId, $contentArray);
             case 'partyrequest':
                 return $this->partyService->partyRequestCommand($resourceId, $contentArray);
+            case 'pignore':
+                return $this->profileService->pignoreCommand($resourceId, $contentArray);
             case 'placebounty':
                 return $this->bountyService->postBounty($resourceId, $contentArray);
             case 'ps':
