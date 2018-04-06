@@ -350,11 +350,11 @@ class LoopService extends BaseService
             }
         }
         /* now we check for missions that should expire */
-        $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
         /** @var MissionRepository $missionRepo */
+        $missionRepo = $this->entityManager->getRepository(Mission::class);
         $expiringMissions = $missionRepo->findForExpiredLoop();
+        /** @var Mission $expiringMission */
         foreach ($expiringMissions as $expiringMission) {
-            /** @var Mission $expiringMission */
             $expiringMission->setExpired(true);
             $targetFile = $expiringMission->getTargetFile();
             if ($targetFile) {
@@ -368,59 +368,29 @@ class LoopService extends BaseService
             $targetClient = NULL;
             $targetClientData = NULL;
             $missionProfile = $expiringMission->getProfile();
-            foreach ($ws->getClients() as $wsClient) {
-                /** @noinspection PhpUndefinedFieldInspection */
-                $clientData = $ws->getClientData($wsClient->resourceId);
-                if ($clientData->profileId == $missionProfile->getId()) {
-                    $targetClient = $wsClient;
-                    $targetClientData = $clientData;
-                    break;
-                }
+            /* store notification */
+            $this->storeNotification(
+                $missionProfile,
+                'Your current mission has expired before you could complete it',
+                Notification::SEVERITY_WARNING
+            );
+            $missionProfile->setFailedMissions($missionProfile->getFailedMissions()+1);
+            $missionProfile->setCurrentMission(null);
+            if ($currentResourceId = $missionProfile->getCurrentResourceId()) {
+                $this->getWebsocketServer()->setClientData($currentResourceId, 'currentMission', null);
             }
-            if ($targetClient && $targetClientData) {
-                /* send message */
-                $message = $this->translate('Your current mission has expired before you could complete it');
-                /** @noinspection PhpUndefinedFieldInspection */
-                $responseMission = new GameClientResponse($targetClient->resourceId);
-                $responseMission->addMessage($message);
-                $responseMission->send();
-                $profile = $expiringMission->getProfile();
-                $profile->setFailedMissions($profile->getFailedMissions()+1);
-                $this->entityManager->flush($profile);
-                $this->createProfileFactionRating(
-                    $profile,
-                    NULL,
-                    $expiringMission,
-                    NULL,
-                    ProfileFactionRating::SOURCE_ID_MISSION,
-                    $expiringMission->getLevel() * -2,
-                    $expiringMission->getLevel() * -1,
-                    $expiringMission->getSourceFaction(),
-                    $expiringMission->getTargetFaction()
-                );
-            }
-            else {
-                /* store notification */
-                $this->storeNotification(
-                    $expiringMission->getProfile(),
-                    'Your current mission has expired before you could complete it',
-                    Notification::SEVERITY_WARNING
-                );
-                $profile = $expiringMission->getProfile();
-                $profile->setFailedMissions($profile->getFailedMissions()+1);
-                $this->entityManager->flush($profile);
-                $this->createProfileFactionRating(
-                    $profile,
-                    NULL,
-                    $expiringMission,
-                    NULL,
-                    ProfileFactionRating::SOURCE_ID_MISSION,
-                    $expiringMission->getLevel() * -2,
-                    $expiringMission->getLevel() * -1,
-                    $expiringMission->getSourceFaction(),
-                    $expiringMission->getTargetFaction()
-                );
-            }
+            $this->entityManager->flush($missionProfile);
+            $this->createProfileFactionRating(
+                $missionProfile,
+                NULL,
+                $expiringMission,
+                NULL,
+                ProfileFactionRating::SOURCE_ID_MISSION,
+                $expiringMission->getLevel() * -2,
+                $expiringMission->getLevel() * -1,
+                $expiringMission->getSourceFaction(),
+                $expiringMission->getTargetFaction()
+            );
         }
         return true;
     }
@@ -896,7 +866,7 @@ class LoopService extends BaseService
                 }
                 if (!$connection->getisOpen()) {
                     if (
-                        $roamingNpc->getProfile() != $currentOwner ||
+                        $roamingNpc->getProfile() !== $currentOwner ||
                         $roamingNpc->getGroup() != $currentGroup ||
                         $roamingNpc->getFaction() != $currentFaction)
                     {

@@ -46,7 +46,7 @@ class NodeService extends BaseService
     const NPCS_STRING = "entities";
 
     const RAW_NODE_COST = 50;
-    const MAX_NODES_MULTIPLIER = 10;
+    const MAX_NODES_MULTIPLIER = 5;
     const MAX_NODE_LEVEL = 8;
 
     /**
@@ -895,21 +895,24 @@ class NodeService extends BaseService
         }
         // check if this is a storage node and if the removal would still support all programs
         if ($currentNodeType->getId() == NodeType::ID_STORAGE) {
-            $newMaxStorage = $this->getTotalStorage($profile) - ($currentNode->getLevel() * SystemService::BASE_STORAGE_VALUE);
+            $newMaxStorage = $this->getTotalStorage($profile) -
+                ($currentNode->getLevel() * SystemService::BASE_STORAGE_VALUE);
             if ($this->getUsedStorage($profile) > $newMaxStorage) {
                 return $this->translate('You could not store all of your programs after removing this node');
             }
         }
         // check if this is a memory node and if the removal would still support all programs
         if ($currentNodeType->getId() == NodeType::ID_MEMORY) {
-            $newMaxMemoty = $this->getTotalMemory($profile) - ($currentNode->getLevel() * SystemService::BASE_MEMORY_VALUE);
+            $newMaxMemoty = $this->getTotalMemory($profile) -
+                ($currentNode->getLevel() * SystemService::BASE_MEMORY_VALUE);
             if ($this->getUsedMemory($profile) > $newMaxMemoty) {
                 return $this->translate('You could not run all of your programs after removing this node');
             }
         }
         // check if this is a cpu node and if the removal would still support all nodes in the system
         if ($currentNodeType->getId() == NodeType::ID_CPU) {
-            $maxNodes = $this->getCurrentNodeMaximumForSystem($currentSystem) - 10;
+            $maxNodes = $this->getCurrentNodeMaximumForSystem($currentSystem) -
+                ($currentNode->getLevel() * self::MAX_NODES_MULTIPLIER);
             $nodeamount = $this->nodeRepo->countBySystem($currentSystem);
             if ($nodeamount > $maxNodes) {
                 return $this->translate('Too many nodes depend on this cpu');

@@ -2960,6 +2960,7 @@ class BaseService extends BaseUtilityService
     /**
      * @param File $file
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
@@ -3025,20 +3026,18 @@ class BaseService extends BaseUtilityService
 
     /**
      * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
     protected function completeMission()
     {
         $profile = $this->user->getProfile();
-        $missionRepo = $this->entityManager->getRepository('Netrunners\Entity\Mission');
-        /** @var MissionRepository $missionRepo */
-        $mission = $missionRepo->findCurrentMission($profile);
+        $mission = $profile->getCurrentMission();
         if ($mission) {
-            /** @var Mission $mission */
             $targetFile = $mission->getTargetFile();
             if ($targetFile) {
-                $mission->setTargetFile(NULL);
+                $mission->setTargetFile(null);
                 $this->entityManager->flush($mission);
                 $this->entityManager->remove($targetFile);
             }
@@ -3058,6 +3057,9 @@ class BaseService extends BaseUtilityService
                 $mission->getSourceFaction(),
                 $mission->getTargetFaction()
             );
+            $profile->setCurrentMission(null);
+            $this->getWebsocketServer()
+                ->setClientData($profile->getCurrentResourceId(), 'currentMission', null);
             $this->entityManager->flush();
             $message = sprintf(
                 $this->translate('Mission accomplished - you received %s credits'),

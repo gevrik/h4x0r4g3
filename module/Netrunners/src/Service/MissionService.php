@@ -134,9 +134,14 @@ class MissionService extends BaseService
         if ($profile->getFaction()) $possibleSourceFactions[] = $profile->getFaction();
         if ($currentSystem->getFaction()) $possibleSourceFactions[] = $currentSystem->getFaction();
         $sourceFaction = $this->getRandomFaction($possibleSourceFactions);
-        $targetFaction = $this->getRandomFaction();
-        while ($targetFaction === $sourceFaction) {
+        if ($targetMission->getSubtype() == MissionArchetype::ID_SUBTYPE_WHITE) { // whitehat missions
+            $targetFaction = $sourceFaction;
+        }
+        else {
             $targetFaction = $this->getRandomFaction();
+            while ($targetFaction === $sourceFaction) {
+                $targetFaction = $this->getRandomFaction();
+            }
         }
         $message = sprintf(
             $this->translate('MISSION: %s'),
@@ -200,14 +205,18 @@ class MissionService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         if ($profile->getCurrentNode()->getNodeType()->getId() != NodeType::ID_AGENT) {
-            return $this->gameClientResponse->addMessage($this->translate('You need to be in an agent node to request a mission'))->send();
+            return $this->gameClientResponse
+                ->addMessage(
+                    $this->translate('You need to be in an agent node to request a mission')
+                )->send();
         }
-        $currentMission = $this->missionRepo->findCurrentMission($profile);
-        if ($currentMission) {
-            return $this->gameClientResponse->addMessage($this->translate('You have accepted another mission already'))->send();
+        if ($this->missionRepo->findCurrentMission($profile)) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You have accepted another mission already'))->send();
         }
         $instanceData = (object)$confirmData->contentArray;
-        $targetMission = $this->entityManager->find(MissionArchetype::class, $instanceData->missionArchetypeId);
+        $targetMission = $this->entityManager
+            ->find(MissionArchetype::class, $instanceData->missionArchetypeId);
         $sourceFaction = $this->entityManager->find(Faction::class, $instanceData->sourceFactionId);
         $targetFaction = $this->entityManager->find(Faction::class, $instanceData->targetFactionId);
         /** @var Faction $targetFaction */
@@ -235,19 +244,26 @@ class MissionService extends BaseService
             $targetSystem = array_shift($possibleSystems);
         }
         $mInstance->setTargetSystem($targetSystem);
-        $this->entityManager->flush($mInstance);
+        $createTargetFile = false;
+        $setTargetProfile = false;
+        $targetNode = NULL;
+        $addToNode = false;
         switch ($targetMission->getId()) {
             default:
-                $createTargetFile = false;
-                $setTargetProfile = false;
-                $targetNode = NULL;
-                $addToNode = false;
+                break;
+            case MissionArchetype::ID_CLEAN_SYSTEM:
+                $amount = ceil(round($this->nodeRepo->getAverageNodeLevelOfSystem($targetSystem))) *
+                    NodeService::MAX_NODES_MULTIPLIER;
+                $data = [
+                    'amount' => 0,
+                    'totalAmount' => $amount
+                ];
+                $mInstance->setData(json_encode($data));
                 break;
             case MissionArchetype::ID_STEAL_FILE:
             case MissionArchetype::ID_DELETE_FILE:
                 $addToNode = true;
                 $createTargetFile = true;
-                $setTargetProfile = false;
                 $targetNode = $this->nodeRepo->getRandomNodeForMission($targetSystem);
                 break;
             case MissionArchetype::ID_PLANT_BACKDOOR:
@@ -255,9 +271,9 @@ class MissionService extends BaseService
                 $createTargetFile = true;
                 $setTargetProfile = true;
                 $targetNode = $this->nodeRepo->getRandomNodeForMission($targetSystem);
-                $addToNode = false;
                 break;
         }
+        $profile->setCurrentMission($mInstance);
         if ($createTargetFile) {
             $fileType = $this->entityManager->find(FileType::class, FileType::ID_TEXT);
             /** @var FileType $fileType */
@@ -282,8 +298,9 @@ class MissionService extends BaseService
             );
             $mInstance->setTargetFile($targetFile);
             $mInstance->setTargetNode($targetNode);
-            $this->entityManager->flush();
         }
+        $this->entityManager->flush();
+        $this->getWebsocketServer()->setClientData($resourceId, 'currentMission', $mInstance->getId());
         return $this->gameClientResponse
             ->addMessage($this->translate('You have accepted the mission'), GameClientResponse::CLASS_SUCCESS);
     }

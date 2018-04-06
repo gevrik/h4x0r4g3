@@ -350,12 +350,11 @@ class Profile
      */
     protected $morph;
 
-
     /**
-     * Constructor for Profile.
+     * @ORM\OneToOne(targetEntity="Netrunners\Entity\Mission")
      */
-    public function __construct() {
-    }
+    protected $currentMission;
+
 
     /**
      * @return int
@@ -1382,6 +1381,24 @@ class Profile
     public function setStatMoxie(int $statMoxie)
     {
         $this->statMoxie = $statMoxie;
+        return $this;
+    }
+
+    /**
+     * @return Mission|null
+     */
+    public function getCurrentMission()
+    {
+        return $this->currentMission;
+    }
+
+    /**
+     * @param mixed $currentMission
+     * @return Profile
+     */
+    public function setCurrentMission($currentMission)
+    {
+        $this->currentMission = $currentMission;
         return $this;
     }
 

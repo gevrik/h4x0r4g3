@@ -61,3 +61,5 @@ INSERT INTO `FileType` (`name`, `description`, `codable`, `executable`, `size`, 
 INSERT INTO `FileTypeSkill` (`id`, `skill_id`, `fileType_id`) VALUES (NULL, '3', '43'), (NULL, '4', '43'), (NULL, '8', '43');
 INSERT INTO `filetype_filecategory` (`filetype_id`, `filecategory_id`) VALUES ('43', '10');
 INSERT INTO `filetype_filepart` (`filetype_id`, `filepart_id`) VALUES ('43', '1'), ('43', '3'), ('43', '8'), ('43', '9');
+
+INSERT INTO `MissionArchetype` (`name`, `description`, `subtype`) VALUES ('clean-system', 'Your Johnson needs you to clear a system from virii.', 1)

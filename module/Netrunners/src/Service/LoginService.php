@@ -492,6 +492,7 @@ class LoginService extends BaseService
             }
             $hash = hash('sha256', $ws->getHash() . $user->getId());
             $ws->setClientData($resourceId, 'hash', $hash);
+            $ws->setClientData($resourceId, 'currentMission', $profile->getCurrentMission());
             $homeCoords = $profile->getHomeNode()->getSystem()->getGeocoords();
             $currentCoords = $currentSystem->getGeocoords();
             // get some settings

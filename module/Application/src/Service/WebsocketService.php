@@ -780,6 +780,7 @@ class WebsocketService implements MessageComponentInterface {
             'partyId' => NULL,
             'newbieStatusDate' => NULL,
             'lastCodingLevel' => 1,
+            'currentMission' => null,
             MainCampaignService::MAIN_CAMPAIGN_STEP => NULL,
             MainCampaignService::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE => NULL,
         ];

@@ -675,7 +675,7 @@ class BaseUtilityService {
     {
         /** @var NodeRepository $nodeRepo */
         $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
-        $cpus = $nodeRepo->countBySystemAndType($system, NodeType::ID_CPU);
+        $cpus = $nodeRepo->getTotalCpuLevels($system);
         $maxNodes = $cpus * NodeService::MAX_NODES_MULTIPLIER;
         return $maxNodes;
     }
@@ -1516,6 +1516,7 @@ class BaseUtilityService {
      * @param null $sourceFaction
      * @param null $targetFaction
      * @return bool
+     * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
@@ -1535,13 +1536,22 @@ class BaseUtilityService {
         // make sure milkrun isnt added twice
         if ($milkrunInstance) {
             $qb = $this->entityManager->createQueryBuilder();
-            $qb->select('pfr');
-            $qb->from('Netrunners\Entity\ProfileFactionRating', 'pfr');
+            $qb->select('COUNT(pfr.id)');
+            $qb->from(ProfileFactionRating::class, 'pfr');
             $qb->where('pfr.milkrunInstance = :milkrun');
             $qb->setParameter('milkrun', $milkrunInstance);
-            $qb->setMaxResults(1);
-            $result = $qb->getQuery()->getOneOrNullResult();
-            if ($result) $existingRating = true;
+            $result = $qb->getQuery()->getSingleScalarResult();
+            if ($result >= 1) $existingRating = true;
+        }
+        // make sure mission isnt added twice
+        if ($mission) {
+            $qb = $this->entityManager->createQueryBuilder();
+            $qb->select('COUNT(pfr.id)');
+            $qb->from(ProfileFactionRating::class, 'pfr');
+            $qb->where('pfr.mission = :mission');
+            $qb->setParameter('mission', $mission);
+            $result = $qb->getQuery()->getSingleScalarResult();
+            if ($result >= 1) $existingRating = true;
         }
         // if no rating exists, create one
         if (!$existingRating) {
@@ -1553,7 +1563,17 @@ class BaseUtilityService {
             $pfr->setRater($rater);
             $pfr->setSource($source);
             $pfr->setSourceRating($sourceRating);
-            $pfr->setTargetRating($targetRating);
+            if ($mission) {
+                if ($mission->getSourceFaction() === $mission->getTargetFaction()) {
+                    $pfr->setTargetRating(0);
+                }
+                else {
+                    $pfr->setTargetRating($targetRating);
+                }
+            }
+            else {
+                $pfr->setTargetRating($targetRating);
+            }
             $pfr->setSourceFaction($sourceFaction);
             $pfr->setTargetFaction($targetFaction);
             $this->entityManager->persist($pfr);
