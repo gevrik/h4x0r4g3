@@ -20,7 +20,7 @@ class MissionArchetype
     const ID_UPLOAD_FILE = 2;
     const ID_PLANT_BACKDOOR = 3;
     const ID_DELETE_FILE = 4;
-    const ID_CLEAN_SYSTEM = 4;
+    const ID_CLEAN_SYSTEM = 5;
 
     const ID_SUBTYPE_GREY = 0;
     const ID_SUBTYPE_WHITE = 1;
