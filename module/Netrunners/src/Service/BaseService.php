@@ -3120,6 +3120,10 @@ class BaseService extends BaseUtilityService
                             $result->send();
                         }
                     }
+                    else {
+                        $currentMission->setData(json_encode($missionData));
+                        $this->entityManager->flush($currentMission);
+                    }
                 }
             }
         }
