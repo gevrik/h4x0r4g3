@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Connection;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
@@ -463,6 +464,252 @@ class CombatService extends BaseService
             $this->lowerIntegrityOfFile($armor, 100, $mitigatedDamage);
         }
         return $damage;
+    }
+
+    /**
+     * Use blaster module on player.
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function snipeCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if (!$blaster = $profile->getBlaster()) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to equip a blaster module to snipe'))->send();
+        }
+        // get parameter
+        list($contentArray, $targetConnection) = $this->getNextParameter($contentArray, true, false, false, true);
+        $targetProfile = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$targetConnection) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a connection to shoot through'))->send();
+        }
+        if (!$targetProfile) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify an user to shoot at'))->send();
+        }
+        $connection = $this->findConnectionByNameOrNumber($targetConnection, $currentNode);
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
+        }
+        // check if they can access the connection
+        if (
+            $connection->getType() == Connection::TYPE_CODEGATE &&
+            !$connection->getisOpen() &&
+            !$this->canAccess($profile, $currentSystem)
+        ) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to shoot through that connection'))->send();
+        }
+        $targetNode = $connection->getTargetNode();
+        $targetProfileObject = $this->findProfileByNameOrNumberInNode($targetProfile, $targetNode);
+        if (!$targetProfileObject) {
+            return $this->gameClientResponse->addMessage($this->translate('No such user'))->send();
+        }
+        $chance = $this->getSkillRating($profile, Skill::ID_BLASTERS);
+        $updateMap = false;
+        $flyToDefender = false;
+        $targetUserName = $targetProfileObject->getUser()->getUsername();
+        if ($this->makePercentRollAgainstTarget($chance)) {
+            // hit
+            $this->learnFromSuccess($profile, ['skills' => ['blasters']], -50);
+            $damage = ceil(round($blaster->getIntegrity()/10));
+            $hitLocation = $this->determineHitLocation();
+            $newEeg = $targetProfileObject->getEeg() - $damage;
+            if ($newEeg < 1) {
+                // flatlined
+                $message = sprintf(
+                    $this->translate('You flatlined [%s] with a shot for [%s] damage in the [%s]'),
+                    $targetUserName,
+                    $damage,
+                    $hitLocation
+                );
+                $this->getWebsocketServer()->removeCombatant($targetProfileObject);
+                $this->flatlineProfile($targetProfileObject);
+                $defenderMessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been flatlined by a shot from [%s] with [%s] damage in the [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $damage,
+                    $hitLocation
+                );
+                $flyToDefender = true;
+                $nodeMessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlined [%s] with a shot in the [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $targetUserName,
+                    $hitLocation
+                );
+            }
+            else {
+                $message = sprintf(
+                    $this->translate('You shoot [%s] for [%s] damage in the [%s]'),
+                    $targetUserName,
+                    $damage,
+                    $hitLocation
+                );
+                $defenderMessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">You have been shot by [%s] for [%s] damage in the [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $damage,
+                    $hitLocation
+                );
+                $nodeMessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] shoots [%s] in the [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $targetUserName,
+                    $hitLocation
+                );
+                $targetProfileObject->setEeg($targetProfileObject->getEeg() - $damage);
+            }
+        }
+        else {
+            $message = sprintf(
+                $this->translate('You miss [%s] with your shot'),
+                $targetUserName
+            );
+            $defenderMessage = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-danger">[%s] misses you with their shot</pre>'),
+                $this->user->getUsername()
+            );
+            $nodeMessage = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] misses [%s] with their shot</pre>'),
+                $this->user->getUsername()
+            );
+        }
+        if ($flyToDefender) {
+            $flyToMessage = [
+                'command' => 'flytocoords',
+                'content' => explode(',', $targetProfileObject->getHomeNode()->getSystem()->getGeocoords()),
+                'silent' => true
+            ];
+            $wsClient = $this->getWsClientByProfile($targetProfileObject);
+            $wsClient->send(json_encode($flyToMessage));
+        }
+        $this->lowerIntegrityOfFile($blaster);
+        $this->messageProfileNew($targetProfileObject, $defenderMessage);
+        $this->messageEveryoneInNodeNew($currentNode, $nodeMessage, GameClientResponse::CLASS_MUTED, null, [$profile->getId()], $updateMap);
+        $this->messageEveryoneInNodeNew($targetNode, $nodeMessage, GameClientResponse::CLASS_MUTED, null, [$targetProfileObject->getId()], $updateMap);
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * Use blaster module on npc.
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function shootCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        if (!$blaster = $profile->getBlaster()) {
+            return $this->gameClientResponse->addMessage($this->translate('You need to equip a blaster module to shoot'))->send();
+        }
+        // get parameter
+        list($contentArray, $targetConnection) = $this->getNextParameter($contentArray, true, false, false, true);
+        $targetNpc = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$targetConnection) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify a connection to shoot through'))->send();
+        }
+        if (!$targetNpc) {
+            return $this->gameClientResponse->addMessage($this->translate('Please specify an entity to shoot at'))->send();
+        }
+        $connection = $this->findConnectionByNameOrNumber($targetConnection, $currentNode);
+        if (!$connection) {
+            return $this->gameClientResponse->addMessage($this->translate('No such connection'))->send();
+        }
+        // check if they can access the connection
+        if (
+            $connection->getType() == Connection::TYPE_CODEGATE &&
+            !$connection->getisOpen() &&
+            !$this->canAccess($profile, $currentSystem)
+        ) {
+            return $this->gameClientResponse->addMessage($this->translate('Unable to shoot through that connection'))->send();
+        }
+        $targetNode = $connection->getTargetNode();
+        $npc = $this->findNpcByNameOrNumberInNode($targetNpc, $targetNode);
+        if (!$npc) {
+            return $this->gameClientResponse->addMessage($this->translate('No such entity'))->send();
+        }
+        $chance = $this->getSkillRating($profile, Skill::ID_BLASTERS);
+        $updateMap = false;
+        if ($this->makePercentRollAgainstTarget($chance)) {
+            // hit
+            $this->learnFromSuccess($profile, ['skills' => ['blasters']], -50);
+            $damage = ceil(round($blaster->getIntegrity()/10));
+            $hitLocation = $this->determineHitLocation();
+            $newEeg = $npc->getCurrentEeg() - $damage;
+            if ($newEeg < 1) {
+                // flatlined
+                $message = sprintf(
+                    $this->translate('You flatline [%s] with a shot for [%s] damage in the [%s]'),
+                    $npc->getName(),
+                    $damage,
+                    $hitLocation
+                );
+                $nodeMessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] flatlines [%s] with a shot in the [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $npc->getName(),
+                    $hitLocation
+                );
+                $this->getWebsocketServer()->removeCombatant($npc);
+                $this->flatlineNpcInstance($npc, $profile);
+                $updateMap = true;
+            }
+            else {
+                $message = sprintf(
+                    $this->translate('You shoot [%s] for [%s] damage in the [%s]'),
+                    $npc->getName(),
+                    $damage,
+                    $hitLocation
+                );
+                $nodeMessage = sprintf(
+                    $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] shoots [%s] in the [%s]</pre>'),
+                    $this->user->getUsername(),
+                    $npc->getName(),
+                    $hitLocation
+                );
+                $npc->setCurrentEeg($npc->getCurrentEeg() - $damage);
+                if (!$this->isInCombat($npc)) {
+                    $this->moveNpcToTargetNode($npc, null, $targetNode, $currentNode);
+                }
+            }
+        }
+        else {
+            $message = sprintf(
+                $this->translate('You miss [%s] with your shot'),
+                $npc->getName()
+            );
+            $nodeMessage = sprintf(
+                $this->translate('<pre style="white-space: pre-wrap;" class="text-muted">[%s] misses [%s] with their shot</pre>'),
+                $this->user->getUsername()
+            );
+        }
+        $this->lowerIntegrityOfFile($blaster);
+        $this->messageEveryoneInNodeNew($currentNode, $nodeMessage, GameClientResponse::CLASS_MUTED, null, [$profile->getId()], $updateMap);
+        $this->messageEveryoneInNodeNew($targetNode, $nodeMessage, GameClientResponse::CLASS_MUTED, null, [], $updateMap);
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
 }

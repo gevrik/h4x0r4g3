@@ -654,10 +654,14 @@ class WebsocketService implements MessageComponentInterface {
     public function removeCombatant($combatant, $endCombat = true)
     {
         if ($combatant instanceof NpcInstance) {
-            unset($this->combatants['npcs'][$combatant->getId()]);
+            if (isset($this->combatants['npcs'][$combatant->getId()])) {
+                unset($this->combatants['npcs'][$combatant->getId()]);
+            }
         }
         if ($combatant instanceof Profile) {
-            unset($this->combatants['profiles'][$combatant->getId()]);
+            if (isset($this->combatants['profile'][$combatant->getId()])) {
+                unset($this->combatants['profiles'][$combatant->getId()]);
+            }
         }
         if ($endCombat) {
             // remove all combatants that also had this combatant as their target

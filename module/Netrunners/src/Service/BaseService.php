@@ -952,6 +952,41 @@ class BaseService extends BaseUtilityService
     }
 
     /**
+     * @param int|string $parameter
+     * @param Node $node
+     * @return NpcInstance|null
+     */
+    protected function findNpcByNameOrNumberInNode($parameter, Node $node)
+    {
+        /** @var NpcInstanceRepository $npcInstanceRepo */
+        $npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $npcs = $npcInstanceRepo->findBy([
+            'node' => $node
+        ]);
+        $npc = NULL;
+        if ($searchByNumber) {
+            $arrayKey = $parameter - 1;
+            if (isset($npcs[$arrayKey])) {
+                $npc = $npcs[$arrayKey];
+            }
+        }
+        else {
+            foreach ($npcs as $xnpc) {
+                /** @var NpcInstance $xnpc */
+                if (mb_strrpos($xnpc->getName(), $parameter) !== false) {
+                    $npc = $xnpc;
+                    break;
+                }
+            }
+        }
+        return $npc;
+    }
+
+    /**
      * @param $parameter
      * @return Profile|null
      */
@@ -965,6 +1000,43 @@ class BaseService extends BaseUtilityService
         }
         $userProfile = $this->user->getProfile();
         $profiles = $profileRepo->findByNodeOrderedByResourceId($userProfile->getCurrentNode(), $userProfile);
+        $profile = NULL;
+        // search by number
+        if ($searchByNumber) {
+            $arrayKey = $parameter - 1;
+            if (isset($profiles[$arrayKey])) {
+                $profile = $profiles[$arrayKey];
+                /** @var Profile $profile */
+            }
+        }
+        else {
+            // search by name
+            foreach ($profiles as $xprofile) {
+                /** @var Profile $xprofile */
+                if (mb_strrpos($xprofile->getUser()->getUsername(), $parameter) !== false) {
+                    $profile = $xprofile;
+                    break;
+                }
+            }
+        }
+        return $profile;
+    }
+
+    /**
+     * @param $parameter
+     * @param Node $node
+     * @return Profile|null
+     */
+    protected function findProfileByNameOrNumberInNode($parameter, Node $node)
+    {
+        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        /** @var ProfileRepository $profileRepo */
+        $searchByNumber = false;
+        if (is_numeric($parameter)) {
+            $searchByNumber = true;
+        }
+        $userProfile = $this->user->getProfile();
+        $profiles = $profileRepo->findByNodeOrderedByResourceId($node, $userProfile);
         $profile = NULL;
         // search by number
         if ($searchByNumber) {
@@ -2915,7 +2987,7 @@ class BaseService extends BaseUtilityService
                 );
                 return $this->gameClientResponse->addMessage($message);
             case MissionArchetype::ID_PLANT_BACKDOOR:
-                if ($mission->getProfile() != $profile) {
+                if ($mission->getProfile() !== $profile) {
                     $message = sprintf(
                         $this->translate('[%s] can not be executed'),
                         $file->getName()
@@ -2941,7 +3013,7 @@ class BaseService extends BaseUtilityService
                 break;
             case MissionArchetype::ID_STEAL_FILE:
             case MissionArchetype::ID_DELETE_FILE:
-                if ($mission->getProfile() != $profile) {
+                if ($mission->getProfile() !== $profile) {
                     $message = sprintf(
                         $this->translate('[%s] can not be interacted with'),
                         $file->getName()

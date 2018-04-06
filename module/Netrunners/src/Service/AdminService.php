@@ -778,6 +778,9 @@ class AdminService extends BaseService
         if (!$level) $level = 1;
         if (!$slots) $slots = 1;
         $fileType = $this->fileTypeRepo->findLikeName($fileTypeName);
+        if (!$fileType) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid file type'), GameClientResponse::CLASS_DANGER)->send();
+        }
         $this->createFile(
             $fileType,
             true,

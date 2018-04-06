@@ -666,6 +666,8 @@ class ParserService
                 return $this->profileService->spendSkillPoints($resourceId, $contentArray);
             case 'skills':
                 return $this->profileService->showSkills($resourceId);
+            case 'shoot':
+                return $this->combatService->shootCommand($resourceId, $contentArray);
             case 'showbalance':
                 return $this->profileService->showBankBalance($resourceId);
             case 'showbounties':
@@ -675,6 +677,8 @@ class ParserService
             case 'sneak':
             case 'stealth':
                 return $this->profileService->startStealthing($resourceId);
+            case 'snipe':
+                return $this->combatService->snipeCommand($resourceId, $contentArray);
             case 'startcoding':
                 return $this->codingService->startCodingCommand($resourceId, $contentArray);
             case 'stat':
