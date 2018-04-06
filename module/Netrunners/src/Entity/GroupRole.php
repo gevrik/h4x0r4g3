@@ -50,6 +50,13 @@ class GroupRole
     ];
 
     /**
+     * @var array
+     */
+    static $allowedWithdraw = [
+        self::ROLE_LEADER_ID, self::ROLE_FOUNDER_ID, self::ROLE_COUNCIL_ID, self::ROLE_BANK_MANAGER_ID
+    ];
+
+    /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
      * @ORM\Column(type="integer")

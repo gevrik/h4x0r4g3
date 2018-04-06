@@ -1220,7 +1220,7 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if valid amount
-        $this->checkValueMinMax($amount, 1);
+        $amount = $this->checkValueMinMax($amount, 1);
         // check if they have that much
         if ($profile->getCredits() < $amount) {
             $message = $this->translate('You do not have that many credits');

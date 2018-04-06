@@ -11,7 +11,9 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\Faction;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\GroupRole;
 use Netrunners\Entity\GroupRoleInstance;
@@ -195,19 +197,27 @@ class GroupService extends BaseService
 
     /**
      * @param Profile $profile
+     * @param Group|null $group
      * @return bool
      */
-    private function isProfileInGroup(Profile $profile)
+    private function isProfileInGroup(Profile $profile, Group $group = null)
     {
+        if ($group) {
+            return ($profile->getGroup() === $group) ? true : false;
+        }
         return ($profile->getGroup()) ? true : false;
     }
 
     /**
      * @param Profile $profile
+     * @param Faction|null $faction
      * @return bool
      */
-    private function isProfileInFaction(Profile $profile)
+    private function isProfileInFaction(Profile $profile, Faction $faction = null)
     {
+        if ($faction) {
+            return ($profile->getFaction() === $faction) ? true : false;
+        }
         return ($profile->getFaction()) ? true : false;
     }
 
@@ -587,48 +597,7 @@ class GroupService extends BaseService
             return $checkResult->send();
         }
         $group = $profile->getGroup();
-        $systems = $this->systemRepo->findBy([
-            'group' => $group
-        ]);
-        /** @var System $system */
-        foreach ($systems as $system) {
-            $files = $this->fileRepo->findBy([
-                'system' => $system,
-                'profile' => $profile
-            ]);
-            /** @var File $file */
-            foreach ($files as $file) {
-                $file->setProfile(null);
-            }
-        }
-        $roles = $this->groupRoleInstanceRepo->findBy([
-            'member' => $profile,
-            'group' => $group
-        ]);
-        /** @var GroupRoleInstance $role */
-        foreach ($roles as $role) {
-            $this->entityManager->remove($role);
-        }
-        $missions = $this->missionRepo->findBy([
-            'sourceGroup' => $group,
-            'profile' => $profile
-        ]);
-        /** @var Mission $mission */
-        foreach ($missions as $mission) {
-            $mission
-                ->setSourceFaction($group->getFaction())
-                ->setTargetFaction($mission->getTargetGroup()->getFaction())
-                ->setSourceGroup(null)
-                ->setTargetGroup(null);
-        }
-        $npcInstances = $this->npcInstanceRepo->findBy([
-            'group' => $group,
-            'profile' => $profile
-        ]);
-        /** @var NpcInstance $npcInstance */
-        foreach ($npcInstances as $npcInstance) {
-            $npcInstance->setProfile(null);
-        }
+        $this->cleanUpForMemberRemoval($profile);
         $profile->setGroup(null);
         $blockDate = new \DateTime();
         $blockDate->add(new \DateInterval('PT1D'));
@@ -674,6 +643,56 @@ class GroupService extends BaseService
             return $this->gameClientResponse->addMessage($message);
         }
         return true;
+    }
+
+    /**
+     * @param Profile $profile
+     */
+    private function cleanUpForMemberRemoval(Profile $profile)
+    {
+        $group = $profile->getGroup();
+        $systems = $this->systemRepo->findBy([
+            'group' => $group
+        ]);
+        /** @var System $system */
+        foreach ($systems as $system) {
+            $files = $this->fileRepo->findBy([
+                'system' => $system,
+                'profile' => $profile
+            ]);
+            /** @var File $file */
+            foreach ($files as $file) {
+                $file->setProfile(null);
+            }
+        }
+        $roles = $this->groupRoleInstanceRepo->findBy([
+            'member' => $profile,
+            'group' => $group
+        ]);
+        /** @var GroupRoleInstance $role */
+        foreach ($roles as $role) {
+            $this->entityManager->remove($role);
+        }
+        $missions = $this->missionRepo->findBy([
+            'sourceGroup' => $group,
+            'profile' => $profile
+        ]);
+        /** @var Mission $mission */
+        foreach ($missions as $mission) {
+            $mission
+                ->setSourceFaction($group->getFaction())
+                ->setTargetFaction($mission->getTargetGroup()->getFaction())
+                ->setSourceGroup(null)
+                ->setTargetGroup(null);
+        }
+        $npcInstances = $this->npcInstanceRepo->findBy([
+            'group' => $group,
+            'profile' => $profile
+        ]);
+        /** @var NpcInstance $npcInstance */
+        foreach ($npcInstances as $npcInstance) {
+            $npcInstance->setProfile(null);
+        }
     }
 
     /**
@@ -760,6 +779,224 @@ class GroupService extends BaseService
         $this->entityManager->remove($group);
         $this->entityManager->flush();
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function removeProfileFromGroup($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // check if they are already in a group
+        if (!$this->isProfileInGroup($profile)) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $group = $profile->getGroup();
+        // check if they are allowed to recruit
+        if (!$this->memberRoleIsAllowed($profile, $group, GroupRole::$allowedToggleRecruitment)) {
+            $message = $this->translate('You not allowed to recruit for your group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now get the new member
+        $recruitName = $this->getNextParameter($contentArray, false, false, true, true);
+        if (!$recruitName) {
+            $message = $this->translate('Please specify the name of the new recruit');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $recruit = $this->profileRepo->findLikeName($recruitName);
+        if (!$recruit) {
+            $message = $this->translate('Invalid recruit');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$this->isProfileInGroup($recruit, $group)) {
+            $message = $this->translate('That user is not in your group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$this->isProfileInFaction($recruit)) {
+            $message = $this->translate('That user is not in a faction');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if (!$this->isProfileInFaction($recruit, $profile->getFaction())) {
+            $message = $this->translate('That user is not in your faction');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // all seems good, remove user from group
+        $this->cleanUpForMemberRemoval($profile);
+        $recruit->setGroup(null);
+        $this->entityManager->flush();
+        $xMessage = sprintf(
+            $this->translate('[%s] has removed you from [%s]'),
+            $profile->getUser()->getUsername(),
+            $group->getName()
+        );
+        $this->messageProfileNew($recruit, $xMessage, GameClientResponse::CLASS_INFO);
+        $message = sprintf(
+            $this->translate('You have removed [%s] from your group'),
+            $recruit->getUser()->getUsername()
+        );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function groupDepositCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // check if they are already in a group
+        if (!$this->isProfileInGroup($profile)) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
+            $message = $this->translate('You need to be in a banking node to deposit credits');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $group = $profile->getGroup();
+        // now get the amount
+        $depositAmount = $this->getNextParameter($contentArray, false, true);
+        if (!$depositAmount) {
+            $message = $this->translate('Please specify the deposit amount');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $depositAmount = $this->checkValueMinMax($depositAmount, 1);
+        // check if they have that much
+        if ($profile->getCredits() < $depositAmount) {
+            $message = $this->translate('You do not have that many credits');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /* all seems good, deposit */
+        // check for skimmer
+        $skimmerFiles = $this->fileRepo->findRunningInNodeByType(
+            $profile->getCurrentNode(),
+            FileType::ID_SKIMMER
+        );
+        $remainingAmount = $depositAmount;
+        $triggerData = ['value' => $remainingAmount];
+        foreach ($skimmerFiles as $skimmerFile) {
+            /** @var File $skimmerFile */
+            $skimAmount = $this->checkFileTriggers($skimmerFile, $triggerData);
+            if ($skimAmount === false) continue;
+            $remainingAmount -= $skimAmount;
+            $triggerData['value'] = $remainingAmount;
+        }
+        // now add/substract
+        $profile->setCredits($profile->getCredits() - $depositAmount);
+        $group->setCredits($group->getCredits() + $depositAmount);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You have deposited %s credits into your group\'s bank account'),
+            $depositAmount
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has deposited some credits'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew(
+            $profile->getCurrentNode(),
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function groupWithdrawCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // check if they are already in a group
+        if (!$this->isProfileInGroup($profile)) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_BANK) {
+            $message = $this->translate('You need to be in a banking node to withdraw credits');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $group = $profile->getGroup();
+        if (!$this->memberRoleIsAllowed($profile, $group, GroupRole::$allowedWithdraw)) {
+            $message = $this->translate('You not allowed to withdraw credits from your group');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        // now get the amount
+        $amount = $this->getNextParameter($contentArray, false, true);
+        if (!$amount) {
+            $message = $this->translate('Please specify the withdrawal amount');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $amount = $this->checkValueMinMax($amount, 1);
+        // check if they have that much
+        if ($group->getCredits() < $amount) {
+            $message = $this->translate('The group does not have that many credits');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /* all seems good, withdraw */
+        // now add/substract
+        $profile->setCredits($profile->getCredits() + $amount);
+        $group->setCredits($group->getCredits() - $amount);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You have withdrawn %s credits from your group\'s account'),
+            $amount
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        // inform other players in node
+        $message = sprintf(
+            $this->translate('[%s] has withdrawn some credits'),
+            $this->user->getUsername()
+        );
+        $this->messageEveryoneInNodeNew(
+            $profile->getCurrentNode(),
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
+        return $this->gameClientResponse->send();
     }
 
 }

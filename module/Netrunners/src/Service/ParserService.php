@@ -527,11 +527,11 @@ class ParserService
             case 'mailreply':
                 return $this->mailMessageService->mailReplyCommand($resourceId, $contentArray);
             case 'groupdeposit':
-                // TODO finish this
-                break;
+                return $this->groupService->groupDepositCommand($resourceId, $contentArray);
+            case 'groupremove':
+                return $this->groupService->removeProfileFromGroup($resourceId, $contentArray);
             case 'groupwithdraw':
-                // TODO finish this
-                break;
+                return $this->groupService->groupWithdrawCommand($resourceId, $contentArray);
             case 'managegroup':
                 return $this->groupService->manageGroupCommand($resourceId);
             case 'manageparts':
