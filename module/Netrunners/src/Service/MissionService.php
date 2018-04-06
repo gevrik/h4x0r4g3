@@ -246,7 +246,7 @@ class MissionService extends BaseService
                 ->send();
         }
         $now = new \DateTime();
-        $receivesPenalty = ($now >= $profile->getMissionPenaltyTimer()) ? true : false;
+        $receivesPenalty = ($now <= $profile->getMissionPenaltyTimer()) ? true : false;
         if ($receivesPenalty) {
             $this->createProfileFactionRating(
                 $profile,

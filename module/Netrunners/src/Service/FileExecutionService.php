@@ -172,6 +172,7 @@ class FileExecutionService extends BaseService
             case FileType::ID_VENOM:
             case FileType::ID_ANTIDOTE:
             case FileType::ID_STIMULANT:
+            case FileType::ID_LOGIC_BOMB:
                 return $this->executeCombatProgram($file);
             case FileType::ID_DATAMINER:
                 return $this->executeDataminer($file, $profile->getCurrentNode());
@@ -276,6 +277,8 @@ class FileExecutionService extends BaseService
         }
         switch ($file->getFileType()->getId()) {
             default:
+                $message = $this->translate('This combat program has not bene implemented yet');
+                $this->gameClientResponse->addMessage($message);
                 break;
             case FileType::ID_KICKER:
                 $this->executeKicker($file);
@@ -299,6 +302,9 @@ class FileExecutionService extends BaseService
             case FileType::ID_STIMULANT:
                 $message = $this->translate('You try to heal yourself');
                 $this->gameClientResponse->addMessage($message);
+                break;
+            case FileType::ID_LOGIC_BOMB:
+                $this->executeLogicBomb($file);
                 break;
         }
         // set global combat cooldown
@@ -501,6 +507,70 @@ class FileExecutionService extends BaseService
                     $this->gameClientResponse->addMessage($message);
                 }
                 $this->lowerIntegrityOfFile($file, 100, 1, true);
+            }
+        }
+    }
+
+    /**
+     * @param File $file
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    protected function executeLogicBomb(File $file)
+    {
+        $profile = $file->getProfile();
+        $ws = $this->getWebsocketServer();
+        $combatData = $ws->getProfileCombatData($profile->getId());
+        if (!$combatData) {
+            $message = sprintf(
+                $this->translate('You are no longer in combat - unable to execute [%s]'),
+                $file->getName()
+            );
+            $this->gameClientResponse->addMessage($message);
+        }
+        else {
+            $willpowerCost = $file->getLevel(); // TODO file mod to lower the willpower cost
+            if ($willpowerCost > $profile->getWillpower()) {
+                $message = sprintf(
+                    $this->translate('You do not have enough willpower to execute [%s]'),
+                    $file->getName()
+                );
+                $this->gameClientResponse->addMessage($message);
+            }
+            else {
+                $profile->setWillpower($profile->getWillpower() - $willpowerCost);
+                $this->entityManager->flush($profile);
+                $target = (isset($combatData->profileTarget)) ? $this->entityManager->find('Netrunners\Entity\Profile', $combatData->profileTarget) : $this->entityManager->find('Netrunners\Entity\NpcInstance', $combatData->npcTarget);
+                if (!$target) {
+                    $message = sprintf(
+                        $this->translate('Your target is no longer valid - unable to execute [%s]'),
+                        $file->getName()
+                    );
+                    $this->gameClientResponse->addMessage($message);
+                }
+                else {
+                    if ($this->makePercentRollAgainstTarget($this->getBonusForFileLevel($file))) {
+                        if ($target instanceof Profile) {
+                            list($actorMessage, $targetMessage) = $this->addEffect($target, NULL, $profile, Effect::ID_STUNNED);
+                        }
+                        else {
+                            list($actorMessage, $targetMessage) = $this->addEffect(NULL, $target, $profile, Effect::ID_STUNNED);
+                        }
+                        $this->gameClientResponse->addMessage($actorMessage);
+                        if ($targetMessage) $this->messageProfileNew($target, $targetMessage);
+                    }
+                    else {
+                        $message = sprintf(
+                            $this->translate('[%s] has no effect'),
+                            $file->getName()
+                        );
+                        $this->gameClientResponse->addMessage($message);
+                    }
+                    $this->lowerIntegrityOfFile($file, 100, 1, true);
+                }
             }
         }
     }
