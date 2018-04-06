@@ -152,9 +152,38 @@ class FactionService extends BaseService
         return $this->gameClientResponse->send();
     }
 
-    public function leaveFaction()
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function leaveFaction($resourceId)
     {
-        // TODO implement this
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        // check if they are already in a faction
+        $faction = $profile->getFaction();
+        if (!$faction) {
+            $message = $this->translate('You are not a member of any faction');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $profile->setFaction(null);
+        $factionJoinBlockData = new \DateTime();
+        $factionJoinBlockData->add(new \DateInterval('PT1D'));
+        $profile->setFactionJoinBlockDate($factionJoinBlockData);
+        $message = sprintf(
+            $this->translate('You have left [%s]'),
+            $faction->getName()
+        );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
 }

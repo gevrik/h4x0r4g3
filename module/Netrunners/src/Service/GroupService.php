@@ -11,16 +11,22 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\File;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\GroupRole;
 use Netrunners\Entity\GroupRoleInstance;
+use Netrunners\Entity\Mission;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
+use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\GroupRepository;
 use Netrunners\Repository\GroupRoleInstanceRepository;
 use Netrunners\Repository\GroupRoleRepository;
+use Netrunners\Repository\MissionRepository;
+use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
@@ -57,6 +63,20 @@ class GroupService extends BaseService
      */
     protected $groupRoleRepo;
 
+    /**
+     * @var MissionRepository
+     */
+    protected $missionRepo;
+
+    /**
+     * @var NpcInstanceRepository
+     */
+    protected $npcInstanceRepo;
+
+    /**
+     * @var FileRepository
+     */
+    protected $fileRepo;
 
     /**
      * GroupService constructor.
@@ -67,11 +87,128 @@ class GroupService extends BaseService
     public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
-        $this->groupRepo = $this->entityManager->getRepository('Netrunners\Entity\Group');
-        $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
-        $this->systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
-        $this->groupRoleInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRoleInstance');
-        $this->groupRoleRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRole');
+        $this->groupRepo = $this->entityManager->getRepository(Group::class);
+        $this->profileRepo = $this->entityManager->getRepository(Profile::class);
+        $this->systemRepo = $this->entityManager->getRepository(System::class);
+        $this->groupRoleInstanceRepo = $this->entityManager->getRepository(GroupRoleInstance::class);
+        $this->groupRoleRepo = $this->entityManager->getRepository(GroupRole::class);
+        $this->missionRepo = $this->entityManager->getRepository(Mission::class);
+        $this->npcInstanceRepo = $this->entityManager->getRepository(NpcInstance::class);
+        $this->fileRepo = $this->entityManager->getRepository(File::class);
+    }
+
+    /**
+     * @param $resourceId
+     * @param $command
+     * @param array $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function enterMode($resourceId, $command, $contentArray = [])
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $this->getWebsocketServer()->setConfirm($resourceId, $command, $contentArray);
+        switch ($command) {
+            default:
+                break;
+            case 'creategroup':
+                $checkResult = $this->createGroupChecks($profile, $currentSystem);
+                if ($checkResult instanceof GameClientResponse) {
+                    return $checkResult->send();
+                }
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                $message = sprintf(
+                    $this->translate('Are you sure that you want to create a group for %s credits - please confirm this action:'),
+                    $this->numberFormat(self::GROUP_CREATION_COST)
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+            case 'leavegroup':
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                $message = $this->translate('Are you sure that you want to leave your group - please confirm this action:');
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+            case 'groupdisband':
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                $message = $this->translate('Are you sure that you want to disband your group - please confirm this action:');
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+            case 'joingroup':
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                $message = sprintf(
+                    $this->translate('Are you sure that you want to join %s - please confirm this action:'),
+                    $this->numberFormat(self::GROUP_CREATION_COST)
+                );
+                $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+                break;
+        }
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param Profile $profile
+     * @param System $currentSystem
+     * @return bool|GameClientResponse
+     */
+    private function createGroupChecks(Profile $profile, System $currentSystem)
+    {
+        // check if they are already in a group
+        if ($this->isProfileInGroup($profile)) {
+            $message = $this->translate('You are already a member of a group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        // check if they are in a faction system
+        if (!$currentSystem->getFaction()) {
+            $message = $this->translate('You must be in a faction system to create a group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        // check if they are in a faction
+        if (!$this->isProfileInFaction($profile)) {
+            $message = $this->translate('You must be a member of a faction to create a group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        // check if they are in a fitting faction system
+        if ($profile->getFaction() != $currentSystem->getFaction()) {
+            $message = $this->translate('You must be in a system of your faction to create a group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        // check if they have enough credits
+        if ($profile->getCredits() < self::GROUP_CREATION_COST) {
+            $message = sprintf(
+                $this->translate('You need %s credits to create a group'),
+                self::GROUP_CREATION_COST
+            );
+            return $this->gameClientResponse->addMessage($message);
+        }
+        return true;
+    }
+
+    /**
+     * @param Profile $profile
+     * @return bool
+     */
+    private function isProfileInGroup(Profile $profile)
+    {
+        return ($profile->getGroup()) ? true : false;
+    }
+
+    /**
+     * @param Profile $profile
+     * @return bool
+     */
+    private function isProfileInFaction(Profile $profile)
+    {
+        return ($profile->getFaction()) ? true : false;
     }
 
     /**
@@ -93,33 +230,9 @@ class GroupService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        // check if they are already in a group
-        if ($profile->getGroup()) {
-            $message = $this->translate('You are already a member of a group');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if they are in a faction system
-        if (!$currentSystem->getFaction()) {
-            $message = $this->translate('You must be in a faction system to create a group');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if they are in a faction
-        if (!$profile->getFaction()) {
-            $message = $this->translate('You must be a member of a faction to create a group');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if they are in a fitting faction system
-        if ($profile->getFaction() != $currentSystem->getFaction()) {
-            $message = $this->translate('You must be in a system of your faction to create a group');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if they have enough credits
-        if ($profile->getCredits() < self::GROUP_CREATION_COST) {
-            $message = sprintf(
-                $this->translate('You need %s credits to create a group'),
-                self::GROUP_CREATION_COST
-            );
-            return $this->gameClientResponse->addMessage($message)->send();
+        $checkResult = $this->createGroupChecks($profile, $currentSystem);
+        if ($checkResult instanceof GameClientResponse) {
+            return $checkResult->send();
         }
         // now get the new name
         $newName = $this->getNextParameter($contentArray, false, false, true, true);
@@ -172,6 +285,23 @@ class GroupService extends BaseService
     }
 
     /**
+     * @param Profile $profile
+     * @param Group $group
+     * @param $groupRoleId
+     */
+    private function addGroupRole(Profile $profile, Group $group, $groupRoleId)
+    {
+        $groupRole = $this->groupRoleRepo->find($groupRoleId);
+        $gri = new GroupRoleInstance();
+        $gri->setGroup($group);
+        $gri->setAdded(new \DateTime());
+        $gri->setChanger(null);
+        $gri->setGroupRole($groupRole);
+        $gri->setMember($profile);
+        $this->entityManager->persist($gri);
+    }
+
+    /**
      * @param $resourceId
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
@@ -187,54 +317,12 @@ class GroupService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         $profile = $this->user->getProfile();
-        $currentNode = $profile->getCurrentNode();
-        // check if they are already in a group
-        if ($profile->getGroup()) {
-            $message = $this->translate('You are already a member of a group - you need to leave that group before you can join another one');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        $group = null;
-        // check if they are in a recruitment node
-        if ($currentNode->getNodeType()->getId() != NodeType::ID_RECRUITMENT) {
-            $message = $this->translate('You must be in a recruitment node of the group that you want to join');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if they are currently blocked from joining a group
-        if ($profile->getGroupJoinBlockDate() > new \DateTime()) {
-            $message = sprintf(
-                $this->translate('You must wait until [%s] before you can join another group - use "time" to get the current server time'),
-                $profile->getGroupJoinBlockDate()->format('Y/m/d H:i:s')
-            );
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        $currentSystem = $currentNode->getSystem();
-        $group = $currentSystem->getGroup();
-        if (!$group) {
-            $message = $this->translate('You must be in a recruitment node of the group that you want to join');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        if (!$profile->getFaction()) {
-            $message = $this->translate('You must join a faction before you can join a group');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        if ($group->getFaction() !== $profile->getFaction()) {
-            $message = $this->translate('You can not join a group that belongs to another faction');
-            return $this->gameClientResponse->addMessage($message)->send();
-        }
-        // check if it is open recruitment or if they need to write an application
-        if (!$group->getOpenRecruitment()) {
-            // check if they have an invitation
-            $invitation = $this->getWebsocketServer()->getGroupInvitation($group->getId(), $profile->getId());
-            if ($invitation) {
-                $this->getWebsocketServer()->removeGroupInvitation($group->getId(), $profile->getId());
-            }
-            else {
-                // no invitation - reject
-                $message = $this->translate('You can not join this group without an invitation');
-                return $this->gameClientResponse->addMessage($message)->send();
-            }
+        $checkResult = $this->joinGroupChecks($profile);
+        if ($checkResult instanceof GameClientResponse) {
+            return $checkResult->send();
         }
         /* checks passed, we can join the group */
+        $group = $profile->getGroup();
         $profile->setGroup($group);
         $this->addGroupRole($profile, $group, GroupRole::ROLE_NEWBIE_ID);
         $this->entityManager->flush();
@@ -255,19 +343,57 @@ class GroupService extends BaseService
 
     /**
      * @param Profile $profile
-     * @param Group $group
-     * @param $groupRoleId
+     * @return bool|GameClientResponse
      */
-    private function addGroupRole(Profile $profile, Group $group, $groupRoleId)
+    private function joinGroupChecks(Profile $profile)
     {
-        $groupRole = $this->groupRoleRepo->find($groupRoleId);
-        $gri = new GroupRoleInstance();
-        $gri->setGroup($group);
-        $gri->setAdded(new \DateTime());
-        $gri->setChanger(null);
-        $gri->setGroupRole($groupRole);
-        $gri->setMember($profile);
-        $this->entityManager->persist($gri);
+        // check if they are already in a group
+        if ($this->isProfileInGroup($profile)) {
+            $message = $this->translate('You are already a member of a group - you need to leave that group before you can join another one');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        $currentNode = $profile->getCurrentNode();
+        $group = null;
+        // check if they are in a recruitment node
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_RECRUITMENT) {
+            $message = $this->translate('You must be in a recruitment node of the group that you want to join');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        // check if they are currently blocked from joining a group
+        if ($profile->getGroupJoinBlockDate() > new \DateTime()) {
+            $message = sprintf(
+                $this->translate('You must wait until [%s] before you can join another group - use "time" to get the current server time'),
+                $profile->getGroupJoinBlockDate()->format('Y/m/d H:i:s')
+            );
+            return $this->gameClientResponse->addMessage($message);
+        }
+        $currentSystem = $currentNode->getSystem();
+        $group = $currentSystem->getGroup();
+        if (!$group) {
+            $message = $this->translate('You must be in a recruitment node of the group that you want to join');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        if (!$this->isProfileInFaction($profile)) {
+            $message = $this->translate('You must join a faction before you can join a group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        if ($group->getFaction() !== $profile->getFaction()) {
+            $message = $this->translate('You can not join a group that belongs to another faction');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        // check if it is open recruitment or if they need to write an application
+        if (!$group->getOpenRecruitment()) {
+            // check if they have an invitation
+            $invitation = $this->getWebsocketServer()->getGroupInvitation($group->getId(), $profile->getId());
+            if ($invitation) {
+                $this->getWebsocketServer()->removeGroupInvitation($group->getId(), $profile->getId());
+            } else {
+                // no invitation - reject
+                $message = $this->translate('You can not join this group without an invitation');
+                return $this->gameClientResponse->addMessage($message);
+            }
+        }
+        return true;
     }
 
     /**
@@ -295,8 +421,8 @@ class GroupService extends BaseService
         $view = new ViewModel();
         $view->setTemplate('netrunners/group/manage-group.phtml');
         // gather important data
-        $members = $this->profileRepo->findBy(['group'=>$group]);
-        $systems = $this->systemRepo->findBy(['group'=>$group]);
+        $members = $this->profileRepo->findBy(['group' => $group]);
+        $systems = $this->systemRepo->findBy(['group' => $group]);
         $allInvited = $this->getWebsocketServer()->getGroupInvitations();
         $invitations = (array_key_exists($group->getId(), $allInvited)) ? $allInvited[$group->getId()] : [];
         $view->setVariables([
@@ -344,8 +470,7 @@ class GroupService extends BaseService
         if ($group->getOpenRecruitment()) {
             $newValue = false;
             $stringValue = $this->translate('no');
-        }
-        else {
+        } else {
             $newValue = true;
             $stringValue = $this->translate('yes');
         }
@@ -436,6 +561,204 @@ class GroupService extends BaseService
             $this->translate('You have invited [%s] to join your group'),
             $recruit->getUser()->getUsername()
         );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function leaveGroup($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        // check if they are already in a group
+        $checkResult = $this->leaveGroupChecks($profile);
+        if ($checkResult instanceof GameClientResponse) {
+            return $checkResult->send();
+        }
+        $group = $profile->getGroup();
+        $systems = $this->systemRepo->findBy([
+            'group' => $group
+        ]);
+        /** @var System $system */
+        foreach ($systems as $system) {
+            $files = $this->fileRepo->findBy([
+                'system' => $system,
+                'profile' => $profile
+            ]);
+            /** @var File $file */
+            foreach ($files as $file) {
+                $file->setProfile(null);
+            }
+        }
+        $roles = $this->groupRoleInstanceRepo->findBy([
+            'member' => $profile,
+            'group' => $group
+        ]);
+        /** @var GroupRoleInstance $role */
+        foreach ($roles as $role) {
+            $this->entityManager->remove($role);
+        }
+        $missions = $this->missionRepo->findBy([
+            'sourceGroup' => $group,
+            'profile' => $profile
+        ]);
+        /** @var Mission $mission */
+        foreach ($missions as $mission) {
+            $mission
+                ->setSourceFaction($group->getFaction())
+                ->setTargetFaction($mission->getTargetGroup()->getFaction())
+                ->setSourceGroup(null)
+                ->setTargetGroup(null);
+        }
+        $npcInstances = $this->npcInstanceRepo->findBy([
+            'group' => $group,
+            'profile' => $profile
+        ]);
+        /** @var NpcInstance $npcInstance */
+        foreach ($npcInstances as $npcInstance) {
+            $npcInstance->setProfile(null);
+        }
+        $profile->setGroup(null);
+        $blockDate = new \DateTime();
+        $blockDate->add(new \DateInterval('PT1D'));
+        $profile->setGroupJoinBlockDate($blockDate);
+        $this->entityManager->flush();
+        $message = sprintf(
+            $this->translate('You have left [%s]'),
+            $group->getName()
+        );
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param Profile $profile
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    private function leaveGroupChecks(Profile $profile)
+    {
+        if (!$this->isProfileInGroup($profile)) {
+            $message = $this->translate('You are not a member of any group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        $group = $profile->getGroup();
+        $groupMembers = $this->profileRepo->countByGroup($group);
+        if ($groupMembers <= 1) {
+            $message = $this->translate('You are the only member of the group, you must disband the group instead');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        /** @var GroupRole $leaderRole */
+        $leaderRole = $this->entityManager->find(GroupRole::class, GroupRole::ROLE_LEADER_ID);
+        $isLeader = $this->groupRoleInstanceRepo->findOneBy([
+            'groupRole' => $leaderRole,
+            'member' => $profile,
+            'group' => $group
+        ]);
+        if ($isLeader) {
+            $message = $this->translate('You must appoint another leader before you can leave the group');
+            return $this->gameClientResponse->addMessage($message);
+        }
+        return true;
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function disbandGroup($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        $group = $profile->getGroup();
+        $faction = $group->getFaction();
+        /** @var GroupRole $leaderRole */
+        $leaderRole = $this->entityManager->find(GroupRole::class, GroupRole::ROLE_LEADER_ID);
+        $isLeader = $this->groupRoleInstanceRepo->findOneBy([
+            'groupRole' => $leaderRole,
+            'member' => $profile,
+            'group' => $group
+        ]);
+        if (!$isLeader) {
+            $message = $this->translate('You must be the leader of the group to disband it');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $systems = $this->systemRepo->findBy([
+            'group' => $group
+        ]);
+        /** @var System $system */
+        foreach ($systems as $system) {
+            $system->setGroup(null)->setFaction($faction);
+            $files = $this->fileRepo->findBy([
+                'system' => $system
+            ]);
+            /** @var File $file */
+            foreach ($files as $file) {
+                $fileProfile = $file->getProfile();
+                if ($fileProfile && $fileProfile->getGroup() === $group) {
+                    $file->setProfile(null)->setRunning(false);
+                }
+            }
+        }
+        $groupRoleInstances = $this->groupRoleInstanceRepo->findBy([
+            'group' => $group
+        ]);
+        foreach ($groupRoleInstances as $groupRoleInstance) {
+            $this->entityManager->remove($groupRoleInstance);
+        }
+        $missions = $this->missionRepo->findBy([
+            'sourceGroup' => $group
+        ]);
+        /** @var Mission $mission */
+        foreach ($missions as $mission) {
+            $mission
+                ->setSourceFaction($faction)
+                ->setTargetFaction($mission->getTargetGroup()->getFaction())
+                ->setSourceGroup(null)
+                ->setTargetGroup(null);
+        }
+        $npcInstances = $this->npcInstanceRepo->findBy([
+            'group' => $group
+        ]);
+        /** @var NpcInstance $npcInstance */
+        foreach ($npcInstances as $npcInstance) {
+            $npcInstance->setFaction($faction)->setGroup(null)->setProfile(null);
+        }
+        $profiles = $this->profileRepo->findBy([
+            'group' => $group
+        ]);
+        /** @var Profile $profile */
+        foreach ($profiles as $profile) {
+            $profile->setGroup(null);
+        }
+        $message = sprintf(
+            $this->translate('You have disbanded [%s]'),
+            $group->getName()
+        );
+        $this->entityManager->remove($group);
+        $this->entityManager->flush();
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 

@@ -29,7 +29,6 @@ use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Mission;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
-use Netrunners\Entity\Notification;
 use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
@@ -39,7 +38,6 @@ use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
-use Netrunners\Entity\SystemLog;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileModInstanceRepository;
@@ -52,7 +50,6 @@ use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\ProfileEffectRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
-use Zend\Mvc\I18n\Translator;
 
 class BaseUtilityService {
 

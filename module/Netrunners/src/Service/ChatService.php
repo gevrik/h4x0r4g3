@@ -552,7 +552,6 @@ class ChatService extends BaseService
         $ws->setClientDataReplyId($recipient->getCurrentResourceId(), $profile->getId());
         // create response for sender
         $senderMessage = $this->prepareMessage($recipient, $messageContent, self::CHANNEL_TELL, true, 'TO ');
-        // TODO add ignore system and anonymous flag
         return $this->gameClientResponse
             ->reset()
             ->setResourceId($resourceId)
@@ -619,7 +618,6 @@ class ChatService extends BaseService
         $ws->setClientDataReplyId($recipient->getCurrentResourceId(), $profile->getId());
         // create response for sender
         $senderMessage = $this->prepareMessage($recipient, $messageContent, self::CHANNEL_TELL, true, 'TO ');
-        // TODO add ignore system and anonymous flag
         return $this->gameClientResponse
             ->reset()
             ->setResourceId($resourceId)

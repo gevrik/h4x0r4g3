@@ -1144,8 +1144,8 @@ class BaseService extends BaseUtilityService
         $updateMap = false
     )
     {
-        $profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         /** @var ProfileRepository $profileRepo */
+        $profileRepo = $this->entityManager->getRepository(Profile::class);
         $profiles = $profileRepo->findByCurrentNode($node, $actor, true);
         $response = new GameClientResponse(NULL, GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
         $response->addMessage($message, $textClass);
@@ -1380,7 +1380,7 @@ class BaseService extends BaseUtilityService
                 $profile->setShield(null);
                 $this->entityManager->flush($profile);
             }
-            if ($file->getFileType()->getId() == FileType::ID_CODEARMOR) { // TODO armor needs to mitigate damage too
+            if ($file->getFileType()->getId() == FileType::ID_CODEARMOR) {
                 $fileData = json_decode($file->getData());
                 switch ($fileData->subtype) {
                     default:
@@ -2202,8 +2202,6 @@ class BaseService extends BaseUtilityService
             $this->entityManager->flush($profile);
         }
     }
-
-    // TODO credit bounties for killing people with security rating
 
     /**
      * @param Profile $profile

@@ -114,7 +114,7 @@ class CodebreakerService extends BaseService
             $words = $this->wordRepo->getRandomWordsByLength(1, $wordLength);
             $word = array_shift($words);
             $thePassword = $word->getContent();
-            $randomString = $this->getRandomString($hashLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'); // TODO add to keyspace
+            $randomString = $this->getRandomString($hashLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
             $thePassword = $this->leetifyString($thePassword);
             $theString = substr_replace($randomString, $thePassword, mt_rand(0, ($hashLength - $wordLength - 1)), $wordLength);
             $deadline = new \DateTime();

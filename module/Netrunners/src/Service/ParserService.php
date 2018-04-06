@@ -395,7 +395,7 @@ class ParserService
             case 'con':
                 return $this->npcInstanceService->considerNpc($resourceId, $contentArray);
             case 'creategroup':
-                return $this->groupService->createGroup($resourceId, $contentArray);
+                return $this->groupService->enterMode($resourceId, 'creategroup', $contentArray);
             case 'createparty':
                 return $this->partyService->createParty($resourceId);
             case 'createpasskey':
@@ -487,12 +487,16 @@ class ParserService
             case 'joinfaction':
                 return $this->factionService->joinFaction($resourceId);
             case 'joingroup':
-                return $this->groupService->joinGroup($resourceId);
+                return $this->groupService->enterMode($resourceId, 'joingroup', $contentArray);
             case 'killprocess':
             case 'killp':
                 return $this->fileService->killProcess($resourceId, $contentArray);
             case 'jobs':
                 return $this->profileService->showJobs($resourceId, $jobs);
+            case 'leavefaction':
+                return $this->factionService->leaveFaction($resourceId);
+            case 'leavegroup':
+                return $this->groupService->enterMode($resourceId, 'leavegroup', $contentArray);
             case 'leaveparty':
                 return $this->partyService->leaveParty($resourceId);
             case 'listmanpages':
@@ -536,6 +540,8 @@ class ParserService
                 return $this->groupService->toggleRecruitment($resourceId);
             case 'groupinvitation':
                 return $this->groupService->groupInvitation($resourceId, $contentArray);
+            case 'groupdisband':
+                return $this->groupService->enterMode($resourceId, 'groupdisband', $contentArray);
             case 'map':
                 return $this->systemService->updateMap($resourceId, $user->getProfile(), false);
             case 'showmra':
