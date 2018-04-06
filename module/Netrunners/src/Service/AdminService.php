@@ -1079,7 +1079,8 @@ class AdminService extends BaseService
             $entity->$setter($value);
         }
         catch (\Exception $e) {
-            return $this->gameClientResponse->addMessage($e->getMessage())->send();
+            $this->gameClientResponse->addMessage($e->getMessage())->send();
+            throw $e;
         }
         $this->entityManager->flush($entity);
         $this->gameClientResponse->addMessage(

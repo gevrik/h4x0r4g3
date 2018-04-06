@@ -1583,47 +1583,6 @@ class BaseUtilityService {
     }
 
     /**
-     * @param NpcInstance $npcInstance
-     * @param NpcInstance|Profile $attacker
-     * @throws \Doctrine\ORM\OptimisticLockException
-     */
-    protected function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
-    {
-        /** @var FileRepository $fileRepo */
-        foreach ($npcInstance->getFiles() as $file) {
-            /** @var File $file */
-            $npcInstance->removeFile($file);
-            $file->setRunning(false);
-            $file->setNode($npcInstance->getNode());
-            $file->setSystem($npcInstance->getNode()->getSystem());
-        }
-        $spawner = $npcInstance->getSpawner();
-        if ($spawner) {
-            $fileData = $this->getFileData($spawner);
-            $fileData->npcid = 0;
-            $spawner->setData(json_encode($fileData));
-        }
-        $npcInstance->setBlasterModule(NULL);
-        $npcInstance->setBladeModule(NULL);
-        $npcInstance->setShieldModule(NULL);
-        $npcInstance->setSpawner(NULL);
-        $this->entityManager->flush();
-        // give snippets and credits to attacker
-        $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
-        $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
-        // remove the npc instance
-        $npcType = $npcInstance->getNpc();
-        if ($npcType->getType() == Npc::TYPE_HELPER) {
-            $this->systemIntegrityChange($npcInstance->getSystem(), -1);
-        }
-        if ($npcType->getType() == Npc::TYPE_VIRUS) {
-            $this->systemIntegrityChange($npcInstance->getSystem(), 1);
-        }
-        $this->entityManager->remove($npcInstance);
-        $this->entityManager->flush($npcInstance);
-    }
-
-    /**
      * @param System $system
      * @param int $amount
      * @throws \Doctrine\ORM\OptimisticLockException

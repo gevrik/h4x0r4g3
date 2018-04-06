@@ -18,6 +18,7 @@ use Netrunners\Entity\Mission;
 use Netrunners\Entity\MissionArchetype;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FactionRepository;
@@ -35,6 +36,8 @@ class MissionService extends BaseService
     const TILE_SUBTYPE_SPECIAL_CREDITS = 1;
     const TILE_SUBTYPE_SPECIAL_SNIPPETS = 2;
     const CREDITS_MULTIPLIER = 125;
+
+    static $combatMissions = [MissionArchetype::ID_CLEAN_SYSTEM];
 
     /**
      * @var SystemGeneratorService
@@ -98,13 +101,14 @@ class MissionService extends BaseService
 
     /**
      * @param $resourceId
+     * @param $command
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      * @throws \Exception
      */
-    public function enterMode($resourceId)
+    public function enterMode($resourceId, $command)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
@@ -115,76 +119,167 @@ class MissionService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_AGENT) {
-            return $this->gameClientResponse->addMessage($this->translate('You need to be in an agent node to request a mission'))->send();
+        switch ($command) {
+            default:
+                break;
+            case 'abandonmission':
+                $currentMission = $profile->getCurrentMission();
+                if (!$currentMission) {
+                    return $this->gameClientResponse
+                        ->addMessage($this->translate('You are not on a mission'))
+                        ->send();
+                }
+                $now = new \DateTime();
+                $receivesPenalty = ($now >= $profile->getMissionPenaltyTimer()) ? true : false;
+                $message = [];
+                if ($receivesPenalty) $message[] = sprintf(
+                    $this->translate('You will receive a faction rating penalty if you abandon this mission now!')
+                );
+                $message[] = $this->translate('Abdondon this mission? (enter "y" to confirm)');
+                $this->gameClientResponse->addMessages($message, GameClientResponse::CLASS_WHITE);
+                $confirmData = [
+                    'missionId' => $currentMission->getId()
+                ];
+                $this->getWebsocketServer()->setConfirm($resourceId, 'abandonmission', $confirmData);
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                break;
+            case 'mission':
+                if (!$this->response && $currentNode->getNodeType()->getId() != NodeType::ID_AGENT) {
+                    return $this->gameClientResponse->addMessage(
+                        $this->translate('You need to be in an agent node to request a mission')
+                    )->send();
+                }
+                $currentMission = $profile->getCurrentMission();
+                if ($currentMission) {
+                    return $this->gameClientResponse->addMessage(
+                        $this->translate('You have already accepted another mission')
+                    )->send();
+                }
+                $missions = $this->missionArchetypeRepo->findAll();
+                $amount = count($missions) - 1;
+                /** @var MissionArchetype $targetMission */
+                $targetMission = $missions[mt_rand(0, $amount)];
+                $missionLevel = $currentNode->getLevel();
+                $expires = new \DateTime();
+                $expires->add(new \DateInterval('PT' . $missionLevel . 'H'));
+                $possibleSourceFactions = [];
+                if ($profile->getFaction()) $possibleSourceFactions[] = $profile->getFaction();
+                if ($currentSystem->getFaction()) $possibleSourceFactions[] = $currentSystem->getFaction();
+                $sourceFaction = $this->getRandomFaction($possibleSourceFactions);
+                if ($targetMission->getSubtype() == MissionArchetype::ID_SUBTYPE_WHITE) { // whitehat missions
+                    $targetFaction = $sourceFaction;
+                }
+                else {
+                    $targetFaction = $this->getRandomFaction();
+                    while ($targetFaction === $sourceFaction) {
+                        $targetFaction = $this->getRandomFaction();
+                    }
+                }
+                $message = [];
+                $message[] = sprintf(
+                    $this->translate('MISSION: %s'),
+                    $targetMission->getName()
+                );
+                $message[] = wordwrap($targetMission->getDescription(), 120);
+                $message[] = sprintf(
+                    $this->translate('LEVEL: %s'),
+                    $missionLevel
+                );
+                $message[] = sprintf(
+                    $this->translate('EXPIRES: %s'),
+                    $expires->format('Y/m/d H:i:s')
+                );
+                $message[] = sprintf(
+                    $this->translate('SOURCE: %s'),
+                    $sourceFaction->getName()
+                );
+                $message[] = sprintf(
+                    $this->translate('TARGET: %s'),
+                    $targetFaction->getName()
+                );
+                $message[] = sprintf(
+                    $this->translate('REWARD: %sc'),
+                    $missionLevel * self::CREDITS_MULTIPLIER
+                );
+                $this->gameClientResponse->addMessages($message, GameClientResponse::CLASS_WHITE);
+                $this->gameClientResponse->addMessage(
+                    $this->translate('Accept this mission? (enter "y" to confirm)'),
+                    GameClientResponse::CLASS_WHITE
+                );
+                $confirmData = [
+                    'missionArchetypeId' => $targetMission->getId(),
+                    'level' => $missionLevel,
+                    'sourceFactionId' => $sourceFaction->getId(),
+                    'targetFactionId' => $targetFaction->getId(),
+                    'expires' => $expires
+                ];
+                $this->getWebsocketServer()->setConfirm($resourceId, 'mission', $confirmData);
+                $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
+                break;
         }
-        $currentMission = $this->missionRepo->findCurrentMission($profile);
-        if ($currentMission) {
-            return $this->gameClientResponse->addMessage($this->translate('You have already accepted another mission'))->send();
-        }
-        $missions = $this->missionArchetypeRepo->findAll();
-        $amount = count($missions) - 1;
-        /** @var MissionArchetype $targetMission */
-        $targetMission = $missions[mt_rand(0, $amount)];
-        $missionLevel = $currentNode->getLevel();
-        $timer = 3600;
-        $expires = new \DateTime();
-        $expires->add(new \DateInterval('PT' . $timer . 'S'));
-        $possibleSourceFactions = [];
-        if ($profile->getFaction()) $possibleSourceFactions[] = $profile->getFaction();
-        if ($currentSystem->getFaction()) $possibleSourceFactions[] = $currentSystem->getFaction();
-        $sourceFaction = $this->getRandomFaction($possibleSourceFactions);
-        if ($targetMission->getSubtype() == MissionArchetype::ID_SUBTYPE_WHITE) { // whitehat missions
-            $targetFaction = $sourceFaction;
-        }
-        else {
-            $targetFaction = $this->getRandomFaction();
-            while ($targetFaction === $sourceFaction) {
-                $targetFaction = $this->getRandomFaction();
-            }
-        }
-        $message = sprintf(
-            $this->translate('MISSION: %s'),
-            $targetMission->getName()
-        );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
-        $this->gameClientResponse->addMessage(wordwrap($targetMission->getDescription(), 120), GameClientResponse::CLASS_WHITE);
-        $message = sprintf(
-            $this->translate('LEVEL: %s'),
-            $missionLevel
-        );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
-        $message = sprintf(
-            $this->translate('EXPIRES: %s'),
-            $expires->format('Y/m/d H:i:s')
-        );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
-        $message = sprintf(
-            $this->translate('SOURCE: %s'),
-            $sourceFaction->getName()
-        );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
-        $message = sprintf(
-            $this->translate('TARGET: %s'),
-            $targetFaction->getName()
-        );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
-        $message = sprintf(
-            $this->translate('REWARD: %sc'),
-            $missionLevel * self::CREDITS_MULTIPLIER
-        );
-        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
-        $this->gameClientResponse->addMessage($this->translate('Accept this mission? (enter "y" to confirm)'), GameClientResponse::CLASS_WHITE);
-        $confirmData = [
-            'missionArchetypeId' => $targetMission->getId(),
-            'level' => $missionLevel,
-            'sourceFactionId' => $sourceFaction->getId(),
-            'targetFactionId' => $targetFaction->getId(),
-            'expires' => $expires
-        ];
-        $this->getWebsocketServer()->setConfirm($resourceId, 'mission', $confirmData);
-        $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
         return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function abandonMission($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $currentMission = $profile->getCurrentMission();
+        if (!$currentMission) {
+            return $this->gameClientResponse
+                ->addMessage($this->translate('You are not on a mission'))
+                ->send();
+        }
+        $now = new \DateTime();
+        $receivesPenalty = ($now >= $profile->getMissionPenaltyTimer()) ? true : false;
+        if ($receivesPenalty) {
+            $this->createProfileFactionRating(
+                $profile,
+                NULL,
+                $currentMission,
+                NULL,
+                ProfileFactionRating::SOURCE_ID_MISSION,
+                $currentMission->getLevel() * -2,
+                $currentMission->getLevel() * -1,
+                $currentMission->getSourceFaction(),
+                $currentMission->getTargetFaction()
+            );
+        }
+        $missionPenaltyTimer = new \DateTime();
+        $missionPenaltyTimer->add(new \DateInterval('PT1H'));
+        $profile->setMissionPenaltyTimer($missionPenaltyTimer);
+        $currentMission->setExpired(true);
+        $currentMission->setExpires(new \DateTime());
+        $targetFile = $currentMission->getTargetFile();
+        if ($targetFile) {
+            $currentMission->setTargetFile(NULL);
+        }
+        $this->entityManager->flush($currentMission);
+        if ($targetFile) {
+            $this->entityManager->remove($targetFile);
+            $this->entityManager->flush($targetFile);
+        }
+        $profile->setFailedMissions($profile->getFailedMissions()+1);
+        $profile->setCurrentMission(null);
+        $this->getWebsocketServer()->setClientData($profile->getCurrentResourceId(), 'currentMission', null);
+        $this->entityManager->flush($profile);
+        $message = $this->translate('You have abandoned your current mission');
+        return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
 
     /**
@@ -210,16 +305,18 @@ class MissionService extends BaseService
                     $this->translate('You need to be in an agent node to request a mission')
                 )->send();
         }
-        if ($this->missionRepo->findCurrentMission($profile)) {
+        if ($profile->getCurrentMission()) {
             return $this->gameClientResponse
                 ->addMessage($this->translate('You have accepted another mission already'))->send();
         }
         $instanceData = (object)$confirmData->contentArray;
+        /** @var MissionArchetype $targetMission */
         $targetMission = $this->entityManager
             ->find(MissionArchetype::class, $instanceData->missionArchetypeId);
+        /** @var Faction $sourceFaction */
         $sourceFaction = $this->entityManager->find(Faction::class, $instanceData->sourceFactionId);
-        $targetFaction = $this->entityManager->find(Faction::class, $instanceData->targetFactionId);
         /** @var Faction $targetFaction */
+        $targetFaction = $this->entityManager->find(Faction::class, $instanceData->targetFactionId);
         $mInstance = new Mission();
         $mInstance->setAdded(new \DateTime());
         $mInstance->setExpires($instanceData->expires);
@@ -227,12 +324,20 @@ class MissionService extends BaseService
         $mInstance->setProfile($profile);
         $mInstance->setSourceFaction($sourceFaction);
         $mInstance->setTargetFaction($targetFaction);
+        $mInstance->setSourceGroup(null);
+        $mInstance->setTargetGroup(null);
+        $mInstance->setTargetProfile(null);
         $mInstance->setMission($targetMission);
-        $mInstance->setCompleted(NULL);
-        $mInstance->setExpired(NULL);
-        $mInstance->setTargetFile(NULL);
-        $mInstance->setTargetSystem(NULL);
-        $mInstance->setTargetNode(NULL);
+        $mInstance->setCompleted(null);
+        $mInstance->setExpired(null);
+        $mInstance->setTargetFile(null);
+        $mInstance->setTargetSystem(null);
+        $mInstance->setTargetNode(null);
+        $mInstance->setData(null);
+        $mInstance->setMissionGiver(null);
+        $mInstance->setAgentNode(null);
+        $mInstance->setDescription($targetMission->getDescription());
+        $mInstance->setName($targetMission->getName());
         $this->entityManager->persist($mInstance);
         $possibleSystems = $this->systemRepo->findByTargetFaction($targetFaction);
         // generate new system randomly or if we have found no existing systems
@@ -275,8 +380,8 @@ class MissionService extends BaseService
         }
         $profile->setCurrentMission($mInstance);
         if ($createTargetFile) {
-            $fileType = $this->entityManager->find(FileType::class, FileType::ID_TEXT);
             /** @var FileType $fileType */
+            $fileType = $this->entityManager->find(FileType::class, FileType::ID_TEXT);
             $fileName = $this->getRandomString(12) . '.txt';
             $targetFile = $this->createFile(
                 $fileType,
@@ -321,12 +426,12 @@ class MissionService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        $currentMission = $this->missionRepo->findCurrentMission($profile);
+        /** @var Mission $currentMission */
+        $currentMission = $profile->getCurrentMission();
         if (!$currentMission) {
             $message = $this->translate('No current mission');
             return $this->gameClientResponse->addMessage($message)->send();
         }
-        /** @var Mission $currentMission */
         $archetype = $currentMission->getMission();
         $message = sprintf(
             $this->translate('%s - %s'),
@@ -356,13 +461,13 @@ class MissionService extends BaseService
         $message = sprintf(
             $this->translate('%-14s: %s'),
             $this->translate('SOURCE'),
-            $currentMission->getSourceFaction()->getName()
+            ($currentMission->getSourceFaction()) ? $currentMission->getSourceFaction()->getName() : $this->translate('---')
         );
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         $message = sprintf(
             $this->translate('%-14s: %s'),
             $this->translate('TARGET'),
-            $currentMission->getTargetFaction()->getName()
+            ($currentMission->getTargetFaction()) ? $currentMission->getTargetFaction()->getName() : $this->translate('---')
         );
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         $message = sprintf(
@@ -374,7 +479,7 @@ class MissionService extends BaseService
         $message = sprintf(
             $this->translate('%-14s: %s'),
             $this->translate('FILE'),
-            $currentMission->getTargetFile()->getName()
+            ($currentMission->getTargetFile()) ? $currentMission->getTargetFile()->getName() : $this->translate('---')
         );
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
         switch ($archetype->getId()) {
@@ -390,6 +495,7 @@ class MissionService extends BaseService
                 $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
                 break;
         }
+        // TODO add amount of kills to output only for kill missions
         return $this->gameClientResponse->send();
     }
 
@@ -403,8 +509,8 @@ class MissionService extends BaseService
             $factions = $this->factionRepo->findAllForMilkrun();
         }
         $factionCount = count($factions) - 1;
-        $targetFaction = $factions[mt_rand(0, $factionCount)];
         /** @var Faction $targetFaction */
+        $targetFaction = $factions[mt_rand(0, $factionCount)];
         while ($targetFaction->getId() == Faction::ID_AIVATARS || $targetFaction->getId() == Faction::ID_NETWATCH) {
             $targetFaction = $factions[mt_rand(0, $factionCount)];
         }

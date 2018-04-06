@@ -3021,18 +3021,23 @@ class BaseService extends BaseUtilityService
                 }
                 break;
         }
-        return $this->completeMission();
+        $result = $this->completeMission();
+        if ($result instanceof GameClientResponse) {
+            $result->send();
+        }
+        return false;
     }
 
     /**
+     * @param Profile|null $profile
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    protected function completeMission()
+    protected function completeMission(Profile $profile = null)
     {
-        $profile = $this->user->getProfile();
+        if (!$profile) $profile = $this->user->getProfile();
         $mission = $profile->getCurrentMission();
         if ($mission) {
             $targetFile = $mission->getTargetFile();
@@ -3065,9 +3070,69 @@ class BaseService extends BaseUtilityService
                 $this->translate('Mission accomplished - you received %s credits'),
                 $reward
             );
-            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+            return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
         }
         return false;
+    }
+
+    /**
+     * @param NpcInstance $npcInstance
+     * @param NpcInstance|Profile $attacker
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    protected function flatlineNpcInstance(NpcInstance $npcInstance, $attacker)
+    {
+        /** @var FileRepository $fileRepo */
+        foreach ($npcInstance->getFiles() as $file) {
+            /** @var File $file */
+            $npcInstance->removeFile($file);
+            $file->setRunning(false);
+            $file->setNode($npcInstance->getNode());
+            $file->setSystem($npcInstance->getNode()->getSystem());
+        }
+        // check if we need to set spawner amount
+        $spawner = $npcInstance->getSpawner();
+        if ($spawner) {
+            $fileData = $this->getFileData($spawner);
+            $fileData->npcid = 0;
+            $spawner->setData(json_encode($fileData));
+        }
+        $npcInstance->setBlasterModule(NULL);
+        $npcInstance->setBladeModule(NULL);
+        $npcInstance->setShieldModule(NULL);
+        $npcInstance->setSpawner(NULL);
+        $this->entityManager->flush();
+        // give snippets and credits to attacker
+        $attacker->setSnippets($attacker->getSnippets()+$npcInstance->getSnippets());
+        $attacker->setCredits($attacker->getCredits()+$npcInstance->getCredits());
+        // check for combat mission targets
+        if ($attacker instanceof Profile) {
+            $currentMission = $attacker->getCurrentMission();
+            if ($currentMission && in_array($currentMission->getMission()->getId(), MissionService::$combatMissions)) {
+                $missionData = json_decode($currentMission->getData());
+                if (isset($missionData->amount)) {
+                    $missionData->amount -= 1;
+                    if ($missionData->amount < 1) {
+                        $result = $this->completeMission($attacker);
+                        if ($result instanceof GameClientResponse) {
+                            $result->send();
+                        }
+                    }
+                }
+            }
+        }
+        // remove the npc instance
+        $npcType = $npcInstance->getNpc();
+        if ($npcType->getType() == Npc::TYPE_HELPER) {
+            $this->systemIntegrityChange($npcInstance->getSystem(), -1);
+        }
+        if ($npcType->getType() == Npc::TYPE_VIRUS) {
+            $this->systemIntegrityChange($npcInstance->getSystem(), 1);
+        }
+        $this->entityManager->remove($npcInstance);
+        $this->entityManager->flush($npcInstance);
     }
 
     /**

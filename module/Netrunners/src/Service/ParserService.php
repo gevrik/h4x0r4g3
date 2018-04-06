@@ -613,9 +613,11 @@ class ParserService
                 return $this->researchService->showResearchers($resourceId);
             case 'rm':
                 return $this->fileService->enterMode($resourceId, $userCommand, $contentArray);
+            case 'abandonmission':
+                return $this->missionService->enterMode($resourceId, $userCommand);
             case 'requestmission':
             case 'mission':
-                return $this->missionService->enterMode($resourceId);
+                return $this->missionService->enterMode($resourceId, $userCommand);
             case 'resources':
             case 'res':
             case 'parts':
@@ -974,13 +976,18 @@ class ParserService
                     $response = $this->nodeService->changeNodeType($resourceId, $confirmData->contentArray);
                     break;
                 case 'rm':
+                case 'removefile':
                     $response = $this->fileService->removeFile($resourceId, $confirmData->contentArray);
                     break;
                 case 'milkrun':
                     $response = $this->milkrunService->requestMilkrun($resourceId, $confirmData);
                     break;
                 case 'mission':
+                case 'requestmission':
                     $response = $this->missionService->requestMission($resourceId, $confirmData);
+                    break;
+                case 'abandonmission':
+                    $response = $this->missionService->abandonMission($resourceId);
                     break;
             }
         }

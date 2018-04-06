@@ -231,7 +231,9 @@ class ConnectionService extends BaseService
         }
         // check if they can access the connection
         if (
-            $connection->getType() == Connection::TYPE_CODEGATE && $profile !== $currentSystem->getProfile() && !$connection->getisOpen()
+            $connection->getType() == Connection::TYPE_CODEGATE &&
+            !$this->checkSystemPermission($profile, $currentSystem) &&
+            !$connection->getisOpen()
         ) {
             return $this->gameClientResponse->addMessage($this->translate('Access denied'))->send();
         }

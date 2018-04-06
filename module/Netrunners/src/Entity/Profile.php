@@ -248,6 +248,12 @@ class Profile
      */
     protected $silencedUntil;
 
+    /**
+     * @ORM\Column(type="datetime", nullable=true)
+     * @var \DateTime
+     */
+    protected $missionPenaltyTimer;
+
     // ORM
 
     /**
@@ -803,6 +809,24 @@ class Profile
     public function setSilencedUntil($silencedUntil)
     {
         $this->silencedUntil = $silencedUntil;
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getMissionPenaltyTimer()
+    {
+        return $this->missionPenaltyTimer;
+    }
+
+    /**
+     * @param \DateTime $missionPenaltyTimer
+     * @return Profile
+     */
+    public function setMissionPenaltyTimer($missionPenaltyTimer)
+    {
+        $this->missionPenaltyTimer = $missionPenaltyTimer;
         return $this;
     }
 

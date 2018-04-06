@@ -181,7 +181,7 @@ class LoopService extends BaseService
                 if ($jobData) {
                     $result = $this->codingService->resolveCoding($jobData);
                     if ($result) {
-                        $profile = $this->entityManager->find('Netrunners\Entity\Profile', $jobData['profileId']);
+                        $profile = $this->entityManager->find(Profile::class, $jobData['profileId']);
                         /** @var Profile $profile */
                         $this->storeNotification($profile, $result['message'], $result['severity']);
                     }
@@ -192,8 +192,8 @@ class LoopService extends BaseService
         }
         // now we iterate connected sockets for actions
         $ws = $this->getWebsocketServer();
+        /** @var ConnectionInterface $wsClient */
         foreach ($ws->getClients() as $wsClient) {
-            /** @var ConnectionInterface $wsClient */
             /** @noinspection PhpUndefinedFieldInspection */
             $resourceId = $wsClient->resourceId;
             $clientData = $ws->getClientData($resourceId);
@@ -201,14 +201,14 @@ class LoopService extends BaseService
             if (!$clientData) continue;
             if (!$clientData->hash) continue;
             // first we get amount of notifications and actiontime
-            $user = $this->entityManager->find('TmoAuth\Entity\User', $clientData->userId);
-            if (!$user) continue;
             /** @var User $user */
-            $profile = $user->getProfile();
+            $user = $this->entityManager->find(User::class, $clientData->userId);
+            if (!$user) continue;
             /** @var Profile $profile */
+            $profile = $user->getProfile();
             $this->checkCodebreaker($wsClient);
-            $notificationRepo = $this->entityManager->getRepository('Netrunners\Entity\Notification');
             /** @var NotificationRepository $notificationRepo */
+            $notificationRepo = $this->entityManager->getRepository(Notification::class);
             $countUnreadNotifications = $notificationRepo->countUnreadByProfile($profile);
             $actionTimeRemaining = 0;
             if (!empty($clientData->action)) {

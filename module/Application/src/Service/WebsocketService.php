@@ -810,6 +810,7 @@ class WebsocketService implements MessageComponentInterface {
      * @param ConnectionInterface $from
      * @param string $msg
      * @return bool
+     * @throws \Exception
      */
     public function onMessage(ConnectionInterface $from, $msg)
     {
@@ -1058,6 +1059,7 @@ class WebsocketService implements MessageComponentInterface {
             $this->log(Logger::ALERT, $resourceId . ' : CAUGHT EXCEPTION : ' . $e->getMessage() . ' [' . $e->getCode() . ']');
             $this->log(Logger::INFO, $e->getTraceAsString());
             $from->close();
+            throw $e;
         }
         return true;
     }

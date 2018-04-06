@@ -114,7 +114,7 @@ class SystemGeneratorService extends BaseService
         $system->setProfile(NULL);
         $system->setName($name);
         $system->setIntegrity(100);
-        $system->setNoclaim(true);
+        $system->setNoclaim(false);
         $system->setFaction($faction);
         $system->setGroup(NULL);
         $system->setAddy($addy);

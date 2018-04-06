@@ -1423,8 +1423,8 @@ class NodeService extends BaseService
                 $this->translate('NAME')
             );
             $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
+            /** @var Node $publicIoNode */
             foreach ($publicIoNodes as $publicIoNode) {
-                /** @var Node $publicIoNode */
                 $returnMessage = sprintf(
                     '%-32s|%-40s|%-12s|%-20s',
                     $publicIoNode->getSystem()->getName(),
@@ -1438,16 +1438,38 @@ class NodeService extends BaseService
         }
         $addy = $parameter;
         // check if the target system exists
+        /** @var System $targetSystem */
         $targetSystem = $this->systemRepo->findByAddy($addy);
-        $targetNode = NULL;
         if (!$targetSystem) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid system address'))->send();
         }
-        /** @var System $targetSystem */
+        $targetNode = NULL;
         // now check if the node id exists
         $targetNodeId = $this->getNextParameter($contentArray, false, true);
         if (!$targetNodeId) {
-            return $this->gameClientResponse->addMessage($this->translate('Please specify the target node id'))->send();
+            $publicIoNodes = $this->nodeRepo->findForConnectCommand($profile);
+            $returnMessage = sprintf(
+                '%-32s|%-40s|%-12s|%-20s',
+                $this->translate('SYSTEM'),
+                $this->translate('ADDRESS'),
+                $this->translate('ID'),
+                $this->translate('NAME')
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
+            /** @var Node $publicIoNode */
+            foreach ($publicIoNodes as $publicIoNode) {
+                if ($publicIoNode->getSystem() === $targetSystem) {
+                    $returnMessage = sprintf(
+                        '%-32s|%-40s|%-12s|%-20s',
+                        $publicIoNode->getSystem()->getName(),
+                        $publicIoNode->getSystem()->getAddy(),
+                        $publicIoNode->getId(),
+                        $publicIoNode->getName()
+                    );
+                    $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+                }
+            }
+            return $this->gameClientResponse->send();
         }
         $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
         if (!$targetNode) {

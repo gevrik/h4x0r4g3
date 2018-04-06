@@ -336,6 +336,7 @@ class LoginService extends BaseService
             $profile->setNoTells(false);
             $profile->setSilenced(false);
             $profile->setSilencedUntil(null);
+            $profile->setMissionPenaltyTimer(null);
             $newbieStatusDate = new \DateTime();
             $newbieStatusDate->add(new \DateInterval('P7D'));
             $profile->setNewbieStatusDate($newbieStatusDate);
