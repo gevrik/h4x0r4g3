@@ -130,11 +130,13 @@ class MissionService extends BaseService
                         ->send();
                 }
                 $now = new \DateTime();
-                $receivesPenalty = ($now >= $profile->getMissionPenaltyTimer()) ? true : false;
+                $receivesPenalty = ($now <= $profile->getMissionPenaltyTimer()) ? true : false;
                 $message = [];
-                if ($receivesPenalty) $message[] = sprintf(
-                    $this->translate('You will receive a faction rating penalty if you abandon this mission now!')
-                );
+                if ($receivesPenalty) {
+                    $message[] = sprintf(
+                        $this->translate('You will receive a faction rating penalty if you abandon this mission now!')
+                    );
+                }
                 $message[] = $this->translate('Abdondon this mission? (enter "y" to confirm)');
                 $this->gameClientResponse->addMessages($message, GameClientResponse::CLASS_WHITE);
                 $confirmData = [
@@ -364,6 +366,33 @@ class MissionService extends BaseService
                     'totalAmount' => $amount
                 ];
                 $mInstance->setData(json_encode($data));
+                /** @var FileType $passkeyFileType */
+                $passkeyFileType = $this->entityManager->find(FileType::class, FileType::ID_PASSKEY);
+                $passkeyNodes = $this->nodeRepo->findBySystemAndType($targetSystem, NodeType::ID_IO);
+                /** @var Node $passkeyNode */
+                $passkeyNode = array_shift($passkeyNodes);
+                $data = [
+                    'systemid' => $targetSystem->getId(),
+                    'nodeid' => $passkeyNode->getId()
+                ];
+                $this->createFile(
+                    $passkeyFileType,
+                    true,
+                    sprintf('%s passkey', $targetSystem->getName()),
+                    1,
+                    100,
+                    false,
+                    100,
+                    $profile,
+                    $passkeyFileType->getDescription(),
+                    json_encode($data),
+                    null,
+                    null,
+                    null,
+                    $profile,
+                    null,
+                    0
+                );
                 break;
             case MissionArchetype::ID_STEAL_FILE:
             case MissionArchetype::ID_DELETE_FILE:

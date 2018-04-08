@@ -156,6 +156,7 @@ class NodeService extends BaseService
                 $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
                 break;
             case 'nodetype':
+                var_dump('here');
                 $checkResult = $this->changeNodeTypeChecks($contentArray);
                 if (!$checkResult instanceof NodeType) {
                     if ($checkResult instanceof GameClientResponse) {
@@ -163,8 +164,10 @@ class NodeService extends BaseService
                     }
                     return $this->gameClientResponse->addMessage($checkResult)->send();
                 }
+                var_dump('here1');
                 $currentNode = $profile->getCurrentNode();
                 if ($currentNode->getLevel() > 1) {
+                    var_dump('here2');
                     $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
                     $message = sprintf(
                         $this->translate('You need [%s] credits to change the node type - <span class="text-danger">the current node [%s] will be reset to level 1</span>'),
@@ -174,6 +177,7 @@ class NodeService extends BaseService
                     $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
                 }
                 else {
+                    var_dump('here3');
                     $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
                     $message = sprintf(
                         $this->translate('You need [%s] credits to change the node type - the current node type is [%s]'),
@@ -1197,37 +1201,51 @@ class NodeService extends BaseService
         // check if there are still other profiles in this node
         $profileCount = $this->profileRepo->countByCurrentNode($currentNode);
         if ($profileCount > 1) {
-            return $this->gameClientResponse->addMessage($this->translate('Unable to remove node which still contains other users'))->send();
+            return $this->gameClientResponse->addMessage(
+                $this->translate('Unable to remove node which still contains other users')
+            )->send();
         }
         // check if this is the home node of someone
         $homeProfiles = $this->profileRepo->findBy([
             'homeNode' => $currentNode
         ]);
         if (count($homeProfiles) > 0) {
-            return $this->gameClientResponse->addMessage($this->translate('Unable to remove a node which is another user\'s home node'))->send();
+            return $this->gameClientResponse->addMessage(
+                $this->translate('Unable to remove a node which is another user\'s home node')
+            )->send();
         }
         // check if this is the home node of some npc
         $homeNpcs = $this->npcInstanceRepo->findOneByHomeNode($currentNode);
         if ($homeNpcs) {
-            return $this->gameClientResponse->addMessage($this->translate('Unable to remove a node which is still an entity\'s home node'))->send();
+            return $this->gameClientResponse->addMessage(
+                $this->translate('Unable to remove a node which is still an entity\'s home node')
+            )->send();
         }
         // check if this is a cpu node and the last one...
-        $cpuCount = $this->nodeRepo->countBySystemAndType($currentSystem, $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU));
+        $cpuCount = $this->nodeRepo->countBySystemAndType(
+            $currentSystem,
+            $this->entityManager->find(NodeType::class, NodeType::ID_CPU)
+        );
         if (
             $currentNodeType->getId() == NodeType::ID_CPU &&
             (int)$cpuCount < 2
         )
         {
-            return $this->gameClientResponse->addMessage($this->translate('Unable to remove the last CPU node of this system'))->send();
+            return $this->gameClientResponse->addMessage(
+                $this->translate('Unable to remove the last CPU node of this system')
+            )->send();
         }
         // check if this is an io-node
-        if ($currentNodeType->getId() == NodeType::ID_IO || $currentNode->getNodeType()->getId() == NodeType::ID_PUBLICIO)
+        if (
+            $currentNodeType->getId() == NodeType::ID_IO || $currentNode->getNodeType()->getId() == NodeType::ID_PUBLICIO
+        )
         {
             return $this->gameClientResponse->addMessage($this->translate('Unable to remove I/O nodes'))->send();
         }
         // check if this is a storage node and if the removal would still support all programs
         if ($currentNodeType->getId() == NodeType::ID_STORAGE) {
-            $newMaxStorage = $this->getTotalStorage($profile) - ($currentNode->getLevel() * SystemService::BASE_STORAGE_VALUE);
+            $newMaxStorage = $this->getTotalStorage($profile) -
+                ($currentNode->getLevel() * SystemService::BASE_STORAGE_VALUE);
             if ($this->getUsedStorage($profile) > $newMaxStorage) {
                 return $this->translate('You could not store all of your programs after removing this node');
             }
@@ -1269,7 +1287,13 @@ class NodeService extends BaseService
             $this->translate('The adjacent node [%s] has been removed'),
             $currentNodeName
         );
-        $this->messageEveryoneInNodeNew($newCurrentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $this->messageEveryoneInNodeNew(
+            $newCurrentNode,
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
         $this->connectionsChecked = [];
         return $this->gameClientResponse->send();
     }
@@ -1298,7 +1322,13 @@ class NodeService extends BaseService
             $this->translate('[%s] is looking around'),
             $this->user->getUsername()
         );
-        $this->messageEveryoneInNodeNew($currentNode, $message, GameClientResponse::CLASS_MUTED, $profile, $profile->getId());
+        $this->messageEveryoneInNodeNew(
+            $currentNode,
+            $message,
+            GameClientResponse::CLASS_MUTED,
+            $profile,
+            $profile->getId()
+        );
         return $this->gameClientResponse->send();
     }
 
@@ -1408,8 +1438,12 @@ class NodeService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // check if they are in an io-node
-        if ($currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $currentNode->getNodeType()->getId() != NodeType::ID_IO) {
-            return $this->gameClientResponse->addMessage($this->translate('You must be in an I/O node to connect to another system'))->send();
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO &&
+            $currentNode->getNodeType()->getId() != NodeType::ID_IO
+        ) {
+            return $this->gameClientResponse->addMessage(
+                $this->translate('You must be in an I/O node to connect to another system')
+            )->send();
         }
         // get parameter
         list($contentArray, $parameter) = $this->getNextParameter($contentArray);
@@ -1475,7 +1509,8 @@ class NodeService extends BaseService
         if (!$targetNode) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid target node id'))->send();
         }
-        if ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO && $targetNode->getNodeType()->getId() != NodeType::ID_IO) {
+        if ($targetNode->getNodeType()->getId() != NodeType::ID_PUBLICIO &&
+            $targetNode->getNodeType()->getId() != NodeType::ID_IO) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
         }
         if (
@@ -1489,11 +1524,16 @@ class NodeService extends BaseService
         }
         /** @var Node $targetNode */
         $this->movePlayerToTargetNodeNew(NULL, $profile, NULL, $currentNode, $targetNode);
-        $this->gameClientResponse->addMessage($this->translate('You have connected to the target system'), GameClientResponse::CLASS_SUCCESS);
+        $this->gameClientResponse->addMessage(
+            $this->translate('You have connected to the target system'),
+            GameClientResponse::CLASS_SUCCESS
+        );
         $this->updateMap($resourceId);
         $flytoResponse = new GameClientResponse($resourceId);
         $flytoResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
-        $flytoResponse->addOption(GameClientResponse::OPT_CONTENT, explode(',',$targetNode->getSystem()->getGeocoords()));
+        $flytoResponse->addOption(
+            GameClientResponse::OPT_CONTENT, explode(',',$targetNode->getSystem()->getGeocoords())
+        );
         $flytoResponse->send();
         $this->gameClientResponse->setSilent(true)->send();
         return $this->showNodeInfoNew($resourceId, NULL, true);

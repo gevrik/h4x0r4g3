@@ -1075,7 +1075,7 @@ class FileUtilityService extends BaseService
             return $this->gameClientResponse->addMessage($message)->send();
         }
         // logic start
-        $fileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_PASSKEY);
+        $fileType = $this->entityManager->find(FileType::class, FileType::ID_PASSKEY);
         $data = [
             'systemid' => $currentSystem->getId(),
             'nodeid' => $currentNode->getId()

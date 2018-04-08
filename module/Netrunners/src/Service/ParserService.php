@@ -517,6 +517,7 @@ class ParserService
                 return $this->groupService->enterMode($resourceId, 'joingroup', $contentArray);
             case 'killprocess':
             case 'killp':
+            case 'pkill':
                 return $this->fileService->killProcess($resourceId, $contentArray);
             case 'jobs':
                 return $this->profileService->showJobs($resourceId, $jobs);

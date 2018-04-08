@@ -952,10 +952,11 @@
             $('#manpage-content-container ul a').map(function() {
                 $(this).unbind().on('click', function(e) {
                     e.preventDefault();
+                    console.log('man ' + $(this).attr('href'));
                     command = {
                         command: 'parseInput',
                         hash: hash,
-                        content: 'man ' + $(this).attr('id'),
+                        content: 'man ' + $(this).attr('href'),
                         silent: true
                     };
                     conn.send(JSON.stringify(command));

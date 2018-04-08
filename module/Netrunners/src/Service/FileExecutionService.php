@@ -820,6 +820,7 @@ class FileExecutionService extends BaseService
         $executeWarning = false;
         $parameterArray = [];
         $message = '';
+        $systemId = null;
         switch ($file->getFileType()->getId()) {
             default:
                 break;
@@ -834,7 +835,6 @@ class FileExecutionService extends BaseService
                     $this->translate('You start portscanning with [%s] - please wait'),
                     $file->getName()
                 );
-                $this->determinePreExecutionActions($file, $systemId);
                 break;
             case FileType::ID_JACKHAMMER:
                 list($executeWarning, $systemId, $nodeId) = $this->executeWarningJackhammer($file, $node, $contentArray);
@@ -848,7 +848,6 @@ class FileExecutionService extends BaseService
                     $this->translate('You start breaking into the system with [%s] - please wait'),
                     $file->getName()
                 );
-                $this->determinePreExecutionActions($file, $systemId);
                 break;
             case FileType::ID_LOCKPICK:
                 list($executeWarning, $connectionId) = $this->executeWarningLockpick($file, $contentArray);
@@ -861,7 +860,6 @@ class FileExecutionService extends BaseService
                     $this->translate('You start breaking the codegate with [%s] - please wait'),
                     $file->getName()
                 );
-                $this->determinePreExecutionActions($file);
                 break;
             case FileType::ID_SIPHON:
                 list($executeWarning, $minerId) = $this->executeWarningSiphon($contentArray);
@@ -874,7 +872,6 @@ class FileExecutionService extends BaseService
                     $this->translate('You start siphoning into the miner program with [%s] - please wait'),
                     $file->getName()
                 );
-                $this->determinePreExecutionActions($file);
                 break;
             case FileType::ID_MEDKIT:
                 $executeWarning = $this->executeWarningMedkit();
@@ -903,6 +900,7 @@ class FileExecutionService extends BaseService
             $this->gameClientResponse->addMessage($executeWarning);
         }
         else {
+            $this->determinePreExecutionActions($file, $systemId);
             $fileType = $file->getFileType();
             $completionDate = new \DateTime();
             $completionDate->add(new \DateInterval('PT' . $fileType->getExecutionTime() . 'S'));
@@ -922,7 +920,8 @@ class FileExecutionService extends BaseService
 
     /**
      * @param File $file
-     * @param null $systemId
+     * @param int|null $systemId
+     * @return bool
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
@@ -932,6 +931,7 @@ class FileExecutionService extends BaseService
         $systemId = null
     )
     {
+        if (!$systemId) return true;
         switch ($file->getFileType()->getId()) {
             default:
                 break;
@@ -1016,6 +1016,7 @@ class FileExecutionService extends BaseService
                 }
                 break;
         }
+        return true;
     }
 
     /**
@@ -1072,8 +1073,8 @@ class FileExecutionService extends BaseService
      */
     public function executeWarningJackhammer(File $file, Node $node, $contentArray)
     {
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
         /** @var SystemRepository $systemRepo */
+        $systemRepo = $this->entityManager->getRepository(System::class);
         $response = false;
         if (!$this->canExecuteInNodeType($file, $node)) {
             $response = sprintf(
@@ -1146,7 +1147,7 @@ class FileExecutionService extends BaseService
             );
         }
         $connectionParameter = $this->getNextParameter($contentArray, false);
-        if (!$connectionParameter) {
+        if (!$response && !$connectionParameter) {
             $response = $this->translate('Please specify a connection by name or number');
         }
         $connection = null;
@@ -1156,7 +1157,6 @@ class FileExecutionService extends BaseService
                 $response = $this->translate('Unable to find connection');
             }
         }
-
         if (!$response && $connection && $connection->getType() != Connection::TYPE_CODEGATE) {
             $response = $this->translate('That connection is not protected by a code-gate');
         }
@@ -1173,7 +1173,8 @@ class FileExecutionService extends BaseService
         if (!$response && $this->checkSystemPermission($profile, $profile->getCurrentNode()->getSystem()) === false) {
             $response = $this->translate('Invalid system - unable to lockpick friendly connections');
         }
-        return [$response, $connection->getId()];
+        $connectionId = ($connection) ? $connection->getId() : null;
+        return [$response, $connectionId];
     }
 
     /**

@@ -25,7 +25,7 @@ class MilkrunInstanceRepository extends EntityRepository
     public function findCurrentMilkrun(Profile $profile)
     {
         $qb = $this->createQueryBuilder('mri');
-        $qb->where('mri.expires > :now AND mri.profile = :profile AND mri.completed IS NULL AND mri.expired != 1');
+        $qb->where('mri.expires > :now AND mri.profile = :profile AND mri.completed IS NULL AND mri.expired IS NULL');
         $qb->setParameters([
             'now' => new \DateTime(),
             'profile' => $profile

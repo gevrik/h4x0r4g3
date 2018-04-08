@@ -341,6 +341,7 @@ class LoginService extends BaseService
             $newbieStatusDate->add(new \DateInterval('P7D'));
             $profile->setNewbieStatusDate($newbieStatusDate);
             $profile->setMainCampaignStep(NULL);
+            $profile->setCurrentResourceId($resourceId);
             // add skills
             $skills = $this->entityManager->getRepository('Netrunners\Entity\Skill')->findAll();
             foreach ($skills as $skill) {

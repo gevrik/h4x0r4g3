@@ -12,6 +12,7 @@ namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
@@ -30,6 +31,7 @@ class SystemService extends BaseService
     const MEMORY_STRING = 'memory';
     const STORAGE_STRING = 'storage';
     const AVG_NODE_LVL_STRING = 'avg-level';
+    const SIZE_STRING = 'size';
     const PROFILE_OWNER_STRING = 'profile';
     const GROUP_OWNER_STRING = 'group';
     const FACTION_OWNER_STRING = 'faction';
@@ -87,6 +89,22 @@ class SystemService extends BaseService
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::MEMORY_STRING), $this->getSystemMemory($currentSystem));
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::STORAGE_STRING), $this->getSystemStorage($currentSystem));
         $returnMessage[] = sprintf('%-12s: %s', $this->translate(self::AVG_NODE_LVL_STRING), $nodeRepo->getAverageNodeLevelOfSystem($currentSystem));
+        if ($currentSystem->getProfile()) {
+            $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE;
+        }
+        elseif ($currentSystem->getGroup()) {
+            $maxSize = System::GROUP_MAX_SYSTEM_SIZE;
+        }
+        else {
+            $maxSize = System::FACTION_MAX_SYSTEM_SIZE;
+        }
+        $returnMessage[] = sprintf(
+            '%-12s: %s/%s [%s]',
+            $this->translate(self::SIZE_STRING),
+            $nodeRepo->countBySystem($currentSystem),
+            $this->getCurrentNodeMaximumForSystem($currentSystem),
+            $maxSize
+        );
         $this->gameClientResponse->addMessages($returnMessage, GameClientResponse::CLASS_WHITE);
         $addonMessage = [];
         if ($currentSystem->getProfile()) $addonMessage[] = sprintf('%-12s: %s', $this->translate(self::PROFILE_OWNER_STRING), $currentSystem->getProfile()->getUser()->getUsername());

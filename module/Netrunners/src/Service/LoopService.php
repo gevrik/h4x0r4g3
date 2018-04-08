@@ -854,7 +854,6 @@ class LoopService extends BaseService
             $randConnectionIndex = mt_rand(0, $connectionsCount - 1);
             /** @var Connection $connection */
             $connection = $connections[$randConnectionIndex];
-            $this->getWebsocketServer()->log(Logger::INFO, sprintf("roaming: %s|%s", $roamingNpc->getName(), $roamingNpc->getId()));
             // now we need to check a few things if the connection is secured
             if ($connection->getType() == Connection::TYPE_CODEGATE) {
                 if ($roamingNpc->getProfile() && !$roamingNpc->getBypassCodegates()) continue;
