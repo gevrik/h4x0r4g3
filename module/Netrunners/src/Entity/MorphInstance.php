@@ -53,6 +53,7 @@ class MorphInstance
      */
     protected $npcInstance;
 
+
     /**
      * @return int
      */
@@ -107,8 +108,10 @@ class MorphInstance
         return $this;
     }
 
+    // ORM
+
     /**
-     * @return mixed
+     * @return Morph
      */
     public function getMorph()
     {
@@ -126,7 +129,7 @@ class MorphInstance
     }
 
     /**
-     * @return mixed
+     * @return Profile
      */
     public function getProfile()
     {
@@ -144,7 +147,7 @@ class MorphInstance
     }
 
     /**
-     * @return mixed
+     * @return NpcInstance
      */
     public function getNpcInstance()
     {

@@ -12,6 +12,7 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
+use Netrunners\Service\EgoCastingService;
 use Netrunners\Service\ParserService;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
@@ -58,7 +59,9 @@ class ParserServiceFactory implements FactoryInterface
             $container->get('Netrunners\Service\PartyService'),
             $container->get('Netrunners\Service\StoryService'),
             $container->get('Netrunners\Service\PassageService'),
-            $container->get('Netrunners\Service\BountyService')
+            $container->get('Netrunners\Service\BountyService'),
+            $container->get('Netrunners\Service\ChoiceService'),
+            $container->get(EgoCastingService::class)
         );
     }
 

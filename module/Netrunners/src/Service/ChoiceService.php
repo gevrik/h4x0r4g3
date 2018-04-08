@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Story Service.
- * The service supplies methods that resolve logic around Story objects.
+ * Choice Service.
+ * The service supplies methods that resolve logic around Choice objects.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -13,17 +13,18 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Model\GameClientResponse;
 use TmoAuth\Entity\Role;
+use TwistyPassages\Entity\Choice;
 use TwistyPassages\Entity\Passage;
 use TwistyPassages\Entity\Story;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class StoryService extends BaseService
+class ChoiceService extends BaseService
 {
 
     /**
-     * StoryService constructor.
+     * ChoiceService constructor.
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
@@ -35,60 +36,72 @@ class StoryService extends BaseService
 
     /**
      * @param $resourceId
+     * @param int|null $storyId
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function storyAddCommand($resourceId)
+    public function choiceAddCommand($resourceId, $storyId = null)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->gameClientResponse->send();
         }
-        $story = new Story();
-        $story->setAdded(new \DateTime());
-        $story->setAuthor($this->user);
-        $story->setDescription('empty description');
-        $story->setStatus(\TwistyPassages\Service\StoryService::STATUS_CREATED);
-        $story->setTitle('new story');
-        $this->entityManager->persist($story);
-        $this->entityManager->flush($story);
-        return $this->gameClientResponse->addMessage('story created', GameClientResponse::CLASS_INFO)->send();
+        /** @var Story $story */
+        $story = ($storyId) ? $this->entityManager->find(Story::class, $storyId) : null;
+        $choice = new Choice();
+        $choice->setAdded(new \DateTime());
+        $choice->setStory($story);
+        $choice->setDescription(null);
+        $choice->setTitle('new choice');
+        $choice->setStatus(\TwistyPassages\Service\ChoiceService::STATUS_CREATED);
+        $this->entityManager->persist($choice);
+        $this->entityManager->flush($choice);
+        return $this->gameClientResponse->addMessage('choice created', GameClientResponse::CLASS_INFO)->send();
     }
 
     /**
      * @param $resourceId
+     * @param $contentArray
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function storyListCommand($resourceId)
+    public function choiceListCommand($resourceId, $contentArray = [])
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->gameClientResponse->send();
         }
+        $storyId = $this->getNextParameter($contentArray, false, true);
+        $choiceRepo = $this->entityManager->getRepository(Choice::class);
+        if (!$storyId) {
+            $choices = $choiceRepo->findAll();
+        }
+        else {
+            $choices = $choiceRepo->findBy(['story'=>$storyId]);
+        }
         $headerMessage = sprintf(
             '%-11s|%-64s|%-32s|%-20s',
-            $this->translate('STORY-ID'),
-            $this->translate('STORY-NAME'),
-            $this->translate('STORY-AUTHOR'),
-            $this->translate('STORY-STATUS')
+            $this->translate('CHOICE-ID'),
+            $this->translate('TITLE'),
+            $this->translate('STATUS'),
+            $this->translate('DESC')
         );
         $this->gameClientResponse->addMessage($headerMessage, GameClientResponse::CLASS_SYSMSG);
         $messages = [];
-        /** @var Story $story */
-        foreach ($this->entityManager->getRepository('TwistyPassages\Entity\Story')->findAll() as $story) {
+        /** @var Choice $choice */
+        foreach ($choices as $choice) {
             $messages[] = sprintf(
                 '%-11s|%-64s|%-32s|%-20s',
-                $story->getId(),
-                $story->getTitle(),
-                $story->getAuthor()->getUsername(),
-                \TwistyPassages\Service\StoryService::$status[$story->getStatus()]
+                $choice->getId(),
+                $choice->getTitle(),
+                \TwistyPassages\Service\ChoiceService::$status[$choice->getStatus()],
+                $choice->getDescription()
             );
         }
         return $this->gameClientResponse->addMessages($messages)->send();
@@ -102,21 +115,21 @@ class StoryService extends BaseService
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function storyEditCommand($resourceId, $contentArray)
+    public function choiceEditCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->gameClientResponse->send();
         }
-        list($contentArray, $storyId) = $this->getNextParameter($contentArray, true, true);
-        if (!$storyId) {
-            return $this->gameClientResponse->addMessage('no story id given')->send();
+        list($contentArray, $choiceId) = $this->getNextParameter($contentArray, true, true);
+        if (!$choiceId) {
+            return $this->gameClientResponse->addMessage('no choice id given')->send();
         }
-        /** @var Story $story */
-        $story = $this->entityManager->find('TwistyPassages\Entity\Story', $storyId);
-        if (!$story) {
-            return $this->gameClientResponse->addMessage('invalid story id')->send();
+        /** @var Choice $choice */
+        $choice = $this->entityManager->find(Choice::class, $choiceId);
+        if (!$choice) {
+            return $this->gameClientResponse->addMessage('invalid choice id')->send();
         }
         list($contentArray, $propertyName) = $this->getNextParameter($contentArray, true, false, false, true);
         if (!$propertyName) {
@@ -127,22 +140,32 @@ class StoryService extends BaseService
                 return $this->gameClientResponse->addMessage('invalid property name')->send();
             case 'title':
                 $value = $this->getNextParameter($contentArray, false, false, true, true);
-                $story->setTitle($value);
+                $choice->setTitle($value);
                 break;
             case 'status':
                 $value = $this->getNextParameter($contentArray, false, true);
-                $story->setStatus($value);
+                $choice->setStatus($value);
                 break;
-            case 'startingpassage':
+            case 'story':
                 $value = $this->getNextParameter($contentArray, false, true);
-                $startingPassage = $this->entityManager->find(Passage::class, $value);
-                if (!$startingPassage) {
+                /** @var Story $story */
+                $story = $this->entityManager->find(Story::class, $value);
+                if (!$story) {
+                    return $this->gameClientResponse->addMessage('invalid story id')->send();
+                }
+                $choice->setStory($story);
+                break;
+            case 'targetpassage':
+                $value = $this->getNextParameter($contentArray, false, true);
+                /** @var Passage $targetPassage */
+                $targetPassage = $this->entityManager->find(Passage::class, $value);
+                if (!$targetPassage) {
                     return $this->gameClientResponse->addMessage('invalid passage id')->send();
                 }
-                $story->setStartingPassage($startingPassage);
+                $choice->setTargetPassage($targetPassage);
                 break;
         }
-        $this->entityManager->flush($story);
+        $this->entityManager->flush($choice);
         $message = sprintf('%s set to %s', $propertyName, $value);
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
     }
@@ -155,24 +178,24 @@ class StoryService extends BaseService
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function storyEditorCommand($resourceId, $contentArray)
+    public function choiceEditorCommand($resourceId, $contentArray)
     {
         $this->initService($resourceId);
         if (!$this->user) return true;
         if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->gameClientResponse->send();
         }
-        $storyId = $this->getNextParameter($contentArray, false, true);
-        if (!$storyId) {
-            return $this->storyListCommand($resourceId);
+        $choiceId = $this->getNextParameter($contentArray, false, true);
+        if (!$choiceId) {
+            return $this->choiceListCommand($resourceId);
         }
-        $story = $this->entityManager->find('TwistyPassages\Entity\Story', $storyId);
-        if (!$story) {
-            return $this->gameClientResponse->addMessage($this->translate('Invalid story id'))->send();
+        $choice = $this->entityManager->find(Choice::class, $choiceId);
+        if (!$choice) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid choice id'))->send();
         }
         $view = new ViewModel();
-        $view->setTemplate('netrunners/story/edit-story.phtml');
-        $view->setVariable('story', $story);
+        $view->setTemplate('netrunners/choice/edit-choice.phtml');
+        $view->setVariable('choice', $choice);
         $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_OPENMANPAGEMENU);
         // add the rendered view as the gmr message with css-class raw so that it will not wrap it in pre
         $this->gameClientResponse->addMessage($this->viewRenderer->render($view), GameClientResponse::CLASS_RAW);
@@ -181,7 +204,7 @@ class StoryService extends BaseService
 
     /**
      * @param $resourceId
-     * @param $storyId
+     * @param $choiceId
      * @param string $content
      * @param string $title
      * @param int $status
@@ -190,11 +213,11 @@ class StoryService extends BaseService
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function saveStoryCommand(
+    public function savePassageCommand(
         $resourceId,
-        $storyId,
-        $content = '===invalid story desc===',
-        $title = '===invalid story title===',
+        $choiceId,
+        $content = '===invalid passage desc===',
+        $title = '===invalid passage title===',
         $status = 1
     )
     {
@@ -203,15 +226,15 @@ class StoryService extends BaseService
         if (!$this->hasRole(NULL, Role::ROLE_ID_ADMIN)) {
             return $this->gameClientResponse->send();
         }
-        /** @var Story $story */
-        $story = $this->entityManager->find('TwistyPassages\Entity\Story', $storyId);
-        if (!$story) {
-            return $this->gameClientResponse->addMessage($this->translate('Invalid story id'))->send();
+        /** @var Choice $choice */
+        $choice = $this->entityManager->find(Choice::class, $choiceId);
+        if (!$choice) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid choice id'))->send();
         }
-        $story->setStatus($status);
-        $story->setTitle($title);
-        $story->setDescription($content);
-        $this->entityManager->flush($story);
+        $choice->setStatus($status);
+        $choice->setTitle($title);
+        $choice->setDescription($content);
+        $this->entityManager->flush($choice);
         return $this->gameClientResponse
             ->setCommand(GameClientResponse::COMMAND_CLOSEPANEL)
             ->setSilent(true)

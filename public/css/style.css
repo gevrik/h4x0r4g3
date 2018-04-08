@@ -248,6 +248,11 @@ pre.text-sysmsg {
     position: fixed;
 }
 
+.story-container {
+    display: none;
+    position: fixed;
+}
+
 .content {
     background-color: rgba(0,0,0,0.6);
 }

@@ -1,0 +1,36 @@
+<div class="panel panel-default draggable play-story-panel">
+    <div class="panel-heading">
+        <button id="btn-close-story" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h3 class="panel-title"><?php echo sprintf('%s', $this->story->getTitle()); ?></h3>
+    </div>
+    <div class="panel-body" style="padding: .25em;">
+        <h3><?php echo $this->currentPassage->getTitle(); ?></h3>
+        <p><?php echo $this->currentPassage->getDescription(); ?></p>
+        <hr />
+        <?php foreach ($this->currentChoices as $currentChoice) : /** @var \TwistyPassages\Entity\PassageChoice $currentChoice */?>
+            <p>
+                <button type="button" class="btn btn-sm btn-default">
+                    <?php echo $currentChoice->getChoice()->getTitle(); ?>
+                </button>
+            </p>
+        <?php endforeach; ?>
+        <?php if ($this->currentPassage->getAllowChoiceSubmissions()) : ?>
+            <p>
+                <button type="button" class="btn btn-sm btn-primary">
+                    <?php echo $this->translate("suggest another choice"); ?>
+                </button>
+            </p>
+        <?php endif; ?>
+    </div>
+</div>
+<script type="application/javascript">
+
+    $('.story-container')
+        .css('max-height', viewportHeight*0.95)
+        .css('height', viewportHeight*0.95)
+        .css('max-width', viewportWidth*0.5)
+        .css('width', viewportWidth*0.5)
+        .css('top', 0)
+        .css('left', viewportWidth*0.45);
+
+</script>

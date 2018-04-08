@@ -57,6 +57,12 @@ class Story
     protected $author;
 
     /**
+     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Passage")
+     */
+    protected $startingPassage;
+
+
+    /**
      * @return int
      */
     public function getId()
@@ -68,7 +74,7 @@ class Story
      * @param int $id
      * @return Story
      */
-    public function setId(int $id)
+    public function setId($id)
     {
         $this->id = $id;
         return $this;
@@ -86,7 +92,7 @@ class Story
      * @param string $title
      * @return Story
      */
-    public function setTitle(string $title)
+    public function setTitle($title)
     {
         $this->title = $title;
         return $this;
@@ -104,7 +110,7 @@ class Story
      * @param string $description
      * @return Story
      */
-    public function setDescription(string $description)
+    public function setDescription($description)
     {
         $this->description = $description;
         return $this;
@@ -122,7 +128,7 @@ class Story
      * @param int $status
      * @return Story
      */
-    public function setStatus(int $status)
+    public function setStatus($status)
     {
         $this->status = $status;
         return $this;
@@ -140,7 +146,7 @@ class Story
      * @param \DateTime $added
      * @return Story
      */
-    public function setAdded(\DateTime $added)
+    public function setAdded($added)
     {
         $this->added = $added;
         return $this;
@@ -158,9 +164,27 @@ class Story
      * @param User $author
      * @return Story
      */
-    public function setAuthor(User $author)
+    public function setAuthor($author)
     {
         $this->author = $author;
+        return $this;
+    }
+
+    /**
+     * @return Passage
+     */
+    public function getStartingPassage()
+    {
+        return $this->startingPassage;
+    }
+
+    /**
+     * @param mixed $startingPassage
+     * @return Story
+     */
+    public function setStartingPassage($startingPassage)
+    {
+        $this->startingPassage = $startingPassage;
         return $this;
     }
 

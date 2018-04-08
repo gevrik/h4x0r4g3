@@ -16,6 +16,17 @@ use Doctrine\ORM\Mapping as ORM;
 class Morph
 {
 
+    const ID_CASE = 1;
+    const ID_SYNTH = 2;
+    const ID_ARACHNOID = 3;
+    const ID_FLAT = 4;
+    const ID_SPLICER = 5;
+    const ID_EXALT = 6;
+    const ID_PLEASURE = 7;
+    const ID_WORKER = 8;
+    const ID_NOVACRAB = 9;
+    const ID_AQUANAUT = 10;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -42,6 +53,7 @@ class Morph
      * @ORM\ManyToOne(targetEntity="Netrunners\Entity\MorphCategory")
      */
     protected $morphCategory;
+
 
     /**
      * @return int
@@ -97,8 +109,10 @@ class Morph
         return $this;
     }
 
+    // ORM
+
     /**
-     * @return mixed
+     * @return MorphCategory
      */
     public function getMorphCategory()
     {

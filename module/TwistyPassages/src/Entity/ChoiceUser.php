@@ -1,8 +1,8 @@
 <?php
 
 /**
- * PassageChoice Entity.
- * Bridge Entity to simulate the many-to-many relation of passages and choices.
+ * ChoiceUser Entity.
+ * This bridge entity keeps track of which user has chosen which choices.
  * @version 1.0
  * @author Gevrik gevrik@protonmail.com
  * @copyright TMO
@@ -11,9 +11,10 @@
 namespace TwistyPassages\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use TmoAuth\Entity\User;
 
 /** @ORM\Entity */
-class PassageChoice
+class ChoiceUser
 {
 
     /**
@@ -33,9 +34,14 @@ class PassageChoice
     // ORM
 
     /**
-     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Passage")
+     * @ORM\ManyToOne(targetEntity="TmoAuth\Entity\User")
      */
-    protected $passage;
+    protected $user;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Story")
+     */
+    protected $story;
 
     /**
      * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Choice")
@@ -53,7 +59,7 @@ class PassageChoice
 
     /**
      * @param int $id
-     * @return PassageChoice
+     * @return ChoiceUser
      */
     public function setId($id)
     {
@@ -71,7 +77,7 @@ class PassageChoice
 
     /**
      * @param \DateTime $added
-     * @return PassageChoice
+     * @return ChoiceUser
      */
     public function setAdded($added)
     {
@@ -82,25 +88,43 @@ class PassageChoice
     // ORM
 
     /**
-     * @return null|Passage
+     * @return User
      */
-    public function getPassage()
+    public function getUser()
     {
-        return $this->passage;
+        return $this->user;
     }
 
     /**
-     * @param Passage $passage
-     * @return PassageChoice
+     * @param mixed $user
+     * @return ChoiceUser
      */
-    public function setPassage($passage)
+    public function setUser($user)
     {
-        $this->passage = $passage;
+        $this->user = $user;
         return $this;
     }
 
     /**
-     * @return null|Choice
+     * @return Story
+     */
+    public function getStory()
+    {
+        return $this->story;
+    }
+
+    /**
+     * @param mixed $story
+     * @return ChoiceUser
+     */
+    public function setStory($story)
+    {
+        $this->story = $story;
+        return $this;
+    }
+
+    /**
+     * @return Choice
      */
     public function getChoice()
     {
@@ -108,8 +132,8 @@ class PassageChoice
     }
 
     /**
-     * @param Choice $choice
-     * @return PassageChoice
+     * @param mixed $choice
+     * @return ChoiceUser
      */
     public function setChoice($choice)
     {

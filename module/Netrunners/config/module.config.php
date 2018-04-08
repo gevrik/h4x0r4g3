@@ -2,71 +2,75 @@
 
 namespace Netrunners;
 
+use Netrunners\Factory\ChoiceServiceFactory;
+use Netrunners\Factory\EgoCastingServiceFactory;
+use Netrunners\Service\ChoiceService;
+use Netrunners\Service\EgoCastingService;
 use Netrunners\View\Helper\ImageUrlHelper;
 use Netrunners\View\Helper\MailMasterHelper;
 use Netrunners\View\Helper\ProfileGroupHelper;
 
-return array(
-    'router' => array(
-        'routes' => array(
-            'profile' => array(
+return [
+    'router' => [
+        'routes' => [
+            'profile' => [
                 'type' => 'segment',
-                'options' => array(
+                'options' => [
                     'route' => '/profile[/:action][/:id]',
-                    'constraints' => array(
+                    'constraints' => [
                         'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
                         'id' => '[0-9]+',
-                    ),
-                    'defaults' => array(
+                    ],
+                    'defaults' => [
                         '__NAMESPACE__' => 'Netrunners\Controller',
                         'controller'    => 'Netrunners\Controller\Profile',
                         'action'        => 'profile',
-                    ),
-                ),
-            ),
-            'system' => array(
+                    ],
+                ],
+            ],
+            'system' => [
                 'type' => 'segment',
-                'options' => array(
+                'options' => [
                     'route' => '/system[/:action][/:id]',
-                    'constraints' => array(
+                    'constraints' => [
                         'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
                         'id' => '[0-9]+',
-                    ),
-                    'defaults' => array(
+                    ],
+                    'defaults' => [
                         '__NAMESPACE__' => 'Netrunners\Controller',
                         'controller'    => 'Netrunners\Controller\System',
                         'action'        => 'profileIndex',
-                    ),
-                ),
-            ),
-            'feedback' => array(
+                    ],
+                ],
+            ],
+            'feedback' => [
                 'type' => 'segment',
-                'options' => array(
+                'options' => [
                     'route' => '/feedback[/:action][/:id]',
-                    'constraints' => array(
+                    'constraints' => [
                         'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
                         'id' => '[0-9]+',
-                    ),
-                    'defaults' => array(
+                    ],
+                    'defaults' => [
                         '__NAMESPACE__' => 'Netrunners\Controller',
                         'controller'    => 'Netrunners\Controller\Feedback',
                         'action'        => 'index',
-                    ),
-                ),
-            ),
-        ),
-    ),
-    'controllers' => array(
-        'invokables' => array(
-        ),
-        'factories' => array(
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'controllers' => [
+        'invokables' => [
+        ],
+        'factories' => [
             'Netrunners\Controller\Profile' => 'Netrunners\Factory\ProfileControllerFactory',
             'Netrunners\Controller\System' => 'Netrunners\Factory\SystemControllerFactory',
             'Netrunners\Controller\Feedback' => 'Netrunners\Factory\FeedbackControllerFactory',
-        ),
-    ),
-    'service_manager' => array(
-        'factories' => array(
+        ],
+    ],
+    'service_manager' => [
+        'factories' => [
             'translator' => 'Zend\Mvc\Service\TranslatorServiceFactory',
             'Netrunners\Service\BaseUtilityService' => 'Netrunners\Factory\BaseUtilityServiceFactory',
             'Netrunners\Service\BaseService' => 'Netrunners\Factory\BaseServiceFactory',
@@ -74,9 +78,11 @@ return array(
             'Netrunners\Service\AdminService' => 'Netrunners\Factory\AdminServiceFactory',
             'Netrunners\Service\BountyService' => 'Netrunners\Factory\BountyServiceFactory',
             'Netrunners\Service\ChatService' => 'Netrunners\Factory\ChatServiceFactory',
+            ChoiceService::class => ChoiceServiceFactory::class,
             'Netrunners\Service\CodingService' => 'Netrunners\Factory\CodingServiceFactory',
             'Netrunners\Service\CodebreakerService' => 'Netrunners\Factory\CodebreakerServiceFactory',
             'Netrunners\Service\CombatService' => 'Netrunners\Factory\CombatServiceFactory',
+            EgoCastingService::class => EgoCastingServiceFactory::class,
             'Netrunners\Service\FactionService' => 'Netrunners\Factory\FactionServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
             'Netrunners\Service\FileExecutionService' => 'Netrunners\Factory\FileExecutionServiceFactory',
@@ -105,65 +111,65 @@ return array(
             'Netrunners\Service\SystemService' => 'Netrunners\Factory\SystemServiceFactory',
             'Netrunners\Service\SystemGeneratorService' => 'Netrunners\Factory\SystemGeneratorServiceFactory',
             'Netrunners\Service\UtilityService' => 'Netrunners\Factory\UtilityServiceFactory',
-        ),
-    ),
-    'translator' => array(
+        ],
+    ],
+    'translator' => [
         'locale' => 'en_US',
-        'translation_file_patterns' => array(
-            array(
+        'translation_file_patterns' => [
+            [
                 'type'     => 'gettext',
                 'base_dir' => __DIR__ . '/../language',
                 'pattern'  => '%s.mo',
-            ),
-        ),
-    ),
-    'view_helpers' => array(
-        'invokables'=> array(
-        ),
-        'factories' => array(
+            ],
+        ],
+    ],
+    'view_helpers' => [
+        'invokables'=> [
+        ],
+        'factories' => [
             ImageUrlHelper::class => 'Netrunners\Factory\ImageUrlHelperFactory',
             MailMasterHelper::class => 'Netrunners\Factory\MailMasterHelperFactory',
             ProfileGroupHelper::class => 'Netrunners\Factory\ProfileGroupHelperFactory',
-        ),
-        'aliases' => array(
+        ],
+        'aliases' => [
             'imageUrlHelper' => ImageUrlHelper::class,
             'mailMasterHelper' => MailMasterHelper::class,
             'profileGroupHelper' => ProfileGroupHelper::class,
-        ),
-    ),
-    'view_manager' => array(
-        'template_path_stack' => array(
+        ],
+    ],
+    'view_manager' => [
+        'template_path_stack' => [
             __DIR__ . '/../view',
-        ),
-    ),
-    'navigation' => array(
-        'default' => array(
-            array(
+        ],
+    ],
+    'navigation' => [
+        'default' => [
+            [
                 'label' => _('Profiles'),
                 'route' => 'profile',
-                'pages' => array(
-                    array(
+                'pages' => [
+                    [
                         'label' => _('Detail'),
                         'route' => 'profile',
                         'action' => 'detail',
-                    ),
-                ),
-            ),
-        ),
-    ),
-    'doctrine' => array(
-        'driver' => array(
-            'netrunners' => array(
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'doctrine' => [
+        'driver' => [
+            'netrunners' => [
                 'class' => 'Doctrine\ORM\Mapping\Driver\AnnotationDriver',
                 'paths' => __DIR__ . '/../src/Entity',
-            ),
-            'orm_default' => array(
-                'drivers' => array(
+            ],
+            'orm_default' => [
+                'drivers' => [
                     'Netrunners\Entity' => 'netrunners',
-                ),
-            ),
-        ),
-    ),
+                ],
+            ],
+        ],
+    ],
     'bjyauthorize' => [
 
         'resource_providers' => [
@@ -196,4 +202,4 @@ return array(
 
         ],
     ],
-);
+];

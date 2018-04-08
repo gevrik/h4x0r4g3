@@ -74,7 +74,7 @@ class Passage
      * @param int $id
      * @return Passage
      */
-    public function setId(int $id)
+    public function setId($id)
     {
         $this->id = $id;
         return $this;
@@ -92,7 +92,7 @@ class Passage
      * @param string $title
      * @return Passage
      */
-    public function setTitle(string $title)
+    public function setTitle($title)
     {
         $this->title = $title;
         return $this;
@@ -110,7 +110,7 @@ class Passage
      * @param string $description
      * @return Passage
      */
-    public function setDescription(string $description)
+    public function setDescription($description)
     {
         $this->description = $description;
         return $this;
@@ -128,7 +128,7 @@ class Passage
      * @param int $status
      * @return Passage
      */
-    public function setStatus(int $status)
+    public function setStatus($status)
     {
         $this->status = $status;
         return $this;
@@ -146,7 +146,7 @@ class Passage
      * @param \DateTime $added
      * @return Passage
      */
-    public function setAdded(\DateTime $added)
+    public function setAdded($added)
     {
         $this->added = $added;
         return $this;
@@ -164,7 +164,7 @@ class Passage
      * @param int $allowChoiceSubmissions
      * @return Passage
      */
-    public function setAllowChoiceSubmissions(int $allowChoiceSubmissions)
+    public function setAllowChoiceSubmissions($allowChoiceSubmissions)
     {
         $this->allowChoiceSubmissions = $allowChoiceSubmissions;
         return $this;

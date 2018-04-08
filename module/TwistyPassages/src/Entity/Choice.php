@@ -55,6 +55,11 @@ class Choice
      */
     protected $story;
 
+    /**
+     * @ORM\ManyToOne(targetEntity="TwistyPassages\Entity\Passage")
+     */
+    protected $targetPassage;
+
 
     /**
      * @return int
@@ -68,7 +73,7 @@ class Choice
      * @param int $id
      * @return Choice
      */
-    public function setId(int $id)
+    public function setId($id)
     {
         $this->id = $id;
         return $this;
@@ -86,7 +91,7 @@ class Choice
      * @param string $title
      * @return Choice
      */
-    public function setTitle(string $title)
+    public function setTitle($title)
     {
         $this->title = $title;
         return $this;
@@ -122,7 +127,7 @@ class Choice
      * @param int $status
      * @return Choice
      */
-    public function setStatus(int $status)
+    public function setStatus($status)
     {
         $this->status = $status;
         return $this;
@@ -140,7 +145,7 @@ class Choice
      * @param \DateTime $added
      * @return Choice
      */
-    public function setAdded(\DateTime $added)
+    public function setAdded($added)
     {
         $this->added = $added;
         return $this;
@@ -149,7 +154,7 @@ class Choice
     // ORM
 
     /**
-     * @return null|Story
+     * @return Story
      */
     public function getStory()
     {
@@ -163,6 +168,24 @@ class Choice
     public function setStory($story)
     {
         $this->story = $story;
+        return $this;
+    }
+
+    /**
+     * @return Passage
+     */
+    public function getTargetPassage()
+    {
+        return $this->targetPassage;
+    }
+
+    /**
+     * @param mixed $targetPassage
+     * @return Choice
+     */
+    public function setTargetPassage($targetPassage)
+    {
+        $this->targetPassage = $targetPassage;
         return $this;
     }
 

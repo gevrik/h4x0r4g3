@@ -167,9 +167,20 @@ class ParserService
     protected $passageService;
 
     /**
+     * @var ChoiceService
+     */
+    protected $choiceService;
+
+    /**
      * @var BountyService
      */
     protected $bountyService;
+
+    /**
+     * @var EgoCastingService
+     */
+    protected $egoCastingService;
+
 
     /**
      * @param EntityManager $entityManager
@@ -201,6 +212,8 @@ class ParserService
      * @param StoryService $storyService
      * @param PassageService $passageService
      * @param BountyService $bountyService
+     * @param ChoiceService $choiceService
+     * @param EgoCastingService $egoCastingService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -231,7 +244,9 @@ class ParserService
         PartyService $partyService,
         StoryService $storyService,
         PassageService $passageService,
-        BountyService $bountyService
+        BountyService $bountyService,
+        ChoiceService $choiceService,
+        EgoCastingService $egoCastingService
     )
     {
         $this->entityManager = $entityManager;
@@ -263,6 +278,8 @@ class ParserService
         $this->storyService = $storyService;
         $this->passageService = $passageService;
         $this->bountyService = $bountyService;
+        $this->choiceService = $choiceService;
+        $this->egoCastingService = $egoCastingService;
     }
 
     /**
@@ -378,6 +395,14 @@ class ParserService
                 return $this->profileService->cancelCurrentAction($resourceId, true, true);
             case 'cd':
                 return $this->connectionService->useConnection($resourceId, $contentArray);
+            case 'choiceadd':
+                return $this->choiceService->choiceAddCommand($resourceId);
+            case 'choiceedit':
+                return $this->choiceService->choiceEditCommand($resourceId, $contentArray);
+            case 'choiceeditor':
+                return $this->choiceService->choiceEditorCommand($resourceId, $contentArray);
+            case 'choicelist':
+                return $this->choiceService->choiceListCommand($resourceId);
             case 'close':
                 return $this->connectionService->closeConnection($resourceId, $contentArray);
             case 'code':
@@ -426,6 +451,8 @@ class ParserService
                 return $this->manpageService->editManpage($resourceId, $contentArray);
             case 'editnode':
                 return $this->nodeService->editNodeDescription($resourceId);
+            case 'egocast':
+                return $this->egoCastingService->egocastCommand($resourceId, $contentArray);
             case 'emote':
             case 'em':
                 return $this->chatService->emoteChat($resourceId, $contentArray);

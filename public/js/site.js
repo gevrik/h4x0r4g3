@@ -695,8 +695,7 @@
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
                         containment: '#messages'
-                    });
-                    $('#map-container').css('z-index', panelZIndex++);
+                    }).css('z-index', panelZIndex++);
                     //$('.panel-body-map').resizable();
                     if (!data.silent) showprompt();
                     break;
@@ -706,8 +705,7 @@
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
                         containment: '#messages'
-                    });
-                    $('#coding-detail-container').css('z-index', panelZIndex++);
+                    }).css('z-index', panelZIndex++);
                     if (!data.silent) showprompt();
                     break;
                 case 'showgrouppanel':
@@ -716,8 +714,16 @@
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
                         containment: '#messages'
-                    });
-                    $('#group-container').css('z-index', panelZIndex++);
+                    }).css('z-index', panelZIndex++);
+                    if (!data.silent) showprompt();
+                    break;
+                case 'showstorypanel':
+                    $('#story-container').html('').append(data.content).show().draggable({
+                        cursor: 'pointer',
+                        handle: '.panel-heading',
+                        stack: '#gamepanels div',
+                        containment: '#messages'
+                    }).css('z-index', panelZIndex++);
                     if (!data.silent) showprompt();
                     break;
                 case 'shownotifications':
@@ -726,8 +732,7 @@
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
                         containment: '#messages'
-                    });
-                    $('#notifications-container').css('z-index', panelZIndex++);
+                    }).css('z-index', panelZIndex++);
                     if(document.getElementById('notification-container') !== null)
                     {
                         document.getElementById('notification-container').scrollTop = document.getElementById('notification-container').scrollHeight;
@@ -740,8 +745,7 @@
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
                         containment: '#messages'
-                    });
-                    $('#panel-container').css('z-index', panelZIndex++);
+                    }).css('z-index', panelZIndex++);
                     $('.btn-hangman-letter').on('click', function(){
                         var hangmanLetter = $(this).data('letter');
                         command = {
@@ -771,8 +775,7 @@
                         handle: '.panel-heading',
                         stack: '#gamepanels div',
                         containment: '#messages'
-                    });
-                    $('#milkrun-container').css('z-index', panelZIndex++);
+                    }).css('z-index', panelZIndex++);
                     var milkrunMapWidth = $('#milkrun-panel').innerWidth();
                     $('#milkrun-game-container')
                         .css('max-height', milkrunMapWidth)

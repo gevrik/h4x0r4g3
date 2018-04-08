@@ -33,6 +33,7 @@ class GameClientResponse {
     const COMMAND_CLOSEPANEL = 'closepanel';
     const COMMAND_SHOWPANEL = 'showpanel';
     const COMMAND_SHOW_GROUP_PANEL = 'showgrouppanel';
+    const COMMAND_SHOW_STORY_PANEL = 'showstorypanel';
     const COMMAND_SHOW_NOTIFICATIONS = 'shownotifications';
     const COMMAND_SHOW_CODING_DETAIL_PANEL = 'showcodingdetailpanel';
     const COMMAND_ENTERMAILMODE = 'entermailmode';
