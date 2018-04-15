@@ -35,8 +35,11 @@ class SystemGeneratorService extends BaseService
     const SECURITY_ORANGE_STRING = 'orange';
     const SECURITY_RED_STRING = 'red';
     const SECURITY_RED_ULTRAVIOLET = 'ultra-violet';
-
     const TOTAL_NODE_LEVEL_MOD = 10;
+    const STRING_GLOBAL = 'global';
+    const STRING_AZTECH = 'aztech';
+    const STRING_EURO = 'euro';
+    const STRING_ASIA = 'asia';
 
     /**
      * @var NodeTypeRepository
@@ -102,19 +105,19 @@ class SystemGeneratorService extends BaseService
         $faction = $this->entityManager->find(Faction::class, $randomNpcFactionId);
         switch ($faction->getId()) {
             default:
-                $zone = 'global';
+                $zone = self::STRING_GLOBAL;
                 break;
             case 1:
             case 2:
-                $zone = 'aztech';
+                $zone = self::STRING_AZTECH;
                 break;
             case 3:
             case 4:
-                $zone = 'euro';
+                $zone = self::STRING_EURO;
                 break;
             case 5:
             case 6:
-                $zone = 'asia';
+                $zone = self::STRING_ASIA;
                 break;
         }
         $addy = $this->getWebsocketServer()->getUtilityService()->getRandomAddress(32);
@@ -245,7 +248,7 @@ class SystemGeneratorService extends BaseService
                 $previousNode = $node;
             }
             else {
-                if (mt_rand(1, 100) <= 45) $previousNode = $node;
+                if (mt_rand(1, 100) <= 50) $previousNode = $node;
             }
             if ($nodeTypeId == NodeType::ID_CPU) $this->previousClusterCpu = $node;
             $this->populateNode($node, $system);
@@ -293,8 +296,8 @@ class SystemGeneratorService extends BaseService
                 break;
         }
         if ($spawnType) {
-            $npc = $this->entityManager->find('Netrunners\Entity\Npc', $spawnType);
             /** @var Npc $npc */
+            $npc = $this->entityManager->find(Npc::class, $spawnType);
             $this->spawnNpcInstance($npc, $node, NULL, $faction, NULL, ($homeNode) ? $node : NULL);
         }
         $fileTypeId = NULL;
@@ -309,8 +312,9 @@ class SystemGeneratorService extends BaseService
                 break;
         }
         if ($fileTypeId) {
+            // TODO add some base resources
             /** @var FileType $fileType */
-            $fileType = $this->entityManager->find('Netrunners\Entity\FileType', $fileTypeId);
+            $fileType = $this->entityManager->find(FileType::class, $fileTypeId);
             $this->createFile(
                 $fileType,
                 false,
