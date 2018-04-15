@@ -29,6 +29,7 @@ class MainCampaignService extends BaseService
     const STEP_NIX_PROGRAMS = 5;
     const STEP_FIRST_MILKRUN = 6;
     const STEP_FIRST_MILKRUN_NIX = 7;
+    const STEP_FIRST_MISSION = 8;
     const STEP_COMPLETED = 10000;
     const MAIN_CAMPAIGN_STEP = 'mainCampaignStep';
     const MAIN_CAMPAIGN_STEP_ACTIVATION_DATE = 'mainCampaignStepActivationDate';
@@ -44,6 +45,7 @@ class MainCampaignService extends BaseService
      * @var NodeRepository
      */
     protected $nodeRepository;
+
 
     /**
      * MailMessageService constructor.
@@ -73,6 +75,8 @@ class MainCampaignService extends BaseService
      */
     public function checkMainCampaignStep($resourceId, $clientData)
     {
+        /** @var Profile $profile */
+        $profile = $this->entityManager->find(Profile::class, $clientData->profileId);
         switch ($clientData->mainCampaignStep) {
             default:
                 break;
@@ -90,8 +94,6 @@ class MainCampaignService extends BaseService
                 $this->sendNixFollowUpMail($resourceId, $clientData);
                 break;
             case self::STEP_NIX_FOLLOW_UP:
-                /** @var Profile $profile */
-                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
                 if ($profile) {
                     $system = $profile->getHomeNode()->getSystem();
                     $storageNodeCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_STORAGE);
@@ -104,15 +106,11 @@ class MainCampaignService extends BaseService
             case self::STEP_MORE_BASICS:
                 $now = new \DateTime();
                 if ($clientData->mainCampaignStepActivationDate > $now) continue;
-                /** @var Profile $profile */
-                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
                 if ($profile) {
                     $this->sendNixProgramMail($profile);
                 }
                 break;
             case self::STEP_NIX_PROGRAMS:
-                /** @var Profile $profile */
-                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
                 if ($profile) {
                     $system = $profile->getHomeNode()->getSystem();
                     $databaseNodeCount = $this->nodeRepository->countBySystemAndType($system, NodeType::ID_DATABASE);
@@ -126,18 +124,22 @@ class MainCampaignService extends BaseService
             case self::STEP_FIRST_MILKRUN:
                 $now = new \DateTime();
                 if ($clientData->mainCampaignStepActivationDate > $now) continue;
-                /** @var Profile $profile */
-                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
                 if ($profile) {
                     $this->sendNixMilkrunMail($profile);
                 }
                 break;
             case self::STEP_FIRST_MILKRUN_NIX:
-                /** @var Profile $profile */
-                $profile = $this->entityManager->find('Netrunners\Entity\Profile', $clientData->profileId);
                 if ($profile) {
                     $milkrunCount = $profile->getCompletedMilkruns();
                     if ($milkrunCount > 0) {
+                        $this->sendMissionInstructions($profile);
+                    }
+                }
+                break;
+            case self::STEP_FIRST_MISSION:
+                if ($profile) {
+                    $missionCount = $profile->getCompletedMissions();
+                    if ($missionCount > 0) {
                         // TODO continue here
                     }
                 }
@@ -503,6 +505,43 @@ EOD;
         $profile->setMainCampaignStep(self::STEP_FIRST_MILKRUN_NIX);
         $profile->setMainCampaignStepActivationDate(null);
         $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP, self::STEP_FIRST_MILKRUN_NIX);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, null);
+    }
+
+    /**
+     * @param Profile $profile
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    private function sendMissionInstructions(Profile $profile)
+    {
+        $ws = $this->getWebsocketServer();
+        $user = $profile->getUser();
+        $username = $user->getUsername();
+        $subject = $this->translate("Mission Updates");
+        $content = <<<EOD
+Welcome again, $username
+
+Now that you have completed your first milkrun, it is time to send you on
+your first real mission.
+
+Go back to your agent node and use the command "mission" to see a mission
+assignment that is available to you.
+
+To complete the mission you will need the programs that we have
+previously sent you. Make good use of them. We will be in touch once you
+have completed your first mission.
+EOD;
+        $this->mailMessageService->createMail(
+            $profile,
+            NULL,
+            $subject,
+            $content,
+            false
+        );
+        $profile->setMainCampaignStep(self::STEP_FIRST_MISSION);
+        $profile->setMainCampaignStepActivationDate(null);
+        $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP, self::STEP_FIRST_MISSION);
         $ws->setClientData($profile->getCurrentResourceId(), self::MAIN_CAMPAIGN_STEP_ACTIVATION_DATE, null);
     }
 
