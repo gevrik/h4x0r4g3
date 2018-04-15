@@ -86,6 +86,11 @@ class BaseUtilityService {
         return WebsocketService::getInstance();
     }
 
+    protected function createPasskeyForSystemAndNode(System $system, Node $node)
+    {
+
+    }
+
     /**
      * @param Profile $member
      * @param Group $group
@@ -100,7 +105,7 @@ class BaseUtilityService {
         $griRepo = $this->entityManager->getRepository('Netrunners\Entity\GroupRoleInstance');
         $roles = $griRepo->findBy([
             'member' => $member,
-            'group' => $member->getGroup()
+            'group' => $group
         ]);
         /** @var GroupRoleInstance $role */
         foreach ($roles as $role) {
@@ -1696,6 +1701,44 @@ class BaseUtilityService {
         $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE
     )
     {
+        $system = $this->createSystem($name, $addy, $profile, $group, $faction,  $maxSize, $noclaim);
+        // default cpu node
+        /** @var NodeType $nodeType */
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
+        $cpuNode = $this->createNode($system, $nodeType, $level);
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
+        $ioNode = $this->createNode($system, $nodeType, $level);
+        // connection between nodes
+        $connection = $this->createConnection($cpuNode, $ioNode, false, $level, Connection::TYPE_CODEGATE);
+        $xconnection = $this->createConnection($ioNode, $cpuNode, false, $level, Connection::TYPE_CODEGATE);
+        return $system;
+    }
+
+    /**
+     * @param string $name
+     * @param string $addy
+     * @param Profile|null $profile
+     * @param Group|null $group
+     * @param Faction|null $faction
+     * @param int|null $maxSize
+     * @param bool $noclaim
+     * @param null $geoCoords
+     * @return System
+     */
+    protected function createSystem(
+        $name,
+        $addy,
+        Profile $profile = null,
+        Group $group = null,
+        Faction $faction = null,
+        $maxSize = null,
+        $noclaim = false,
+        $geoCoords = null
+    )
+    {
+        if (!$maxSize) {
+            $maxSize = $this->getSystemSizeByType($faction, $group);
+        }
         $system = new System();
         $system->setProfile($profile);
         $system->setName($name);
@@ -1706,46 +1749,99 @@ class BaseUtilityService {
         $system->setAlertLevel(0);
         $system->setNoclaim($noclaim);
         $system->setIntegrity(100);
-        $system->setGeocoords(NULL); // TODO add geocoords
+        $system->setGeocoords($geoCoords);
         $this->entityManager->persist($system);
-        // default cpu node
-        /** @var NodeType $nodeType */
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
-        $cpuNode = new Node();
-        $cpuNode->setCreated(new \DateTime());
-        $cpuNode->setLevel($level);
-        $cpuNode->setName($nodeType->getName());
-        $cpuNode->setSystem($system);
-        $cpuNode->setNodeType($nodeType);
-        $this->entityManager->persist($cpuNode);
-        // default private io node
-        /** @var NodeType $nodeType */
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
-        $ioNode = new Node();
-        $ioNode->setCreated(new \DateTime());
-        $ioNode->setLevel($level);
-        $ioNode->setName($nodeType->getName());
-        $ioNode->setSystem($system);
-        $ioNode->setNodeType($nodeType);
-        $this->entityManager->persist($ioNode);
-        // connection between nodes
-        $connection = new Connection();
-        $connection->setCreated(new \DateTime());
-        $connection->setLevel($level);
-        $connection->setIsOpen(NULL);
-        $connection->setSourceNode($cpuNode);
-        $connection->setTargetNode($ioNode);
-        $connection->setType(Connection::TYPE_CODEGATE);
-        $this->entityManager->persist($connection);
-        $connection = new Connection();
-        $connection->setCreated(new \DateTime());
-        $connection->setLevel($level);
-        $connection->setIsOpen(NULL);
-        $connection->setTargetNode($cpuNode);
-        $connection->setSourceNode($ioNode);
-        $connection->setType(Connection::TYPE_CODEGATE);
-        $this->entityManager->persist($connection);
         return $system;
+    }
+
+    /**
+     * @param System $system
+     * @param NodeType $nodeType
+     * @param int $level
+     * @param Profile|null $profile
+     * @param string|null $name
+     * @param string|null $description
+     * @param bool $nomob
+     * @param bool $nopvp
+     * @param bool $noclaim
+     * @param string|null $data
+     * @return Node
+     */
+    protected function createNode(
+        System $system,
+        NodeType $nodeType,
+        $level = 1,
+        Profile $profile = null,
+        $name = null,
+        $description = null,
+        $nomob = false,
+        $nopvp = false,
+        $noclaim = true,
+        $data = null
+    )
+    {
+        $node = new Node();
+        $node->setCreated(new \DateTime());
+        $node->setLevel($level);
+        $node->setName(($name) ? $name : $nodeType->getName());
+        $node->setDescription(($description) ? $description : $nodeType->getDescription());
+        $node->setNomob($nomob);
+        $node->setProfile($profile);
+        $node->setNopvp($nopvp);
+        $node->setSystem($system);
+        $node->setNodeType($nodeType);
+        $node->setNoclaim($noclaim);
+        $node->setIntegrity(100);
+        $node->setData($data);
+        $this->entityManager->persist($node);
+        return $node;
+    }
+
+    /**
+     * @param Node $sourceNode
+     * @param Node $targetNode
+     * @param bool $isOpen
+     * @param int $level
+     * @param int $type
+     * @return Connection
+     */
+    protected function createConnection(
+        Node $sourceNode,
+        Node $targetNode,
+        $isOpen = true,
+        $level = 1,
+        $type = Connection::TYPE_NORMAL
+    )
+    {
+        $connection = new Connection();
+        $connection->setCreated(new \DateTime());
+        $connection->setLevel($level);
+        $connection->setIsOpen($isOpen);
+        $connection->setIsOpen(NULL);
+        $connection->setSourceNode($sourceNode);
+        $connection->setTargetNode($targetNode);
+        $connection->setType($type);
+        $this->entityManager->persist($connection);
+        return $connection;
+    }
+
+    /**
+     * @param Faction|null $faction
+     * @param Group|null $group
+     * @return int
+     */
+    protected function getSystemSizeByType(Faction $faction = null, Group $group = null)
+    {
+        if ($faction instanceof Faction) {
+            $maxSize = System::FACTION_MAX_SYSTEM_SIZE;
+        }
+        elseif ($group instanceof Group) {
+            $maxSize = System::GROUP_MAX_SYSTEM_SIZE;
+        }
+        else {
+            $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE;
+        }
+        return $maxSize;
     }
 
     /**

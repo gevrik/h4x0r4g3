@@ -336,31 +336,11 @@ class NodeService extends BaseService
         $newCredits = $profile->getCredits() - self::RAW_NODE_COST;
         $profile->setCredits($newCredits);
         // create the new node
-        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
         /** @var NodeType $nodeType */
-        $node = new Node();
-        $node->setCreated(new \DateTime());
-        $node->setLevel(1);
-        $node->setName($nodeType->getShortName());
-        $node->setSystem($currentNode->getSystem());
-        $node->setNodeType($nodeType);
-        $this->entityManager->persist($node);
-        $sourceConnection = new Connection();
-        $sourceConnection->setType(Connection::TYPE_NORMAL);
-        $sourceConnection->setLevel(1);
-        $sourceConnection->setCreated(new \DateTime());
-        $sourceConnection->setSourceNode($currentNode);
-        $sourceConnection->setTargetNode($node);
-        $sourceConnection->setIsOpen(false);
-        $this->entityManager->persist($sourceConnection);
-        $targetConnection = new Connection();
-        $targetConnection->setType(Connection::TYPE_NORMAL);
-        $targetConnection->setLevel(1);
-        $targetConnection->setCreated(new \DateTime());
-        $targetConnection->setSourceNode($node);
-        $targetConnection->setTargetNode($currentNode);
-        $targetConnection->setIsOpen(false);
-        $this->entityManager->persist($targetConnection);
+        $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
+        $node = $this->createNode($currentNode->getSystem(), $nodeType, 1, null, $nodeType->getShortName());
+        $sourceConnection = $this->createConnection($currentNode, $node, false, $currentNode->getLevel());
+        $targetConnection = $this->createConnection($node, $currentNode, false, $node->getLevel());
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have added a new node to the system for %s credits'),
@@ -628,37 +608,18 @@ class NodeService extends BaseService
         }
         else {
             // player has found a hidden connection
-            $excludedNodeTypes = [NodeType::ID_CPU, NodeType::ID_HOME, NodeType::ID_IO, NodeType::ID_PUBLICIO,
-                NodeType::ID_RECRUITMENT];
+            $excludedNodeTypes = [
+                NodeType::ID_CPU,
+                NodeType::ID_HOME,
+                NodeType::ID_IO,
+                NodeType::ID_PUBLICIO,
+                NodeType::ID_RECRUITMENT,
+            ];
             $exploredNodeType = $this->getRandomNodeType($excludedNodeTypes);
-            $exploredNode =  new Node();
-            $exploredNode->setSystem($currentSystem);
-            $exploredNode->setProfile(NULL);
-            $exploredNode->setCreated(new \DateTime());
-            $exploredNode->setDescription($exploredNodeType->getDescription());
             $newLevel = (mt_rand(1, 100) > 90) ? $currentNode->getLevel() + 1 : $currentNode->getLevel();
-            $exploredNode->setLevel($newLevel);
-            $exploredNode->setName($exploredNodeType->getName());
-            $exploredNode->setNodeType($exploredNodeType);
-            $exploredNode->setNomob(false);
-            $exploredNode->setNopvp(false);
-            $this->entityManager->persist($exploredNode);
-            $sourceConnection = new Connection();
-            $sourceConnection->setType(Connection::TYPE_NORMAL);
-            $sourceConnection->setLevel($newLevel);
-            $sourceConnection->setCreated(new \DateTime());
-            $sourceConnection->setSourceNode($currentNode);
-            $sourceConnection->setTargetNode($exploredNode);
-            $sourceConnection->setIsOpen(false);
-            $this->entityManager->persist($sourceConnection);
-            $targetConnection = new Connection();
-            $targetConnection->setType(Connection::TYPE_NORMAL);
-            $targetConnection->setLevel(1);
-            $targetConnection->setCreated(new \DateTime());
-            $targetConnection->setSourceNode($exploredNode);
-            $targetConnection->setTargetNode($currentNode);
-            $targetConnection->setIsOpen(false);
-            $this->entityManager->persist($targetConnection);
+            $exploredNode = $this->createNode($currentSystem, $exploredNodeType, $newLevel);
+            $sourceConnection = $this->createConnection($currentNode, $exploredNode, false, $currentNode->getLevel());
+            $targetConnection = $this->createConnection($exploredNode, $currentNode, false, $newLevel);
             $this->entityManager->flush();
             $this->gameClientResponse->addMessage(
                 $this->translate('You have found a hidden service'), GameClientResponse::CLASS_SUCCESS

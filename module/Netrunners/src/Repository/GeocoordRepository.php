@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Geocoord;
 
 class GeocoordRepository extends EntityRepository
 {
@@ -32,7 +33,7 @@ class GeocoordRepository extends EntityRepository
 
     /**
      * @param null $zone
-     * @return mixed
+     * @return Geocoord
      */
     public function findOneRandomInZone($zone = NULL)
     {

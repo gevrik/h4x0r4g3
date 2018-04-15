@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\CompanyName;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\FileType;
@@ -43,6 +44,21 @@ class SystemGeneratorService extends BaseService
     protected $nodeTypeRepo;
 
     /**
+     * @var CompanyNameRepository
+     */
+    protected $companyNameRepo;
+
+    /**
+     * @var GeocoordRepository
+     */
+    protected $coordRepo;
+
+    /**
+     * @var SystemRepository
+     */
+    protected $systemRepo;
+
+    /**
      * @var null|Node
      */
     protected $previousClusterCpu = NULL;
@@ -51,6 +67,7 @@ class SystemGeneratorService extends BaseService
      * @var bool
      */
     protected $needIo = true;
+
 
     /**
      * SystemGeneratorService constructor.
@@ -65,7 +82,10 @@ class SystemGeneratorService extends BaseService
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator);
-        $this->nodeTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\NodeType');
+        $this->nodeTypeRepo = $this->entityManager->getRepository(NodeType::class);
+        $this->companyNameRepo = $this->entityManager->getRepository(CompanyName::class);
+        $this->coordRepo = $this->entityManager->getRepository(Geocoord::class);
+        $this->systemRepo = $this->entityManager->getRepository(System::class);
     }
 
     /**
@@ -79,7 +99,7 @@ class SystemGeneratorService extends BaseService
     public function generateRandomSystem($levels = 1, Faction $faction = NULL)
     {
         $randomNpcFactionId = ($faction) ? $faction->getId() : mt_rand(1, 6);
-        $faction = $this->entityManager->find('Netrunners\Entity\Faction', $randomNpcFactionId);
+        $faction = $this->entityManager->find(Faction::class, $randomNpcFactionId);
         switch ($faction->getId()) {
             default:
                 $zone = 'global';
@@ -98,30 +118,21 @@ class SystemGeneratorService extends BaseService
                 break;
         }
         $addy = $this->getWebsocketServer()->getUtilityService()->getRandomAddress(32);
-        $companyNameRepo = $this->entityManager->getRepository('Netrunners\Entity\CompanyName');
-        /** @var CompanyNameRepository $companyNameRepo */
-        $coordRepo = $this->entityManager->getRepository('Netrunners\Entity\Geocoord');
-        /** @var GeocoordRepository $coordRepo */
-        $randomCoord = $coordRepo->findOneRandomInZone($zone);
-        /** @var Geocoord $randomCoord */
-        $nameData = $companyNameRepo->getRandomCompanyName();
+        $randomCoord = $this->coordRepo->findOneRandomInZone($zone);
+        $nameData = $this->companyNameRepo->getRandomCompanyName();
         $name = $nameData['content'];
-        $systemRepo = $this->entityManager->getRepository('Netrunners\Entity\System');
-        /** @var SystemRepository $systemRepo */
-        $instanceCount = $systemRepo->countLikeName($name);
+        $instanceCount = $this->systemRepo->countLikeName($name);
         $name = $name . '-' . ($instanceCount+1);
-        $system = new System();
-        $system->setProfile(NULL);
-        $system->setName($name);
-        $system->setIntegrity(100);
-        $system->setNoclaim(false);
-        $system->setFaction($faction);
-        $system->setGroup(NULL);
-        $system->setAddy($addy);
-        $system->setAlertLevel(0);
-        $system->setGeocoords($randomCoord->getLat() . ',' . $randomCoord->getLat());
-        $system->setMaxSize(System::FACTION_MAX_SYSTEM_SIZE);
-        $this->entityManager->persist($system);
+        $system = $this->createSystem(
+            $name,
+            $addy,
+            null,
+            null,
+            $faction,
+            null,
+            false,
+            $randomCoord->getLat() . ',' . $randomCoord->getLat()
+        );
         for ($i=1;$i<=$levels;$i++) {
             $this->generateCpuCluster($system, $i);
         }
@@ -142,7 +153,6 @@ class SystemGeneratorService extends BaseService
     {
         $previousNode = false;
         $maxNodeLevels = $cpuLevel * self::TOTAL_NODE_LEVEL_MOD;
-        $now = new \DateTime();
         $firstNode = true;
         while ($maxNodeLevels > 0) {
             // init node level
@@ -181,62 +191,55 @@ class SystemGeneratorService extends BaseService
                     $secured = true;
                     break;
             }
-            $nodeType = $this->nodeTypeRepo->find($nodeTypeId);
             /** @var NodeType $nodeType */
-            $node = new Node();
-            $node->setNopvp(false);
-            $node->setNomob(false);
-            $node->setNodeType($nodeType);
-            $node->setNoclaim(true);
-            $node->setLevel($nodeLevel);
-            $node->setData(NULL);
-            $node->setDescription($nodeType->getDescription());
-            $node->setIntegrity(100);
-            $node->setCreated($now);
-            $node->setName($nodeType->getShortName());
-            $node->setProfile(NULL);
-            $node->setSystem($system);
-            $this->entityManager->persist($node);
+            $nodeType = $this->nodeTypeRepo->find($nodeTypeId);
+            $node = $this->createNode(
+                $system,
+                $nodeType,
+                $nodeLevel,
+                null,
+                $nodeType->getShortName(),
+                null,
+                false,
+                false,
+                true
+            );
             if ($firstNode) {
                 if ($this->previousClusterCpu) {
                     $secured = true;
-                    $connectiona = new Connection();
-                    $connectiona->setCreated($now);
-                    $connectiona->setLevel($this->previousClusterCpu->getLevel());
-                    $connectiona->setIsOpen(($secured)?false:true);
-                    $connectiona->setType(($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL);
-                    $connectiona->setSourceNode($this->previousClusterCpu);
-                    $connectiona->setTargetNode($node);
-                    $this->entityManager->persist($connectiona);
-                    $connectionb = new Connection();
-                    $connectionb->setCreated($now);
-                    $connectionb->setLevel($nodeLevel);
-                    $connectionb->setIsOpen(($secured)?false:true);
-                    $connectionb->setType(($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL);
-                    $connectionb->setSourceNode($node);
-                    $connectionb->setTargetNode($this->previousClusterCpu);
-                    $this->entityManager->persist($connectionb);
+                    $connectiona = $this->createConnection(
+                        $this->previousClusterCpu,
+                        $node,
+                        ($secured)?false:true,
+                        $this->previousClusterCpu->getLevel(),
+                        ($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL
+                    );
+                    $connectionb = $this->createConnection(
+                        $node,
+                        $this->previousClusterCpu,
+                        ($secured)?false:true,
+                        $nodeLevel,
+                        ($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL
+                    );
                 }
                 $firstNode = false;
             }
             if ($previousNode) {
                 /** @var Node $previousNode */
-                $connectiona = new Connection();
-                $connectiona->setCreated($now);
-                $connectiona->setLevel($previousNode->getLevel());
-                $connectiona->setIsOpen(($secured)?false:true);
-                $connectiona->setType(($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL);
-                $connectiona->setSourceNode($previousNode);
-                $connectiona->setTargetNode($node);
-                $this->entityManager->persist($connectiona);
-                $connectionb = new Connection();
-                $connectionb->setCreated($now);
-                $connectionb->setLevel($nodeLevel);
-                $connectionb->setIsOpen(($secured)?false:true);
-                $connectionb->setType(($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL);
-                $connectionb->setSourceNode($node);
-                $connectionb->setTargetNode($previousNode);
-                $this->entityManager->persist($connectionb);
+                $connectiona = $this->createConnection(
+                    $previousNode,
+                    $node,
+                    ($secured)?false:true,
+                    $previousNode->getLevel(),
+                    ($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL
+                );
+                $connectionb = $this->createConnection(
+                    $node,
+                    $previousNode,
+                    ($secured)?false:true,
+                    $nodeLevel,
+                    ($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL
+                );
             }
             if (!$previousNode) {
                 $previousNode = $node;

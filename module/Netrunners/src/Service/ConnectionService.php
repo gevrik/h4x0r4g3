@@ -452,22 +452,8 @@ class ConnectionService extends BaseService
         /* all checks passed, we can now add the connection */
         $newCredits = $profile->getCredits() - self::CONNECTION_COST;
         $profile->setCredits($newCredits);
-        $aconnection = new Connection();
-        $aconnection->setType(Connection::TYPE_NORMAL);
-        $aconnection->setTargetNode($targetNode);
-        $aconnection->setSourceNode($currentNode);
-        $aconnection->setCreated(new \DateTime());
-        $aconnection->setLevel($currentNode->getLevel());
-        $aconnection->setIsOpen(false);
-        $this->entityManager->persist($aconnection);
-        $bconnection = new Connection();
-        $bconnection->setType(Connection::TYPE_NORMAL);
-        $bconnection->setTargetNode($currentNode);
-        $bconnection->setSourceNode($targetNode);
-        $bconnection->setCreated(new \DateTime());
-        $bconnection->setLevel(1);
-        $bconnection->setIsOpen(false);
-        $this->entityManager->persist($bconnection);
+        $aconnection = $this->createConnection($currentNode, $targetNode, false, $currentNode->getLevel());
+        $bconnection = $this->createConnection($targetNode, $currentNode, false, $targetNode->getLevel());
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('The connection has been created for %s credits'),

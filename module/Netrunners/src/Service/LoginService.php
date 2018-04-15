@@ -380,28 +380,20 @@ class LoginService extends BaseService
             $defaultRole = $this->entityManager->find('TmoAuth\Entity\Role', 2);
             /** @var Role $defaultRole */
             $user->addRole($defaultRole);
-            $system = new System();
-            $system->setProfile($profile);
-            $system->setName($user->getUsername());
-            $system->setAddy($addy);
-            $system->setGroup(NULL);
-            $system->setFaction(NULL);
-            $system->setMaxSize(System::DEFAULT_MAX_SYSTEM_SIZE);
-            $system->setAlertLevel(0);
-            $system->setNoclaim(true);
-            $system->setIntegrity(100);
-            $system->setGeocoords($clientData->geocoords);
-            $this->entityManager->persist($system);
+            $system = $this->createSystem(
+                $user->getUsername(),
+                $addy,
+                $profile,
+                null,
+                null,
+                null,
+                true,
+                $clientData->geocoords
+            );
             // default io node
-            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
             /** @var NodeType $nodeType */
-            $ioNode = new Node();
-            $ioNode->setCreated(new \DateTime());
-            $ioNode->setLevel(1);
-            $ioNode->setName($nodeType->getName());
-            $ioNode->setSystem($system);
-            $ioNode->setNodeType($nodeType);
-            $this->entityManager->persist($ioNode);
+            $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
+            $ioNode = $this->createNode($system, $nodeType);
             $profile->setCurrentNode($ioNode);
             $profile->setHomeNode($ioNode);
             $profile->setLocale(Profile::DEFAULT_PROFILE_LOCALE);
