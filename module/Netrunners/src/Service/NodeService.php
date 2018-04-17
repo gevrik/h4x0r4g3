@@ -156,7 +156,6 @@ class NodeService extends BaseService
                 $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
                 break;
             case 'nodetype':
-                var_dump('here');
                 $checkResult = $this->changeNodeTypeChecks($contentArray);
                 if (!$checkResult instanceof NodeType) {
                     if ($checkResult instanceof GameClientResponse) {
@@ -164,10 +163,8 @@ class NodeService extends BaseService
                     }
                     return $this->gameClientResponse->addMessage($checkResult)->send();
                 }
-                var_dump('here1');
                 $currentNode = $profile->getCurrentNode();
                 if ($currentNode->getLevel() > 1) {
-                    var_dump('here2');
                     $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
                     $message = sprintf(
                         $this->translate('You need [%s] credits to change the node type - <span class="text-danger">the current node [%s] will be reset to level 1</span>'),
@@ -177,7 +174,6 @@ class NodeService extends BaseService
                     $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
                 }
                 else {
-                    var_dump('here3');
                     $this->gameClientResponse->setCommand(GameClientResponse::COMMAND_ENTERCONFIRMMODE);
                     $message = sprintf(
                         $this->translate('You need [%s] credits to change the node type - the current node type is [%s]'),

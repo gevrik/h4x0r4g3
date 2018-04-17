@@ -16,6 +16,7 @@ use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
+use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
@@ -117,7 +118,10 @@ class FileExecutionService extends BaseService
             $file = array_shift($targetFiles);
         }
         if (!$file) {
-            return $this->gameClientResponse->addMessage($this->translate('No such file'))->send();
+            $file = $this->entityManager->find(File::class, $parameter);
+            if (!$file) {
+                return $this->gameClientResponse->addMessage($this->translate('No such file'))->send();
+            }
         }
         /** @var File $file */
         $isBlocked = $this->isActionBlockedNew($resourceId, false, $file);
@@ -166,6 +170,8 @@ class FileExecutionService extends BaseService
                 return $this->gameClientResponse->addMessage($message)->send();
             case FileType::ID_CHATCLIENT:
                 return $this->executeChatClient($file);
+            case FileType::ID_PASSKEY:
+                return $this->executePasskey($file);
             case FileType::ID_KICKER:
             case FileType::ID_BREAKOUT:
             case FileType::ID_SMOKESCREEN:
@@ -257,6 +263,47 @@ class FileExecutionService extends BaseService
     /**
      * @param File $file
      * @return GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    protected function executePasskey(File $file)
+    {
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        // check if they are in an io-node
+        if ($currentNode->getNodeType()->getId() != NodeType::ID_PUBLICIO &&
+            $currentNode->getNodeType()->getId() != NodeType::ID_IO
+        ) {
+            return $this->gameClientResponse->addMessage(
+                $this->translate('You must be in an I/O node to connect to another system')
+            )->send();
+        }
+        $data = json_decode($file->getData());
+        if (!isset($data->systemid) || !isset($data->nodeid)) {
+            $message = $this->translate('Invalid passkey');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        /** @var Node $targetNode */
+        $targetNode = $this->entityManager->find(Node::class, $data->nodeid);
+        if (!$targetNode) {
+            $message = $this->translate('Invalid passkey');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $this->movePlayerToTargetNodeNew(
+            $profile->getCurrentResourceId(),
+            $profile,
+            null,
+            $profile->getCurrentNode(),
+            $targetNode
+        );
+        $this->updateMap($profile->getCurrentResourceId());
+        return $this->showNodeInfoNew($profile->getCurrentResourceId(), NULL, true);
+    }
+
+    /**
+     * @param File $file
+     * @return GameClientResponse
      * @throws \Doctrine\ORM\NonUniqueResultException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
@@ -277,7 +324,7 @@ class FileExecutionService extends BaseService
         }
         switch ($file->getFileType()->getId()) {
             default:
-                $message = $this->translate('This combat program has not bene implemented yet');
+                $message = $this->translate('This combat program has not been implemented yet');
                 $this->gameClientResponse->addMessage($message);
                 break;
             case FileType::ID_KICKER:

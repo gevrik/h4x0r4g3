@@ -271,7 +271,7 @@ class SystemService extends BaseService
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function createSystem($resourceId)
+    public function createProfileSystem($resourceId)
     {
         $this->initService($resourceId);
         if (!$this->user) return false;

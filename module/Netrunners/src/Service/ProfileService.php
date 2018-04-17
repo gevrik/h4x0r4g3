@@ -88,6 +88,10 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
 
     const SCORE_SECRATING_STRING = 'secrating';
 
+    const SCORE_MILKRUNS_STRING = 'milkruns';
+
+    const SCORE_MISSIONS_STRING = 'missions';
+
     const SCORE_STEALTHING_STRING = 'stealthing';
 
     const SCORE_NOTELLS_STRING = 'notells';
@@ -256,25 +260,45 @@ class ProfileService extends NetrunnersAbstractService implements NetrunnersEnti
             $this->translate(self::SCORE_SECRATING_STRING),
             ($profile->getSecurityRating()) ? $profile->getSecurityRating() : 0
         );
+        $completedMilksruns = ($profile->getCompletedMilkruns()) ? $profile->getCompletedMilkruns() : 0;
+        $failedMilkruns = ($profile->getFaileddMilkruns()) ? $profile->getFaileddMilkruns() : 0;
+        $completedMissions = ($profile->getCompletedMissions()) ? $profile->getCompletedMissions() : 0;
+        $failedMissions = ($profile->getFailedMissions()) ? $profile->getFailedMissions() : 0;
+        $returnMessage[] = sprintf(
+            '%-12s: <span class="text-success">%s</span>|<span class="text-danger">%s</span>',
+            $this->translate(self::SCORE_MILKRUNS_STRING),
+            $completedMilksruns,
+            $failedMilkruns
+        );
+        $returnMessage[] = sprintf(
+            '%-12s: <span class="text-success">%s</span>|<span class="text-danger">%s</span>',
+            $this->translate(self::SCORE_MISSIONS_STRING),
+            $completedMissions,
+            $failedMissions
+        );
         $returnMessage[] = sprintf(
             '%-12s: %s',
             $this->translate('faction'),
-            ($profile->getFaction()) ? $profile->getFaction()->getName() : $this->translate('<span class="text-muted">---</span>')
+            ($profile->getFaction()) ? $profile->getFaction()->getName() :
+                $this->translate('<span class="text-muted">---</span>')
         );
         $returnMessage[] = sprintf(
             '%-12s: %s',
             $this->translate('group'),
-            ($profile->getGroup()) ? $profile->getGroup()->getName() : $this->translate('<span class="text-muted">---</span>')
+            ($profile->getGroup()) ? $profile->getGroup()->getName() :
+                $this->translate('<span class="text-muted">---</span>')
         );
         $returnMessage[] = sprintf(
             '%-12s: %s',
             $this->translate(self::SCORE_STEALTHING_STRING),
-            ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') : $this->translate('<span class="text-muted">off</span>')
+            ($profile->getStealthing()) ? $this->translate('<span class="text-warning">on</span>') :
+                $this->translate('<span class="text-muted">off</span>')
         );
         $returnMessage[] = sprintf(
             '%-12s: %s',
             $this->translate(self::SCORE_NOTELLS_STRING),
-            ($profile->getNoTells()) ? $this->translate('<span class="text-success">on</span>') : $this->translate('<span class="text-muted">off</span>')
+            ($profile->getNoTells()) ? $this->translate('<span class="text-success">on</span>') :
+                $this->translate('<span class="text-muted">off</span>')
         );
         if ($profile->getSilenced()) {
             $returnMessage[] = $this->translate('<span class="text-warning">You are currently silenced</span>');

@@ -17,6 +17,7 @@ use Netrunners\Entity\FileCategory;
 use Netrunners\Entity\FileMod;
 use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
+use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
 use Netrunners\Entity\NpcInstance;
@@ -100,12 +101,15 @@ class FileUtilityService extends BaseService
             $profile,
             $parameter
         );
-        if (count($targetFiles) < 1) {
-            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
+        $file = NULL;
+        if (count($targetFiles) >= 1) {
+            $file = array_shift($targetFiles);
         }
-        $file = array_shift($targetFiles);
         if (!$file) {
-            return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
+            $file = $this->entityManager->find(File::class, $parameter);
+            if (!$file) {
+                return $this->gameClientResponse->addMessage($this->translate('File not found'))->send();
+            }
         }
         // now get the new name
         $newName = $this->getNextParameter($contentArray, false, false, true, true);
@@ -1148,7 +1152,7 @@ class FileUtilityService extends BaseService
             if (!$passkeyData) continue;
             $targetNodeId = $passkeyData->nodeid;
             if (!$targetNodeId) continue;
-            $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+            $targetNode = $this->entityManager->find(Node::class, $targetNodeId);
             if (!$targetNode) continue;
             $currentOwnerString = ($passkey->getProfile()) ?
                 sprintf('<span class="text-attention">%s</span>', $passkey->getProfile()->getUser()->getUsername()) :
