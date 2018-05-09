@@ -58,7 +58,7 @@ class Morph
     /**
      * @return int
      */
-    public function getId(): int
+    public function getId()
     {
         return $this->id;
     }
@@ -67,7 +67,7 @@ class Morph
      * @param int $id
      * @return Morph
      */
-    public function setId(int $id)
+    public function setId($id)
     {
         $this->id = $id;
         return $this;
@@ -85,7 +85,7 @@ class Morph
      * @param string $name
      * @return Morph
      */
-    public function setName(string $name)
+    public function setName($name)
     {
         $this->name = $name;
         return $this;
@@ -103,7 +103,7 @@ class Morph
      * @param string $description
      * @return Morph
      */
-    public function setDescription(string $description)
+    public function setDescription($description)
     {
         $this->description = $description;
         return $this;
