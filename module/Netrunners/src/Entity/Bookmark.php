@@ -59,7 +59,7 @@ class Bookmark
     /**
      * @return int
      */
-    public function getId(): int
+    public function getId()
     {
         return $this->id;
     }
@@ -68,7 +68,7 @@ class Bookmark
      * @param int $id
      * @return Bookmark
      */
-    public function setId(int $id): Bookmark
+    public function setId($id)
     {
         $this->id = $id;
         return $this;
@@ -77,7 +77,7 @@ class Bookmark
     /**
      * @return \DateTime
      */
-    public function getAdded(): \DateTime
+    public function getAdded()
     {
         return $this->added;
     }
@@ -86,7 +86,7 @@ class Bookmark
      * @param \DateTime $added
      * @return Bookmark
      */
-    public function setAdded(\DateTime $added): Bookmark
+    public function setAdded($added)
     {
         $this->added = $added;
         return $this;
@@ -95,7 +95,7 @@ class Bookmark
     /**
      * @return string
      */
-    public function getName(): string
+    public function getName()
     {
         return $this->name;
     }
@@ -104,7 +104,7 @@ class Bookmark
      * @param string $name
      * @return Bookmark
      */
-    public function setName(string $name): Bookmark
+    public function setName($name)
     {
         $this->name = $name;
         return $this;
