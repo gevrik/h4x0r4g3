@@ -50,6 +50,7 @@ use Netrunners\Repository\ProfileEffectRepository;
 use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
+use Netrunners\Repository\SystemRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
@@ -3467,6 +3468,134 @@ class BaseService extends BaseUtilityService
             $this->entityManager->flush($effectInstance);
         }
         return [$actorMessage, $profileMessage];
+    }
+
+    /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \Exception
+     */
+    public function systemConnect($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return false;
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentNodeType = $currentNode->getNodeType();
+        // check if they are in an io-node
+        if ($currentNodeType->getId() != NodeType::ID_PUBLICIO &&
+            $currentNodeType->getId() != NodeType::ID_IO
+        ) {
+            return $this->gameClientResponse->addMessage(
+                $this->translate('You must be in an I/O node to connect to another system')
+            )->send();
+        }
+        // get parameter
+        list($contentArray, $parameter) = $this->getNextParameter($contentArray);
+        /** @var NodeRepository $nodeRepo */
+        $nodeRepo = $this->entityManager->getRepository(Node::class);
+        if (!$parameter) {
+            $publicIoNodes = $nodeRepo->findForConnectCommand($profile);
+            $returnMessage = sprintf(
+                '%-32s|%-40s|%-12s|%-20s',
+                $this->translate('SYSTEM'),
+                $this->translate('ADDRESS'),
+                $this->translate('ID'),
+                $this->translate('NAME')
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
+            /** @var Node $publicIoNode */
+            foreach ($publicIoNodes as $publicIoNode) {
+                $returnMessage = sprintf(
+                    '%-32s|%-40s|%-12s|%-20s',
+                    $publicIoNode->getSystem()->getName(),
+                    $publicIoNode->getSystem()->getAddy(),
+                    $publicIoNode->getId(),
+                    $publicIoNode->getName()
+                );
+                $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+            }
+            return $this->gameClientResponse->send();
+        }
+        $addy = $parameter;
+        // check if the target system exists
+        /** @var SystemRepository $systemRepo */
+        $systemRepo = $this->entityManager->getRepository(System::class);
+        /** @var System $targetSystem */
+        $targetSystem = $systemRepo->findByAddy($addy);
+        if (!$targetSystem) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid system address'))->send();
+        }
+        $targetNode = NULL;
+        // now check if the node id exists
+        $targetNodeId = $this->getNextParameter($contentArray, false, true);
+        if (!$targetNodeId) {
+            $publicIoNodes = $nodeRepo->findForConnectCommand($profile);
+            $returnMessage = sprintf(
+                '%-32s|%-40s|%-12s|%-20s',
+                $this->translate('SYSTEM'),
+                $this->translate('ADDRESS'),
+                $this->translate('ID'),
+                $this->translate('NAME')
+            );
+            $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_SYSMSG);
+            /** @var Node $publicIoNode */
+            foreach ($publicIoNodes as $publicIoNode) {
+                if ($publicIoNode->getSystem() === $targetSystem) {
+                    $returnMessage = sprintf(
+                        '%-32s|%-40s|%-12s|%-20s',
+                        $publicIoNode->getSystem()->getName(),
+                        $publicIoNode->getSystem()->getAddy(),
+                        $publicIoNode->getId(),
+                        $publicIoNode->getName()
+                    );
+                    $this->gameClientResponse->addMessage($returnMessage, GameClientResponse::CLASS_WHITE);
+                }
+            }
+            return $this->gameClientResponse->send();
+        }
+        /** @var Node $targetNode */
+        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $targetNodeId);
+        if (!$targetNode) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid target node id'))->send();
+        }
+        $targetNodeType = $targetNode->getNodeType();
+        if ($targetNodeType->getId() != NodeType::ID_PUBLICIO &&
+            $targetNodeType->getId() != NodeType::ID_IO) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
+        }
+        if (
+            $targetNodeType->getId() == NodeType::ID_IO &&
+            !$this->canAccess($profile, $targetSystem)
+        ) {
+            return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
+        }
+        if ($targetNode == $currentNode) {
+            return $this->gameClientResponse->addMessage($this->translate('You are already there'))->send();
+        }
+        /** @var Node $targetNode */
+        $this->movePlayerToTargetNodeNew(NULL, $profile, NULL, $currentNode, $targetNode);
+        $this->gameClientResponse->addMessage(
+            $this->translate('You have connected to the target system'),
+            GameClientResponse::CLASS_SUCCESS
+        );
+        $this->updateMap($resourceId);
+        $flytoResponse = new GameClientResponse($resourceId);
+        $flytoResponse->setCommand(GameClientResponse::COMMAND_FLYTO)->setSilent(true);
+        $flytoResponse->addOption(
+            GameClientResponse::OPT_CONTENT, explode(',', $targetSystem->getGeocoords())
+        );
+        $flytoResponse->send();
+        $this->gameClientResponse->setSilent(true)->send();
+        return $this->showNodeInfoNew($resourceId, NULL, true);
     }
 
 }

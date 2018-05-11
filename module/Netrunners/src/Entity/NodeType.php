@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass="Netrunners\Repository\NodeTypeRepository")
  */
-final class NodeType
+class NodeType
 {
 
     const ID_RAW = 1;

@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\ConnectionRepository") */
-final class Connection
+class Connection
 {
 
     const TYPE_NORMAL = 0;

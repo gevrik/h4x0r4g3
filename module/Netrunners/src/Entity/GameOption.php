@@ -14,7 +14,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\GameOptionRepository") */
-final class GameOption
+class GameOption
 {
 
     const ID_SOUND = 1;

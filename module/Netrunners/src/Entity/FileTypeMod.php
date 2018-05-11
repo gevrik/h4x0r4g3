@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\FileTypeModRepository") */
-final class FileTypeMod
+class FileTypeMod
 {
 
     /**

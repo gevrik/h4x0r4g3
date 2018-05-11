@@ -14,7 +14,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\FactionRoleRepository") */
-final class FactionRole
+class FactionRole
 {
 
     /**

@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\NodeRepository")
  * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"})})
  */
-final class Node
+class Node
 {
 
     /**

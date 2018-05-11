@@ -783,6 +783,9 @@ class ParserService
                 return $this->nodeService->enterMode($resourceId, $userCommand);
             case 'use':
                 return $this->fileService->useCommand($resourceId, $contentArray);
+            case 'usebookmark':
+            case 'usebm':
+                return $this->bookmarkService->useBookmarkCommand($resourceId, $contentArray);
             case 'visible':
             case 'vis':
                 return $this->profileService->stopStealthing($resourceId);

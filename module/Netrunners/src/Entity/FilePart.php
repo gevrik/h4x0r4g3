@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\FilePartRepository")
  * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"})})
  */
-final class FilePart
+class FilePart
 {
 
     const ID_CONTROLLER = 1;

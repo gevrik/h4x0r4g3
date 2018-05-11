@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\ManpageRepository")
  * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"subject"})})
  */
-final class Manpage
+class Manpage
 {
 
     const STATUS_INVALID = 0;

@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\FeedbackRepository") */
-final class Feedback
+class Feedback
 {
 
     const TYPE_TYPO_ID = 1;

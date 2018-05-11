@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\MissionArchetypeRepository") */
-final class MissionArchetype
+class MissionArchetype
 {
 
     const ID_STEAL_FILE = 1;

@@ -211,18 +211,52 @@ final class BookmarkService extends BaseService
     }
 
     /**
+     * @param $resourceId
+     * @param $contentArray
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function useBookmarkCommand($resourceId, $contentArray)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        $bookmarkId = $this->getNextParameter($contentArray, false, true);
+        if (!$bookmarkId) {
+            $message = sprintf($this->translate('Please specify a bookmark id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        $bookmark = $this->getBookmarkByIdOrNumber($bookmarkId);
+        if (!$bookmark || ($bookmark && $bookmark->getProfile() !== $profile)) {
+            $message = sprintf($this->translate('Please specify a valid bookmark id'));
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
+        return $this->systemConnect($resourceId, [$bookmark->getSystem()->getAddy(), $bookmark->getNode()->getId()]);
+    }
+
+    /**
      * @param int $identifier
      * @return Bookmark|null
      */
     private function getBookmarkByIdOrNumber($identifier)
     {
         /** @var Bookmark $bookmark */
-        $bookmark = $this->bookmarkRepo->find($identifier);
+        $profile = $this->user->getProfile();
+        $bookmark = $this->bookmarkRepo->findOneBy([
+            'id' => $identifier,
+            'profile' => $profile
+        ]);
         if (!$bookmark) {
             // try to get via number
-            $bookmarks = $this->bookmarkRepo->findBy(['profile' => $this->user->getProfile()], ['id' => 'asc']);
-            if (array_key_exists($identifier-1, $bookmarks)) {
-                $bookmark = $bookmarks[$identifier-1];
+            $bookmarks = $this->bookmarkRepo->findBy(['profile' => $profile], ['id' => 'asc']);
+            if (array_key_exists($identifier - 1, $bookmarks)) {
+                $bookmark = $bookmarks[$identifier - 1];
             }
         }
         return $bookmark;

@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\SkillRepository") */
-final class Skill
+class Skill
 {
 
     const ID_CODING = 1;

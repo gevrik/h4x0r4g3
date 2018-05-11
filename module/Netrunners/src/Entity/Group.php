@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\GroupRepository")
  * @ORM\Table(name="Player_Group")
  */
-final class Group
+class Group
 {
 
     /**
