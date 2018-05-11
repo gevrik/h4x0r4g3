@@ -318,7 +318,7 @@ final class ProfileService extends NetrunnersAbstractService implements Netrunne
     {
         $this->initService($resourceId);
         if (!$this->user) return false;
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
+        $isBlocked = $this->isActionBlockedNew($resourceId);
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
@@ -777,6 +777,7 @@ final class ProfileService extends NetrunnersAbstractService implements Netrunne
      */
     public function startStealthing($resourceId)
     {
+        // TODO can't stealth when entities in node
         $this->initService($resourceId);
         if (!$this->user) return false;
         $isBlocked = $this->isActionBlockedNew($resourceId);

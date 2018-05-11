@@ -14,15 +14,19 @@ use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Effect;
 use Netrunners\Entity\File;
+use Netrunners\Entity\FileMod;
+use Netrunners\Entity\FileModInstance;
 use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
+use Netrunners\Repository\FileModInstanceRepository;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\NpcInstanceRepository;
@@ -63,6 +67,11 @@ final class FileExecutionService extends BaseService
      */
     protected $connectionRepo;
 
+    /**
+     * @var FileModInstanceRepository
+     */
+    protected $fileModInstanceRepo;
+
 
     /**
      * FileExecutionService constructor.
@@ -86,9 +95,10 @@ final class FileExecutionService extends BaseService
         $this->codebreakerService = $codebreakerService;
         $this->missionService = $missionService;
         $this->hangmanService = $hangmanService;
-        $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
-        $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');
-        $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        $this->fileRepo = $this->entityManager->getRepository(File::class);
+        $this->npcInstanceRepo = $this->entityManager->getRepository(NpcInstance::class);
+        $this->connectionRepo = $this->entityManager->getRepository(Connection::class);
+        $this->fileModInstanceRepo = $this->entityManager->getRepository(FileModInstance::class);
     }
 
     /**
@@ -949,8 +959,21 @@ final class FileExecutionService extends BaseService
         else {
             $this->determinePreExecutionActions($file, $systemId);
             $fileType = $file->getFileType();
+            // check for mods that could lower execution time
+            /** @var FileMod $executionBoosterMod */
+            $executionBoosterMod = $this->entityManager->find(FileMod::class, FileMod::ID_EXECUTION_BOOSTER);
+            /** @var FileModInstance $executionBoosterInstance */
+            $executionBoosterInstance = $this->fileModInstanceRepo->findOneByFileAndType($file, $executionBoosterMod);
+            $executionTime = $fileType->getExecutionTime();
+            if ($executionBoosterInstance) {
+                $modLevel = $executionBoosterInstance->getLevel();
+                $percentTime = $executionTime / 100;
+                $reduceBy = $modLevel * $percentTime;
+                $executionTime = $this->checkValueMinMax($executionTime - round(floor($reduceBy)), 1);
+            }
+            // all good
             $completionDate = new \DateTime();
-            $completionDate->add(new \DateInterval('PT' . $fileType->getExecutionTime() . 'S'));
+            $completionDate->add(new \DateInterval('PT' . (int)$executionTime . 'S'));
             $actionData = [
                 'command' => 'executeprogram',
                 'completion' => $completionDate,
@@ -1181,6 +1204,7 @@ final class FileExecutionService extends BaseService
      * @return array
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
      */
     public function executeWarningLockpick(File $file, $contentArray)
     {
@@ -1227,6 +1251,7 @@ final class FileExecutionService extends BaseService
     /**
      * @param $contentArray
      * @return array
+     * @throws \Doctrine\ORM\ORMException
      */
     public function executeWarningSiphon($contentArray)
     {

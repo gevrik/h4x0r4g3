@@ -120,4 +120,22 @@ class FileModInstanceRepository extends EntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @param File $file
+     * @param FileMod $fileMod
+     * @return array
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function findOneByFileAndType(File $file, FileMod $fileMod)
+    {
+        $qb = $this->createQueryBuilder('fmi');
+        $qb->where('fmi.file = :file AND fmi.fileMod = :fileMod');
+        $qb->setParameters([
+            'file' => $file,
+            'fileMod' => $fileMod
+        ]);
+        $qb->setMaxResults(1);
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
 }

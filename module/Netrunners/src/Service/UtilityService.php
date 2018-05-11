@@ -156,18 +156,23 @@ final class UtilityService extends BaseService
         $this->initService($resourceId);
         if (!$this->user) return false;
         $message = <<<EOD
-addconnection  addnode  a attack  auction auctionfile  auctionbid bid  auctionbids bids  auctionbuyout buyout  
-auctioncancel cancelauction  auctions  auctionclaim  bgopacity  bug  cancel  cd  changepassword  claim  clear  close
-code  commands  connect  con consider  creategroup  createpasskey passkey  date  decompile  defaultmra  deposit  dl 
-download  editfile  editnode  entityname  equipment  eset  exe execute  explore  factionchat fc  factionratings  
-factions  filecats  filemods  filename  filetypes  gc  harvest  help  home  idea  initarmor  inventory inv  invitations
-jobs  joinfaction  k kill  killp killprocess  listpasskeys passkeys  logout  ls  mail  manageparts  map  milkrun  
-mission  missiondetails  mod modfile  mods  newbie  ninfo  nodename  nodes  nodetype  nset  open  options  parts  
-passwd  ps  recipes  removeconnection rmconnection  removenode rmnode  removepasskey rmpasskey  removeresource rmres  
-repairmra  reply  research  resources res  rm  say  scan  score  secureconnection  setemail  setlocale  slay 
-showbalance  showmra showmilkrunaivatars  showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  
-tell  time  touch  typo  ul  unload upload  updatesystemcoords  unsecure  update updatefile  upgrademra  upgradenode  
-use  visible  vis  withdraw
+abandonmission  addconnection  addnode  apt aptitudes  a attack  auction auctionfile  auctionbid bid  auctionbids bids  
+auctionbuyout  buyout  auctioncancel cancelauction  auctions  auctionclaim  bgopacity  bookmark  bookmarks  bug  cancel
+cd  changepassword  claim  claimnode  claimsystem  clear  close  code  commands  compare  connect  con consider  
+creategroup  createparty  createpasskey passkey  date  decompile  defaultmra  deposit  dl download  editfile  editnode  
+em emote  entityname  equipment  eset  exe execute  explore  factionchat fc  factionratings  factions  filecats  
+filemods  filename fn  filetypes  gc  glob  groupdeposit  groupinvitation  groupdisband  groupremove  
+grouptogglerecruitment  groupwithdraw  harvest  help  home  idea  initarmor  inventory inv  invitations  jobs  
+joinfaction  joingroup  k kill  killp killprocess  leavefaction  leavegroup  leaveparty  listpasskeys passkeys  logout  
+ls  mail  mailread  maildetach  mailattachinfo  mailattachmentdelete  maildelete  mailcreate  mailreply  managegroup  
+manageparts  map  milkrun  mission  missiondetails  missionlist  mod modfile  mods  newbie  ninfo  nodename  nodes  
+nodetype  nset  open  options  party  partychat pc  parts  partyinvite  partyfollow  partykick  partyrequest  passwd  
+pignore  placebounty  ps  recipes  rmbm rmbookmark removebookmark  removeconnection rmconnection  removenode rmnode  
+removepasskey rmpasskey  removeresource rmres  repairmra  reply  research  resources res  rm  say  scan  score  
+secureconnection  setemail  setlocale  slay  shoot snipe  showbalance  showbounties  showmra showmilkrunaivatars  
+showresearch  skillpoints  skills  sneak  stat  stealth  survey  system  systemchat  tell  time  touch  tradechat tc  
+typo  ul unload upload  updatesystemcoords  unsecure  update updatefile  upgrademra  upgradenode  use  usebookmark usebm
+visible  vis  withdraw
 EOD;
         $returnMessage = sprintf(
             '%s',

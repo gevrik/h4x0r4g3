@@ -124,10 +124,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if (!$this->getProfileGameOption($profile, GameOption::ID_SHOW_GLOBAL_CHAT)) {
             return $this->gameClientResponse->addMessage($this->translate('You have global chat deactivated in options'))->send();
         }
@@ -176,10 +172,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if (!$this->getProfileGameOption($profile, GameOption::ID_SHOW_TRADE_CHAT)) {
             return $this->gameClientResponse->addMessage($this->translate('You have trade chat deactivated in options'))->send();
         }
@@ -227,10 +219,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -274,10 +262,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -324,10 +308,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -364,10 +344,6 @@ final class ChatService extends BaseService
         $ws = $this->getWebsocketServer();
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         $profile = $this->user->getProfile();
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
@@ -406,10 +382,6 @@ final class ChatService extends BaseService
         $ws = $this->getWebsocketServer();
         $this->initService($resourceId);
         if (!$this->user) return true;
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         $profile = $this->user->getProfile();
         if (!$this->fileRepo->findChatClientForProfile($profile)) {
             return $this->gameClientResponse->addMessage($this->translate('You need a running chatclient to send system messages'))->send();
@@ -509,10 +481,6 @@ final class ChatService extends BaseService
         $profile = $this->user->getProfile();
         $messageContent = NULL;
         $recipient = NULL;
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -577,10 +545,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         $profile = $this->user->getProfile();
         $messageContent = NULL;
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -689,10 +653,6 @@ final class ChatService extends BaseService
         if (!$this->user) return true;
         // get profile
         $profile = $this->user->getProfile();
-        $isBlocked = $this->isActionBlockedNew($resourceId, true);
-        if ($isBlocked) {
-            return $this->gameClientResponse->addMessage($isBlocked)->send();
-        }
         if ($profile->getSilenced()) {
             return $this->gameClientResponse->addMessage($this->translate('You are currently silenced'))->send();
         }
@@ -752,6 +712,7 @@ final class ChatService extends BaseService
      * @return bool
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\ORMException
      */
     private function isIgnoredBy(Profile $sourceProfile, Profile $targetProfile)
     {

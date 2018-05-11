@@ -801,6 +801,12 @@ final class FileUtilityService extends BaseService
             $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
             return $this->gameClientResponse->send();
         }
+        // now we need to check if the file already has a mod of the same type installed
+        $existingFileModOfSameType = $this->fileModInstanceRepo->findOneByFileAndType($file, $fileMod);
+        if ($existingFileModOfSameType) {
+            $message = $this->translate('This file already has a mod of the same type installed');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
         // ok, now we know the file and the filemod, try to find a filemodinstance that fits the variables
         $fileModInstances = $this->fileModInstanceRepo->findByProfileAndTypeAndMinLevel($profile, $fileMod, $file->getLevel());
         if (count($fileModInstances) < 1) {
@@ -839,6 +845,16 @@ final class FileUtilityService extends BaseService
                 );
                 break;
             case FileMod::ID_TITANKILLER:
+                $fileModInstance->setFile($file);
+                $fileModInstance->setProfile(NULL);
+                $flush = true;
+                $successMessage = sprintf(
+                    $this->translate('[%s] has been modded with [%s]'),
+                    $file->getName(),
+                    $fileMod->getName()
+                );
+                break;
+            case FileMod::ID_EXECUTION_BOOSTER:
                 $fileModInstance->setFile($file);
                 $fileModInstance->setProfile(NULL);
                 $flush = true;
