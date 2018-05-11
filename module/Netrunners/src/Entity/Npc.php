@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\NpcRepository") */
-class Npc
+final class Npc
 {
 
     const ID_MURPHY_VIRUS = 1;

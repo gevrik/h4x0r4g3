@@ -18,7 +18,7 @@ use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class MainCampaignService extends BaseService
+final class MainCampaignService extends BaseService
 {
 
     const STEP_NOT_STARTED = NULL;

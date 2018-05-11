@@ -21,7 +21,7 @@ use Netrunners\Repository\NpcRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class CombatService extends BaseService
+final class CombatService extends BaseService
 {
 
     /**

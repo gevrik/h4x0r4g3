@@ -15,7 +15,7 @@ use TmoAuth\Entity\User;
 use TwistyPassages\Entity\Story;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\ProfileRepository") */
-class Profile
+final class Profile
 {
 
     const DEFAULT_PROFILE_LOCALE = 'en_US';

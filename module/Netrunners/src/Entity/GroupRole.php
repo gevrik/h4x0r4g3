@@ -14,7 +14,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\GroupRoleRepository") */
-class GroupRole
+final class GroupRole
 {
 
     const ROLE_LEADER_ID = 1;

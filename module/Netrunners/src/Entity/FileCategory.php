@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\FileCategoryRepository")
  * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"})})
  */
-class FileCategory
+final class FileCategory
 {
 
     const ID_UTILITY = 1;

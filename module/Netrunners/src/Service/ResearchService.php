@@ -21,7 +21,7 @@ use Netrunners\Repository\FileTypeRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class ResearchService extends BaseService
+final class ResearchService extends BaseService
 {
 
     /**

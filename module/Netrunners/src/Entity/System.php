@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\SystemRepository")
  * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"})})
  */
-class System
+final class System
 {
 
     const DEFAULT_MAX_SYSTEM_SIZE = 64;

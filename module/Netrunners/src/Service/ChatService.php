@@ -23,7 +23,7 @@ use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class ChatService extends BaseService
+final class ChatService extends BaseService
 {
 
     /**

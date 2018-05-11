@@ -27,7 +27,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class MilkrunService extends BaseService
+final class MilkrunService extends BaseService
 {
 
     const TILE_TYPE_UNKNOWN = 0;

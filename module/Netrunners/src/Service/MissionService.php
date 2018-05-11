@@ -30,7 +30,7 @@ use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class MissionService extends BaseService
+final class MissionService extends BaseService
 {
 
     const TILE_SUBTYPE_SPECIAL_CREDITS = 1;

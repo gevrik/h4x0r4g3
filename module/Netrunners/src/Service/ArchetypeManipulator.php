@@ -10,7 +10,7 @@
 
 namespace Netrunners\Service;
 
-class ArchetypeManipulator
+final class ArchetypeManipulator
 {
 
 

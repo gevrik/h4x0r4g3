@@ -20,7 +20,7 @@ use Netrunners\Repository\FileRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\Role;
 
-class UtilityService extends BaseService
+final class UtilityService extends BaseService
 {
 
     /**

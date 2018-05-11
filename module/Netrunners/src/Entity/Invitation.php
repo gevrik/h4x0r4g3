@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\InvitationRepository")
  * @ORM\Table(name="Invitation_Code")
  */
-class Invitation
+final class Invitation
 {
 
     /**

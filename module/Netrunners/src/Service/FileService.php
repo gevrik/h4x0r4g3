@@ -20,7 +20,7 @@ use Netrunners\Repository\FileRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class FileService extends BaseService
+final class FileService extends BaseService
 {
 
     const DEFAULT_DIFFICULTY_MOD = 10;

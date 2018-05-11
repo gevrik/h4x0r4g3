@@ -44,7 +44,7 @@ use TmoAuth\Entity\User;
 use Zend\Log\Logger;
 use Zend\Mvc\I18n\Translator;
 
-class LoopService extends BaseService
+final class LoopService extends BaseService
 {
 
     /**

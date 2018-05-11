@@ -16,7 +16,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\FileModRepository") */
-class FileMod
+final class FileMod
 {
 
     const ID_BACKSLASH = 1;

@@ -24,7 +24,7 @@ use Zend\View\Renderer\PhpRenderer;
  * Class BountyService
  * @package Netrunners\Service
  */
-class BountyService extends BaseService
+final class BountyService extends BaseService
 {
 
     /**

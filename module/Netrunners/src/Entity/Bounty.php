@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\BountyRepository") */
-class Bounty
+final class Bounty
 {
 
     /**

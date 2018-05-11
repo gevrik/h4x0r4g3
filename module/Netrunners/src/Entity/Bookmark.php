@@ -16,8 +16,6 @@ use Doctrine\ORM\Mapping as ORM;
 class Bookmark
 {
 
-    // TODO create repo and service
-
     /**
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -113,7 +111,7 @@ class Bookmark
     // ORM
 
     /**
-     * @return mixed
+     * @return Profile
      */
     public function getProfile()
     {
@@ -131,7 +129,7 @@ class Bookmark
     }
 
     /**
-     * @return mixed
+     * @return System
      */
     public function getSystem()
     {
@@ -149,7 +147,7 @@ class Bookmark
     }
 
     /**
-     * @return mixed
+     * @return Node
      */
     public function getNode()
     {

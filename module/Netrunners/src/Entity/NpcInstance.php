@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity(repositoryClass="Netrunners\Repository\NpcInstanceRepository")
  * @ORM\Table(indexes={@ORM\Index(name="search_idx", columns={"name"}), @ORM\Index(name="roaming_idx", columns={"roaming"})})
  */
-class NpcInstance
+final class NpcInstance
 {
 
     /**

@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\ProfileFactionRatingRepository") */
-class ProfileFactionRating
+final class ProfileFactionRating
 {
 
     const SOURCE_ID_PLOFILE = 1;

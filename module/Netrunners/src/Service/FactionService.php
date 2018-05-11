@@ -19,7 +19,7 @@ use Netrunners\Repository\ProfileRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class FactionService extends BaseService
+final class FactionService extends BaseService
 {
 
     /**

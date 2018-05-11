@@ -30,7 +30,7 @@ use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class FileExecutionService extends BaseService
+final class FileExecutionService extends BaseService
 {
 
     /**

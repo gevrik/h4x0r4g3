@@ -20,7 +20,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class ChoiceService extends BaseService
+final class ChoiceService extends BaseService
 {
 
     /**

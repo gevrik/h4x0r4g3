@@ -13,7 +13,7 @@ namespace Netrunners\Controller;
 use Netrunners\Entity\Profile;
 use Zend\View\Model\ViewModel;
 
-class ProfileController extends NetrunnersAbstractController
+final class ProfileController extends NetrunnersAbstractController
 {
 
     /**

@@ -19,7 +19,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class ManpageService extends BaseService
+final class ManpageService extends BaseService
 {
 
     const DEFAULT_MANPAGE_ID = 1;

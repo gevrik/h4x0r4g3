@@ -12,7 +12,7 @@ namespace Netrunners\Controller;
 
 use Zend\View\Model\ViewModel;
 
-class SystemController extends NetrunnersAbstractController
+final class SystemController extends NetrunnersAbstractController
 {
 
     /**

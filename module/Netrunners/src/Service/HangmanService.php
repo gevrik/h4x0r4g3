@@ -18,7 +18,7 @@ use Netrunners\Repository\SystemRepository;
 use Netrunners\Repository\WordRepository;
 use Zend\View\Model\ViewModel;
 
-class HangmanService extends BaseService
+final class HangmanService extends BaseService
 {
 
     const LENGTH_MODIFIER = 4;

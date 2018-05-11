@@ -35,7 +35,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class GroupService extends BaseService
+final class GroupService extends BaseService
 {
 
     const GROUP_CREATION_COST = 100000;

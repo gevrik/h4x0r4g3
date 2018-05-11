@@ -22,7 +22,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class EgoCastingService extends BaseService
+final class EgoCastingService extends BaseService
 {
 
     const ID_INTRO_STORY = 1;

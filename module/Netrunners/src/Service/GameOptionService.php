@@ -20,7 +20,7 @@ use Netrunners\Repository\GameOptionRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class GameOptionService extends BaseService
+final class GameOptionService extends BaseService
 {
 
     /**

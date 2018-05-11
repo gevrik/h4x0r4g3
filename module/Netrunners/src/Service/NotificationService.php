@@ -18,7 +18,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class NotificationService extends BaseService
+final class NotificationService extends BaseService
 {
 
     /**

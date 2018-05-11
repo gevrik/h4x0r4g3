@@ -38,7 +38,7 @@ use TmoAuth\Entity\User;
 use Zend\Mvc\I18n\Translator;
 use Zend\Validator\Ip;
 
-class AdminService extends BaseService
+final class AdminService extends BaseService
 {
 
     /**

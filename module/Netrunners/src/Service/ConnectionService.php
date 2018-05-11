@@ -21,7 +21,7 @@ use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class ConnectionService extends BaseService
+final class ConnectionService extends BaseService
 {
 
     const CONNECTION_COST = 10;

@@ -2,8 +2,10 @@
 
 namespace Netrunners;
 
+use Netrunners\Factory\BookmarkServiceFactory;
 use Netrunners\Factory\ChoiceServiceFactory;
 use Netrunners\Factory\EgoCastingServiceFactory;
+use Netrunners\Service\BookmarkService;
 use Netrunners\Service\ChoiceService;
 use Netrunners\Service\EgoCastingService;
 use Netrunners\View\Helper\ImageUrlHelper;
@@ -76,6 +78,7 @@ return [
             'Netrunners\Service\BaseService' => 'Netrunners\Factory\BaseServiceFactory',
             'Netrunners\Service\AuctionService' => 'Netrunners\Factory\AuctionServiceFactory',
             'Netrunners\Service\AdminService' => 'Netrunners\Factory\AdminServiceFactory',
+            BookmarkService::class => BookmarkServiceFactory::class,
             'Netrunners\Service\BountyService' => 'Netrunners\Factory\BountyServiceFactory',
             'Netrunners\Service\ChatService' => 'Netrunners\Factory\ChatServiceFactory',
             ChoiceService::class => ChoiceServiceFactory::class,

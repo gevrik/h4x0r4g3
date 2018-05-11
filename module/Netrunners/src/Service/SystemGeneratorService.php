@@ -27,7 +27,7 @@ use Netrunners\Repository\SystemRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class SystemGeneratorService extends BaseService
+final class SystemGeneratorService extends BaseService
 {
 
     const SECURITY_WHITE_STRING = 'white';

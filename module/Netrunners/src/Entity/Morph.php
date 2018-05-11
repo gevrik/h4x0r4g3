@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\MorphRepository") */
-class Morph
+final class Morph
 {
 
     const ID_CASE = 1;

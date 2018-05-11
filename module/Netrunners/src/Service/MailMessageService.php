@@ -23,7 +23,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class MailMessageService extends BaseService
+final class MailMessageService extends BaseService
 {
 
     /**

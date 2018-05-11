@@ -26,7 +26,7 @@ use Netrunners\Repository\FileTypeRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class AuctionService extends BaseService
+final class AuctionService extends BaseService
 {
 
     /**

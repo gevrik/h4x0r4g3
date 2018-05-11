@@ -18,7 +18,7 @@ use Netrunners\Repository\NodeRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class SystemService extends BaseService
+final class SystemService extends BaseService
 {
 
     const HOME_RECALL_TIMER = 10;

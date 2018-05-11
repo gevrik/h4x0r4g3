@@ -34,7 +34,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class NodeService extends BaseService
+final class NodeService extends BaseService
 {
 
     const NAME_STRING = "name";

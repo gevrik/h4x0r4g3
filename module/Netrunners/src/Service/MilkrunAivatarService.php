@@ -18,7 +18,7 @@ use Netrunners\Repository\MilkrunAivatarRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class MilkrunAivatarService extends BaseService
+final class MilkrunAivatarService extends BaseService
 {
 
     /**

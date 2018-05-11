@@ -181,6 +181,10 @@ class ParserService
      */
     protected $egoCastingService;
 
+    /**
+     * @var BookmarkService
+     */
+    protected $bookmarkService;
 
     /**
      * @param EntityManager $entityManager
@@ -214,6 +218,7 @@ class ParserService
      * @param BountyService $bountyService
      * @param ChoiceService $choiceService
      * @param EgoCastingService $egoCastingService
+     * @param BookmarkService $bookmarkService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -246,7 +251,8 @@ class ParserService
         PassageService $passageService,
         BountyService $bountyService,
         ChoiceService $choiceService,
-        EgoCastingService $egoCastingService
+        EgoCastingService $egoCastingService,
+        BookmarkService $bookmarkService
     )
     {
         $this->entityManager = $entityManager;
@@ -280,6 +286,7 @@ class ParserService
         $this->bountyService = $bountyService;
         $this->choiceService = $choiceService;
         $this->egoCastingService = $egoCastingService;
+        $this->bookmarkService = $bookmarkService;
     }
 
     /**
@@ -373,6 +380,10 @@ class ParserService
             case 'auctioncancel':
             case 'cancelauction':
                 return $this->auctionService->cancelAuction($resourceId, $contentArray);
+            case 'bookmark':
+                return $this->bookmarkService->bookmarkCommand($resourceId, $contentArray);
+            case 'bookmarks':
+                return $this->bookmarkService->bookmarksCommand($resourceId);
             case 'claimnode':
             case 'claimsystem':
             case 'claim':
@@ -621,6 +632,10 @@ class ParserService
                 return $this->partyService->partyFollowCommand($resourceId);
             case 'recipes':
                 return $this->codingService->showRecipes($resourceId);
+            case 'removebookmark':
+            case 'rmbookmark':
+            case 'rmbm':
+                return $this->bookmarkService->removeBookmarkCommand($resourceId, $contentArray);
             case 'removeconnection':
             case 'rmconnection':
                 return $this->connectionService->removeConnection($resourceId, $contentArray);

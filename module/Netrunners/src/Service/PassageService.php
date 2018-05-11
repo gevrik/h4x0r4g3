@@ -18,7 +18,7 @@ use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class PassageService extends BaseService
+final class PassageService extends BaseService
 {
 
     /**

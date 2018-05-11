@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\EffectRepository") */
-class Effect
+final class Effect
 {
 
     const ID_STUNNED = 1;

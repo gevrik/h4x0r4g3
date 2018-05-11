@@ -13,7 +13,7 @@ namespace Netrunners\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity(repositoryClass="Netrunners\Repository\NotificationRepository") */
-class Notification
+final class Notification
 {
 
     const SEVERITY_DANGER = 'danger';

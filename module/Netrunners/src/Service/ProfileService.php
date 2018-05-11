@@ -39,7 +39,7 @@ use Zend\Validator\EmailAddress;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
 
-class ProfileService extends NetrunnersAbstractService implements NetrunnersEntityServiceInterface
+final class ProfileService extends NetrunnersAbstractService implements NetrunnersEntityServiceInterface
 {
 
     const SKILL_CODING_STRING = 'coding';

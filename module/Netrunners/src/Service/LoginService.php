@@ -33,7 +33,7 @@ use Zend\I18n\Validator\Alnum;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class LoginService extends BaseService
+final class LoginService extends BaseService
 {
 
     /**

@@ -21,7 +21,7 @@ use Netrunners\Repository\WordRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
-class CodebreakerService extends BaseService
+final class CodebreakerService extends BaseService
 {
 
     /**

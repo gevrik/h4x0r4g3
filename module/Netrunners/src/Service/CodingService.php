@@ -35,7 +35,7 @@ use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 
-class CodingService extends BaseService
+final class CodingService extends BaseService
 {
     const MIN_ADV_SKILL_RATING = 80;
 
