@@ -380,7 +380,7 @@ final class LoginService extends BaseService
             $defaultRole = $this->entityManager->find('TmoAuth\Entity\Role', 2);
             /** @var Role $defaultRole */
             $user->addRole($defaultRole);
-            $system = $this->createSystem(
+            $system = $this->entityGenerator->createSystem(
                 $user->getUsername(),
                 $addy,
                 $profile,
@@ -393,7 +393,7 @@ final class LoginService extends BaseService
             // default io node
             /** @var NodeType $nodeType */
             $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
-            $ioNode = $this->createNode($system, $nodeType);
+            $ioNode = $this->entityGenerator->createNode($system, $nodeType);
             $profile->setCurrentNode($ioNode);
             $profile->setHomeNode($ioNode);
             $profile->setLocale(Profile::DEFAULT_PROFILE_LOCALE);

@@ -1,8 +1,8 @@
 <?php
 
 /**
- * BaseUtilityService Factory.
- * Factory for the BaseUtilityService.
+ * EntityGenerator Factory.
+ * Factory for the EntityGenerator.
  * @version 1.0
  * @author gevrik gevrik@totalmadownage.com
  * @copyright TMO
@@ -12,26 +12,24 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
-use Netrunners\Service\BaseUtilityService;
 use Netrunners\Service\EntityGenerator;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
-class BaseUtilityServiceFactory implements FactoryInterface
+class EntityGeneratorFactory implements FactoryInterface
 {
 
     /**
      * @param ContainerInterface $container
      * @param string $requestedName
      * @param array|null $options
-     * @return BaseUtilityService|object
+     * @return EntityGenerator
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
-        return new BaseUtilityService(
-            $container->get(EntityManager::class),
-            $container->get(EntityGenerator::class)
+        return new EntityGenerator(
+            $container->get(EntityManager::class)
         );
     }
 

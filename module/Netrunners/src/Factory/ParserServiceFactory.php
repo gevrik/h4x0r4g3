@@ -15,6 +15,7 @@ use Interop\Container\ContainerInterface;
 use Netrunners\Service\BookmarkService;
 use Netrunners\Service\EgoCastingService;
 use Netrunners\Service\ParserService;
+use Netrunners\Service\SystemRoleService;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
@@ -63,7 +64,8 @@ class ParserServiceFactory implements FactoryInterface
             $container->get('Netrunners\Service\BountyService'),
             $container->get('Netrunners\Service\ChoiceService'),
             $container->get(EgoCastingService::class),
-            $container->get(BookmarkService::class)
+            $container->get(BookmarkService::class),
+            $container->get(SystemRoleService::class)
         );
     }
 

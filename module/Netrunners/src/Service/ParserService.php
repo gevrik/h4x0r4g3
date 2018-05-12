@@ -187,6 +187,11 @@ class ParserService
     protected $bookmarkService;
 
     /**
+     * @var SystemRoleService
+     */
+    protected $systemRoleService;
+
+    /**
      * @param EntityManager $entityManager
      * @param Translator $translator
      * @param AuctionService $auctionService
@@ -219,6 +224,7 @@ class ParserService
      * @param ChoiceService $choiceService
      * @param EgoCastingService $egoCastingService
      * @param BookmarkService $bookmarkService
+     * @param SystemRoleService $systemRoleService
      */
     public function __construct(
         EntityManager $entityManager,
@@ -252,7 +258,8 @@ class ParserService
         BountyService $bountyService,
         ChoiceService $choiceService,
         EgoCastingService $egoCastingService,
-        BookmarkService $bookmarkService
+        BookmarkService $bookmarkService,
+        SystemRoleService $systemRoleService
     )
     {
         $this->entityManager = $entityManager;
@@ -287,6 +294,7 @@ class ParserService
         $this->choiceService = $choiceService;
         $this->egoCastingService = $egoCastingService;
         $this->bookmarkService = $bookmarkService;
+        $this->systemRoleService = $systemRoleService;
     }
 
     /**

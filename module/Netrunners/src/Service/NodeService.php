@@ -334,9 +334,9 @@ final class NodeService extends BaseService
         // create the new node
         /** @var NodeType $nodeType */
         $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_RAW);
-        $node = $this->createNode($currentNode->getSystem(), $nodeType, 1, null, $nodeType->getShortName());
-        $sourceConnection = $this->createConnection($currentNode, $node, false, $currentNode->getLevel());
-        $targetConnection = $this->createConnection($node, $currentNode, false, $node->getLevel());
+        $node = $this->entityGenerator->createNode($currentNode->getSystem(), $nodeType, 1, null, $nodeType->getShortName());
+        $sourceConnection = $this->entityGenerator->createConnection($currentNode, $node, false, $currentNode->getLevel());
+        $targetConnection = $this->entityGenerator->createConnection($node, $currentNode, false, $node->getLevel());
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have added a new node to the system for %s credits'),
@@ -613,9 +613,9 @@ final class NodeService extends BaseService
             ];
             $exploredNodeType = $this->getRandomNodeType($excludedNodeTypes);
             $newLevel = (mt_rand(1, 100) > 90) ? $currentNode->getLevel() + 1 : $currentNode->getLevel();
-            $exploredNode = $this->createNode($currentSystem, $exploredNodeType, $newLevel);
-            $sourceConnection = $this->createConnection($currentNode, $exploredNode, false, $currentNode->getLevel());
-            $targetConnection = $this->createConnection($exploredNode, $currentNode, false, $newLevel);
+            $exploredNode = $this->entityGenerator->createNode($currentSystem, $exploredNodeType, $newLevel);
+            $sourceConnection = $this->entityGenerator->createConnection($currentNode, $exploredNode, false, $currentNode->getLevel());
+            $targetConnection = $this->entityGenerator->createConnection($exploredNode, $currentNode, false, $newLevel);
             $this->entityManager->flush();
             $this->gameClientResponse->addMessage(
                 $this->translate('You have found a hidden service'), GameClientResponse::CLASS_SUCCESS

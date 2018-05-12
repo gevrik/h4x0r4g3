@@ -68,14 +68,23 @@ class BaseUtilityService {
     protected $entityManager;
 
     /**
+     * @var EntityGenerator
+     */
+    protected $entityGenerator;
+
+
+    /**
      * BaseUtilityService constructor.
      * @param EntityManager $entityManager
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
-        EntityManager $entityManager
+        EntityManager $entityManager,
+        EntityGenerator $entityGenerator
     )
     {
         $this->entityManager = $entityManager;
+        $this->entityGenerator = $entityGenerator;
     }
 
     /**
@@ -88,7 +97,7 @@ class BaseUtilityService {
 
     protected function createPasskeyForSystemAndNode(System $system, Node $node)
     {
-
+        // TODO is this still needed?
     }
 
     /**
@@ -526,6 +535,7 @@ class BaseUtilityService {
      * Get the amount of used memory for the given profile.
      * @param Profile $profile
      * @return int
+     * @throws \Doctrine\ORM\ORMException
      */
     protected function getUsedMemory(Profile $profile)
     {
@@ -625,6 +635,7 @@ class BaseUtilityService {
      * Get the amount of used storage for the given profile.
      * @param Profile $profile
      * @return int
+     * @throws \Doctrine\ORM\ORMException
      */
     protected function getUsedStorage(Profile $profile)
     {
@@ -790,6 +801,7 @@ class BaseUtilityService {
      * @param $parameter
      * @param Node $currentNode
      * @return bool|Connection
+     * @throws \Doctrine\ORM\ORMException
      */
     protected function findConnectionByNameOrNumber($parameter, Node $currentNode)
     {
@@ -897,6 +909,7 @@ class BaseUtilityService {
      * @param FileType $fileType
      * @param Profile $profile
      * @return int
+     * @throws \Doctrine\ORM\ORMException
      */
     protected function getSkillModifierForFileType(FileType $fileType, Profile $profile)
     {
@@ -926,6 +939,7 @@ class BaseUtilityService {
      * @param FilePart $filePart
      * @param Profile $profile
      * @return int
+     * @throws \Doctrine\ORM\ORMException
      */
     protected function getSkillModifierForFilePart(FilePart $filePart, Profile $profile)
     {
@@ -1701,147 +1715,17 @@ class BaseUtilityService {
         $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE
     )
     {
-        $system = $this->createSystem($name, $addy, $profile, $group, $faction,  $maxSize, $noclaim);
+        $system = $this->entityGenerator->createSystem($name, $addy, $profile, $group, $faction,  $maxSize, $noclaim);
         // default cpu node
         /** @var NodeType $nodeType */
         $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_CPU);
-        $cpuNode = $this->createNode($system, $nodeType, $level);
+        $cpuNode = $this->entityGenerator->createNode($system, $nodeType, $level);
         $nodeType = $this->entityManager->find('Netrunners\Entity\NodeType', NodeType::ID_IO);
-        $ioNode = $this->createNode($system, $nodeType, $level);
+        $ioNode = $this->entityGenerator->createNode($system, $nodeType, $level);
         // connection between nodes
-        $connection = $this->createConnection($cpuNode, $ioNode, false, $level, Connection::TYPE_CODEGATE);
-        $xconnection = $this->createConnection($ioNode, $cpuNode, false, $level, Connection::TYPE_CODEGATE);
+        $connection = $this->entityGenerator->createConnection($cpuNode, $ioNode, false, $level, Connection::TYPE_CODEGATE);
+        $xconnection = $this->entityGenerator->createConnection($ioNode, $cpuNode, false, $level, Connection::TYPE_CODEGATE);
         return $system;
-    }
-
-    /**
-     * @param string $name
-     * @param string $addy
-     * @param Profile|null $profile
-     * @param Group|null $group
-     * @param Faction|null $faction
-     * @param int|null $maxSize
-     * @param bool $noclaim
-     * @param null $geoCoords
-     * @return System
-     */
-    protected function createSystem(
-        $name,
-        $addy,
-        Profile $profile = null,
-        Group $group = null,
-        Faction $faction = null,
-        $maxSize = null,
-        $noclaim = false,
-        $geoCoords = null
-    )
-    {
-        if (!$maxSize) {
-            $maxSize = $this->getSystemSizeByType($faction, $group);
-        }
-        $system = new System();
-        $system->setProfile($profile);
-        $system->setName($name);
-        $system->setAddy($addy);
-        $system->setGroup($group);
-        $system->setFaction($faction);
-        $system->setMaxSize($maxSize);
-        $system->setAlertLevel(0);
-        $system->setNoclaim($noclaim);
-        $system->setIntegrity(100);
-        $system->setGeocoords($geoCoords);
-        $this->entityManager->persist($system);
-        return $system;
-    }
-
-    /**
-     * @param System $system
-     * @param NodeType $nodeType
-     * @param int $level
-     * @param Profile|null $profile
-     * @param string|null $name
-     * @param string|null $description
-     * @param bool $nomob
-     * @param bool $nopvp
-     * @param bool $noclaim
-     * @param string|null $data
-     * @return Node
-     */
-    protected function createNode(
-        System $system,
-        NodeType $nodeType,
-        $level = 1,
-        Profile $profile = null,
-        $name = null,
-        $description = null,
-        $nomob = false,
-        $nopvp = false,
-        $noclaim = true,
-        $data = null
-    )
-    {
-        $node = new Node();
-        $node->setCreated(new \DateTime());
-        $node->setLevel($level);
-        $node->setName(($name) ? $name : $nodeType->getName());
-        $node->setDescription(($description) ? $description : $nodeType->getDescription());
-        $node->setNomob($nomob);
-        $node->setProfile($profile);
-        $node->setNopvp($nopvp);
-        $node->setSystem($system);
-        $node->setNodeType($nodeType);
-        $node->setNoclaim($noclaim);
-        $node->setIntegrity(100);
-        $node->setData($data);
-        $this->entityManager->persist($node);
-        return $node;
-    }
-
-    /**
-     * @param Node $sourceNode
-     * @param Node $targetNode
-     * @param bool $isOpen
-     * @param int $level
-     * @param int $type
-     * @return Connection
-     */
-    protected function createConnection(
-        Node $sourceNode,
-        Node $targetNode,
-        $isOpen = true,
-        $level = 1,
-        $type = Connection::TYPE_NORMAL
-    )
-    {
-        $connection = new Connection();
-        $connection->setCreated(new \DateTime());
-        $connection->setLevel($level);
-        $connection->setIsOpen($isOpen);
-        $connection->setIsOpen(NULL);
-        $connection->setSourceNode($sourceNode);
-        $connection->setTargetNode($targetNode);
-        $connection->setType($type);
-        $this->entityManager->persist($connection);
-        return $connection;
-    }
-
-    /**
-     * @param Faction|null $faction
-     * @param Group|null $group
-     * @return int
-     */
-    protected function getSystemSizeByType(Faction $faction = null, Group $group = null)
-    {
-        if ($faction instanceof Faction) {
-            $maxSize = System::FACTION_MAX_SYSTEM_SIZE;
-        }
-        elseif ($group instanceof Group) {
-            $maxSize = System::GROUP_MAX_SYSTEM_SIZE;
-        }
-        else {
-            $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE;
-        }
-        return $maxSize;
     }
 
     /**

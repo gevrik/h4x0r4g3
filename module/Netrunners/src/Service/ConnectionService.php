@@ -106,7 +106,7 @@ final class ConnectionService extends BaseService
                 foreach ($partyData['members'] as $memberProfileId => $memberData) {
                     if ($memberData['following']) {
                         /** @var Profile $memberProfile */
-                        $memberProfile = $this->entityManager->find('Netrunners\Entity\Profile', $memberProfileId);
+                        $memberProfile = $this->entityManager->find(Profile::class, $memberProfileId);
                         if (!$memberProfile->getCurrentResourceId()) continue;
                         if ($memberProfile->getCurrentNode() != $currentNode) continue;
                         if ($this->isActionBlockedNew($memberProfile->getCurrentResourceId())) continue;
@@ -428,7 +428,7 @@ final class ConnectionService extends BaseService
             return $this->gameClientResponse->addMessage($message)->send();
         }
         // check if the target node exists
-        $targetNode = $this->entityManager->find('Netrunners\Entity\Node', $parameter);
+        $targetNode = $this->entityManager->find(Node::class, $parameter);
         if (!$targetNode) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid target node'))->send();
         }
@@ -452,8 +452,8 @@ final class ConnectionService extends BaseService
         /* all checks passed, we can now add the connection */
         $newCredits = $profile->getCredits() - self::CONNECTION_COST;
         $profile->setCredits($newCredits);
-        $aconnection = $this->createConnection($currentNode, $targetNode, false, $currentNode->getLevel());
-        $bconnection = $this->createConnection($targetNode, $currentNode, false, $targetNode->getLevel());
+        $aconnection = $this->entityGenerator->createConnection($currentNode, $targetNode, false, $currentNode->getLevel());
+        $bconnection = $this->entityGenerator->createConnection($targetNode, $currentNode, false, $targetNode->getLevel());
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('The connection has been created for %s credits'),

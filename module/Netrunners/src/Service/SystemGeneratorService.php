@@ -126,7 +126,7 @@ final class SystemGeneratorService extends BaseService
         $name = $nameData['content'];
         $instanceCount = $this->systemRepo->countLikeName($name);
         $name = $name . '-' . ($instanceCount+1);
-        $system = $this->createSystem(
+        $system = $this->entityGenerator->createSystem(
             $name,
             $addy,
             null,
@@ -196,7 +196,7 @@ final class SystemGeneratorService extends BaseService
             }
             /** @var NodeType $nodeType */
             $nodeType = $this->nodeTypeRepo->find($nodeTypeId);
-            $node = $this->createNode(
+            $node = $this->entityGenerator->createNode(
                 $system,
                 $nodeType,
                 $nodeLevel,
@@ -210,14 +210,14 @@ final class SystemGeneratorService extends BaseService
             if ($firstNode) {
                 if ($this->previousClusterCpu) {
                     $secured = true;
-                    $connectiona = $this->createConnection(
+                    $connectiona = $this->entityGenerator->createConnection(
                         $this->previousClusterCpu,
                         $node,
                         ($secured)?false:true,
                         $this->previousClusterCpu->getLevel(),
                         ($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL
                     );
-                    $connectionb = $this->createConnection(
+                    $connectionb = $this->entityGenerator->createConnection(
                         $node,
                         $this->previousClusterCpu,
                         ($secured)?false:true,
@@ -229,14 +229,14 @@ final class SystemGeneratorService extends BaseService
             }
             if ($previousNode) {
                 /** @var Node $previousNode */
-                $connectiona = $this->createConnection(
+                $connectiona = $this->entityGenerator->createConnection(
                     $previousNode,
                     $node,
                     ($secured)?false:true,
                     $previousNode->getLevel(),
                     ($secured)?Connection::TYPE_CODEGATE:Connection::TYPE_NORMAL
                 );
-                $connectionb = $this->createConnection(
+                $connectionb = $this->entityGenerator->createConnection(
                     $node,
                     $previousNode,
                     ($secured)?false:true,

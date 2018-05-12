@@ -5,9 +5,13 @@ namespace Netrunners;
 use Netrunners\Factory\BookmarkServiceFactory;
 use Netrunners\Factory\ChoiceServiceFactory;
 use Netrunners\Factory\EgoCastingServiceFactory;
+use Netrunners\Factory\EntityGeneratorFactory;
+use Netrunners\Factory\SystemRoleServiceFactory;
 use Netrunners\Service\BookmarkService;
 use Netrunners\Service\ChoiceService;
 use Netrunners\Service\EgoCastingService;
+use Netrunners\Service\EntityGenerator;
+use Netrunners\Service\SystemRoleService;
 use Netrunners\View\Helper\ImageUrlHelper;
 use Netrunners\View\Helper\MailMasterHelper;
 use Netrunners\View\Helper\ProfileGroupHelper;
@@ -86,6 +90,7 @@ return [
             'Netrunners\Service\CodebreakerService' => 'Netrunners\Factory\CodebreakerServiceFactory',
             'Netrunners\Service\CombatService' => 'Netrunners\Factory\CombatServiceFactory',
             EgoCastingService::class => EgoCastingServiceFactory::class,
+            EntityGenerator::class => EntityGeneratorFactory::class,
             'Netrunners\Service\FactionService' => 'Netrunners\Factory\FactionServiceFactory',
             'Netrunners\Service\FileService' => 'Netrunners\Factory\FileServiceFactory',
             'Netrunners\Service\FileExecutionService' => 'Netrunners\Factory\FileExecutionServiceFactory',
@@ -112,6 +117,7 @@ return [
             'Netrunners\Service\ResearchService' => 'Netrunners\Factory\ResearchServiceFactory',
             'Netrunners\Service\StoryService' => 'Netrunners\Factory\StoryServiceFactory',
             'Netrunners\Service\SystemService' => 'Netrunners\Factory\SystemServiceFactory',
+            SystemRoleService::class => SystemRoleServiceFactory::class,
             'Netrunners\Service\SystemGeneratorService' => 'Netrunners\Factory\SystemGeneratorServiceFactory',
             'Netrunners\Service\UtilityService' => 'Netrunners\Factory\UtilityServiceFactory',
         ],

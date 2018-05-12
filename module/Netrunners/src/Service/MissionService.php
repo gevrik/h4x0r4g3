@@ -430,6 +430,7 @@ final class MissionService extends BaseService
                 ($addToNode) ? $targetSystem : NULL,
                 0
             );
+            $targetFile->setSize(0);
             $mInstance->setTargetFile($targetFile);
             $mInstance->setTargetNode($targetNode);
         }
@@ -531,6 +532,7 @@ final class MissionService extends BaseService
     /**
      * @param array $factions
      * @return mixed|Faction
+     * @throws \Doctrine\ORM\ORMException
      */
     public function getRandomFaction($factions = [])
     {
