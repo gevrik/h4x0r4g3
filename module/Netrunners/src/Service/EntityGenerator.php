@@ -13,9 +13,13 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
+use Netrunners\Entity\File;
+use Netrunners\Entity\FileType;
 use Netrunners\Entity\Group;
+use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
@@ -164,6 +168,75 @@ final class EntityGenerator
             $maxSize = System::DEFAULT_MAX_SYSTEM_SIZE;
         }
         return $maxSize;
+    }
+
+    /**
+     * @param FileType $fileType
+     * @param bool $flush
+     * @param string|null $name
+     * @param int $level
+     * @param int $integrity
+     * @param bool $running
+     * @param int $maxIntegrity
+     * @param Profile|null $coder
+     * @param string|null $content
+     * @param string|null $data
+     * @param MailMessage|null $mailMessage
+     * @param Node|null $node
+     * @param NpcInstance|null $npc
+     * @param Profile|null $profile
+     * @param System|null $system
+     * @param int|null $slots
+     * @param int $version
+     * @return File
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    public function createFile(
+        FileType $fileType,
+        $flush = false,
+        $name = null,
+        $level = 1,
+        $integrity = 100,
+        $running = false,
+        $maxIntegrity = 100,
+        Profile $coder = null,
+        $content = null,
+        $data = null,
+        MailMessage $mailMessage = null,
+        Node $node = null,
+        NpcInstance $npc = null,
+        Profile $profile = null,
+        System $system = null,
+        $slots = null,
+        $version = 1
+    )
+    {
+        if (!$name) $name = $fileType->getName();
+        if (!$slots) $slots = $fileType->getSize();
+        $file = new File();
+        $file->setIntegrity($integrity);
+        $file->setCoder($coder);
+        $file->setContent($content);
+        $file->setCreated(new \DateTime());
+        $file->setData($data);
+        $file->setExecutable($fileType->getExecutable());
+        $file->setFileType($fileType);
+        $file->setLevel($level);
+        $file->setMailMessage($mailMessage);
+        $file->setMaxIntegrity($maxIntegrity);
+        $file->setModified(NULL);
+        $file->setName($name);
+        $file->setNode($node);
+        $file->setNpc($npc);
+        $file->setProfile($profile);
+        $file->setRunning($running);
+        $file->setSize($fileType->getSize());
+        $file->setSlots($slots);
+        $file->setSystem($system);
+        $file->setVersion($version);
+        $this->entityManager->persist($file);
+        if ($flush) $this->entityManager->flush($file);
+        return $file;
     }
 
 }

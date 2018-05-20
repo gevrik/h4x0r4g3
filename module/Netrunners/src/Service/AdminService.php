@@ -781,7 +781,7 @@ final class AdminService extends BaseService
         if (!$fileType) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid file type'), GameClientResponse::CLASS_DANGER)->send();
         }
-        $this->createFile(
+        $this->entityGenerator->createFile(
             $fileType,
             true,
             'prototype_' . $fileType->getName(),

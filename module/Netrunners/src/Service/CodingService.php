@@ -1501,7 +1501,7 @@ final class CodingService extends BaseService
                     if ($integrity > 100) $integrity = 100;
                     // programs
                     $newFileName = $basePart->getName();
-                    $newCode = $this->createFile(
+                    $newCode = $this->entityGenerator->createFile(
                         $basePart,
                         false,
                         $newFileName,

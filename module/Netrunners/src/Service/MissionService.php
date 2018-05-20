@@ -375,7 +375,7 @@ final class MissionService extends BaseService
                     'systemid' => $targetSystem->getId(),
                     'nodeid' => $passkeyNode->getId()
                 ];
-                $this->createFile(
+                $this->entityGenerator->createFile(
                     $passkeyFileType,
                     true,
                     sprintf('%s passkey', $targetSystem->getName()),
@@ -412,7 +412,7 @@ final class MissionService extends BaseService
             /** @var FileType $fileType */
             $fileType = $this->entityManager->find(FileType::class, FileType::ID_TEXT);
             $fileName = $this->getRandomString(12) . '.txt';
-            $targetFile = $this->createFile(
+            $targetFile = $this->entityGenerator->createFile(
                 $fileType,
                 false,
                 $fileName,

@@ -1115,7 +1115,7 @@ final class FileUtilityService extends BaseService
             $shortNodeName,
             'passkey'
         );
-        $this->createFile(
+        $this->entityGenerator->createFile(
             $fileType,
             true,
             $newName,
@@ -1431,7 +1431,7 @@ final class FileUtilityService extends BaseService
         $currentSnippets = $profile->getSnippets();
         $profile->setSnippets($currentSnippets - 1);
         $newFileType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_TEXT);
-        $this->createFile(
+        $this->entityGenerator->createFile(
             $newFileType,
             false,
             $parameter . '.txt',

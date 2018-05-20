@@ -283,7 +283,7 @@ EOD;
         $jhType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_JACKHAMMER);
         $psType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_PORTSCANNER);
         $lpType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_LOCKPICK);
-        $jackhammer = $this->createFile(
+        $jackhammer = $this->entityGenerator->createFile(
             $jhType,
             false,
             null,
@@ -302,7 +302,7 @@ EOD;
             0,
             1
         );
-        $portscanner = $this->createFile(
+        $portscanner = $this->entityGenerator->createFile(
             $psType,
             false,
             null,
@@ -321,7 +321,7 @@ EOD;
             0,
             1
         );
-        $lockpick = $this->createFile(
+        $lockpick = $this->entityGenerator->createFile(
             $lpType,
             false,
             null,
@@ -384,7 +384,7 @@ How is that ego-casting node coming along?
 EOD;
         $cloakType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CLOAK);
         $bladeType = $this->entityManager->find('Netrunners\Entity\FileType', FileType::ID_CODEBLADE);
-        $cloak = $this->createFile(
+        $cloak = $this->entityGenerator->createFile(
             $cloakType,
             false,
             'see_nix',
@@ -403,7 +403,7 @@ EOD;
             1,
             1
         );
-        $blade = $this->createFile(
+        $blade = $this->entityGenerator->createFile(
             $bladeType,
             false,
             'nixxer',

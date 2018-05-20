@@ -315,7 +315,7 @@ final class SystemGeneratorService extends BaseService
             // TODO add some base resources
             /** @var FileType $fileType */
             $fileType = $this->entityManager->find(FileType::class, $fileTypeId);
-            $this->createFile(
+            $this->entityGenerator->createFile(
                 $fileType,
                 false,
                 null,
