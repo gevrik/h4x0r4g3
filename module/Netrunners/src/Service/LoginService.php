@@ -45,10 +45,11 @@ final class LoginService extends BaseService
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator,
-        MailMessageService $mailMessageService
+        MailMessageService $mailMessageService,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->mailMessageService = $mailMessageService;
     }
 

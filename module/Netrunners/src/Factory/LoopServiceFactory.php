@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
 use Netrunners\Service\CodingService;
 use Netrunners\Service\CombatService;
+use Netrunners\Service\EntityGenerator;
 use Netrunners\Service\FileService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\MainCampaignService;
@@ -42,7 +43,8 @@ class LoopServiceFactory implements FactoryInterface
             $container->get(CombatService::class),
             $container->get(SystemService::class),
             $container->get(MainCampaignService::class),
-            $container->get(Translator::class)
+            $container->get(Translator::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

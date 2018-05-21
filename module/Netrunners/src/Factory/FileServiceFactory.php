@@ -12,6 +12,7 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
+use Netrunners\Service\EntityGenerator;
 use Netrunners\Service\FileExecutionService;
 use Netrunners\Service\FileService;
 use Netrunners\Service\FileUtilityService;
@@ -36,7 +37,8 @@ class FileServiceFactory implements FactoryInterface
             $container->get('ViewRenderer'),
             $container->get(Translator::class),
             $container->get(FileUtilityService::class),
-            $container->get(FileExecutionService::class)
+            $container->get(FileExecutionService::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

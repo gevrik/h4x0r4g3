@@ -81,15 +81,17 @@ final class MissionService extends BaseService
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
      * @param SystemGeneratorService $systemGeneratorService
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator,
-        SystemGeneratorService $systemGeneratorService
+        SystemGeneratorService $systemGeneratorService,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->systemGeneratorService = $systemGeneratorService;
         $this->missionRepo = $this->entityManager->getRepository(Mission::class);
         $this->missionArchetypeRepo = $this->entityManager->getRepository(MissionArchetype::class);

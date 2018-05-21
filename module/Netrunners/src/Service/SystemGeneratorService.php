@@ -77,14 +77,16 @@ final class SystemGeneratorService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
-        Translator $translator
+        Translator $translator,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->nodeTypeRepo = $this->entityManager->getRepository(NodeType::class);
         $this->companyNameRepo = $this->entityManager->getRepository(CompanyName::class);
         $this->coordRepo = $this->entityManager->getRepository(Geocoord::class);

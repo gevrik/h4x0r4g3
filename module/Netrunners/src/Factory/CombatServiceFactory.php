@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
 use Netrunners\Service\CodebreakerService;
 use Netrunners\Service\CombatService;
+use Netrunners\Service\EntityGenerator;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
@@ -33,7 +34,8 @@ class CombatServiceFactory implements FactoryInterface
         return new CombatService(
             $container->get(EntityManager::class),
             $container->get('ViewRenderer'),
-            $container->get(Translator::class)
+            $container->get(Translator::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

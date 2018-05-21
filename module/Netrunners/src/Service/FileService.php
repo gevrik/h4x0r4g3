@@ -48,16 +48,18 @@ final class FileService extends BaseService
      * @param Translator $translator
      * @param FileUtilityService $fileUtilityService
      * @param FileExecutionService $fileExecutionService
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator,
         FileUtilityService $fileUtilityService,
-        FileExecutionService $fileExecutionService
+        FileExecutionService $fileExecutionService,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->fileUtilityService = $fileUtilityService;
         $this->fileExecutionService = $fileExecutionService;
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');

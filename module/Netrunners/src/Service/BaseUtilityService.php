@@ -24,7 +24,6 @@ use Netrunners\Entity\GameOptionInstance;
 use Netrunners\Entity\Group;
 use Netrunners\Entity\GroupRoleInstance;
 use Netrunners\Entity\KnownNode;
-use Netrunners\Entity\MailMessage;
 use Netrunners\Entity\MilkrunInstance;
 use Netrunners\Entity\Mission;
 use Netrunners\Entity\Node;

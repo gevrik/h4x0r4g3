@@ -12,6 +12,7 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
+use Netrunners\Service\EntityGenerator;
 use Netrunners\Service\MailMessageService;
 use Netrunners\Service\MainCampaignService;
 use Zend\Mvc\I18n\Translator;
@@ -34,7 +35,8 @@ class MainCampaignServiceFactory implements FactoryInterface
             $container->get(EntityManager::class),
             $container->get(MailMessageService::class),
             $container->get('ViewRenderer'),
-            $container->get(Translator::class)
+            $container->get(Translator::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

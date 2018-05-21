@@ -39,14 +39,16 @@ final class GameOptionService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
-        Translator $translator
+        Translator $translator,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->gameOptionRepo = $this->entityManager->getRepository(GameOption::class);
         $this->goiRepo = $this->entityManager->getRepository(GameOptionInstance::class);
     }

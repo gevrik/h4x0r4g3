@@ -60,10 +60,16 @@ final class AuctionService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
-    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        EntityGenerator $entityGenerator
+    )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->auctionRepo = $this->entityManager->getRepository('Netrunners\Entity\Auction');
         $this->bidRepo = $this->entityManager->getRepository('Netrunners\Entity\AuctionBid');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');

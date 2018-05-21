@@ -13,6 +13,7 @@ namespace Netrunners\Factory;
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
 use Netrunners\Service\CodebreakerService;
+use Netrunners\Service\EntityGenerator;
 use Netrunners\Service\FileExecutionService;
 use Netrunners\Service\HangmanService;
 use Netrunners\Service\MissionService;
@@ -38,7 +39,8 @@ class FileExecutionServiceFactory implements FactoryInterface
             $container->get(Translator::class),
             $container->get(CodebreakerService::class),
             $container->get(MissionService::class),
-            $container->get(HangmanService::class)
+            $container->get(HangmanService::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

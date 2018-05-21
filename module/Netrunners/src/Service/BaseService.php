@@ -105,16 +105,18 @@ class BaseService extends BaseUtilityService
     /**
      * BaseService constructor.
      * @param EntityManager $entityManager
-     * @param $viewRenderer
-     * @param $translator
+     * @param PhpRenderer $viewRenderer
+     * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
-        Translator $translator
+        Translator $translator,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager);
+        parent::__construct($entityManager, $entityGenerator);
         $this->translator = $translator;
         $this->viewRenderer = $viewRenderer;
     }

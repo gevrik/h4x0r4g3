@@ -45,10 +45,16 @@ final class CodebreakerService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
-    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        EntityGenerator $entityGenerator
+    )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->wordRepo = $this->entityManager->getRepository('Netrunners\Entity\Word');
         $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
         $this->npcInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\NpcInstance');

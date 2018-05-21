@@ -97,10 +97,16 @@ final class ChatService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
-    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        EntityGenerator $entityGenerator
+    )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
         $this->pignoreRepo = $this->entityManager->getRepository(Pignore::class);

@@ -13,6 +13,7 @@ namespace Netrunners\Factory;
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
 use Netrunners\Service\CodebreakerService;
+use Netrunners\Service\EntityGenerator;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
 
@@ -32,7 +33,8 @@ class CodebreakerServiceFactory implements FactoryInterface
         return new CodebreakerService(
             $container->get(EntityManager::class),
             $container->get('ViewRenderer'),
-            $container->get(Translator::class)
+            $container->get(Translator::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

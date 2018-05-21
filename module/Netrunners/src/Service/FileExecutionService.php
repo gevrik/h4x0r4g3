@@ -81,6 +81,7 @@ final class FileExecutionService extends BaseService
      * @param CodebreakerService $codebreakerService
      * @param MissionService $missionService
      * @param HangmanService $hangmanService
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
@@ -88,10 +89,11 @@ final class FileExecutionService extends BaseService
         Translator $translator,
         CodebreakerService $codebreakerService,
         MissionService $missionService,
-        HangmanService $hangmanService
+        HangmanService $hangmanService,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->codebreakerService = $codebreakerService;
         $this->missionService = $missionService;
         $this->hangmanService = $hangmanService;

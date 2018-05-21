@@ -49,15 +49,17 @@ final class ConnectionService extends BaseService
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
      * @param NodeService $nodeService
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         PhpRenderer $viewRenderer,
         Translator $translator,
-        NodeService $nodeService
+        NodeService $nodeService,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->nodeService = $nodeService;
         $this->nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         $this->connectionRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');

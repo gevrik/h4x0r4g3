@@ -45,10 +45,16 @@ final class ResearchService extends BaseService
      * @param EntityManager $entityManager
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
-    public function __construct(EntityManager $entityManager, PhpRenderer $viewRenderer, Translator $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        EntityGenerator $entityGenerator
+    )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
         $this->fileCategoryRepo = $this->entityManager->getRepository('Netrunners\Entity\FileCategory');

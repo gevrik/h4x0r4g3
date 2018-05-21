@@ -53,15 +53,17 @@ final class MainCampaignService extends BaseService
      * @param MailMessageService $mailMessageService
      * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
         MailMessageService $mailMessageService,
         PhpRenderer $viewRenderer,
-        Translator $translator
+        Translator $translator,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->mailMessageService = $mailMessageService;
         $this->nodeRepository = $this->entityManager->getRepository('Netrunners\Entity\Node');
     }

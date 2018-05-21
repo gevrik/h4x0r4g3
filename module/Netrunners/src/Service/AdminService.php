@@ -88,10 +88,17 @@ final class AdminService extends BaseService
      * @param $viewRenderer
      * @param Authorize $authorize
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
-    public function __construct(EntityManager $entityManager, $viewRenderer, $authorize, $translator)
+    public function __construct(
+        EntityManager $entityManager,
+        $viewRenderer,
+        $authorize,
+        $translator,
+        EntityGenerator $entityGenerator
+    )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->authorize = $authorize;
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');
         $this->fileRepo = $this->entityManager->getRepository('Netrunners\Entity\File');

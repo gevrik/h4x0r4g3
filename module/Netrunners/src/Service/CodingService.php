@@ -34,6 +34,7 @@ use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use TmoAuth\Entity\Role;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
+use Zend\View\Renderer\PhpRenderer;
 
 final class CodingService extends BaseService
 {
@@ -93,16 +94,18 @@ final class CodingService extends BaseService
     /**
      * CodingService constructor.
      * @param EntityManager $entityManager
-     * @param $viewRenderer
+     * @param PhpRenderer $viewRenderer
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
-        $viewRenderer,
-        Translator $translator
+        PhpRenderer $viewRenderer,
+        Translator $translator,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->filePartInstanceRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePartInstance');
         $this->filePartRepo = $this->entityManager->getRepository('Netrunners\Entity\FilePart');
         $this->fileTypeRepo = $this->entityManager->getRepository('Netrunners\Entity\FileType');

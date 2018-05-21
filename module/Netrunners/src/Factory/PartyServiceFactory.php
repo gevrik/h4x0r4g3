@@ -12,6 +12,7 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
+use Netrunners\Service\EntityGenerator;
 use Netrunners\Service\PartyService;
 use Zend\Mvc\I18n\Translator;
 use Zend\ServiceManager\Factory\FactoryInterface;
@@ -32,7 +33,8 @@ class PartyServiceFactory implements FactoryInterface
         return new PartyService(
             $container->get(EntityManager::class),
             $container->get('ViewRenderer'),
-            $container->get(Translator::class)
+            $container->get(Translator::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

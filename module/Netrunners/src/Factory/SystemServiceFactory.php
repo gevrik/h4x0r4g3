@@ -12,6 +12,7 @@ namespace Netrunners\Factory;
 
 use Doctrine\ORM\EntityManager;
 use Interop\Container\ContainerInterface;
+use Netrunners\Service\EntityGenerator;
 use Netrunners\Service\SystemGeneratorService;
 use Netrunners\Service\SystemService;
 use Zend\Mvc\I18n\Translator;
@@ -34,7 +35,8 @@ class SystemServiceFactory implements FactoryInterface
             $container->get(EntityManager::class),
             $container->get('ViewRenderer'),
             $container->get(Translator::class),
-            $container->get(SystemGeneratorService::class)
+            $container->get(SystemGeneratorService::class),
+            $container->get(EntityGenerator::class)
         );
     }
 

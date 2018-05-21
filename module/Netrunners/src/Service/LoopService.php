@@ -118,6 +118,7 @@ final class LoopService extends BaseService
      * @param SystemService $systemService
      * @param MainCampaignService $mainCampaignService
      * @param Translator $translator
+     * @param EntityGenerator $entityGenerator
      */
     public function __construct(
         EntityManager $entityManager,
@@ -127,10 +128,11 @@ final class LoopService extends BaseService
         CombatService $combatService,
         SystemService $systemService,
         MainCampaignService $mainCampaignService,
-        Translator $translator
+        Translator $translator,
+        EntityGenerator $entityGenerator
     )
     {
-        parent::__construct($entityManager, $viewRenderer, $translator);
+        parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
         $this->fileService = $fileService;
         $this->codingService = $codingService;
         $this->combatService = $combatService;

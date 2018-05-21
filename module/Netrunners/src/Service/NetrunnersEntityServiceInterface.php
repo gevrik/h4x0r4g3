@@ -10,9 +10,7 @@
 
 namespace Netrunners\Service;
 
-
 use Doctrine\ORM\QueryBuilder;
-use Netrunners\Entity\Profile;
 
 interface NetrunnersEntityServiceInterface
 {
