@@ -49,7 +49,7 @@ final class SystemRoleService extends BaseService
 
     }
 
-    public function showSystemRolesCommand($resourceId, $contentArray)
+    public function showSystemRolesCommand($resourceId)
     {
 
     }

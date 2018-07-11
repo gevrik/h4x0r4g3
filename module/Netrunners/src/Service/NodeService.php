@@ -21,6 +21,7 @@ use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRole;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\AuctionRepository;
 use Netrunners\Repository\ConnectionRepository;
@@ -1356,7 +1357,7 @@ final class NodeService extends BaseService
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
         // check if they can list nodes
-        if (!$this->canAccess($profile, $currentSystem)) {
+        if (!$this->canAccess($profile, $currentSystem, true, SystemRole::ALLOWED_BUILDING)) {
             return $this->gameClientResponse->addMessage($this->translate('Permission denied'))->send();
         }
         $returnMessage = sprintf(

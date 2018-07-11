@@ -7,6 +7,8 @@ use Netrunners\Entity\CompanyName;
 use Netrunners\Entity\Connection;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\Geocoord;
+use Netrunners\Entity\GroupRole;
+use Netrunners\Entity\GroupRoleInstance;
 use Netrunners\Entity\MilkrunAivatar;
 use Netrunners\Entity\MilkrunAivatarInstance;
 use Netrunners\Entity\Node;
@@ -18,11 +20,15 @@ use Netrunners\Entity\ServerSetting;
 use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRole;
+use Netrunners\Entity\SystemRoleInstance;
 use Netrunners\Entity\Word;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\GeocoordRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SkillRatingRepository;
+use Netrunners\Repository\SystemRepository;
+use Netrunners\Repository\SystemRoleInstanceRepository;
 use Netrunners\Service\LoginService;
 use Netrunners\Service\LoopService;
 use Netrunners\Service\ParserService;
@@ -1039,23 +1045,131 @@ class IndexController extends AbstractActionController
             throw new \RuntimeException('access denied');
         }
         set_time_limit(0);
-        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         /** @var NodeRepository $nodeRepo */
-        $connRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
+        $nodeRepo = $this->entityManager->getRepository('Netrunners\Entity\Node');
         /** @var ConnectionRepository $connRepo */
+        $connRepo = $this->entityManager->getRepository('Netrunners\Entity\Connection');
         $nodes = $nodeRepo->findAll();
         $this->console->writeLine('ITERATING NODES', ColorInterface::GREEN);
+        /** @var Node $node */
         foreach ($nodes as $node) {
-            /** @var Node $node */
             $connections = $connRepo->findBySourceNode($node);
+            /** @var Connection $connection */
             foreach ($connections as $connection) {
-                /** @var Connection $connection */
                 if ($connection->getLevel() >= $node->getLevel()) continue;
                 $connection->setLevel($node->getLevel());
             }
         }
         $this->entityManager->flush();
         $this->console->writeLine('ALL CONNECTIONS UPDATED', ColorInterface::GREEN);
+    }
+
+    /**
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function cliFixSystemRolesAction()
+    {
+        // get request and check if we received it from the console
+        $request = $this->getRequest();
+        if (!$request instanceof Request){
+            throw new \RuntimeException('access denied');
+        }
+        set_time_limit(0);
+        /** @var SystemRepository $systemRepo */
+        $systemRepo = $this->entityManager->getRepository(System::class);
+        $systems = $systemRepo->findAll();
+        $this->console->writeLine('ITERATING SYSTEMS', ColorInterface::GREEN);
+        // start with owners
+        $ownerRole = $this->entityManager->find(SystemRole::class, SystemRole::ROLE_OWNER_ID);
+        /** @var System $system */
+        foreach ($systems as $system) {
+            $profile = $system->getProfile();
+            if ($profile) {
+                $sri = new SystemRoleInstance();
+                $sri->setSystem($system);
+                $sri->setAdded(new \DateTime());
+                $sri->setProfile($profile);
+                $sri->setExpires(null);
+                $sri->setSystemRole($ownerRole);
+                $this->entityManager->persist($sri);
+            }
+            $group = $system->getGroup();
+            if ($group) {
+                $groupMembers = $this->entityManager->getRepository(Profile::class)->findBy([
+                    'group' => $group
+                ]);
+                foreach ($groupMembers as $groupMember) {
+                    $groupRoles = $this->entityManager->getRepository(GroupRoleInstance::class)->findBy([
+                        'member' => $groupMember,
+                        'group' => $group
+                    ]);
+                    /** @var GroupRole $groupRole */
+                    $systemRoles = [];
+                    foreach ($groupRoles as $groupRole) {
+                        switch ($groupRole->getId()) {
+                            default:
+                                break;
+                            case GroupRole::ROLE_FOUNDER_ID:
+                            case GroupRole::ROLE_LEADER_ID:
+                                $systemRoles[] = SystemRole::ROLE_OWNER_ID;
+                                break;
+                            case GroupRole::ROLE_COUNCIL_ID:
+                                $systemRoles[] = SystemRole::ROLE_ARCHITECT_ID;
+                                $systemRoles[] = SystemRole::ROLE_HARVESTER_ID;
+                                break;
+                            case GroupRole::ROLE_ADMIN_OFFICE_ID:
+                            case GroupRole::ROLE_COMBAT_OFFICE_ID:
+                                $systemRoles[] = SystemRole::ROLE_ARCHITECT_ID;
+                                break;
+                            case GroupRole::ROLE_BANK_MANAGER_ID:
+                                $systemRoles[] = SystemRole::ROLE_HARVESTER_ID;
+                                break;
+                            case GroupRole::ROLE_COMM_OFFICE_ID:
+                            case GroupRole::ROLE_RECRUITMENT_ID:
+                            case GroupRole::ROLE_MEMBER_ID:
+                                $systemRoles[] = SystemRole::ROLE_FRIEND_ID;
+                                break;
+                            case GroupRole::ROLE_NEWBIE_ID:
+                                $systemRoles[] = SystemRole::ROLE_GUEST_ID;
+                                break;
+                        }
+                    }
+                    $systemRoles = array_unique($systemRoles);
+                    foreach ($systemRoles as $systemRole) {
+                        $systemRoleObject = $this->entityManager->find(SystemRole::class, $systemRole);
+
+                        $sri = new SystemRoleInstance();
+                        $sri->setSystem($system);
+                        $sri->setAdded(new \DateTime());
+                        $sri->setProfile($groupMember);
+                        $sri->setExpires(null);
+                        $sri->setSystemRole($systemRoleObject);
+                        $this->entityManager->persist($sri);
+                    }
+                }
+            }
+            $faction = $system->getFaction();
+            if ($faction) {
+                $factionMembers = $this->entityManager->getRepository(Profile::class)->findBy([
+                    'faction' => $faction
+                ]);
+                foreach ($factionMembers as $factionMember) {
+                    $systemRoleObject = $this->entityManager->find(SystemRole::class, SystemRole::ROLE_FRIEND_ID);
+                    $sri = new SystemRoleInstance();
+                    $sri->setSystem($system);
+                    $sri->setAdded(new \DateTime());
+                    $sri->setProfile($factionMember);
+                    $sri->setExpires(null);
+                    $sri->setSystemRole($systemRoleObject);
+                    $this->entityManager->persist($sri);
+                }
+            }
+        }
+        // now check TODO
+        $this->entityManager->flush();
+        $this->console->writeLine('ALL SYSTEM ROLES UPDATED', ColorInterface::GREEN);
     }
 
     /**

@@ -15,6 +15,7 @@ use Netrunners\Entity\Connection;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
+use Netrunners\Entity\SystemRole;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\NodeRepository;
@@ -96,7 +97,7 @@ final class ConnectionService extends BaseService
         if (
             $connection->getType() == Connection::TYPE_CODEGATE &&
             !$connection->getisOpen() &&
-            !$this->canAccess($profile, $currentSystem)
+            !$this->canAccess($profile, $currentSystem, true, SystemRole::ALLOWED_FREE_MOVEMENT)
         ) {
             return $this->gameClientResponse->addMessage($this->translate('Access denied'))->send();
         }

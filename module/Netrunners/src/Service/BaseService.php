@@ -38,6 +38,8 @@ use Netrunners\Entity\Skill;
 use Netrunners\Entity\SkillRating;
 use Netrunners\Entity\System;
 use Netrunners\Entity\SystemLog;
+use Netrunners\Entity\SystemRole;
+use Netrunners\Entity\SystemRoleInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileModInstanceRepository;
@@ -51,6 +53,7 @@ use Netrunners\Repository\ProfileFactionRatingRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SkillRatingRepository;
 use Netrunners\Repository\SystemRepository;
+use Netrunners\Repository\SystemRoleInstanceRepository;
 use TmoAuth\Entity\Role;
 use TmoAuth\Entity\User;
 use Zend\I18n\Validator\Alnum;
@@ -276,6 +279,78 @@ class BaseService extends BaseUtilityService
             return $this->translate('Permission denied');
         }
         return false;
+    }
+
+    /**
+     * @param Profile $profile
+     * @param System $currentSytem
+     * @param bool $checkRoles
+     * @param string|bool $permission
+     * @return bool
+     */
+    protected function canAccess(Profile $profile, System $currentSytem, $checkRoles = false, $permission = false)
+    {
+        // check for roles
+        if ($checkRoles) {
+            $canAccess = false;
+            /** @var SystemRoleInstanceRepository $profileSystemRolesRepo */
+            $profileSystemRolesRepo = $this->entityManager->getRepository(SystemRoleInstance::class);
+            $systemRoles = $profileSystemRolesRepo->getProfileSystemRoles($profile, $currentSytem);
+            switch ($permission) {
+                default:
+                    break;
+                case SystemRole::ALLOWED_CONNECT:
+                    /** @var SystemRoleInstance $systemRole */
+                    foreach ($systemRoles as $systemRole) {
+                        if (in_array($systemRole->getSystemRole()->getId(), SystemRole::$allowedConnect)) {
+                            $canAccess = true;
+                            break;
+                        }
+                    }
+                    break;
+                case SystemRole::ALLOWED_FREE_MOVEMENT:
+                    /** @var SystemRoleInstance $systemRole */
+                    foreach ($systemRoles as $systemRole) {
+                        if (in_array($systemRole->getSystemRole()->getId(), SystemRole::$allowedFreeMovement)) {
+                            $canAccess = true;
+                            break;
+                        }
+                    }
+                    break;
+                case SystemRole::ALLOWED_BUILDING:
+                    /** @var SystemRoleInstance $systemRole */
+                    foreach ($systemRoles as $systemRole) {
+                        if (in_array($systemRole->getSystemRole()->getId(), SystemRole::$allowedBuilding)) {
+                            $canAccess = true;
+                            break;
+                        }
+                    }
+                    break;
+                case SystemRole::ALLOWED_HARVESTING:
+                    /** @var SystemRoleInstance $systemRole */
+                    foreach ($systemRoles as $systemRole) {
+                        if (in_array($systemRole->getSystemRole()->getId(), SystemRole::$allowedHarvesting)) {
+                            $canAccess = true;
+                            break;
+                        }
+                    }
+                    break;
+            }
+        }
+        else {
+            $systemProfile = $currentSytem->getProfile();
+            $systemGroup = $currentSytem->getGroup();
+            $systemFaction = $currentSytem->getFaction();
+            // set default
+            $canAccess = true;
+            if ($systemProfile && $systemProfile !== $profile) $canAccess = false;
+            if ($systemFaction && $systemFaction !== $profile->getFaction()) $canAccess = false;
+            if ($systemGroup && $systemGroup !== $profile->getGroup()) $canAccess = false;
+        }
+        if ($this->hasRole($profile->getUser(), Role::ROLE_ID_ADMIN)) {
+            $canAccess = true;
+        }
+        return $canAccess;
     }
 
     /**
@@ -2632,6 +2707,9 @@ class BaseService extends BaseUtilityService
             case Npc::ID_DEBUGGER_PROGRAM:
                 $this->checkDebuggerTriggers($npc);
                 break;
+            case Npc::ID_SCANNER_PROGRAM:
+                $this->checkScannerTriggers($npc);
+                break;
         }
     }
 
@@ -2854,6 +2932,29 @@ class BaseService extends BaseUtilityService
                     $this->messageEveryoneInNode($currentNode, $message);
                 }
                 break;
+        }
+    }
+
+    /**
+     * @param NpcInstance $npc
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    private function checkScannerTriggers(NpcInstance $npc)
+    {
+        $profile = $npc->getProfile();
+        $newNode = $npc->getNode();
+        $this->addKnownNode($profile, $newNode);
+        /** @var ConnectionRepository $connectionRepo */
+        $connectionRepo = $this->entityManager->getRepository(Connection::class);
+        $connections = $connectionRepo->findBySourceNode($newNode);
+        /** @var Connection $connection */
+        foreach ($connections as $connection) {
+            $this->addKnownNode($profile, $connection->getTargetNode());
+        }
+        $currentResourceId = $profile->getCurrentResourceId();
+        // only update client map if they are in the same system
+        if ($currentResourceId && $profile->getCurrentNode()->getSystem() === $newNode->getSystem()) {
+            $this->updateMap($currentResourceId, $profile);
         }
     }
 
@@ -3576,7 +3677,7 @@ class BaseService extends BaseUtilityService
         }
         if (
             $targetNodeType->getId() == NodeType::ID_IO &&
-            !$this->canAccess($profile, $targetSystem)
+            !$this->canAccess($profile, $targetSystem, true, SystemRole::ALLOWED_CONNECT)
         ) {
             return $this->gameClientResponse->addMessage($this->translate('Invalid node id'))->send();
         }

@@ -18,6 +18,7 @@ use Netrunners\Entity\Mission;
 use Netrunners\Entity\MissionArchetype;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\System;
 use Netrunners\Model\GameClientResponse;
@@ -153,8 +154,7 @@ final class MissionService extends BaseService
                         $this->translate('You need to be in an agent node to request a mission')
                     )->send();
                 }
-                $currentMission = $profile->getCurrentMission();
-                if ($currentMission) {
+                if ($this->getCurrentMission($profile)) {
                     return $this->gameClientResponse->addMessage(
                         $this->translate('You have already accepted another mission')
                     )->send();
@@ -225,6 +225,15 @@ final class MissionService extends BaseService
     }
 
     /**
+     * @param Profile $profile
+     * @return Mission|null
+     */
+    public function getCurrentMission(Profile $profile)
+    {
+        return $profile->getCurrentMission();
+    }
+
+    /**
      * @param $resourceId
      * @return bool|GameClientResponse
      * @throws \Doctrine\ORM\NoResultException
@@ -243,7 +252,7 @@ final class MissionService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        $currentMission = $profile->getCurrentMission();
+        $currentMission = $this->getCurrentMission($profile);
         if (!$currentMission) {
             return $this->gameClientResponse
                 ->addMessage($this->translate('You are not on a mission'))
@@ -309,7 +318,7 @@ final class MissionService extends BaseService
                     $this->translate('You need to be in an agent node to request a mission')
                 )->send();
         }
-        if ($profile->getCurrentMission()) {
+        if ($this->getCurrentMission($profile)) {
             return $this->gameClientResponse
                 ->addMessage($this->translate('You have accepted another mission already'))->send();
         }
@@ -458,8 +467,7 @@ final class MissionService extends BaseService
         if ($isBlocked) {
             return $this->gameClientResponse->addMessage($isBlocked)->send();
         }
-        /** @var Mission $currentMission */
-        $currentMission = $profile->getCurrentMission();
+        $currentMission = $this->getCurrentMission($profile);
         if (!$currentMission) {
             $message = $this->translate('No current mission');
             return $this->gameClientResponse->addMessage($message)->send();
@@ -534,7 +542,6 @@ final class MissionService extends BaseService
     /**
      * @param array $factions
      * @return mixed|Faction
-     * @throws \Doctrine\ORM\ORMException
      */
     public function getRandomFaction($factions = [])
     {

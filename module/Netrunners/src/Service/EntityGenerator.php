@@ -22,6 +22,8 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRole;
+use Netrunners\Entity\SystemRoleInstance;
 
 final class EntityGenerator
 {
@@ -237,6 +239,48 @@ final class EntityGenerator
         $this->entityManager->persist($file);
         if ($flush) $this->entityManager->flush($file);
         return $file;
+    }
+
+    /**
+     * @param System $system
+     * @param Profile $profile
+     * @param integer $roleId
+     * @param \DateTime|null $expires
+     * @param bool $flush
+     * @return SystemRoleInstance
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function createSystemRoleInstance(System $system, Profile $profile, $roleId, $expires = null, $flush = false)
+    {
+        $systemRoleInstanceRepo = $this->entityManager->getRepository(SystemRoleInstance::class);
+        $role = $this->entityManager->find(SystemRole::class, $roleId);
+        /** @var SystemRoleInstance $existingRecord */
+        $sri = $systemRoleInstanceRepo->findOneBy([
+            'system' => $system,
+            'profile' => $profile,
+            'systemRole' => $role
+        ]);
+        if (!$sri) {
+            $sri = new SystemRoleInstance();
+            $sri->setSystem($system);
+            $sri->setAdded(new \DateTime());
+            $sri->setProfile($profile);
+            $sri->setExpires($expires);
+            $sri->setSystemRole($role);
+            $this->entityManager->persist($sri);
+        }
+        else {
+            if ($sri->getExpires() !== null && $expires !== null) {
+                $sri->setExpires($expires);
+            }
+        }
+        $this->entityManager->persist($sri);
+        if ($flush) {
+            $this->entityManager->flush($sri);
+        }
+        return $sri;
     }
 
 }

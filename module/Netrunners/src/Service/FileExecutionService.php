@@ -20,6 +20,7 @@ use Netrunners\Entity\FileType;
 use Netrunners\Entity\Node;
 use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Notification;
+use Netrunners\Entity\Npc;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\Skill;
@@ -211,6 +212,7 @@ final class FileExecutionService extends BaseService
             case FileType::ID_SIPHON:
             case FileType::ID_MEDKIT:
             case FileType::ID_PROXIFIER:
+            case FileType::ID_SYSMAPPER:
                 return $this->queueProgramExecution($resourceId, $file, $profile->getCurrentNode(), $contentArray);
             case FileType::ID_CODEBREAKER:
                 return $this->codebreakerService->startCodebreaker($resourceId, $file, $contentArray);
@@ -954,6 +956,18 @@ final class FileExecutionService extends BaseService
                     $file->getName()
                 );
                 break;
+            case FileType::ID_SYSMAPPER:
+                $executeWarning = $this->executeWarningSysmapper();
+                $parameterArray = [
+                    'fileId' => $file->getId(),
+                    'contentArray' => $contentArray
+                ];
+                $systemId = $node->getSystem()->getId();
+                $message = sprintf(
+                    $this->translate('You start using [%s] - please wait'),
+                    $file->getName()
+                );
+                break;
         }
         if ($executeWarning) {
             $this->gameClientResponse->addMessage($executeWarning);
@@ -1006,6 +1020,26 @@ final class FileExecutionService extends BaseService
         if (!$systemId) return true;
         switch ($file->getFileType()->getId()) {
             default:
+                break;
+            case FileType::ID_SYSMAPPER:
+                /** @var System $system */
+                $system = $this->entityManager->find(System::class, $systemId);
+                $omens = $this->fileRepo->findRunningFilesInSystemByType($system, true, FileType::ID_OMEN);
+                foreach ($omens as $omen) {
+                    $chance = $this->getBonusForFileLevel($omen);
+                    if ($this->makePercentRollAgainstTarget($chance)) {
+                        $sourceNode = $file->getProfile()->getCurrentNode();
+                        $this->writeSystemLogEntry(
+                            $system,
+                            sprintf(
+                                $this->translate(
+                                    'Sysmapper attempt started from [%s|%s]'
+                                ), $sourceNode->getId(), $sourceNode->getName()),
+                            Notification::SEVERITY_WARNING
+                        );
+                    }
+                    $this->lowerIntegrityOfFile($omen, 100, 1, true);
+                }
                 break;
             case FileType::ID_PORTSCANNER:
                 /** @var System $system */
@@ -1253,7 +1287,6 @@ final class FileExecutionService extends BaseService
     /**
      * @param $contentArray
      * @return array
-     * @throws \Doctrine\ORM\ORMException
      */
     public function executeWarningSiphon($contentArray)
     {
@@ -1316,6 +1349,24 @@ final class FileExecutionService extends BaseService
         $profile = $this->user->getProfile();
         if ($profile->getSecurityRating() < 1) {
             $response = $this->translate('Your security rating is already at 0');
+        }
+        return $response;
+    }
+
+    /**
+     * @return bool|string
+     */
+    public function executeWarningSysmapper()
+    {
+        $response = false;
+        $profile = $this->user->getProfile();
+        $currentNode = $profile->getCurrentNode();
+        $currentSystem = $currentNode->getSystem();
+        if ($currentSystem->getProfile() === $profile) {
+            $response = $this->translate("Unable to scan your own systems");
+        }
+        if (!$response && $this->canAccess($profile, $currentSystem)) {
+            $response = $this->translate("Unable to scan friendly systems");
         }
         return $response;
     }
@@ -2345,6 +2396,37 @@ final class FileExecutionService extends BaseService
             $amountRecovered,
             $profile->getSecurityRating()
         );
+        return $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+    }
+
+    /**
+     * @param File $file
+     * @return GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
+     */
+    public function executeSysmapper(File $file)
+    {
+        $response = new GameClientResponse($file->getProfile()->getCurrentResourceId());
+        $response->setCommand(GameClientResponse::COMMAND_SHOWOUTPUT_PREPEND);
+        $checkResult = $this->executeWarningSysmapper();
+        if ($checkResult) {
+            return $response->addMessage($checkResult);
+        }
+        $profile = $file->getProfile();
+        if ($this->isInCombat($profile)) {
+            return $response->addMessage($this->translate('You are busy fighting'));
+        }
+        // spawn the scanner
+        $currentNode = $profile->getCurrentNode();
+        $npcLevel = $this->checkValueMinMax((int)$file->getLevel()/10, 1, 10);
+        /** @var Npc $npc */
+        $npc = $this->entityManager->find(Npc::class, Npc::ID_SCANNER_PROGRAM);
+        $npcInstance = $this->spawnNpcInstance($npc, $currentNode, $profile);
+        $this->checkNpcAggro($npcInstance);
+        // lower integrity and send response
+        $this->lowerIntegrityOfFile($file, 100, $npcLevel, false);
+        $message = sprintf($this->translate('You have launched your scanner'));
         return $response->addMessage($message, GameClientResponse::CLASS_SUCCESS);
     }
 

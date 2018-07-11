@@ -274,6 +274,9 @@ final class LoopService extends BaseService
                         case FileType::ID_PROXIFIER:
                             $gameClientResponse = $this->fileService->executeProxifier($file);
                             break;
+                        case FileType::ID_SYSMAPPER:
+                            $gameClientResponse = $this->fileService->executeSysmapper($file);
+                            break;
                     }
                     break;
                 case 'homerecall':
@@ -856,26 +859,34 @@ final class LoopService extends BaseService
             $randConnectionIndex = mt_rand(0, $connectionsCount - 1);
             /** @var Connection $connection */
             $connection = $connections[$randConnectionIndex];
-            // now we need to check a few things if the connection is secured
-            if ($connection->getType() == Connection::TYPE_CODEGATE) {
-                if ($roamingNpc->getProfile() && !$roamingNpc->getBypassCodegates()) continue;
-                if ($currentSystem != $roamingNpc->getSystem()) {
-                    $currentSystem = $roamingNpc->getSystem();
-                    $currentOwner = $currentSystem->getProfile();
-                    $currentFaction = $currentSystem->getFaction();
-                    $currentGroup = $currentSystem->getGroup();
-                }
-                if (!$connection->getisOpen()) {
-                    if (
-                        $roamingNpc->getProfile() !== $currentOwner ||
-                        $roamingNpc->getGroup() != $currentGroup ||
-                        $roamingNpc->getFaction() != $currentFaction)
-                    {
-                        // TODO add more checks here so that some entities can bypass in enemy systems
-                        continue;
+            /** now we need to check a few things if the connection is secured */
+            // some npcs can bypass codegates alltogether
+            $npcType = $roamingNpc->getNpc();
+            if (!in_array($npcType->getId(), Npc::$codegateBypassers)) {
+                if ($connection->getType() == Connection::TYPE_CODEGATE) {
+                    if ($roamingNpc->getProfile() && !$roamingNpc->getBypassCodegates()) continue;
+                    if ($currentSystem != $roamingNpc->getSystem()) {
+                        $currentSystem = $roamingNpc->getSystem();
+                        $currentOwner = $currentSystem->getProfile();
+                        $currentFaction = $currentSystem->getFaction();
+                        $currentGroup = $currentSystem->getGroup();
                     }
-                }
-            };
+                    if (!$connection->getisOpen()) {
+                        if (
+                            $roamingNpc->getProfile() !== $currentOwner ||
+                            $roamingNpc->getGroup() != $currentGroup ||
+                            $roamingNpc->getFaction() != $currentFaction
+                        ) {
+                            // TODO add more checks here so that some entities can bypass in enemy systems
+                            continue;
+                        }
+                    }
+                };
+            }
+            // codegate bypassers can only bypass gates lower than or equal to their level
+            if (in_array($npcType->getId(), Npc::$codegateBypassers) && $connection->getLevel() > $roamingNpc->getLevel()) {
+                continue;
+            }
             $this->moveNpcToTargetNode($roamingNpc, $connection);
         }
         if (!empty($this->updatedSockets)) {

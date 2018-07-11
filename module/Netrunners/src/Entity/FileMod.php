@@ -23,17 +23,23 @@ class FileMod
     const ID_INTEGRITY_BOOSTER = 2;
     const ID_TITANKILLER = 3;
     const ID_EXECUTION_BOOSTER = 4;
+    const ID_OBFUSCATION = 5;
+    const ID_CACHE_MEMORY = 6;
 
     const STRING_BACKSLASH = 'backslash';
     const STRING_INTEGRITY_BOOSTER = 'integrity-booster';
     const STRING_TITANKILLER = 'titankiller';
     const STRING_EXECUTION_BOOSTER = 'execution-booster';
+    const STRING_OBFUSCATION = 'obfuscation-booster';
+    const STRING_CACHE_MEMORY = 'cache-memory';
 
     static $revLookup = [
         self::STRING_BACKSLASH => self::ID_BACKSLASH,
         self::STRING_INTEGRITY_BOOSTER => self::ID_INTEGRITY_BOOSTER,
         self::STRING_TITANKILLER => self::ID_TITANKILLER,
         self::STRING_EXECUTION_BOOSTER => self::ID_EXECUTION_BOOSTER,
+        self::STRING_OBFUSCATION => self::ID_OBFUSCATION,
+        self::STRING_CACHE_MEMORY => self::ID_CACHE_MEMORY,
     ];
 
     /**

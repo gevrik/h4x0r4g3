@@ -13,9 +13,15 @@ namespace Netrunners\Service;
 use Doctrine\ORM\EntityManager;
 use Netrunners\Entity\Faction;
 use Netrunners\Entity\NodeType;
+use Netrunners\Entity\Profile;
+use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRole;
+use Netrunners\Entity\SystemRoleInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FactionRepository;
 use Netrunners\Repository\ProfileRepository;
+use Netrunners\Repository\SystemRepository;
+use Netrunners\Repository\SystemRoleInstanceRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -31,6 +37,11 @@ final class FactionService extends BaseService
      * @var ProfileRepository
      */
     protected $profileRepo;
+
+    /**
+     * @var SystemRepository
+     */
+    protected $systemRepo;
 
 
     /**
@@ -48,8 +59,9 @@ final class FactionService extends BaseService
     )
     {
         parent::__construct($entityManager, $viewRenderer, $translator, $entityGenerator);
-        $this->factionRepo = $this->entityManager->getRepository('Netrunners\Entity\Faction');
-        $this->profileRepo = $this->entityManager->getRepository('Netrunners\Entity\Profile');
+        $this->factionRepo = $this->entityManager->getRepository(Faction::class);
+        $this->profileRepo = $this->entityManager->getRepository(Profile::class);
+        $this->systemRepo = $this->entityManager->getRepository(System::class);
     }
 
     /**
@@ -139,6 +151,18 @@ final class FactionService extends BaseService
         /* checks passed, we can join the faction */
         $profile->setFaction($faction);
         $this->entityManager->flush($profile);
+        // create system role rows
+        $factionSystems = $this->systemRepo->findByTargetFaction($faction);
+        foreach ($factionSystems as $factionSystem) {
+            $this->entityGenerator->createSystemRoleInstance(
+                $factionSystem,
+                $profile,
+                SystemRole::ROLE_FRIEND_ID,
+                null,
+                true
+            );
+        }
+        // prepare output and send
         $message = sprintf(
             $this->translate('You have joined [%s]'),
             $faction->getName()
@@ -177,15 +201,42 @@ final class FactionService extends BaseService
             $message = $this->translate('You are not a member of any faction');
             return $this->gameClientResponse->addMessage($message)->send();
         }
+        $group = $profile->getGroup();
+        if ($group) {
+            $message = $this->translate('You must leave your group before you can leave your faction');
+            return $this->gameClientResponse->addMessage($message)->send();
+        }
         $profile->setFaction(null);
         $factionJoinBlockData = new \DateTime();
         $factionJoinBlockData->add(new \DateInterval('PT1D'));
         $profile->setFactionJoinBlockDate($factionJoinBlockData);
+        $this->removeSystemRoleInstances($faction, $profile);
+        $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have left [%s]'),
             $faction->getName()
         );
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param Faction $faction
+     * @param Profile $profile
+     */
+    private function removeSystemRoleInstances(Faction $faction, Profile $profile)
+    {
+        /** @var SystemRoleInstanceRepository $systemRoleInstanceRepo */
+        $systemRoleInstanceRepo = $this->entityManager->getRepository(SystemRoleInstance::class);
+        $systems = $this->systemRepo->findBy([
+            'faction' => $faction
+        ]);
+        /** @var System $system */
+        foreach ($systems as $system) {
+            $sris = $systemRoleInstanceRepo->getProfileSystemRoles($profile, $system);
+            foreach ($sris as $sri) {
+                $this->entityManager->remove($sri);
+            }
+        }
     }
 
 }

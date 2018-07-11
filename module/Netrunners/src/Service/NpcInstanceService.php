@@ -11,6 +11,7 @@
 namespace Netrunners\Service;
 
 use Doctrine\ORM\EntityManager;
+use Netrunners\Entity\NpcInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\NpcRepository;
@@ -316,6 +317,48 @@ final class NpcInstanceService extends BaseService
                 break;
         }
         $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS);
+        return $this->gameClientResponse->send();
+    }
+
+    /**
+     * @param $resourceId
+     * @return bool|GameClientResponse
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     */
+    public function showEntitiesCommand($resourceId)
+    {
+        $this->initService($resourceId);
+        if (!$this->user) return true;
+        $profile = $this->user->getProfile();
+        $isBlocked = $this->isActionBlockedNew($resourceId);
+        if ($isBlocked) {
+            return $this->gameClientResponse->addMessage($isBlocked)->send();
+        }
+        // logic start
+        $message = sprintf(
+            '%-11s|%-32s|%-32s|%-32s|%s',
+            $this->translate('ID'),
+            $this->translate('NAME'),
+            $this->translate('SYSTEM'),
+            $this->translate('NODE'),
+            $this->translate('EEG')
+        );
+        $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SYSMSG);
+        /** @var NpcInstance $npcInstance */
+        foreach ($this->npcInstanceRepo->findBy(['profile' => $profile], ['system' => 'asc']) as $npcInstance) {
+            $npcNode = $npcInstance->getNode();
+            $message = sprintf(
+                '%-11s|%-32s|%-32s|%-32s|%s',
+                $npcInstance->getId(),
+                $npcInstance->getName(),
+                $npcNode->getSystem()->getName(),
+                $npcNode->getName(),
+                sprintf("%s/%s", $npcInstance->getCurrentEeg(), $npcInstance->getMaxEeg())
+            );
+            $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_WHITE);
+        }
         return $this->gameClientResponse->send();
     }
 

@@ -731,6 +731,8 @@ class ParserService
                 return $this->profileService->showBankBalance($resourceId);
             case 'showbounties':
                 return $this->bountyService->showBounties($resourceId, $contentArray);
+            case 'showentities':
+                return $this->npcInstanceService->showEntitiesCommand($resourceId);
             case 'showunreadmails':
                 return $this->mailMessageService->displayAmountUnreadMails($resourceId);
             case 'sneak':
@@ -1043,17 +1045,17 @@ class ParserService
                 case 'abandonmission':
                     $response = $this->missionService->abandonMission($resourceId);
                     break;
+                case 'joingroup':
+                    $response = $this->groupService->joinGroup($resourceId);
+                    break;
             }
         }
         $this->getWebsocketServer()->setConfirm($resourceId, '');
         if (!$response) {
             $response = new GameClientResponse($resourceId);
             $response->addMessage($this->translator->translate('You cancel your action'), GameClientResponse::CLASS_WHITE);
-            $response->addOption(GameClientResponse::OPT_EXITCONFIRMMODE, true);
         }
-        else {
-            $response->addOption(GameClientResponse::OPT_EXITCONFIRMMODE, true);
-        }
+        $response->addOption(GameClientResponse::OPT_EXITCONFIRMMODE, true);
         return $response->send();
     }
 

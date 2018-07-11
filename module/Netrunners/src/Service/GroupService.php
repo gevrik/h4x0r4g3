@@ -22,6 +22,8 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\NpcInstance;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRole;
+use Netrunners\Entity\SystemRoleInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FileRepository;
 use Netrunners\Repository\GroupRepository;
@@ -31,6 +33,7 @@ use Netrunners\Repository\MissionRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileRepository;
 use Netrunners\Repository\SystemRepository;
+use Netrunners\Repository\SystemRoleInstanceRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Model\ViewModel;
 use Zend\View\Renderer\PhpRenderer;
@@ -290,6 +293,7 @@ final class GroupService extends BaseService
         $systemName = $newName . '_headquarters';
         $system = $this->createBaseSystem($systemName, $addy, null, null, $group, false, 5, System::GROUP_MAX_SYSTEM_SIZE);
         $profile->setGroup($group);
+        $this->entityGenerator->createSystemRoleInstance($system, $profile, SystemRole::ROLE_OWNER_ID);
         $this->entityManager->flush();
         $message = sprintf(
             'group [%s] has been created - group system [%s] [%s]',
@@ -338,9 +342,28 @@ final class GroupService extends BaseService
             return $checkResult->send();
         }
         /* checks passed, we can join the group */
-        $group = $profile->getGroup();
+        $group = $profile->getCurrentNode()->getSystem()->getGroup();
         $profile->setGroup($group);
         $this->addGroupRole($profile, $group, GroupRole::ROLE_NEWBIE_ID);
+        // create system role rows
+        $factionSystems = $this->systemRepo->findByTargetFaction($group->getFaction());
+        foreach ($factionSystems as $factionSystem) {
+            $this->entityGenerator->createSystemRoleInstance(
+                $factionSystem,
+                $profile,
+                SystemRole::ROLE_FRIEND_ID
+            );
+        }
+        $groupSystems = $this->systemRepo->findBy([
+            'group' => $group
+        ]);
+        foreach ($groupSystems as $groupSystem) {
+            $this->entityGenerator->createSystemRoleInstance(
+                $groupSystem,
+                $profile,
+                SystemRole::ROLE_GUEST_ID
+            );
+        }
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have joined [%s]'),
@@ -608,12 +631,33 @@ final class GroupService extends BaseService
         $blockDate = new \DateTime();
         $blockDate->add(new \DateInterval('PT1D'));
         $profile->setGroupJoinBlockDate($blockDate);
+        $this->removeSystemRoleInstances($group, $profile);
         $this->entityManager->flush();
         $message = sprintf(
             $this->translate('You have left [%s]'),
             $group->getName()
         );
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param Group $group
+     * @param Profile $profile
+     */
+    private function removeSystemRoleInstances(Group $group, Profile $profile)
+    {
+        /** @var SystemRoleInstanceRepository $systemRoleInstanceRepo */
+        $systemRoleInstanceRepo = $this->entityManager->getRepository(SystemRoleInstance::class);
+        $systems = $this->systemRepo->findBy([
+            'group' => $group
+        ]);
+        /** @var System $system */
+        foreach ($systems as $system) {
+            $sris = $systemRoleInstanceRepo->getProfileSystemRoles($profile, $system);
+            foreach ($sris as $sri) {
+                $this->entityManager->remove($sri);
+            }
+        }
     }
 
     /**
@@ -843,6 +887,7 @@ final class GroupService extends BaseService
         // all seems good, remove user from group
         $this->cleanUpForMemberRemoval($profile);
         $recruit->setGroup(null);
+        $this->removeSystemRoleInstances($group, $recruit);
         $this->entityManager->flush();
         $xMessage = sprintf(
             $this->translate('[%s] has removed you from [%s]'),

@@ -763,7 +763,7 @@ class BaseUtilityService {
      */
     protected function addKnownNode(Profile $profile, Node $node)
     {
-        $knownNodeRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        $knownNodeRepo = $this->entityManager->getRepository(KnownNode::class);
         /** @var KnownNodeRepository $knownNodeRepo */
         $row = $knownNodeRepo->findByProfileAndNode($profile, $node);
         if ($row) {
@@ -789,7 +789,7 @@ class BaseUtilityService {
      */
     protected function getKnownNode(Profile $profile, Node $node)
     {
-        $knownNodeRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        $knownNodeRepo = $this->entityManager->getRepository(KnownNode::class);
         /** @var KnownNodeRepository $knownNodeRepo */
         return $knownNodeRepo->findByProfileAndNode($profile, $node);
     }
@@ -1039,7 +1039,7 @@ class BaseUtilityService {
         if ($profile->getFaction() && $profile->getFaction() === $currentSystem->getFaction()) return true;
         if ($profile->getGroup() && $profile->getGroup() === $currentSystem->getGroup()) return true;
         $currentNodeType = $currentNode->getNodeType();
-        $knRepo = $this->entityManager->getRepository('Netrunners\Entity\KnownNode');
+        $knRepo = $this->entityManager->getRepository(KnownNode::class);
         /** @var KnownNodeRepository $knRepo */
         $knownNode = $knRepo->findByProfileAndNode($profile, $currentNode);
         /** @var KnownNode $knownNode */
@@ -1105,23 +1105,6 @@ class BaseUtilityService {
             'profile' => $profile
         ]);
         return ($gameOptionInstance) ? $gameOptionInstance->getStatus() : $gameOption->getDefaultStatus();
-    }
-
-    /**
-     * @param Profile $profile
-     * @param System $currentSytem
-     * @return bool
-     */
-    protected function canAccess(Profile $profile, System $currentSytem)
-    {
-        $systemProfile = $currentSytem->getProfile();
-        $systemGroup = $currentSytem->getGroup();
-        $systemFaction = $currentSytem->getFaction();
-        $canAccess = true;
-        if ($systemProfile && $systemProfile !== $profile) $canAccess = false;
-        if ($systemFaction && $systemFaction !== $profile->getFaction()) $canAccess = false;
-        if ($systemGroup && $systemGroup !== $profile->getGroup()) $canAccess = false;
-        return $canAccess;
     }
 
     /**

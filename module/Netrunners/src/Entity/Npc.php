@@ -28,11 +28,17 @@ class Npc
     const ID_GUARDIAN_ICE = 10;
     const ID_SPIDER_ICE = 11;
     const ID_STORY_NPC = 12;
+    const ID_SCANNER_PROGRAM = 13;
 
     const TYPE_VIRUS = 1;
     const TYPE_HELPER = 2;
     const TYPE_NETWATCH = 3;
     const TYPE_STORY_NPC = 4;
+    const TYPE_PROGRAM = 5;
+
+    static $codegateBypassers = [
+        self::ID_SCANNER_PROGRAM
+    ];
 
     /**
      * @ORM\Id

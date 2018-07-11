@@ -137,6 +137,15 @@ return array(
                         )
                     )
                 ),
+                'fix-system-roles' => array(
+                    'options' => array(
+                        'route'    => 'fix-system-roles',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\Index',
+                            'action'     => 'cli-fix-system-roles'
+                        )
+                    )
+                ),
                 'parse-so' => array(
                     'options' => array(
                         'route'    => 'parse-so',

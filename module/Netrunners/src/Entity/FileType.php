@@ -64,6 +64,7 @@ class FileType
     const ID_LOCKPICK = 42;
     const ID_OMEN = 43;
     const ID_LOGIC_BOMB = 44;
+    const ID_PADLOCK = 45;
 
     const STRING_DIRECTORY = 'directory';
     const STRING_CHATCLIENT = 'chatclient';
