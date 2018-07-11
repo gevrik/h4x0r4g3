@@ -349,6 +349,16 @@ final class FileService extends BaseService
      * @return \Netrunners\Model\GameClientResponse
      * @throws \Doctrine\ORM\OptimisticLockException
      */
+    public function executeProxifier(File $file)
+    {
+        return $this->fileExecutionService->executeProxifier($file);
+    }
+
+    /**
+     * @param File $file
+     * @return \Netrunners\Model\GameClientResponse
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
     public function executeSysmapper(File $file)
     {
         return $this->fileExecutionService->executeSysmapper($file);

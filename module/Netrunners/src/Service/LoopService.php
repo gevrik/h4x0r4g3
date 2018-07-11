@@ -27,6 +27,7 @@ use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\ProfileFileTypeRecipe;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRoleInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\ConnectionRepository;
 use Netrunners\Repository\FileRepository;
@@ -39,9 +40,9 @@ use Netrunners\Repository\NotificationRepository;
 use Netrunners\Repository\NpcInstanceRepository;
 use Netrunners\Repository\ProfileFileTypeRecipeRepository;
 use Netrunners\Repository\SystemRepository;
+use Netrunners\Repository\SystemRoleInstanceRepository;
 use Ratchet\ConnectionInterface;
 use TmoAuth\Entity\User;
-use Zend\Log\Logger;
 use Zend\Mvc\I18n\Translator;
 
 final class LoopService extends BaseService
@@ -396,6 +397,12 @@ final class LoopService extends BaseService
                 $expiringMission->getSourceFaction(),
                 $expiringMission->getTargetFaction()
             );
+            /** @var SystemRoleInstanceRepository $systemRoleInstanceRepo */
+            $systemRoleInstanceRepo = $this->entityManager->getRepository(SystemRoleInstance::class);
+            $sri = $systemRoleInstanceRepo->getRoleForMission($expiringMission);
+            if ($sri) {
+                $this->entityManager->remove($sri);
+            }
         }
         return true;
     }

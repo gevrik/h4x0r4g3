@@ -21,6 +21,8 @@ use Netrunners\Entity\NodeType;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\ProfileFactionRating;
 use Netrunners\Entity\System;
+use Netrunners\Entity\SystemRole;
+use Netrunners\Entity\SystemRoleInstance;
 use Netrunners\Model\GameClientResponse;
 use Netrunners\Repository\FactionRepository;
 use Netrunners\Repository\GroupRepository;
@@ -28,6 +30,7 @@ use Netrunners\Repository\MissionArchetypeRepository;
 use Netrunners\Repository\MissionRepository;
 use Netrunners\Repository\NodeRepository;
 use Netrunners\Repository\SystemRepository;
+use Netrunners\Repository\SystemRoleInstanceRepository;
 use Zend\Mvc\I18n\Translator;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -291,8 +294,31 @@ final class MissionService extends BaseService
         $profile->setCurrentMission(null);
         $this->getWebsocketServer()->setClientData($profile->getCurrentResourceId(), 'currentMission', null);
         $this->entityManager->flush($profile);
+        $this->removeSystemRoles($currentMission);
         $message = $this->translate('You have abandoned your current mission');
         return $this->gameClientResponse->addMessage($message, GameClientResponse::CLASS_SUCCESS)->send();
+    }
+
+    /**
+     * @param Mission $mission
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     */
+    private function removeSystemRoles(Mission $mission)
+    {
+        switch ($mission->getMission()->getId()) {
+            default:
+                break;
+            case MissionArchetype::ID_CLEAN_SYSTEM:
+                /** @var SystemRoleInstanceRepository $systemRoleInstanceRepo */
+                $systemRoleInstanceRepo = $this->entityManager->getRepository(SystemRoleInstance::class);
+                $sri = $systemRoleInstanceRepo->getRoleForMission($mission);
+                if ($sri) {
+                    $this->entityManager->remove($sri);
+                    $this->entityManager->flush($sri);
+                }
+                break;
+        }
     }
 
     /**
@@ -403,6 +429,13 @@ final class MissionService extends BaseService
                     $profile,
                     null,
                     0
+                );
+                $this->entityGenerator->createSystemRoleInstance(
+                    $targetSystem,
+                    $profile,
+                    SystemRole::ROLE_GUEST_ID,
+                    $instanceData->expires,
+                    true
                 );
                 break;
             case MissionArchetype::ID_STEAL_FILE:

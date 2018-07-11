@@ -11,6 +11,7 @@
 namespace Netrunners\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Netrunners\Entity\Mission;
 use Netrunners\Entity\Profile;
 use Netrunners\Entity\System;
 
@@ -36,6 +37,23 @@ class SystemRoleInstanceRepository extends EntityRepository
             'now' => new \DateTime()
         ]);
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @param Mission $mission
+     * @return mixed
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function getRoleForMission(Mission $mission)
+    {
+        $qb = $this->createQueryBuilder('sr');
+        $qb->where('sr.profile = :profile AND sr.system = :system AND sr.expires = :missionexpiration');
+        $qb->setParameters([
+            'profile' => $mission->getProfile(),
+            'system' => $mission->getTargetSystem(),
+            'missionexpiration' => $mission->getExpires()
+        ]);
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
 }
